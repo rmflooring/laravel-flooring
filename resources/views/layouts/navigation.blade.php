@@ -86,7 +86,35 @@
                         <x-nav-link :href="route('admin.unit_measures.index')" :active="request()->routeIs('admin.unit_measures.*')">
                             {{ __('Manage Unit Measures') }}
                         </x-nav-link>
+			
+			<!-- New: Product Management Dropdown -->
+<div x-data="{ open: false }" class="relative">
+    <button
+        @click="open = !open"
+        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition
+            {{ request()->routeIs('admin.product_types.*') ? 'text-gray-900 bg-gray-100' : '' }}">
+        {{ __('Product Management') }}
+        <svg class="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+    </button>
+    <div x-show="open" @click.away="open = false" x-cloak class="absolute z-50 mt-2 w-56 rounded-md shadow-lg origin-top-left left-0">
+        <div class="rounded-md bg-white ring-1 ring-black ring-opacity-5">
+            <div class="py-1">
+                <!-- Sub-item: Product Types -->
+                <a href="{{ route('admin.product_types.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.product_types.*') ? 'bg-gray-100' : '' }}">
+                    Product Types
+                </a>
 
+                <!-- NEW: Product Lines sub-item -->
+                <a href="{{ route('admin.product-lines.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.product-lines.*') ? 'bg-gray-100' : '' }}">
+                    Product Lines
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+			
                         <!-- Labour Dropdown -->
                         <div x-data="{ open: false }" class="relative">
                             <button
@@ -105,6 +133,10 @@
                                         <a href="{{ route('admin.labour_types.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.labour_types.*') ? 'bg-gray-100' : '' }}">
                                             Labour Types
                                         </a>
+					<!-- NEW: Labour Items sub-item -->
+    					<a href="{{ route('admin.labour_items.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.labour_items.*') ? 					'bg-gray-100' : '' }}">
+					        Labour Items
+					    </a>
                                     </div>
                                 </div>
                             </div>
@@ -156,6 +188,9 @@
                                     <div class="py-1">
                                         <a href="{{ route('admin.tax_agencies.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.tax_agencies.*') ? 'bg-gray-100' : '' }}">
                                             Tax Agencies
+                                        </a>
+					<a href="{{ route('admin.tax_rates.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.tax_rates.*') ? 'bg-						gray-100' : '' }}">
+                                            Tax Rates
                                         </a>
                                     </div>
                                 </div>
@@ -294,6 +329,36 @@
                                 Labour Types
                             </x-responsive-nav-link>
                         </li>
+			<!-- Mobile Product Management Dropdown -->
+<li x-data="{ open: false }">
+    <button @click="open = !open" class="w-full text-left flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100">
+        {{ __('Product Management') }}
+        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+    </button>
+    <ul x-show="open" x-cloak class="pl-6 pt-1 pb-2">
+        <li>
+            <x-responsive-nav-link :href="route('admin.product_types.index')" :active="request()->routeIs('admin.product_types.*')">
+                Product Types
+            </x-responsive-nav-link>
+        </li>
+
+        <!-- NEW: Product Lines sub-item for mobile -->
+        <li>
+            <x-responsive-nav-link :href="route('admin.product-lines.index')" :active="request()->routeIs('admin.product-lines.*')">
+                Product Lines
+            </x-responsive-nav-link>
+        </li>
+    </ul>
+</li>
+
+			<!-- NEW: Labour Items sub-item -->
+    			<li>
+			        <x-responsive-nav-link :href="route('admin.labour_items.index')" :active="request()->routeIs('admin.labour_items.*')">
+			            Labour Items
+			        </x-responsive-nav-link>
+			    </li>
                     </ul>
                 </li>
 
@@ -340,6 +405,12 @@
                         </li>
                     </ul>
                 </li>
+		<!-- NEW: Tax Rates sub-item -->
+        <li>
+            <x-responsive-nav-link :href="route('admin.tax_rates.index')" :active="request()->routeIs('admin.tax_rates.*')">
+                Tax Rates
+            </x-responsive-nav-link>
+        </li>
             @endif
         </div>
 

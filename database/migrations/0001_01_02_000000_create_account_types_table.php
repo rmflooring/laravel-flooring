@@ -13,8 +13,11 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('status')->default('active'); // active/inactive
-            $table->foreignId('created_by')->nullable()->constrained('users');
-            $table->foreignId('updated_by')->nullable()->constrained('users');
+            $table->unsignedBigInteger('created_by')->nullable();
+	    $table->unsignedBigInteger('updated_by')->nullable();
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+	    $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
+
             $table->timestamps();
         });
     }
