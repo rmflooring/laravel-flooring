@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\CustomerTypeController;
 use App\Http\Controllers\Admin\AccountTypeController;
 use App\Http\Controllers\Admin\DetailTypeController;
 use App\Http\Controllers\Admin\TaxAgencyController;
-use App\Http\Controllers\Admin\ProductLineController;
+use App\Http\Controllers\Admin\ProductStyleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,7 +54,11 @@ Route::prefix('admin')->middleware(['auth', 'verified', 'admin'])->group(functio
     Route::resource('tax-rates', \App\Http\Controllers\Admin\TaxRateController::class)->names('admin.tax_rates');
     Route::resource('labour-items', \App\Http\Controllers\Admin\LabourItemController::class)->names('admin.labour_items');
     Route::resource('product-types', \App\Http\Controllers\Admin\ProductTypeController::class)->names('admin.product_types');
-    Route::resource('product-lines', ProductLineController::class)->names('admin.product-lines');
+    Route::resource('product-lines', \App\Http\Controllers\Admin\ProductLineController::class)->names('admin.product_lines');
+	Route::resource('product-lines/{product_line}/product-styles', \App\Http\Controllers\Admin\ProductStyleController::class)
+    ->names('admin.product_styles')
+    ->parameters(['product_line' => 'product_line']);
+	
 
     // Ajax routes for dynamic dropdowns - use a dedicated prefix to avoid conflict with resource
     Route::prefix('ajax/gl-accounts')->group(function () {

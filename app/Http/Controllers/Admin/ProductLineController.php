@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ProductLine;
 use App\Models\ProductType;
+use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,80 +15,84 @@ class ProductLineController extends Controller
      * Display a listing of the product lines.
      */
     public function index()
-    {
-        $lines = ProductLine::with('productType')->latest()->paginate(20);
-        return view('admin.product_lines.index', compact('lines'));
-    }
+{
+    $lines = ProductLine::with(['productType', 'vendorRelation']) // ← add 'vendorRelation'
+        ->latest()
+        ->paginate(20);
+
+    return view('admin.product_lines.index', compact('lines'));
+}
 
     /**
      * Show the form for creating a new product line.
      */
     public function create()
-    {
-        $types = ProductType::where('status', 'active')->get();
-        return view('admin.product_lines.create', compact('types'));
-    }
+{
+    // Load active product types (as you had)
+    $types = ProductType::where('status', 'active')->get();
+
+    // Load all vendors, sorted by name for the dropdown
+    $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
+
+    // Pass both to the view
+    return view('admin.product_lines.create', compact('types', 'vendors'));
+}
 
     /**
      * Store a newly created product line in storage.
      */
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'product_type_id' => 'required|exists:product_types,id',
-            'name'           => 'required|string|max:255',
-            'status'         => 'required|in:active,inactive',
-            'vendor'         => 'nullable|string|max:255',
-            'manufacturer'   => 'nullable|string|max:255',
-            'model'          => 'nullable|string|max:255',
-            'collection'     => 'nullable|string|max:255',
-        ]);
+{
+    $validated = $request->validate([
+        'product_type_id' => 'required|exists:product_types,id',
+        'name' => 'required|string|max:255',
+        'status' => 'required|in:active,inactive',
+        'vendor_id' => 'nullable|exists:vendors,id',  // ← NEW: validate as foreign key
+        'manufacturer' => 'nullable|string|max:255',
+        'model' => 'nullable|string|max:255',
+        'collection' => 'nullable|string|max:255',
+    ]);
 
-        ProductLine::create([
-            ...$validated,
-            'created_by' => Auth::id(),
-        ]);
+    ProductLine::create([
+        ...$validated,
+        'created_by' => Auth::id(),
+    ]);
 
-        return redirect()->route('admin.product-lines.index')
-            ->with('success', 'Product line created successfully.');
-    }
+    return redirect()->route('admin.product_lines.index')
+        ->with('success', 'Product line created successfully.');
+}
 
     /**
      * Show the form for editing the specified product line.
      */
-    public function edit($id)
-    {
-        $line = ProductLine::findOrFail($id);
-        $types = ProductType::where('status', 'active')->get();
+public function edit(ProductLine $product_line)
+{
+    $types = ProductType::where('status', 'active')->get();
+    $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
 
-        return view('admin.product_lines.edit', compact('line', 'types'));
-    }
+    return view('admin.product_lines.edit', compact('product_line', 'types', 'vendors'));
+}
 
-    /**
-     * Update the specified product line in storage.
-     */
-    public function update(Request $request, $id)
-    {
-        $line = ProductLine::findOrFail($id);
+public function update(Request $request, ProductLine $product_line)
+{
+    $validated = $request->validate([
+        'product_type_id' => 'required|exists:product_types,id',
+        'name' => 'required|string|max:255',
+        'status' => 'required|in:active,inactive',
+        'vendor_id' => 'nullable|exists:vendors,id',  // ← NEW
+        'manufacturer' => 'nullable|string|max:255',
+        'model' => 'nullable|string|max:255',
+        'collection' => 'nullable|string|max:255',
+    ]);
 
-        $validated = $request->validate([
-            'product_type_id' => 'required|exists:product_types,id',
-            'name'           => 'required|string|max:255',
-            'status'         => 'required|in:active,inactive',
-            'vendor'         => 'nullable|string|max:255',
-            'manufacturer'   => 'nullable|string|max:255',
-            'model'          => 'nullable|string|max:255',
-            'collection'     => 'nullable|string|max:255',
-        ]);
+    $product_line->update([
+        ...$validated,
+        'updated_by' => Auth::id(),
+    ]);
 
-        $line->update([
-            ...$validated,
-            'updated_by' => Auth::id(),
-        ]);
-
-        return redirect()->route('admin.product-lines.index')
-            ->with('success', 'Product line updated successfully.');
-    }
+    return redirect()->route('admin.product_lines.index')
+        ->with('success', 'Product line updated successfully.');
+}
 
     /**
      * Remove the specified product line from storage.
@@ -97,7 +102,7 @@ class ProductLineController extends Controller
         $line = ProductLine::findOrFail($id);
         $line->delete();
 
-        return redirect()->route('admin.product-lines.index')
+        return redirect()->route('admin.product_lines.index')
             ->with('success', 'Product line deleted successfully.');
     }
 }

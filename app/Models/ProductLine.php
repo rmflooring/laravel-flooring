@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductLine;  
 
 class ProductLine extends Model
 {
@@ -12,7 +13,7 @@ class ProductLine extends Model
     protected $fillable = [
         'product_type_id',
         'name',
-        'vendor',
+		'vendor_id',
         'manufacturer',
         'model',
         'collection',
@@ -26,5 +27,15 @@ class ProductLine extends Model
     {
         return $this->belongsTo(ProductType::class);
     }
+	public function vendorRelation()
+{
+    return $this->belongsTo(Vendor::class, 'vendor_id');
 }
+		public function productStyles()
+{
+    return $this->hasMany(ProductStyle::class, 'product_line_id');
+}
+	
+}
+
 

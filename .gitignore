@@ -22,3 +22,48 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+
+# Backups
+*.sql
+*.tar.gz
+*.zip
+
+# Local / personal files
+project_context.md
+data_only.sql
+
+# OS junk
+.DS_Store
+
+# Node
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Local backups / dumps
+*.sql
+*.tar.gz
+
+# Local notes / context files
+project_context.md
+
+# Copies / temp files
+*copy*
+*.log
+
+# Laravel / Node typical
+/node_modules
+/public/build
+/.env
+/.env.*
+/storage/*.key
+/storage/app/public
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/storage/logs
+/vendor
+

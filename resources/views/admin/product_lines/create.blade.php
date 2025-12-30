@@ -1,17 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
             Add New Product Line
         </h2>
     </x-slot>
 
-    <div class="py-6">
+    <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-
+            <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+                <div class="p-6">
+                    <!-- Error Messages -->
                     @if ($errors->any())
-                        <div class="mb-4 text-red-600">
+                        <div class="mb-6 p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
                             <ul class="list-disc list-inside">
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>
@@ -20,12 +20,14 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('admin.product-lines.store') }}" method="POST">
+                    <form action="{{ route('admin.product_lines.store') }}" method="POST">
                         @csrf
 
-                        <div class="mb-4">
-                            <label for="product_type_id" class="block font-medium text-gray-700">Product Type</label>
-                            <select name="product_type_id" id="product_type_id" class="border-gray-300 rounded mt-1 w-full">
+                        <!-- Product Type Dropdown -->
+                        <div class="mb-6">
+                            <label for="product_type_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Product Type</label>
+                            <select name="product_type_id" id="product_type_id"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                 <option value="">-- Select Product Type --</option>
                                 @foreach($types as $type)
                                     <option value="{{ $type->id }}" {{ old('product_type_id') == $type->id ? 'selected' : '' }}>
@@ -33,47 +35,94 @@
                                     </option>
                                 @endforeach
                             </select>
+                            @error('product_type_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="name" class="block font-medium text-gray-700">Name</label>
-                            <input type="text" name="name" id="name" value="{{ old('name') }}" class="border-gray-300 rounded mt-1 w-full" required>
+                        <!-- Name -->
+                        <div class="mb-6">
+                            <label for="name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                            <input type="text" name="name" id="name" value="{{ old('name') }}"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                   required>
+                            @error('name')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="vendor" class="block font-medium text-gray-700">Vendor</label>
-                            <input type="text" name="vendor" id="vendor" value="{{ old('vendor') }}" class="border-gray-300 rounded mt-1 w-full">
+                        <!-- Vendor Dropdown (NEW) -->
+                        <div class="mb-6">
+                            <label for="vendor_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Vendor</label>
+                            <select name="vendor_id" id="vendor_id"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+    <option value="">-- Select a Vendor --</option>
+    @foreach($vendors as $vendor)
+        <option value="{{ $vendor->id }}" {{ old('vendor_id') == $vendor->id ? 'selected' : '' }}>
+            {{ $vendor->company_name }}  <!-- ← Changed from name to company_name -->
+        </option>
+    @endforeach
+</select>
+                            @error('vendor_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="manufacturer" class="block font-medium text-gray-700">Manufacturer</label>
-                            <input type="text" name="manufacturer" id="manufacturer" value="{{ old('manufacturer') }}" class="border-gray-300 rounded mt-1 w-full">
+                        <!-- Manufacturer -->
+                        <div class="mb-6">
+                            <label for="manufacturer" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Manufacturer</label>
+                            <input type="text" name="manufacturer" id="manufacturer" value="{{ old('manufacturer') }}"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                            @error('manufacturer')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="model" class="block font-medium text-gray-700">Model</label>
-                            <input type="text" name="model" id="model" value="{{ old('model') }}" class="border-gray-300 rounded mt-1 w-full">
+                        <!-- Model -->
+                        <div class="mb-6">
+                            <label for="model" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Model</label>
+                            <input type="text" name="model" id="model" value="{{ old('model') }}"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                            @error('model')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="collection" class="block font-medium text-gray-700">Collection</label>
-                            <input type="text" name="collection" id="collection" value="{{ old('collection') }}" class="border-gray-300 rounded mt-1 w-full">
+                        <!-- Collection -->
+                        <div class="mb-6">
+                            <label for="collection" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Collection</label>
+                            <input type="text" name="collection" id="collection" value="{{ old('collection') }}"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                            @error('collection')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="mb-4">
-                            <label for="status" class="block font-medium text-gray-700">Status</label>
-                            <select name="status" id="status" class="border-gray-300 rounded mt-1 w-full">
+                        <!-- Status -->
+                        <div class="mb-6">
+                            <label for="status" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Status</label>
+                            <select name="status" id="status"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                 <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
+                            @error('status')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="mt-6">
-                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Product Line</button>
-                            <a href="{{ route('admin.product-lines.index') }}" class="ml-2 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancel</a>
+                        <!-- Form Actions -->
+                        <div class="flex justify-end space-x-4">
+                            <a href="{{ route('admin.product_lines.index') }}"
+                               class="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600">
+                                Cancel
+                            </a>
+                            <button type="submit"
+                                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                                Save Product Line
+                            </button>
                         </div>
                     </form>
-
                 </div>
             </div>
         </div>

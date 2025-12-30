@@ -107,7 +107,7 @@
                 </a>
 
                 <!-- NEW: Product Lines sub-item -->
-                <a href="{{ route('admin.product-lines.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.product-lines.*') ? 'bg-gray-100' : '' }}">
+                <a href="{{ route('admin.product_lines.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{ request()->routeIs('admin.product-lines.*') ? 'bg-gray-100' : '' }}">
                     Product Lines
                 </a>
             </div>
@@ -346,7 +346,7 @@
 
         <!-- NEW: Product Lines sub-item for mobile -->
         <li>
-            <x-responsive-nav-link :href="route('admin.product-lines.index')" :active="request()->routeIs('admin.product-lines.*')">
+            <x-responsive-nav-link :href="route('admin.product_lines.index')" :active="request()->routeIs('admin.product-lines.*')">
                 Product Lines
             </x-responsive-nav-link>
         </li>

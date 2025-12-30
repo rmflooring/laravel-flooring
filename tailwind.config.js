@@ -7,8 +7,9 @@ export default {
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
+        // ← Added this – very important for Flowbite components to be recognized
+        './node_modules/flowbite/**/*.js',
     ],
-
     theme: {
         extend: {
             fontFamily: {
@@ -16,9 +17,12 @@ export default {
             },
         },
     },
-
-    plugins: [forms],
-
+    plugins: [
+        forms,
+        // ← Add this line to enable Flowbite's additional utilities & components
+        require('flowbite/plugin'),
+    ],
+    // Keep your existing safelist – it's fine
     safelist: [
         // Button backgrounds and hovers for roles edit page
         'bg-green-600',

@@ -20,6 +20,7 @@
     },
     "dependencies": {
         "bootstrap": "^5.3.3",
+        "flowbite": "^4.0.1",
         "sass": "^1.97.0"
     }
 }

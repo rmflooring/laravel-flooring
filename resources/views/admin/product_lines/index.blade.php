@@ -1,82 +1,94 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
             Product Lines
         </h2>
     </x-slot>
 
-    <div class="py-6">
+    <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-
+            <!-- Success Message -->
             @if(session('success'))
-                <div class="mb-4 text-green-600 font-medium">
+                <div class="mb-6 p-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">
                     {{ session('success') }}
                 </div>
             @endif
 
-            <div class="mb-4">
-                <a href="{{ route('admin.product-lines.create') }}" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                    Add New Product Line
+            <!-- Add New Button -->
+            <div class="flex justify-end mb-6">
+                <a href="{{ route('admin.product_lines.create') }}"
+                   class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+					Add New Product Line
                 </a>
             </div>
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Product Type</th>
-                                <th>Name</th>
-                                <th>Vendor</th>
-                                <th>Manufacturer</th>
-                                <th>Model</th>
-                                <th>Collection</th>
-                                <th>Status</th>
-                                <th>Created By</th>
-                                <th>Updated By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            @forelse($lines as $line)
+            <!-- Table -->
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <td>{{ $line->id }}</td>
-                                    <td>{{ $line->productType->name ?? 'N/A' }}</td>
-                                    <td>{{ $line->name }}</td>
-                                    <td>{{ $line->vendor }}</td>
-                                    <td>{{ $line->manufacturer }}</td>
-                                    <td>{{ $line->model }}</td>
-                                    <td>{{ $line->collection }}</td>
-                                    <td>{{ ucfirst($line->status) }}</td>
-                                    <td>{{ $line->created_by }}</td>
-                                    <td>{{ $line->updated_by }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-    <a href="{{ route('admin.product-lines.edit', $line->id) }}"
-       class="inline-block px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors shadow-sm">
-        Edit
-    </a>
-
-    <form action="{{ route('admin.product-lines.destroy', $line->id) }}" method="POST" class="inline-block">
-        @csrf
-        @method('DELETE')
-        <button type="submit" 
-                onclick="return confirm('Delete this product line?')" 
-                class="inline-block px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors shadow-sm">
-            Delete
-        </button>
-    </form>
-</td>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Product Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Vendor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Manufacturer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Model</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Collection</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="11" class="text-center py-4">No product lines found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                @forelse($lines as $line)
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->id }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->productType->name ?? 'N/A' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+										    <a href="{{ route('admin.product_styles.index', $line->id) }}"
+										       class="text-blue-700 hover:underline dark:text-blue-400">
+										        {{ $line->name }}
+										    </a>
+										</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->vendorRelation->company_name ?? 'N/A' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->manufacturer }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->model }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->collection }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                                            {{ ucfirst($line->status) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <a href="{{ route('admin.product_lines.edit', $line->id) }}"
+                                               class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4">
+                                                Edit
+                                            </a>
+                                            <form action="{{ route('admin.product_lines.destroy', $line->id) }}" method="POST" class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        onclick="return confirm('Delete this product line?')"
+                                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="9" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                            No product lines found.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
 
-                    <div class="mt-4">
+                    <div class="mt-6">
                         {{ $lines->links() }}
                     </div>
                 </div>
