@@ -8,13 +8,84 @@ use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
-    public function index()
-    {
-        // Load customers with parent and creator info
-        $customers = Customer::with(['parent', 'creator'])->paginate(15);
+public function index(Request $request)
+{
+    $query = Customer::with(['parent', 'creator']);
 
-        return view('admin.customers.index', compact('customers'));
+    // Search
+if ($request->filled('search')) {
+    $search = trim($request->search);
+
+    $query->where(function ($q) use ($search) {
+        $q->where('name', 'like', "%{$search}%")
+          ->orWhere('company_name', 'like', "%{$search}%")
+          ->orWhere('email', 'like', "%{$search}%")
+          ->orWhere('phone', 'like', "%{$search}%")
+          ->orWhere('mobile', 'like', "%{$search}%");
+    });
+}
+
+	$perPage = (int) $request->get('perPage', 15);
+$perPage = in_array($perPage, [15, 25, 50, 100], true) ? $perPage : 15;
+
+$customers = $query->paginate($perPage)->withQueryString();
+
+
+
+    // Status filter
+    if ($request->filled('status')) {
+        $query->where('customer_status', $request->status);
     }
+
+    // Type filter
+    if ($request->filled('type')) {
+        $query->where('customer_type', $request->type);
+    }
+	
+	// Safe sorting (whitelist)
+$allowedSorts = [
+    'name',
+    'company_name',
+    'email',
+    'city',
+    'province',
+    'customer_type',
+    'customer_status',
+    'created_at',
+];
+
+$sort = $request->get('sort');
+$dir  = strtolower($request->get('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+if ($sort && in_array($sort, $allowedSorts, true)) {
+    $query->orderBy($sort, $dir);
+} else {
+    // Default ordering
+    $query->orderBy('company_name')->orderBy('name');
+}
+
+
+    $customers = $query->orderBy('company_name')->orderBy('name')
+        ->paginate(15)
+        ->withQueryString();
+
+    $statusOptions = Customer::query()
+        ->select('customer_status')
+        ->whereNotNull('customer_status')
+        ->distinct()
+        ->orderBy('customer_status')
+        ->pluck('customer_status');
+
+    $typeOptions = Customer::query()
+        ->select('customer_type')
+        ->whereNotNull('customer_type')
+        ->distinct()
+        ->orderBy('customer_type')
+        ->pluck('customer_type');
+
+    return view('admin.customers.index', compact('customers', 'statusOptions', 'typeOptions'));
+}
+
 
     // We'll add create, store, edit, update, destroy in the next steps
 //create method here

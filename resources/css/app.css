@@ -14,3 +14,8 @@
     @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white;
   }
 }
+
+/* Estimate Wide Mode */
+body.estimate-wide-mode .estimate-normal-container {
+    max-width: 100%;
+}

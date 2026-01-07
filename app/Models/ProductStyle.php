@@ -4,40 +4,34 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductLine;
 
 class ProductStyle extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'product_line_id',
         'name',
+        'sku',
         'style_number',
         'color',
         'pattern',
         'description',
+        'cost_price',
+        'sell_price',
         'status',
+        'created_by',
+        'updated_by',
     ];
 
-    /**
-     * Get the product line that owns the style.
-     */
     public function productLine()
     {
         return $this->belongsTo(ProductLine::class, 'product_line_id');
     }
 
-    /**
-     * Scope a query to only include active styles.
-     */
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
     }
-	
 }

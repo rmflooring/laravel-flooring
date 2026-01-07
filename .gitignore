@@ -67,3 +67,11 @@ project_context.md
 /storage/logs
 /vendor
 
+
+
+# Local context / AI notes
+*-context*.md
+*context-*.md
+*context*.md.php
+*_context.md
+*_notes.md

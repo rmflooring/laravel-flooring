@@ -1,95 +1,183 @@
-<x-app-layout>
+<x-admin-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
-            Product Types
-        </h2>
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-800 leading-tight">
+                Product Types
+            </h2>
+
+            @can('create product types')
+                <a href="{{ route('admin.product_types.create') }}"
+                   class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white
+                          hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    <span class="text-base leading-none">+</span>
+                    <span>Add Product Type</span>
+                </a>
+            @endcan
+        </div>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <!-- Success Message (optional - add if you use session messages here) -->
-            @if(session('success'))
-                <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">
-                    {{ session('success') }}
+    <div class="py-6">
+        <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+
+            {{-- Flash Messages --}}
+            @if (session('success'))
+                <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800" role="alert">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-0.5 h-2.5 w-2.5 rounded-full bg-green-500"></div>
+                        <div class="text-sm font-medium">
+                            {{ session('success') }}
+                        </div>
+                    </div>
                 </div>
             @endif
 
-            <!-- Add New Button -->
-            <div class="flex justify-end">
-                <a href="{{ route('admin.product_types.create') }}"
-                   class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add New Product Type
-                </a>
-            </div>
+            <div class="rounded-lg bg-white p-6 shadow">
 
-            <!-- Table Card -->
-            <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-                <div class="p-6">
-                    @if ($productTypes->isEmpty())
-                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                            No product types found. 
-                            <a href="{{ route('admin.product_types.create') }}" 
-                               class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
-                                Create one now
-                            </a>.
-                        </div>
-                    @else
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead class="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ordered By</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sold By</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Default Cost GL</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Default Sell GL</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    @foreach ($productTypes as $type)
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $type->name }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                                {{ $type->orderedByUnit->label ?? 'N/A' }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                                {{ $type->soldByUnit->label ?? 'N/A' }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                                {{ $type->defaultCostGlAccount ? $type->defaultCostGlAccount->account_number . ' - ' . $type->defaultCostGlAccount->name : 'N/A' }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                                {{ $type->defaultSellGlAccount ? $type->defaultSellGlAccount->account_number . ' - ' . $type->defaultSellGlAccount->name : 'N/A' }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div class="flex items-center justify-end space-x-4">
-                                                    <a href="{{ route('admin.product_types.edit', $type) }}"
-                                                       class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                                        Edit
-                                                    </a>
-                                                    <form action="{{ route('admin.product_types.destroy', $type) }}" method="POST" class="inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit"
-                                                                onclick="return confirm('Are you sure you want to delete this Product Type?\nThis action cannot be undone and may affect related product lines.')"
-                                                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                                                            Delete
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Product Types List</h3>
                 </div>
+
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full text-left text-sm text-gray-700">
+                        <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                            <tr>
+                                <th class="px-4 py-3">Name</th>
+                                <th class="px-4 py-3">Ordered By</th>
+                                <th class="px-4 py-3">Sold By</th>
+                                <th class="px-4 py-3">Cost GL</th>
+                                <th class="px-4 py-3">Sell GL</th>
+                                <th class="px-4 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            @forelse ($productTypes as $productType)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 font-medium text-gray-900">
+                                        {{ $productType->name }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        {{ $productType->orderedByUnit->label ?? '-' }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        {{ $productType->soldByUnit->label ?? '-' }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        {{ optional($productType->defaultCostGlAccount)->account_number }}
+                                        {{ optional($productType->defaultCostGlAccount)->name }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        {{ optional($productType->defaultSellGlAccount)->account_number }}
+                                        {{ optional($productType->defaultSellGlAccount)->name }}
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right">
+                                        <div class="inline-flex items-center gap-2">
+
+                                            @can('edit product types')
+                                                <a href="{{ route('admin.product_types.edit', $productType->id) }}"
+                                                   class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800
+                                                          hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200">
+                                                    Edit
+                                                </a>
+                                            @endcan
+
+                                            @can('delete product types')
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white
+                                                           hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300"
+                                                    data-modal-target="deleteProductTypeModal"
+                                                    data-modal-toggle="deleteProductTypeModal"
+                                                    data-delete-url="{{ route('admin.product_types.destroy', $productType->id) }}"
+                                                    data-item-name="{{ $productType->name }}"
+                                                >
+                                                    Delete
+                                                </button>
+                                            @endcan
+
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                                        No product types found.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
             </div>
         </div>
     </div>
-</x-app-layout>
+
+    {{-- Flowbite Delete Confirmation Modal --}}
+    <div id="deleteProductTypeModal" tabindex="-1"
+         class="fixed left-0 top-0 z-50 hidden h-modal w-full overflow-y-auto overflow-x-hidden p-4 md:h-full">
+        <div class="relative h-full w-full max-w-md md:h-auto">
+
+            <div class="relative rounded-lg bg-white shadow">
+                <button type="button"
+                        class="absolute right-2.5 top-2.5 inline-flex items-center rounded-lg p-1.5 text-gray-400 hover:bg-gray-200 hover:text-gray-900"
+                        data-modal-hide="deleteProductTypeModal">
+                    <span class="sr-only">Close modal</span>
+                    ✕
+                </button>
+
+                <div class="p-6 text-center">
+                    <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+                        <span class="text-red-600 text-xl">!</span>
+                    </div>
+
+                    <h3 class="mb-2 text-lg font-semibold text-gray-900">Confirm delete</h3>
+                    <p class="mb-5 text-sm text-gray-600">
+                        Are you sure you want to delete <span id="deleteItemName" class="font-semibold text-gray-800">this product type</span>?
+                        This action cannot be undone.
+                    </p>
+
+                    <form id="deleteProductTypeForm" method="POST" action="#">
+                        @csrf
+                        @method('DELETE')
+
+                        <div class="flex items-center justify-center gap-3">
+                            <button type="button"
+                                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800
+                                           hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200"
+                                    data-modal-hide="deleteProductTypeModal">
+                                Cancel
+                            </button>
+
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white
+                                           hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300">
+                                Yes, delete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    {{-- Minimal JS to set modal form action + item name --}}
+    <script>
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-delete-url][data-modal-target="deleteProductTypeModal"]');
+            if (!btn) return;
+
+            const deleteUrl = btn.getAttribute('data-delete-url');
+            const itemName = btn.getAttribute('data-item-name') || 'this product type';
+
+            const form = document.getElementById('deleteProductTypeForm');
+            const nameEl = document.getElementById('deleteItemName');
+
+            if (form) form.setAttribute('action', deleteUrl);
+            if (nameEl) nameEl.textContent = itemName;
+        });
+    </script>
+</x-admin-layout>
