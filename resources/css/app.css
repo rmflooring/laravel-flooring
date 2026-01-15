@@ -6,7 +6,7 @@
 @tailwind utilities;
 
 /* Import Flowbite */
-@import 'flowbite/dist/flowbite.min.css';
+
 
 /* Your custom styles can go here */
 @layer base {
