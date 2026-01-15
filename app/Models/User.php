@@ -51,4 +51,26 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+	
+    public function microsoftAccount()
+    {
+        return $this->hasOne(\App\Models\MicrosoftAccount::class);
+    }
+
+    public function ownedCalendarEvents()
+    {
+        return $this->hasMany(\App\Models\CalendarEvent::class, 'owner_user_id');
+    }
+
+    public function assignedCalendarEvents()
+    {
+        return $this->hasMany(\App\Models\CalendarEvent::class, 'assigned_to_user_id');
+    }
+
+    // 👉 ADD THIS RIGHT HERE
+    public function calendarPreference()
+    {
+        return $this->hasOne(\App\Models\UserCalendarPreference::class);
+    }
+	
 }

@@ -40,17 +40,17 @@
                     {{-- Left Column --}}
                     <div class="space-y-4">
                         <div>
-                            <label class="block mb-1 text-sm font-medium text-gray-700">Parent Customer</label>
-                            <input type="text" name="parent_customer_name"
-                                value=""
-                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                                placeholder="Restoration Company Name">
-                        </div>
+    <label class="block mb-1 text-sm font-medium text-gray-700">Parent Customer</label>
+    <input type="text" name="parent_customer_name"
+        value="{{ $opportunity?->parentCustomer?->company_name ?: $opportunity?->parentCustomer?->name }}"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+        placeholder="Restoration Company Name">
+</div>
 
                         <div>
                             <label class="block mb-1 text-sm font-medium text-gray-700">Project Manager (PM)</label>
                             <input type="text" name="pm_name"
-                                value=""
+                                    value="{{ $opportunity?->projectManager?->name }}"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                 placeholder="PM Name">
                         </div>
@@ -62,7 +62,7 @@
                             <div>
                                 <label class="block mb-1 text-sm font-medium text-gray-700">Job Number</label>
                                 <input type="text" name="job_number"
-                                    value=""
+                                        value="{{ $opportunity?->job_no }}"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                     placeholder="e.g. 12345">
                             </div>
@@ -92,7 +92,7 @@
                                 <div>
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Name</label>
                                     <input type="text" name="homeowner_name"
-                                        value=""
+                                            value="{{ $opportunity?->jobSiteCustomer?->name ?: $opportunity?->jobSiteCustomer?->company_name }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="Homeowner Name">
                                 </div>
@@ -100,7 +100,7 @@
                                 <div>
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Phone</label>
                                     <input type="text" name="homeowner_phone"
-                                        value=""
+                                            value="{{ $opportunity?->jobSiteCustomer?->phone }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="Phone Number">
                                 </div>
@@ -108,16 +108,14 @@
                                 <div class="md:col-span-2">
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Email</label>
                                     <input type="email" name="homeowner_email"
-                                        value=""
+                                            value="{{ $opportunity?->jobSiteCustomer?->email }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="email@example.com">
                                 </div>
 
                                 <div class="md:col-span-2">
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Job Address</label>
-                                    <textarea name="job_address" rows="3"
-                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                                        placeholder="Full job address"></textarea>
+                                    <textarea name="job_address" rows="3"    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Full job address">{{ $opportunity?->jobSiteCustomer?->address }}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -165,6 +163,12 @@
                 <input type="text" name="rooms[0][name]"
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     placeholder="e.g. Living Room">
+				<input type="hidden" class="room-delete-flag" name="rooms[__ROOM_INDEX__][_delete]" value="0">
+
+				<input type="hidden" class="room-subtotal-materials-input" name="rooms[__ROOM_INDEX__][subtotal_materials]" value="0.00">
+				<input type="hidden" class="room-subtotal-freight-input" name="rooms[__ROOM_INDEX__][subtotal_freight]" value="0.00">
+				<input type="hidden" class="room-subtotal-labour-input" name="rooms[__ROOM_INDEX__][subtotal_labour]" value="0.00">
+				<input type="hidden" class="room-total-input" name="rooms[__ROOM_INDEX__][room_total]" value="0.00">
             </div>
 
             {{-- Materials --}}
@@ -410,11 +414,6 @@
 
         </div>
     </div>
-	<!-- Step 13: Hidden inputs for room totals (used on save) -->
-<input type="hidden" name="rooms[0][subtotal_materials]" class="room-subtotal-materials-input" value="0">
-<input type="hidden" name="rooms[0][subtotal_labour]" class="room-subtotal-labour-input" value="0">
-<input type="hidden" name="rooms[0][subtotal_freight]" class="room-subtotal-freight-input" value="0">
-<input type="hidden" name="rooms[0][room_total]" class="room-total-input" value="0">
 
 </template>
 

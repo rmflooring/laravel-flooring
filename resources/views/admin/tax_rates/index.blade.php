@@ -4,11 +4,21 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-3xl font-bold">Tax Rates</h1>
-                        <a href="{{ route('admin.tax_rates.create') }}" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg">
-                            Add New Tax Rate
-                        </a>
-                    </div>
+    <div class="flex items-center gap-3">
+        <a href="{{ route('admin.tax.index') }}"
+           class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+            ← Back
+        </a>
+
+        <h1 class="text-3xl font-bold">Tax Rates</h1>
+    </div>
+
+    <a href="{{ route('admin.tax_rates.create') }}"
+       class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg">
+        Add New Tax Rate
+    </a>
+</div>
+
 
                     @if ($taxRates->isEmpty())
                         <p class="text-gray-500">No tax rates found. <a href="{{ route('admin.tax_rates.create') }}" class="text-indigo-600 hover:underline">Create one now</a>.</p>

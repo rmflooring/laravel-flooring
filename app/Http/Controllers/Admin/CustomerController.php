@@ -113,7 +113,7 @@ public function create()
 }
 //end create method
 
-//store method 
+//store method
 public function store(Request $request)
 {
     $request->validate([
@@ -136,11 +136,39 @@ public function store(Request $request)
         'company_name' => 'required_without:name',
     ]);
 
-    Customer::create($request->all());
+    $customer = Customer::create($request->only([
+        'parent_id',
+        'name',
+        'company_name',
+        'email',
+        'phone',
+        'mobile',
+        'address',
+        'address2',
+        'city',
+        'province',
+        'postal_code',
+        'customer_type',
+        'customer_status',
+        'notes',
+    ]));
 
-    return redirect()->route('admin.customers.index')->with('success', 'Customer created successfully.');
+    // If a redirect_to URL was provided (ex: from the Job Site modal),
+    // send the user there instead of the admin customers index.
+    $redirectTo = $request->input('redirect_to');
+
+    if ($redirectTo) {
+        return redirect($redirectTo)
+            ->with('success', 'Customer created successfully.')
+            ->with('new_job_site_id', $customer->id)
+            ->with('new_job_site_parent_id', $customer->parent_id);
+    }
+
+    return redirect()->route('admin.customers.index')
+        ->with('success', 'Customer created successfully.');
 }
 //end store method
+
 
 //add edit method
 public function edit(Customer $customer)

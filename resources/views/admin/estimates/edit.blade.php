@@ -30,6 +30,7 @@
 
 {{-- Validation Errors --}}
 @if ($errors->any())
+			
     <div class="mb-4 p-4 text-red-800 bg-red-100 border border-red-200 rounded-lg">
         <p class="font-semibold mb-2">Please fix the following:</p>
         <ul class="list-disc list-inside text-sm space-y-1">
@@ -125,8 +126,16 @@
                         </div>
                     </div>
                 </div>
+				</div>
+			
+			
+ {{-- end max-w-7xl container --}}
+<div class="w-full px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16">
+    <div id="rooms-container" class="mt-6 space-y-6">
+        {{-- existing room cards --}}
+ 
 
-                {{-- Rooms --}}
+			{{-- Rooms --}}
                 <div id="rooms-container" class="mt-6 space-y-6">
                     @forelse ($estimate->rooms as $roomIndex => $room)
                         @php
@@ -157,20 +166,31 @@
     <input type="hidden" class="room-subtotal-labour-input" name="rooms[{{ $roomIndex }}][subtotal_labour]" value="{{ number_format($room_labour, 2, '.', '') }}">
     <input type="hidden" class="room-total-input" name="rooms[{{ $roomIndex }}][room_total]" value="{{ number_format($room_total_calc, 2, '.', '') }}">
 </div>
+								
                                 <div class="flex flex-col items-end gap-3 pt-1">
-                                    <div class="text-sm text-gray-600 whitespace-nowrap">
-                                        Total:
-                                        <span class="room-total-value font-semibold">
-                                            ${{ number_format($room_total_calc, 2) }}
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" class="move-up inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">↑</button>
-                                        <button type="button" class="move-down inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">↓</button>
-                                        <button type="button" class="delete-room inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete Room</button>
-                                    </div>
-                                </div>
-                            </div>
+    <div class="text-sm text-gray-600 whitespace-nowrap">
+        <div class="flex items-center gap-2">
+                <button type="button"
+                    class="move-up hidden inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    ↑
+                </button>
+
+                <button type="button"
+                    class="move-down hidden inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    ↓
+                </button>
+
+                <button type="button"
+                    class="delete-room inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300">
+                    Delete Room
+                </button>
+            </div>
+        
+    </div>
+
+   
+</div>
+</div>
                             {{-- MATERIALS --}}
                             <div class="mt-4">
                                 <div class="flex items-center justify-between mb-2">
@@ -183,13 +203,16 @@
                                     <table class="min-w-full text-sm">
                                         <thead>
                                         <tr class="text-left text-gray-700 border-b">
-                                            <th class="py-2 pr-4">Product Type</th>
-                                            <th class="py-2 pr-4">Notes</th>
-                                            <th class="py-2 pr-4">Qty</th>
-                                            <th class="py-2 pr-4">Unit</th>
-                                            <th class="py-2 pr-4">Sell Price</th>
-                                            <th class="py-2 pr-4">Line Total</th>
-                                            <th class="py-2 pr-4">Action</th>
+                                            <th class="px-3 py-3">Product Type</th>
+                                <th class="px-3 py-3">Qty</th>
+                                <th class="px-3 py-3">Unit</th>
+                                <th class="px-3 py-3">Manufacturer</th>
+                                <th class="px-3 py-3">Style</th>
+                                <th class="px-3 py-3">Color / Item #</th>
+                                <th class="px-3 py-3">PO Notes</th>
+                                <th class="px-3 py-3">Sell</th>
+                                <th class="px-3 py-3">Total</th>
+                                <th class="px-3 py-3">Action</th>
                                         </tr>
                                         </thead>
                                         <tbody class="materials-tbody">
@@ -202,45 +225,50 @@
                                                                class="material-type-input w-40 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                                                placeholder="Product Type">
                                                     </td>
-                                                    <td class="py-2 pr-4">
-                                                        <input type="hidden"
-                                                               name="rooms[{{ $roomIndex }}][materials][{{ $i }}][id]"
-                                                               value="{{ $item->getKey() }}">
-                                                        <input type="text"
-                                                               name="rooms[{{ $roomIndex }}][materials][{{ $i }}][notes]"
-                                                               value="{{ old("rooms.$roomIndex.materials.$i.notes", $item->notes ?? '') }}"
-                                                               class="material-notes-input w-full bg-gray-50 border border-gray-300 rounded-lg p-2">
-                                                    </td>
-                                                    <td class="py-2 pr-4">
-                                                        <input type="number" step="0.01"
-                                                               name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
-                                                               value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
-                                                               class="material-qty-input w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
-                                                    </td>
-                                                    <td class="py-2 pr-4">
-                                                        <input type="text"
-                                                               name="rooms[{{ $roomIndex }}][materials][{{ $i }}][unit]"
-                                                               value="{{ old("rooms.$roomIndex.materials.$i.unit", $item->unit) }}"
-                                                               class="material-unit-input w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
-                                                    </td>
-                                                    <td class="py-2 pr-4">
-                                                        <input type="number" step="0.01"
-                                                               name="rooms[{{ $roomIndex }}][materials][{{ $i }}][sell_price]"
-                                                               value="{{ old("rooms.$roomIndex.materials.$i.sell_price", $item->sell_price) }}"
-                                                               class="material-price-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
-                                                    </td>
-                                                    <td class="py-2 pr-4">
-                                                        <span class="material-line-total-text font-medium">
-                                                            ${{ number_format((float)($item->line_total ?? 0), 2) }}
-                                                        </span>
-                                                        <input type="hidden"
-                                                               class="material-line-total-input"
-                                                               name="rooms[{{ $roomIndex }}][materials][{{ $i }}][line_total]"
-                                                               value="{{ number_format((float)($item->line_total ?? 0), 2, '.', '') }}">
-                                                    </td>
-                                                    <td class="py-2 pr-4">
-                                                        <button type="button" class="delete-material-row text-sm text-red-700 underline">Delete</button>
-                                                    </td>
+                                                    <td class="px-3 py-2">
+                            <input type="number" step="0.01" name="rooms[0][materials][0][quantity]"
+                                class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0">
+                        </td>
+                                                    <td class="px-3 py-2">
+                            <input type="text" name="rooms[0][materials][0][unit]"
+                                class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Unit">
+                        </td>
+                                                    <td class="px-3 py-2">
+                            <input type="text" name="rooms[0][materials][0][manufacturer]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Manufacturer">
+                        </td>
+                                                    <td class="px-3 py-2">
+                            <input type="text" name="rooms[0][materials][0][style]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Style">
+                        </td>
+                                                    <td class="px-3 py-2">
+                            <input type="text" name="rooms[0][materials][0][color_item_number]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Color / Item #">
+                        </td>
+                                                    <td class="px-3 py-2">
+                            <input type="text" name="rooms[0][materials][0][po_notes]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="PO Notes">
+                        </td>
+													<td class="px-3 py-2">
+                            <input type="number" step="0.01" name="rooms[0][materials][0][sell_price]"
+                                class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0.00">
+                        </td>
+													 <td class="px-3 py-2">
+    <span class="material-line-total inline-block w-28 text-right font-medium">$0.00</span>
+    <input type="hidden" name="rooms[0][materials][0][line_total]" class="material-line-total-input" value="0">
+</td>
+                        <td class="px-3 py-2">
+                            <button type="button" class="delete-material-row text-red-600 hover:underline">
+                                Delete
+                            </button>
+                        </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -519,6 +547,31 @@
                                     </tr>
                                 </template>
                             </div>
+							 {{-- Room Summary --}}
+<div class="border-t pt-4 mt-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="room-material-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Material Total</p>
+            <p class="room-material-value text-lg font-semibold text-gray-900">${{ number_format($room_materials, 2) }}</p>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="room-freight-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Freight Total</p>
+            <p class="room-freight-value text-lg font-semibold text-gray-900">${{ number_format($room_freight, 2) }}</p>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="room-labour-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Labour Total</p>
+            <p class="room-labour-value text-lg font-semibold text-gray-900">${{ number_format($room_labour, 2) }}</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <p class="room-total-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Total</p>
+            <p class="room-total-value text-lg font-bold text-gray-900">${{ number_format($room_total_calc, 2) }}</p>
+        </div>
+    </div>
+</div>
+
                         </div>
                     @empty
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 text-sm text-gray-600">
@@ -762,7 +815,33 @@
   </tr>
 </template>
                         </div>
+						{{-- Room Summary --}}
+<div class="border-t pt-4 mt-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="room-material-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Material Total</p>
+            <p class="room-material-value text-lg font-semibold text-gray-900">${{ number_format($room_materials, 2) }}</p>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="room-freight-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Freight Total</p>
+            <p class="room-freight-value text-lg font-semibold text-gray-900">${{ number_format($room_freight, 2) }}</p>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="room-labour-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Labour Total</p>
+            <p class="room-labour-value text-lg font-semibold text-gray-900">${{ number_format($room_labour, 2) }}</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <p class="room-total-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Total</p>
+            <p class="room-total-value text-lg font-bold text-gray-900">${{ number_format($room_total_calc, 2) }}</p>
+        </div>
+    </div>
+</div>
                     </div>
+					   </div>
+</div>
                 </template>
                 {{-- Estimate Summary --}}
                 @php

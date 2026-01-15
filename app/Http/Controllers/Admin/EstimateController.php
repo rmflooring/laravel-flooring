@@ -11,6 +11,43 @@ use Illuminate\Support\Facades\DB;
 
 class EstimateController extends Controller
 {
+	public function index(Request $request)
+{
+    $q        = trim((string) $request->query('q', ''));
+    $status   = $request->query('status', '');
+    $dateFrom = $request->query('date_from', '');
+    $dateTo   = $request->query('date_to', '');
+
+    $estimates = Estimate::query()
+        ->when($q !== '', function ($query) use ($q) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('estimate_number', 'like', "%{$q}%")
+                    ->orWhere('customer_name', 'like', "%{$q}%")
+                    ->orWhere('job_name', 'like', "%{$q}%")
+                    ->orWhere('job_no', 'like', "%{$q}%")
+                    ->orWhere('pm_name', 'like', "%{$q}%");
+            });
+        })
+        ->when($status !== '', fn($query) => $query->where('status', $status))
+        ->when($dateFrom !== '', fn($query) => $query->whereDate('created_at', '>=', $dateFrom))
+        ->when($dateTo !== '', fn($query) => $query->whereDate('created_at', '<=', $dateTo))
+        ->orderByDesc('id')
+        ->paginate(15)
+        ->withQueryString();
+
+    // NOTE: your statuses are lowercase in validation: draft,sent,approved,rejected
+    $statusOptions = ['draft', 'sent', 'approved', 'rejected'];
+
+    return view('admin.estimates.index', compact(
+        'estimates',
+        'statusOptions',
+        'q',
+        'status',
+        'dateFrom',
+        'dateTo'
+    ));
+}
+	
     public function store(Request $request)
     {
         $data = $request->validate([

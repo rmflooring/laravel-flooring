@@ -44,4 +44,10 @@ class Estimate extends Model
     {
         return $this->hasMany(EstimateItem::class);
     }
+	
+	public function opportunity()
+{
+    return $this->belongsTo(\App\Models\Opportunity::class);
+}
+
 }

@@ -61,6 +61,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const title = card.querySelector(".room-title");
       if (title) title.textContent = `Room ${roomNumber}`;
 
+      // Optional: keep Room Summary labels in sync too
+      const matLabel = card.querySelector(".room-material-label");
+      const frLabel = card.querySelector(".room-freight-label");
+      const labLabel = card.querySelector(".room-labour-label");
+      const totLabel = card.querySelector(".room-total-label");
+
+      if (matLabel) matLabel.textContent = `Room ${roomNumber} Material Total`;
+      if (frLabel) frLabel.textContent = `Room ${roomNumber} Freight Total`;
+      if (labLabel) labLabel.textContent = `Room ${roomNumber} Labour Total`;
+      if (totLabel) totLabel.textContent = `Room ${roomNumber} Total`;
+
       const moveUp = card.querySelector(".move-up");
       const moveDown = card.querySelector(".move-down");
       if (moveUp) moveUp.classList.toggle("hidden", index === 0);
@@ -254,9 +265,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const labourTotal = sumRowTotals(roomCard.querySelector(".labour-tbody"));
     const roomTotal = matTotal + freightTotal + labourTotal;
 
-    // Visible total (this exists in your Blade)
-    const totalEl = roomCard.querySelector(".room-total-value");
-    if (totalEl) totalEl.textContent = formatMoney(roomTotal);
+    // ✅ Update ALL room total displays (header + room summary tile)
+    roomCard.querySelectorAll(".room-total-value").forEach(el => {
+      el.textContent = formatMoney(roomTotal);
+    });
+
+    // ✅ Update room summary tiles (materials/freight/labour)
+    const matValue = roomCard.querySelector(".room-material-value");
+    const frValue = roomCard.querySelector(".room-freight-value");
+    const labValue = roomCard.querySelector(".room-labour-value");
+
+    if (matValue) matValue.textContent = formatMoney(matTotal);
+    if (frValue) frValue.textContent = formatMoney(freightTotal);
+    if (labValue) labValue.textContent = formatMoney(labourTotal);
 
     // Hidden room totals (these exist in your Blade)
     const matHidden = roomCard.querySelector(".room-subtotal-materials-input");

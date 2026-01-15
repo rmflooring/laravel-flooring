@@ -4,11 +4,20 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-3xl font-bold">Tax Agencies</h1>
-                        <a href="{{ route('admin.tax_agencies.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded">
-                            Add New Tax Agency
-                        </a>
-                    </div>
+    <div class="flex items-center gap-4">
+        <a href="{{ route('admin.tax.index') }}"
+           class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 rounded-lg hover:bg-gray-300">
+            ← Back
+        </a>
+
+        <h1 class="text-3xl font-bold">Tax Agencies</h1>
+    </div>
+
+    <a href="{{ route('admin.tax_agencies.create') }}"
+       class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">
+        Add New Tax Agency
+    </a>
+</div>
 
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
