@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
 use App\Models\ExternalEventLink;
+use App\Models\CalendarEvent;
+
 
 class CalendarEventController extends Controller
 {
@@ -365,4 +368,171 @@ if (!$calendar) {
             return response()->json(['message' => 'Failed to delete event', 'error' => $e->getMessage()], 500);
         }
     }
+	
+	public function move(Request $request, CalendarEvent $event)
+{
+    $request->validate([
+        'microsoft_calendar_id' => ['required', 'integer'],
+    ]);
+
+    // Ensure user owns the local event
+    if ((int) $event->owner_user_id !== (int) auth()->id()) {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+
+    // Find the Microsoft link for this event (scoped to provider)
+    $link = ExternalEventLink::where('calendar_event_id', $event->id)
+        ->where('provider', 'microsoft')
+        ->first();
+
+    if (!$link) {
+        return response()->json(['message' => 'Microsoft link not found for this event.'], 404);
+    }
+
+    // Account + token
+    $account = MicrosoftAccount::where('id', $link->microsoft_account_id)
+        ->where('is_connected', 1)
+        ->first();
+
+    if (!$account) {
+        return response()->json(['message' => 'Microsoft account not found or not connected.'], 404);
+    }
+
+    $accessToken = $this->ensureMicrosoftAccessToken($account);
+
+    // Source calendar (based on the link’s external_calendar_id)
+    $sourceCal = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+        ->where('calendar_id', $link->external_calendar_id)
+        ->first();
+
+    if (!$sourceCal) {
+        return response()->json(['message' => 'Source calendar not found in database.'], 404);
+    }
+
+    // Destination calendar (DB id from dropdown)
+    $destCal = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+        ->where('id', (int) $request->microsoft_calendar_id)
+        ->first();
+
+    if (!$destCal) {
+        return response()->json(['message' => 'Destination calendar not found.'], 404);
+    }
+
+    // Same calendar? no-op
+    if ($link->external_calendar_id === $destCal->calendar_id) {
+        return response()->json(['success' => true, 'moved' => false]);
+    }
+
+    /**
+     * MOVE IMPLEMENTATION:
+     * GET original -> CREATE in destination -> DELETE original
+     */
+
+    // 1) GET original event (group vs me)
+    if (!empty($sourceCal->group_id)) {
+        $getUrl = "https://graph.microsoft.com/v1.0/groups/{$sourceCal->group_id}/events/" . rawurlencode($link->external_event_id);
+    } else {
+        $getUrl = "https://graph.microsoft.com/v1.0/me/events/" . rawurlencode($link->external_event_id);
+    }
+
+    $getResp = Http::withToken($accessToken)->acceptJson()->get($getUrl);
+    $getJson = $getResp->json();
+
+    if (!$getResp->successful()) {
+        return response()->json([
+            'message' => 'Microsoft get-event failed',
+            'status'  => $getResp->status(),
+            'error'   => $getJson,
+            'debug'   => [
+                'source_is_group' => !empty($sourceCal->group_id),
+                'source_group_id' => $sourceCal->group_id,
+            ],
+        ], $getResp->status());
+    }
+
+    // 2) CREATE in destination (group vs calendar)
+    if (!empty($destCal->group_id)) {
+        $createUrl = "https://graph.microsoft.com/v1.0/groups/{$destCal->group_id}/events";
+    } else {
+        $createUrl = "https://graph.microsoft.com/v1.0/me/calendars/" . rawurlencode($destCal->calendar_id) . "/events";
+    }
+
+    // Graph GET returns body as HTML (per docs), so keep HTML to avoid content loss
+    $createPayload = [
+        'subject' => $getJson['subject'] ?? $event->title ?? '',
+        'body' => [
+            'contentType' => 'HTML',
+            'content' => $getJson['body']['content'] ?? ($event->description ?? ''),
+        ],
+        'location' => [
+            'displayName' => $getJson['location']['displayName'] ?? ($event->location ?? ''),
+        ],
+        'isAllDay' => $getJson['isAllDay'] ?? false,
+        'start'    => $getJson['start'] ?? null,
+        'end'      => $getJson['end'] ?? null,
+    ];
+
+    // Remove only null top-level values (Graph will complain about null start/end)
+    foreach ($createPayload as $k => $v) {
+        if ($v === null) unset($createPayload[$k]);
+    }
+
+    $createResp = Http::withToken($accessToken)->acceptJson()->post($createUrl, $createPayload);
+    $createJson = $createResp->json();
+
+    if (!$createResp->successful()) {
+        return response()->json([
+            'message' => 'Microsoft create-in-destination failed',
+            'status'  => $createResp->status(),
+            'error'   => $createJson,
+            'debug'   => [
+                'dest_is_group' => !empty($destCal->group_id),
+                'dest_group_id' => $destCal->group_id,
+                'dest_calendar_id' => $destCal->calendar_id,
+            ],
+        ], $createResp->status());
+    }
+
+    $newExternalEventId = $createJson['id'] ?? null;
+    if (!$newExternalEventId) {
+        return response()->json([
+            'message' => 'Microsoft create succeeded but returned no event id.',
+            'error'   => $createJson,
+        ], 500);
+    }
+
+    // 3) DELETE original event (group vs me)
+    if (!empty($sourceCal->group_id)) {
+        $deleteUrl = "https://graph.microsoft.com/v1.0/groups/{$sourceCal->group_id}/events/" . rawurlencode($link->external_event_id);
+    } else {
+        $deleteUrl = "https://graph.microsoft.com/v1.0/me/events/" . rawurlencode($link->external_event_id);
+    }
+
+    $deleteResp = Http::withToken($accessToken)->acceptJson()->delete($deleteUrl);
+
+    if (!in_array($deleteResp->status(), [204, 200], true)) {
+        return response()->json([
+            'message' => 'Microsoft delete-original failed (destination event was created)',
+            'status'  => $deleteResp->status(),
+            'error'   => $deleteResp->json(),
+            'new_external_event_id' => $newExternalEventId,
+        ], $deleteResp->status());
+    }
+
+    // 4) Update our link to the new calendar + event id
+    $link->external_calendar_id = $destCal->calendar_id;
+    $link->external_event_id    = $newExternalEventId;
+    $link->last_synced_at       = now();
+    $link->save();
+
+    return response()->json([
+        'success' => true,
+        'moved'   => true,
+        'external_calendar_id' => $link->external_calendar_id,
+        'external_event_id'    => $link->external_event_id,
+    ]);
+}
+
+	
+	
 }

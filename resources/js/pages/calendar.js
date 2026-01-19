@@ -272,79 +272,77 @@ eventSources: [
     // -----------------------------
     // Edit (click)
     // -----------------------------
-    eventClick: (info) => {
-      info.jsEvent.preventDefault();
+   eventClick: (info) => {
+  info.jsEvent.preventDefault();
 
-//log 
-console.log('[eventClick]', {
-  id: info.event.id,
-  title: info.event.title,
-  start: info.event.start,
-  end: info.event.end,
-  allDay: info.event.allDay,
-  extendedProps: info.event.extendedProps
-});
-// end log. 
+  const event = info.event;
+  const ext = event.extendedProps || {};
+  window.__eventEditorProvider = (ext.provider || '').toLowerCase();
 
-      const event = info.event;
-      const ext = event.extendedProps || {};
+  // Grab modal fields
+  const titleEl = document.getElementById('event-editor-title');
+  const errEl = document.getElementById('event-editor-error');
+  const idEl = document.getElementById('event-editor-id');
+  const calEl = document.getElementById('event-editor-calendar');
+  const subjectEl = document.getElementById('event-editor-subject');
+  const locEl = document.getElementById('event-editor-location');
+  const notesEl = document.getElementById('event-editor-notes');
+  const startEl = document.getElementById('event-editor-start');
+  const endEl = document.getElementById('event-editor-end');
+  const allDayEl = document.getElementById('event-editor-all-day');
 
-      const titleEl = document.getElementById('event-editor-title');
-      const errEl = document.getElementById('event-editor-error');
-      const idEl = document.getElementById('event-editor-id');
-      const calEl = document.getElementById('event-editor-calendar');
-      const subjectEl = document.getElementById('event-editor-subject');
-      const locEl = document.getElementById('event-editor-location');
-      const notesEl = document.getElementById('event-editor-notes');
-      const startEl = document.getElementById('event-editor-start');
-      const endEl = document.getElementById('event-editor-end');
-      const allDayEl = document.getElementById('event-editor-all-day');
+  if (titleEl) titleEl.textContent = 'Edit event';
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.classList.add('hidden');
+  }
 
-      if (titleEl) titleEl.textContent = 'Edit event';
-      if (errEl) errEl.classList.add('hidden');
+  if (idEl) idEl.value = event.id || '';
+  if (subjectEl) subjectEl.value = event.title || '';
+  if (locEl) locEl.value = ext.location || '';
+  if (notesEl) notesEl.value = ext.description || '';
 
-      if (idEl) idEl.value = event.id || '';
-      if (subjectEl) subjectEl.value = event.title || '';
-      if (locEl) locEl.value = ext.location || '';
-      if (notesEl) notesEl.value = ext.description || '';
+  // Populate calendar dropdown first
+  const options = Array.isArray(window.FM_CALENDAR_OPTIONS) ? window.FM_CALENDAR_OPTIONS : [];
+  if (calEl) {
+    calEl.innerHTML = '';
+    options.forEach((opt) => {
+      const o = document.createElement('option');
+      o.value = String(opt.id);
+      o.textContent = opt.label || String(opt.id);
+      calEl.appendChild(o);
+    });
 
-      // Populate calendar dropdown (so it always has options)
-      const options = Array.isArray(window.FM_CALENDAR_OPTIONS) ? window.FM_CALENDAR_OPTIONS : [];
-      if (calEl) {
-        calEl.innerHTML = '';
-        options.forEach((opt) => {
-          const o = document.createElement('option');
-          o.value = String(opt.id);
-          o.textContent = opt.label || String(opt.id);
-          calEl.appendChild(o);
-        });
+    // Then select the correct calendar (from feed)
+    if (ext.calendar_id) {
+      calEl.value = String(ext.calendar_id);
+    }
 
-        // Select the calendar if provided by feed as extendedProp
-        const calId = ext.microsoft_calendar_id || '';
-        if (calId) calEl.value = String(calId);
-      }
+    // Track original calendar for "move" detection on save
+// Always set to the dropdown's current value (so it's never blank)
+calEl.dataset.originalCalendarId = String(calEl.value || '');
+  }
 
-		if (allDayEl) allDayEl.checked = !!event.allDay;
+  if (allDayEl) allDayEl.checked = !!event.allDay;
 
-		if (event.allDay) {
-		  // Use raw dates from feed to avoid timezone shifts
-		  const sd = ext.start_date; // 'YYYY-MM-DD'
-		  const ed = ext.end_date;   // 'YYYY-MM-DD'
+  if (event.allDay) {
+    const sd = ext.start_date; // 'YYYY-MM-DD'
+    const ed = ext.end_date;   // 'YYYY-MM-DD'
+    if (startEl) startEl.value = sd ? `${sd}T00:00` : '';
+    if (endEl) endEl.value = ed ? `${ed}T00:00` : '';
+  } else {
+    if (startEl) startEl.value = toDatetimeLocal(event.start);
+    if (endEl) endEl.value = toDatetimeLocal(event.end);
+  }
 
-		  if (startEl) startEl.value = sd ? `${sd}T00:00` : '';
-		  if (endEl) endEl.value = ed ? `${ed}T00:00` : '';
-		} else {
-		  if (startEl) startEl.value = toDatetimeLocal(event.start);
-		  if (endEl) endEl.value = toDatetimeLocal(event.end);
-		}
+  // Show delete in edit mode
+  document.getElementById('event-editor-delete')?.classList.remove('hidden');
 
-      // Show delete in edit mode
-      document.getElementById('event-editor-delete')?.classList.remove('hidden');
+  const modalInstance = window.FlowbiteInstances?.getInstance('Modal', 'event-editor-modal');
+  if (modalInstance) modalInstance.show();
+  else document.getElementById('event-editor-modal-init')?.click();
+},
 
-      const modalInstance = window.FlowbiteInstances?.getInstance('Modal', 'event-editor-modal');
-      if (modalInstance) modalInstance.show();
-      else document.getElementById('event-editor-modal-init')?.click();
-    },
   });
 
   // -----------------------------
@@ -408,6 +406,20 @@ console.log('[eventClick]', {
       // Always require microsoft_calendar_id (backend update uses it too)
 const microsoftCalendarId = parseInt(calEl?.value || '0', 10);
 
+// Detect calendar change (for move logic)
+const originalCalendarId = parseInt(calEl?.dataset?.originalCalendarId || '0', 10);
+
+const provider = (window.__eventEditorProvider || '').toLowerCase(); // we will set this on eventClick next step
+const calendarChanged =
+  originalCalendarId &&
+  !Number.isNaN(originalCalendarId) &&
+  microsoftCalendarId &&
+  !Number.isNaN(microsoftCalendarId) &&
+  originalCalendarId !== microsoftCalendarId;
+
+const csrf = getCsrf(); // keep ONE, here (before move + update)
+
+
 if (!microsoftCalendarId || Number.isNaN(microsoftCalendarId)) {
   showError('Please choose a calendar.');
   return;
@@ -446,8 +458,45 @@ if (!microsoftCalendarId || Number.isNaN(microsoftCalendarId)) {
   is_all_day: isAllDay ? 1 : 0,
 };
 
-      const csrf = getCsrf();
+if (isEdit && provider === 'microsoft' && calendarChanged) {
 
+ const ok = window.confirm('Are you sure you want to move this event to another calendar?');
+  if (!ok) {
+    // Revert dropdown back to original
+    calEl.value = String(originalCalendarId);
+    return;
+  }
+
+  const moveUrlTpl =
+    window.FM_MOVE_EVENT_URL_TEMPLATE || '/pages/calendar/events/__ID__/move';
+
+  const moveUrl = moveUrlTpl.replace('__ID__', encodeURIComponent(id));
+
+  const moveRes = await fetch(moveUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+    },
+    body: JSON.stringify({ microsoft_calendar_id: microsoftCalendarId }),
+  });
+
+  const moveJson = await moveRes.json().catch(() => ({}));
+
+  if (!moveRes.ok) {
+    showError(
+      moveJson?.message ||
+        moveJson?.error?.message ||
+        `Move failed (HTTP ${moveRes.status}).`
+    );
+    return;
+  }
+
+  // Update original calendar so future saves don't keep moving
+  calEl.dataset.originalCalendarId = String(microsoftCalendarId);
+calendar.getEventSourceById('fm-feed')?.refetch();
+}
       const originalText = saveBtn.textContent;
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';

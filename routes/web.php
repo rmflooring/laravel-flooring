@@ -376,7 +376,7 @@ Route::prefix('pages')
 		
 Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) {
 
-    // Expect comma-separated Microsoft calendar IDs, e.g. ?calendar_ids=id1,id2
+    // Expect comma-separated Microsoft calendar IDs, e.g. ?calendar_ids=24,25
     $calendarIds = collect(explode(',', (string) $request->query('calendar_ids')))
         ->map(fn ($v) => trim($v))
         ->filter()
@@ -386,47 +386,78 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
         ->where('owner_user_id', auth()->id())
         ->whereNull('deleted_at');
 
-    // If calendar_ids provided, filter by external_event_links.external_calendar_id
+    // If calendar_ids provided, filter by external_event_links.external_calendar_id (Graph calendar id)
     if ($calendarIds->count() > 0) {
         $eventsQuery->whereIn('id', function ($sub) use ($calendarIds) {
             $sub->select('calendar_event_id')
                 ->from('external_event_links')
                 ->whereIn('external_calendar_id', $calendarIds->all());
         });
-		
-		
     }
 
-$events = $eventsQuery->get()->map(function ($e) {
-    $isAllDay = $e->starts_at
-        && $e->ends_at
-        && $e->starts_at->format('H:i:s') === '00:00:00'
-        && $e->ends_at->format('H:i:s') === '00:00:00'
-        && $e->ends_at->greaterThan($e->starts_at);
+    // Load events once
+    $eventModels = $eventsQuery->get();
 
-    return [
-        'id'    => $e->id,
-        'title' => $e->title,
-        'start' => $isAllDay
-    ? optional($e->starts_at)->format('Y-m-d')
-    : optional($e->starts_at)->toIso8601String(),
+    // Link: calendar_event_id -> external_calendar_id (Graph calendar id)
+    $linksByEventId = \App\Models\ExternalEventLink::query()
+        ->whereIn('calendar_event_id', $eventModels->pluck('id'))
+        ->get()
+        ->keyBy('calendar_event_id');
 
-'end' => $isAllDay
-    ? optional($e->ends_at)->format('Y-m-d')
-    : optional($e->ends_at)->toIso8601String(),
-        'allDay' => $isAllDay,
-        'extendedProps' => [
-            'location'    => $e->location,
-            'description' => $e->description,
-            'provider'    => $e->provider,
-			'start_date'  => $isAllDay ? optional($e->starts_at)->format('Y-m-d') : null,
-			'end_date'    => $isAllDay ? optional($e->ends_at)->format('Y-m-d') : null,
-        ],
-    ];
-});
+    // Map: Graph calendar id -> MicrosoftCalendar (DB id used by dropdown)
+    $microsoftCalendars = \App\Models\MicrosoftCalendar::query()
+        ->where('microsoft_account_id', optional(auth()->user()->microsoftAccount)->id)
+        ->get();
+
+    $calendarByGraphId = $microsoftCalendars->keyBy('calendar_id')->filter();
+
+    $events = $eventModels->map(function ($e) use ($linksByEventId, $calendarByGraphId) {
+
+        $isAllDay = $e->starts_at
+            && $e->ends_at
+            && $e->starts_at->format('H:i:s') === '00:00:00'
+            && $e->ends_at->format('H:i:s') === '00:00:00'
+            && $e->ends_at->greaterThan($e->starts_at);
+
+        $graphCalendarId = optional($linksByEventId->get($e->id))->external_calendar_id;
+        $mc = $graphCalendarId ? $calendarByGraphId->get($graphCalendarId) : null;
+
+        return [
+            'id'    => (string) $e->id,
+            'title' => (string) $e->title,
+
+            'start' => $isAllDay
+                ? optional($e->starts_at)->format('Y-m-d')
+                : optional($e->starts_at)->toIso8601String(),
+
+            'end' => $isAllDay
+                ? optional($e->ends_at)->format('Y-m-d')
+                : optional($e->ends_at)->toIso8601String(),
+
+            'allDay' => $isAllDay,
+
+            'extendedProps' => [
+                'location'    => $e->location,
+                'description' => $e->description,
+
+                // provider: never null
+                'provider'    => $e->provider ?: ($graphCalendarId ? 'microsoft' : 'local'),
+
+                // for dropdown auto-select + future move logic
+                'calendar_id'          => optional($mc)->id,     // matches <option value="...">
+                'provider_calendar_id' => $graphCalendarId,      // Graph calendar id
+                'calendar_name'        => optional($mc)->name,   // optional UI
+
+                // helper fields for all-day UI
+                'start_date'  => $isAllDay ? optional($e->starts_at)->format('Y-m-d') : null,
+                'end_date'    => $isAllDay ? optional($e->ends_at)->format('Y-m-d') : null,
+            ],
+        ];
+    });
 
     return response()->json($events);
 })->name('calendar.events.feed');
+
 
 // Calendar Event CRUD (create / edit / delete)
 Route::post('calendar/events', [CalendarEventController::class, 'store'])
@@ -437,6 +468,9 @@ Route::patch('calendar/events/{event}', [CalendarEventController::class, 'update
 
 Route::delete('calendar/events/{event}', [CalendarEventController::class, 'destroy'])
     ->name('calendar.events.destroy');
+		
+Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'move'])
+    ->name('calendar.events.move');
 		        /*
         |--------------------------------------------------------------------------
         | Opportunity Documents
