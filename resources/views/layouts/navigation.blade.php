@@ -1,5 +1,18 @@
 @php
-    $isAdmin = auth()->check() && auth()->user()->hasRole('admin');
+    use App\Support\Roles;
+
+    $user = auth()->user();
+
+    // Role-based (still fine to keep)
+    $isAdminRole = auth()->check() && $user->hasRole(Roles::ADMIN);
+
+    // Permission-based (more resilient)
+    $canManageUsers = auth()->check() && $user->can('manage users');
+    $canManageRoles = auth()->check() && $user->can('manage roles');
+    $canEditSettings = auth()->check() && $user->can('edit settings');
+
+    // Treat as "admin nav" if they have core admin permissions OR admin role
+    $showAdminNav = $isAdminRole || $canManageUsers || $canManageRoles || $canEditSettings;
 @endphp
 
 <nav class="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
@@ -78,6 +91,7 @@
             <ul class="mt-4 flex flex-col rounded-lg border border-gray-100 bg-gray-50 p-4 font-medium
                        md:mt-0 md:flex-row md:space-x-8 md:border-0 md:bg-white md:p-0 rtl:space-x-reverse
                        dark:border-gray-700 dark:bg-gray-800 md:dark:bg-gray-900">
+
                 <!-- Dashboard -->
                 <li>
                     <a href="{{ route('dashboard') }}"
@@ -87,27 +101,17 @@
                     </a>
                 </li>
 
-                <!-- Manage Customers -->
-                <li class="relative">
-                    <button id="dropdownCustomersButton" data-dropdown-toggle="dropdownCustomers"
-                            class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
-                                   {{ (request()->routeIs('admin.customers.*') || request()->routeIs('admin.project_managers.*') || request()->routeIs('admin.customer_types.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
-                            type="button">
-                        Manage Customers
-                        <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
-                    <div id="dropdownCustomers" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
-                        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownCustomersButton">
-                            <li><a href="{{ route('admin.customers.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Customers List</a></li>
-                            <li><a href="{{ route('admin.project_managers.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Project Managers</a></li>
-                            <li><a href="{{ route('admin.customer_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Customer Types</a></li>
-                        </ul>
-                    </div>
+                <!-- Pages: Calendar -->
+                <li>
+                    <a href="{{ route('pages.calendar.index') }}"
+                       class="block rounded px-3 py-2 md:p-0
+                              {{ request()->routeIs('pages.calendar.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
+                        Calendar
+                    </a>
                 </li>
+				
 
-                <!-- Manage Opportunities -->
+                <!-- Manage Opportunities (Pages) -->
                 <li>
                     <a href="{{ route('pages.opportunities.index') }}"
                        class="block rounded px-3 py-2 md:p-0
@@ -116,115 +120,145 @@
                     </a>
                 </li>
 
-                <!-- Manage Vendors -->
-                <li class="relative">
-                    <button id="dropdownVendorsButton" data-dropdown-toggle="dropdownVendors"
-                            class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
-                                   {{ (request()->routeIs('admin.vendors.*') || request()->routeIs('admin.vendor_reps.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
-                            type="button">
-                        Manage Vendors
-                        <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
-                    <div id="dropdownVendors" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
-                        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownVendorsButton">
-                            <li><a href="{{ route('admin.vendors.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Vendors List</a></li>
-                            <li><a href="{{ route('admin.vendor_reps.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Vendor Reps</a></li>
-                        </ul>
-                    </div>
-                </li>
+                {{-- Admin-managed sections --}}
+                @if ($showAdminNav)
 
-                <!-- Product Management -->
-                <li class="relative">
-                    <button id="dropdownProductsButton" data-dropdown-toggle="dropdownProducts"
-                            class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
-                                   {{ (request()->routeIs('admin.product_types.*') || request()->routeIs('admin.product_lines.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
-                            type="button">
-                        Product Management
-                        <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
-                    <div id="dropdownProducts" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
-                        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownProductsButton">
-                            <li><a href="{{ route('admin.product_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Product Types</a></li>
-                            <li><a href="{{ route('admin.product_lines.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Product Lines</a></li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- Manage Labour -->
-                <li class="relative">
-                    <button id="dropdownLabourButton" data-dropdown-toggle="dropdownLabour"
-                            class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
-                                   {{ (request()->routeIs('admin.labour_types.*') || request()->routeIs('admin.labour_items.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
-                            type="button">
-                        Manage Labour
-                        <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
-                    <div id="dropdownLabour" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
-                        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownLabourButton">
-                            <li><a href="{{ route('admin.labour_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Labour Types</a></li>
-                            <li><a href="{{ route('admin.labour_items.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Labour Items</a></li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- Manage Estimates -->
-                <li class="relative">
-                    <button id="dropdownEstimatesButton" data-dropdown-toggle="dropdownEstimates"
-                            class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
-                                   {{ (request()->routeIs('admin.estimates.*') || request()->is('admin/estimates/mock-create')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
-                            type="button">
-                        Manage Estimates
-                        <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                        </svg>
-                    </button>
-                    <div id="dropdownEstimates" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
-                        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownEstimatesButton">
-                            <li><a href="{{ route('admin.estimates.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">View Estimates</a></li>
-                            <li><a href="{{ url('/admin/estimates/mock-create') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Create Estimate</a></li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- Admin-only items -->
-                @if ($isAdmin)
-                    <li>
-                        <a href="{{ route('admin.settings') }}"
-                           class="block rounded px-3 py-2 md:p-0
-                                  {{ request()->routeIs('admin.settings') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
-                            Admin Settings
-                        </a>
+                    <!-- Manage Customers -->
+                    <li class="relative">
+                        <button id="dropdownCustomersButton" data-dropdown-toggle="dropdownCustomers"
+                                class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
+                                       {{ (request()->routeIs('admin.customers.*') || request()->routeIs('admin.project_managers.*') || request()->routeIs('admin.customer_types.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
+                                type="button">
+                            Manage Customers
+                            <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                            </svg>
+                        </button>
+                        <div id="dropdownCustomers" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
+                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownCustomersButton">
+                                <li><a href="{{ route('admin.customers.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Customers List</a></li>
+                                <li><a href="{{ route('admin.project_managers.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Project Managers</a></li>
+                                <li><a href="{{ route('admin.customer_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Customer Types</a></li>
+                            </ul>
+                        </div>
                     </li>
 
-                    <li>
-                        <a href="{{ route('admin.users.index') }}"
-                           class="block rounded px-3 py-2 md:p-0
-                                  {{ request()->routeIs('admin.users.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
-                            Manage Users
-                        </a>
+                    <!-- Manage Vendors -->
+                    <li class="relative">
+                        <button id="dropdownVendorsButton" data-dropdown-toggle="dropdownVendors"
+                                class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
+                                       {{ (request()->routeIs('admin.vendors.*') || request()->routeIs('admin.vendor_reps.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
+                                type="button">
+                            Manage Vendors
+                            <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                            </svg>
+                        </button>
+                        <div id="dropdownVendors" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
+                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownVendorsButton">
+                                <li><a href="{{ route('admin.vendors.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Vendors List</a></li>
+                                <li><a href="{{ route('admin.vendor_reps.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Vendor Reps</a></li>
+                            </ul>
+                        </div>
                     </li>
 
-                    <li>
-                        <a href="{{ route('admin.employees.index') }}"
-                           class="block rounded px-3 py-2 md:p-0
-                                  {{ request()->routeIs('admin.employees.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
-                            Manage Employees
-                        </a>
+                    <!-- Product Management -->
+                    <li class="relative">
+                        <button id="dropdownProductsButton" data-dropdown-toggle="dropdownProducts"
+                                class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
+                                       {{ (request()->routeIs('admin.product_types.*') || request()->routeIs('admin.product_lines.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
+                                type="button">
+                            Product Management
+                            <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                            </svg>
+                        </button>
+                        <div id="dropdownProducts" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
+                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownProductsButton">
+                                <li><a href="{{ route('admin.product_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Product Types</a></li>
+                                <li><a href="{{ route('admin.product_lines.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Product Lines</a></li>
+                            </ul>
+                        </div>
                     </li>
 
-                    <li>
-                        <a href="{{ route('admin.roles.index') }}"
-                           class="block rounded px-3 py-2 md:p-0
-                                  {{ request()->routeIs('admin.roles.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
-                            Manage Roles
-                        </a>
+                    <!-- Manage Labour -->
+                    <li class="relative">
+                        <button id="dropdownLabourButton" data-dropdown-toggle="dropdownLabour"
+                                class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
+                                       {{ (request()->routeIs('admin.labour_types.*') || request()->routeIs('admin.labour_items.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
+                                type="button">
+                            Manage Labour
+                            <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                            </svg>
+                        </button>
+                        <div id="dropdownLabour" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
+                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownLabourButton">
+                                <li><a href="{{ route('admin.labour_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Labour Types</a></li>
+                                <li><a href="{{ route('admin.labour_items.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Labour Items</a></li>
+                            </ul>
+                        </div>
                     </li>
+
+                    <!-- Manage Estimates -->
+                    <li class="relative">
+                        <button id="dropdownEstimatesButton" data-dropdown-toggle="dropdownEstimates"
+                                class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
+                                       {{ (request()->routeIs('admin.estimates.*') || request()->is('admin/estimates/mock-create')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
+                                type="button">
+                            Manage Estimates
+                            <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+                            </svg>
+                        </button>
+                        <div id="dropdownEstimates" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
+                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownEstimatesButton">
+                                <li><a href="{{ route('admin.estimates.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">View Estimates</a></li>
+                                <li><a href="{{ url('/admin/estimates/mock-create') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Create Estimate</a></li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <!-- Admin Utilities (permission-based) -->
+                    @if ($canEditSettings)
+                        <li>
+                            <a href="{{ route('admin.settings') }}"
+                               class="block rounded px-3 py-2 md:p-0
+                                      {{ request()->routeIs('admin.settings') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
+                                Admin Settings
+                            </a>
+                        </li>
+                    @endif
+
+                    @if ($canManageUsers)
+                        <li>
+                            <a href="{{ route('admin.users.index') }}"
+                               class="block rounded px-3 py-2 md:p-0
+                                      {{ request()->routeIs('admin.users.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
+                                Manage Users
+                            </a>
+                        </li>
+                    @endif
+
+                    @if ($showAdminNav)
+                        <li>
+                            <a href="{{ route('admin.employees.index') }}"
+                               class="block rounded px-3 py-2 md:p-0
+                                      {{ request()->routeIs('admin.employees.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
+                                Manage Employees
+                            </a>
+                        </li>
+                    @endif
+
+                    @if ($canManageRoles)
+                        <li>
+                            <a href="{{ route('admin.roles.index') }}"
+                               class="block rounded px-3 py-2 md:p-0
+                                      {{ request()->routeIs('admin.roles.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
+                                Manage Roles
+                            </a>
+                        </li>
+                    @endif
 
                     <li>
                         <a href="{{ route('admin.unit_measures.index') }}"
@@ -233,6 +267,17 @@
                             Unit Measures
                         </a>
                     </li>
+
+                    <!-- Calendar Admin Settings -->
+                    @if (Route::has('admin.calendar.settings'))
+    <li>
+        <a href="{{ route('admin.calendar.settings') }}"
+           class="block rounded px-3 py-2 md:p-0
+                  {{ request()->routeIs('admin.calendar.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
+            Calendar Settings
+        </a>
+    </li>
+@endif
 
                     <!-- Chart of Accounts -->
                     <li class="relative">
@@ -255,12 +300,12 @@
                     </li>
 
                     <li>
-    <a href="{{ route('admin.tax.index') }}"
-       class="block rounded px-3 py-2 md:p-0
-              {{ request()->routeIs('admin.tax.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
-        Tax Management
-    </a>
-</li>
+                        <a href="{{ route('admin.tax.index') }}"
+                           class="block rounded px-3 py-2 md:p-0
+                                  {{ request()->routeIs('admin.tax.*') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}">
+                            Tax Management
+                        </a>
+                    </li>
 
                 @endif
             </ul>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\MicrosoftCalendarConnectController;
 use App\Http\Controllers\Pages\Settings\Integrations\MicrosoftIntegrationController;
 use App\Http\Controllers\UserCalendarPreferenceController;
+use App\Http\Controllers\CalendarEventController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -340,9 +341,29 @@ Route::prefix('pages')
 			->middleware('permission:connect microsoft calendar')
 			->name('settings.integrations.microsoft.calendars.update');
 		
+		Route::middleware(['permission:connect microsoft calendar'])->group(function () {
+    Route::get('settings/integrations/microsoft/connect', [MicrosoftCalendarConnectController::class, 'redirect'])
+        ->name('microsoft.connect');
+
+    Route::get('settings/integrations/microsoft/callback', [MicrosoftCalendarConnectController::class, 'callback'])
+        ->name('microsoft.callback');
+
+    Route::post('settings/integrations/microsoft/calendars/discover', [MicrosoftCalendarConnectController::class, 'discoverCalendars'])
+        ->name('microsoft.calendars.discover');
+
+    Route::post('settings/integrations/microsoft/sync-now', [MicrosoftCalendarConnectController::class, 'syncNow'])
+        ->name('microsoft.syncNow');
+});
+
+		
 		Route::get('calendar', function () {
-			return view('pages.calendar.index');
-			})->name('calendar.index');
+    $microsoftCalendars = \App\Models\MicrosoftCalendar::query()
+    ->where('is_enabled', 1)
+    ->orderBy('name')
+    ->get();
+
+    return view('pages.calendar.index', compact('microsoftCalendars'));
+})->name('calendar.index');
 		
 		Route::get('calendar/events', function () {
 				$events = \App\Models\CalendarEvent::where('owner_user_id', auth()->id())
@@ -372,6 +393,8 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
                 ->from('external_event_links')
                 ->whereIn('external_calendar_id', $calendarIds->all());
         });
+		
+		
     }
 
     $events = $eventsQuery->get()->map(function ($e) {
@@ -391,7 +414,15 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
     return response()->json($events);
 })->name('calendar.events.feed');
 
+// Calendar Event CRUD (create / edit / delete)
+Route::post('calendar/events', [CalendarEventController::class, 'store'])
+    ->name('calendar.events.store');
 
+Route::patch('calendar/events/{event}', [CalendarEventController::class, 'update'])
+    ->name('calendar.events.update');
+
+Route::delete('calendar/events/{event}', [CalendarEventController::class, 'destroy'])
+    ->name('calendar.events.destroy');
 		        /*
         |--------------------------------------------------------------------------
         | Opportunity Documents
@@ -434,24 +465,7 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
 
     });
 
-		/*
-		|--------------------------------------------------------------------------
-		| Microsoft 365 Calendar Integration (Actions)
-		|--------------------------------------------------------------------------
-		*/
-		Route::middleware(['auth', 'permission:connect microsoft calendar'])->group(function () {
-			Route::get('/settings/integrations/microsoft/connect', [MicrosoftCalendarConnectController::class, 'redirect'])
-				->name('microsoft.connect');
-
-			Route::get('/settings/integrations/microsoft/callback', [MicrosoftCalendarConnectController::class, 'callback'])
-				->name('microsoft.callback');
-
-			Route::post('/settings/integrations/microsoft/calendars/discover', [MicrosoftCalendarConnectController::class, 'discoverCalendars'])
-				->name('microsoft.calendars.discover');
-			
-			Route::post('/settings/integrations/microsoft/sync-now', [MicrosoftCalendarConnectController::class, 'syncNow'])
-				->name('microsoft.syncNow');
-		});
+	
 
 
 // Profile routes (authenticated)

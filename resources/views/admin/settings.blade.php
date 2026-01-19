@@ -43,6 +43,12 @@
                         <a href="{{ route('admin.roles.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
     			Manage Roles & Permissions
 			</a>
+						 <a href="{{ route('admin.users.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Manage Users
+                        </a>
+                        <a href="{{ route('pages.settings.integrations.microsoft.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+    			Manage Calendar Settings
+			</a>
                         <a href="{{ url('/') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Back to Home
                         </a>

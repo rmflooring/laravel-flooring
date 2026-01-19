@@ -21,19 +21,19 @@
             @endif
 
             <div class="mt-6 flex flex-wrap gap-3">
-                <a href="{{ route('microsoft.connect') }}"
+                <a href="{{ route('pages.microsoft.connect') }}"
                    class="inline-flex items-center px-4 py-2 bg-blue-700 text-white text-sm font-medium rounded-lg hover:bg-blue-800">
                     Connect Microsoft
                 </a>
 
-                <form method="POST" action="{{ route('microsoft.calendars.discover') }}">
+                <form method="POST" action="{{ route('pages.microsoft.calendars.discover') }}">
                     @csrf
                     <button type="submit"
                         class="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800">
                         Discover Calendars
                     </button>
                 </form>
-				<form method="POST" action="{{ route('microsoft.syncNow') }}">
+				<form method="POST" action="{{ route('pages.microsoft.syncNow') }}">
     @csrf
     <button type="submit"
         class="inline-flex items-center px-4 py-2 bg-emerald-700 text-white text-sm font-medium rounded-lg hover:bg-emerald-800">

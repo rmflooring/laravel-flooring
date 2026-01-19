@@ -13,6 +13,15 @@ class RolesSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // Normalize any mixed-case role names to lowercase
+        Role::all()->each(function ($role) {
+            $lower = strtolower($role->name);
+            if ($role->name !== $lower) {
+                $role->name = $lower;
+                $role->save();
+            }
+        });
+
         // Create roles (use consistent lowercase to avoid casing issues)
         $admin      = Role::firstOrCreate(['name' => 'admin']);
         $sales      = Role::firstOrCreate(['name' => 'sales']);
@@ -23,10 +32,10 @@ class RolesSeeder extends Seeder
         // Admin gets everything
         $admin->syncPermissions(Permission::all());
 
-        // Helper: build permissions by prefix
+        // Helper: build permissions by name list
         $perm = fn (array $names) => Permission::whereIn('name', $names)->get();
 
-        // Reception: can view dashboard + customers (and later opportunities when you add them)
+        // Reception: can view dashboard + customers
         $reception->syncPermissions($perm([
             'view dashboard',
             'view customers',
@@ -34,7 +43,7 @@ class RolesSeeder extends Seeder
             'edit customers',
         ]));
 
-        // Sales: customer + vendor + PM + products (adjust as you like)
+        // Sales: customer + vendor + PM + products
         $sales->syncPermissions($perm([
             'view dashboard',
 
@@ -52,7 +61,7 @@ class RolesSeeder extends Seeder
             'view unit measures', 'create unit measures', 'edit unit measures',
         ]));
 
-        // Estimator: mostly view reference data (you can expand later)
+        // Estimator: mostly view reference data
         $estimator->syncPermissions($perm([
             'view dashboard',
             'view customers',
@@ -65,7 +74,7 @@ class RolesSeeder extends Seeder
             'view unit measures',
         ]));
 
-        // Accounting: mostly view + some edits (adjust later)
+        // Accounting: mostly view
         $accounting->syncPermissions($perm([
             'view dashboard',
             'view customers',

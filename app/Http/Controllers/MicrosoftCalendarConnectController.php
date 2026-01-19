@@ -23,9 +23,9 @@ class MicrosoftCalendarConnectController extends Controller
         $query = http_build_query([
               'client_id'     => config('services.microsoft.client_id'),
 				'response_type' => 'code',
-				'redirect_uri'  => route('microsoft.callback'),
+				'redirect_uri'  => route('pages.microsoft.callback'),
 				'response_mode' => 'query',
-				'scope'         => 'offline_access User.Read Calendars.ReadWrite Group.Read.All GroupMember.Read.All',
+				'scope' => 'offline_access User.Read Calendars.ReadWrite Group.ReadWrite.All Group.Read.All GroupMember.Read.All',
 				'state'         => $state,
 				'prompt'        => 'consent',
 				'include_granted_scopes' => 'true',
@@ -71,7 +71,7 @@ class MicrosoftCalendarConnectController extends Controller
             'client_secret' => config('services.microsoft.client_secret'),
             'grant_type'    => 'authorization_code',
             'code'          => $code,
-            'redirect_uri'  => route('microsoft.callback'),
+            'redirect_uri'  => route('pages.microsoft.callback'),
         ]);
 
         if (!$tokenResponse->successful()) {
@@ -252,7 +252,12 @@ $accessToken = $account->access_token;
         }
 
 
-		return back()->with('success', 'Calendars discovered: ' . count($calendars));
+$groupCount = isset($groupIds) ? $groupIds->count() : 0;
+
+return back()->with(
+    'success',
+    'Calendars discovered: ' . count($calendars) . ' personal, ' . $groupCount . ' group(s).'
+);
 	}
 	
 	public function syncNow(Request $request)
@@ -307,14 +312,24 @@ $totalUpserted = 0;
 foreach ($enabledCalendars as $cal) {
     $baseUrl = $cal->group_id
     ? "https://graph.microsoft.com/v1.0/groups/{$cal->group_id}/calendar/events"
-    : "https://graph.microsoft.com/v1.0/me/calendars/{$cal->calendar_id}/events";
+    : "https://graph.microsoft.com/v1.0/me/calendars/" . rawurlencode($cal->calendar_id) . "/events";
+
+$params = [
+    '$top' => 200,
+    '$orderby' => 'lastModifiedDateTime desc',
+];
+
+// NO FILTER — Graph does not support filtering by calendarId
+
+Log::error('Microsoft syncNow request debug', [
+    'calendar_name' => $cal->name,
+    'url' => $baseUrl,
+    'params' => $params,
+]);
 
 $resp = Http::withToken($accessToken)
     ->acceptJson()
-    ->get($baseUrl, [
-        '$top' => 200,
-        '$orderby' => 'lastModifiedDateTime desc',
-    ]);
+    ->get($baseUrl, $params);
 
     if (!$resp->successful()) {
     Log::error('Microsoft syncNow calendar fetch failed', [
@@ -324,6 +339,8 @@ $resp = Http::withToken($accessToken)
         'url'           => $baseUrl,
         'status'        => $resp->status(),
         'body'          => $resp->body(),
+		'json'          => $resp->json(),
+
     ]);
 
     $results[] = $cal->name . ': error ' . $resp->status();
