@@ -397,19 +397,33 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
 		
     }
 
-    $events = $eventsQuery->get()->map(function ($e) {
-        return [
-            'id'    => $e->id,
-            'title' => $e->title,
-            'start' => optional($e->starts_at)->toIso8601String(),
-            'end'   => optional($e->ends_at)->toIso8601String(),
-            'extendedProps' => [
-                'location'    => $e->location,
-                'description' => $e->description,
-                'provider'    => 'Microsoft', // placeholder for now
-            ],
-        ];
-    });
+$events = $eventsQuery->get()->map(function ($e) {
+    $isAllDay = $e->starts_at
+        && $e->ends_at
+        && $e->starts_at->format('H:i:s') === '00:00:00'
+        && $e->ends_at->format('H:i:s') === '00:00:00'
+        && $e->ends_at->greaterThan($e->starts_at);
+
+    return [
+        'id'    => $e->id,
+        'title' => $e->title,
+        'start' => $isAllDay
+    ? optional($e->starts_at)->format('Y-m-d')
+    : optional($e->starts_at)->toIso8601String(),
+
+'end' => $isAllDay
+    ? optional($e->ends_at)->format('Y-m-d')
+    : optional($e->ends_at)->toIso8601String(),
+        'allDay' => $isAllDay,
+        'extendedProps' => [
+            'location'    => $e->location,
+            'description' => $e->description,
+            'provider'    => $e->provider,
+			'start_date'  => $isAllDay ? optional($e->starts_at)->format('Y-m-d') : null,
+			'end_date'    => $isAllDay ? optional($e->ends_at)->format('Y-m-d') : null,
+        ],
+    ];
+});
 
     return response()->json($events);
 })->name('calendar.events.feed');

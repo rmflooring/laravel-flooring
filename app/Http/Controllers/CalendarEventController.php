@@ -81,11 +81,11 @@ $payload['end'] = [
 ];
         } else {
             $payload['start'] = [
-                'dateTime' => date('c', strtotime($data['start'])),
+                'dateTime' => date('Y-m-d\TH:i:s', strtotime($data['start'])),
                 'timeZone' => 'Pacific Standard Time',
             ];
             $payload['end'] = [
-                'dateTime' => date('c', strtotime($data['end'])),
+                'dateTime' => date('Y-m-d\TH:i:s', strtotime($data['end'])),
                 'timeZone' => 'Pacific Standard Time',
             ];
         }
@@ -239,10 +239,10 @@ public function store(Request $request)
                 return response()->json(['message' => 'No connected Microsoft account found'], 400);
             }
 
-            $link = ExternalEventLink::where('id', $event)
-                ->where('microsoft_account_id', $account->id)
-                ->where('provider', 'microsoft')
-                ->first();
+            $link = ExternalEventLink::where('calendar_event_id', (int) $event)
+    ->where('microsoft_account_id', $account->id)
+    ->where('provider', 'microsoft')
+    ->first();
 
             if (!$link) {
                 \Log::warning('ExternalEventLink not found', ['event_param' => $event]);
@@ -322,18 +322,18 @@ if (!$calendar) {
                 return response()->json(['message' => 'No connected Microsoft account found'], 400);
             }
 
-            $link = ExternalEventLink::where('id', $event)
-                ->where('microsoft_account_id', $account->id)
-                ->where('provider', 'microsoft')
-                ->first();
+            $link = ExternalEventLink::where('calendar_event_id', (int) $event)
+			->where('microsoft_account_id', $account->id)
+			->where('provider', 'microsoft')
+			->first();
 
             if (!$link) {
                 return response()->json(['message' => 'Event link not found'], 404);
             }
 
             $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-    ->where('calendar_id', $link->external_calendar_id)
-    ->first();
+			->where('calendar_id', $link->external_calendar_id)
+			->first();
 
             if (!$calendar) {
                 return response()->json(['message' => 'Calendar not found'], 404);

@@ -152,8 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
       right: 'dayGridMonth,timeGridWeek,timeGridDay',
     },
 
+eventSources: [
+  {
+    id: 'fm-feed',
     events: async (info, successCallback, failureCallback) => {
       try {
+        console.log('[events feed called]', { start: info.startStr, end: info.endStr });
         const showRfm = document.getElementById('filter-show-rfm')?.checked;
         const showInst = document.getElementById('filter-show-installations')?.checked;
         const showWh = document.getElementById('filter-show-warehouse')?.checked;
@@ -179,6 +183,9 @@ document.addEventListener('DOMContentLoaded', () => {
         failureCallback(err);
       }
     },
+  },
+],
+
 
     height: 'auto',
     editable: false,
@@ -268,6 +275,17 @@ document.addEventListener('DOMContentLoaded', () => {
     eventClick: (info) => {
       info.jsEvent.preventDefault();
 
+//log 
+console.log('[eventClick]', {
+  id: info.event.id,
+  title: info.event.title,
+  start: info.event.start,
+  end: info.event.end,
+  allDay: info.event.allDay,
+  extendedProps: info.event.extendedProps
+});
+// end log. 
+
       const event = info.event;
       const ext = event.extendedProps || {};
 
@@ -306,10 +324,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (calId) calEl.value = String(calId);
       }
 
-      if (startEl) startEl.value = toDatetimeLocal(event.start);
-      if (endEl) endEl.value = toDatetimeLocal(event.end);
+		if (allDayEl) allDayEl.checked = !!event.allDay;
 
-      if (allDayEl) allDayEl.checked = !!event.allDay;
+		if (event.allDay) {
+		  // Use raw dates from feed to avoid timezone shifts
+		  const sd = ext.start_date; // 'YYYY-MM-DD'
+		  const ed = ext.end_date;   // 'YYYY-MM-DD'
+
+		  if (startEl) startEl.value = sd ? `${sd}T00:00` : '';
+		  if (endEl) endEl.value = ed ? `${ed}T00:00` : '';
+		} else {
+		  if (startEl) startEl.value = toDatetimeLocal(event.start);
+		  if (endEl) endEl.value = toDatetimeLocal(event.end);
+		}
 
       // Show delete in edit mode
       document.getElementById('event-editor-delete')?.classList.remove('hidden');
@@ -451,11 +478,11 @@ const url = isEdit
 
         document.getElementById('event-editor-close')?.click();
 
-        calendar.unselect();
-        calendar.refetchEvents();
+		calendar.unselect();
+		calendar.getEventSourceById('fm-feed')?.refetch();
 
-        await syncNowSilently();
-        calendar.refetchEvents();
+		await syncNowSilently();
+		calendar.getEventSourceById('fm-feed')?.refetch();
       } catch (err) {
         console.error(err);
         showError(err?.message || 'Save failed. Check console for details.');
@@ -512,6 +539,8 @@ const url = isEdit
       }
     });
   })();
+
+window.__FC = calendar;
 
   calendar.render();
 });
