@@ -387,4 +387,30 @@ class EstimateController extends Controller
         }
         return true;
     }
+	
+	public function apiProductTypes()
+{
+    $rows = \App\Models\ProductType::query()
+        ->where('status', 'active')
+        ->with([
+            'soldByUnit:id,code,label,status',
+        ])
+        ->orderBy('name')
+        ->get(['id', 'name', 'sold_by_unit_id']);
+
+    return response()->json(
+        $rows->map(function ($pt) {
+            return [
+                'id' => $pt->id,
+                'name' => $pt->name,
+                'sold_by_unit' => $pt->soldByUnit ? [
+                    'id' => $pt->soldByUnit->id,
+                    'code' => $pt->soldByUnit->code,
+                    'label' => $pt->soldByUnit->label,
+                ] : null,
+            ];
+        })
+    );
+}
+
 }

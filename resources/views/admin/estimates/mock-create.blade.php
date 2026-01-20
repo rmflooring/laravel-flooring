@@ -181,7 +181,7 @@
                     </button>
                 </div>
 
-                <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                <div class="border border-gray-200 rounded-lg">
                     <table class="min-w-full text-sm text-left text-gray-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                             <tr>
@@ -205,11 +205,23 @@
                 {{-- Material row template (outside the table) --}}
                 <template class="material-row-template">
                     <tr class="bg-white border-t">
-                        <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][materials][0][product_type]"
-                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="Product Type">
-                        </td>
+                        <td class="px-3 py-2 relative">
+  <input
+    type="text"
+    name="rooms[0][materials][0][product_type]"
+    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+    placeholder="Product Type"
+    autocomplete="off"
+    data-product-type-input
+  />
+
+  <div
+  class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+  data-product-type-dropdown
+>
+    <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
+  </div>
+</td>
                         <td class="px-3 py-2">
                             <input type="number" step="0.01" name="rooms[0][materials][0][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"

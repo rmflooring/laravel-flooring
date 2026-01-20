@@ -180,34 +180,221 @@ document.addEventListener("DOMContentLoaded", () => {
     updateEstimateTotals();
   }
 
-  // ── Room add/delete/move ────────────────────────────────────────────────
+	function initProductTypeDropdownForRoom(roomCard) {
+  const input = roomCard.querySelector('[data-product-type-input]');
+  const dropdown = roomCard.querySelector('[data-product-type-dropdown]');
+  const list = roomCard.querySelector('[data-product-type-options]');
+  if (!input || !dropdown || !list) return;
 
-  function addRoom() {
-    console.log("[addRoom] Adding new room");
+  const row = input.closest('tr');
+  const unitInput = row ? row.querySelector('input[name*="[unit]"]') : null;
 
-    const fragment = roomTemplate.content.cloneNode(true);
-    const currentCount = roomsContainer.querySelectorAll(".room-card").length;
-    const newIndex = currentCount;
+  let productTypes = [];
 
-    fragment.querySelectorAll("[name]").forEach(el => {
-      el.name = el.name.replaceAll("__ROOM_INDEX__", newIndex);
+  function openDropdown() { dropdown.classList.remove('hidden'); }
+  function closeDropdown() { dropdown.classList.add('hidden'); }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+function render(items) {
+  list.innerHTML = (items || []).map(pt => {
+    const unitCode  = (pt.sold_by_unit && pt.sold_by_unit.code)  ? pt.sold_by_unit.code  : '';
+	const unitLabel = (pt.sold_by_unit && pt.sold_by_unit.label) ? pt.sold_by_unit.label : '';
+    return `
+	  <li>
+		<button type="button"
+		  class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+		  data-pt-name="${escapeHtml(pt.name)}"
+		  data-pt-unit="${escapeHtml(unitCode)}">
+		  <div class="flex justify-between items-center gap-3">
+			<span class="truncate">${escapeHtml(pt.name)}</span>
+			<span class="text-gray-500 text-xs whitespace-nowrap">${escapeHtml(unitLabel)}</span>
+		  </div>
+		</button>
+	  </li>`;
+  }).join('');
+}
+
+		  // --- Keyboard navigation (ArrowUp/ArrowDown/Enter/Escape) ---
+  let activeIndex = -1;
+
+  function getOptionButtons() {
+    return Array.from(list.querySelectorAll('button[data-pt-name]'));
+  }
+
+  function setActiveIndex(nextIndex) {
+    const opts = getOptionButtons();
+    if (!opts.length) {
+      activeIndex = -1;
+      return;
+    }
+
+    // clamp
+    if (nextIndex < 0) nextIndex = opts.length - 1;
+    if (nextIndex >= opts.length) nextIndex = 0;
+
+    activeIndex = nextIndex;
+
+    // update styles
+    opts.forEach((btn, i) => {
+      if (i === activeIndex) {
+        btn.classList.add('bg-gray-100');
+        btn.setAttribute('aria-selected', 'true');
+        // keep visible
+        btn.scrollIntoView({ block: 'nearest' });
+      } else {
+        btn.classList.remove('bg-gray-100');
+        btn.setAttribute('aria-selected', 'false');
+      }
+    });
+  }
+
+  function selectFromButton(btn) {
+    if (!btn) return;
+
+    const name = btn.dataset.ptName || '';
+    const unit = btn.dataset.ptUnit || '';
+
+    input.value = name;
+    if (unitInput) unitInput.value = unit;
+
+    closeDropdown();
+    activeIndex = -1;
+  }
+
+  // Click selection (use mousedown so it selects before blur)
+  list.addEventListener('mousedown', (e) => {
+    const btn = e.target.closest('button[data-pt-name]');
+    if (!btn) return;
+    e.preventDefault();
+    selectFromButton(btn);
+  });
+
+  // Keyboard control on the input field
+  input.addEventListener('keydown', (e) => {
+    const opts = getOptionButtons();
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      openDropdown();
+      // if nothing active yet, start at first
+      if (activeIndex === -1) setActiveIndex(0);
+      else setActiveIndex(activeIndex + 1);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      openDropdown();
+      if (activeIndex === -1) setActiveIndex(opts.length - 1);
+      else setActiveIndex(activeIndex - 1);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      // only intercept if dropdown open and we have an active item
+      if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+        e.preventDefault();
+        selectFromButton(opts[activeIndex]);
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      if (!dropdown.classList.contains('hidden')) {
+        e.preventDefault();
+        closeDropdown();
+        activeIndex = -1;
+      }
+      return;
+    }
+  });
+  // --- end keyboard navigation ---
+
+  // fetch once per room for now (we’ll optimize later)
+  fetch('/admin/estimates/api/product-types', { headers: { Accept: 'application/json' }})
+    .then(r => r.json())
+    .then(data => {
+      productTypes = data || [];
+      render(productTypes);
     });
 
-    roomsContainer.appendChild(fragment);
+  // Open immediately on click (mousedown happens before "click" handlers)
+input.addEventListener('mousedown', () => {
+  openDropdown();
+  // optional: if you want it filtered instantly based on current text:
+  const q = (input.value || '').toLowerCase();
+  render(productTypes.filter(pt => (pt.name || '').toLowerCase().includes(q)));
+});
 
-    const allCards = roomsContainer.querySelectorAll(".room-card");
-    const newRoomCard = allCards[allCards.length - 1];
+// Still open when focused (Tab)
+input.addEventListener('focus', () => {
+  openDropdown();
+});
+  input.addEventListener('input', () => {
+    const q = (input.value || '').toLowerCase();
+    render(productTypes.filter(pt => (pt.name || '').toLowerCase().includes(q)));
+    openDropdown();
+  });
 
-    if (newRoomCard) {
-      ensureDefaultRows(newRoomCard);
-      renumberRooms();
-      reindexAllRooms();
-      updateRoomTotals(newRoomCard);
-      console.log("[addRoom] Success - Room #" + (newIndex + 1) + " added");
-    } else {
-      console.error("[addRoom] Failed to find new room card");
-    }
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-pt-name]');
+    if (!btn) return;
+    input.value = btn.getAttribute('data-pt-name') || '';
+    const unit = btn.getAttribute('data-pt-unit') || '';
+    if (unitInput && unit) unitInput.value = unit;
+    closeDropdown();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (roomCard.contains(e.target)) return;
+    closeDropdown();
+  });
+}
+
+
+  // ── Room add/delete/move ────────────────────────────────────────────────
+
+function addRoom() {
+  console.log("[addRoom] Adding new room");
+
+  const fragment = roomTemplate.content.cloneNode(true);
+  const currentCount = roomsContainer.querySelectorAll(".room-card").length;
+  const newIndex = currentCount;
+
+  fragment.querySelectorAll("[name]").forEach(el => {
+    el.name = el.name.replaceAll("__ROOM_INDEX__", newIndex);
+  });
+
+  roomsContainer.appendChild(fragment);
+
+  const allCards = roomsContainer.querySelectorAll(".room-card");
+  const newRoomCard = allCards[allCards.length - 1];
+
+  if (!newRoomCard) {
+    console.error("[addRoom] Failed to find new room card");
+    return;
   }
+
+  ensureDefaultRows(newRoomCard);
+
+  // ✅ now it exists, so init is safe
+  initProductTypeDropdownForRoom(newRoomCard);
+
+  renumberRooms();
+  reindexAllRooms();
+  updateRoomTotals(newRoomCard);
+  console.log("[addRoom] Success - Room #" + (newIndex + 1) + " added");
+}
+
+
 
   addRoomBtn.addEventListener("click", addRoom);
 
@@ -445,6 +632,141 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renumberRooms();
   reindexAllRooms();
+			
+
+// Product Type searchable dropdown (Flowbite-style)
+(async function initProductTypeDropdown() {
+  console.log('[pt] initProductTypeDropdown start');
+  const input = document.querySelector('[data-product-type-input]');
+  const dropdown = document.querySelector('[data-product-type-dropdown]');
+  const list = document.querySelector('[data-product-type-options]');
+
+  if (!input || !dropdown || !list) return;
+
+  // Find the Unit input in the same row
+  const wrapper = input.closest('td') || input.parentElement;
+const row = input.closest('tr') || input.closest('.material-row') || input.closest('tbody');
+  const unitInput = row ? row.querySelector('input[name*="[unit]"]') : null;
+
+  let productTypes = [];
+  let filtered = [];
+
+  function openDropdown() {
+    dropdown.classList.remove('hidden');
+  }
+
+  function closeDropdown() {
+    dropdown.classList.add('hidden');
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function render(items) {
+    if (!items || items.length === 0) {
+      list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+      return;
+    }
+
+    list.innerHTML = items
+      .map((pt) => {
+        const unitLabel = (pt.sold_by_unit && (pt.sold_by_unit.code || pt.sold_by_unit.label)) || '';
+        return `
+          <li>
+            <button type="button"
+              class="w-full text-left px-3 py-2 hover:bg-gray-100"
+              data-pt-id="${pt.id}"
+              data-pt-name="${escapeHtml(pt.name)}"
+              data-pt-unit="${escapeHtml(unitLabel)}"
+            >
+              <div class="flex justify-between gap-2">
+                <span class="truncate">${escapeHtml(pt.name)}</span>
+                <span class="text-gray-400 text-xs">${escapeHtml(unitLabel)}</span>
+              </div>
+            </button>
+          </li>
+        `;
+      })
+      .join('');
+  }
+
+  function applyFilter() {
+    const q = (input.value || '').trim().toLowerCase();
+    filtered = productTypes.filter((pt) => pt.name.toLowerCase().includes(q));
+    render(filtered);
+  }
+
+  // Fetch data once
+  try {
+	  console.log('[pt] about to fetch product types');
+    const resp = await fetch('/admin/estimates/api/product-types', {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin',
+    });
+    if (!resp.ok) throw new Error(`Product types fetch failed (${resp.status})`);
+    productTypes = await resp.json();
+	  console.log('[pt] fetched productTypes:', productTypes.length);
+  } catch (e) {
+    console.error('[estimate_mock] Failed to load product types', e);
+    list.innerHTML = `<li class="px-3 py-2 text-red-600">Failed to load product types</li>`;
+    return;
+  }
+
+  // Initial render
+  render(productTypes);
+console.log('[pt] rendered items:', list.children.length);
+
+  // Open + filter behavior
+  // Open on pointerdown so it happens before the document pointerdown close handler
+input.addEventListener('mousedown', (e) => {
+  openDropdown();
+  applyFilter();
+});
+
+// Keep filtering while typing
+input.addEventListener('input', () => {
+  openDropdown();
+  applyFilter();
+});
+
+  // Click on an option
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-pt-id]');
+    if (!btn) return;
+
+    const name = btn.getAttribute('data-pt-name') || '';
+    const unit = btn.getAttribute('data-pt-unit') || '';
+
+    input.value = name;
+
+    // Auto-fill unit but keep editable
+    if (unitInput && unit) {
+      unitInput.value = unit;
+    }
+
+    closeDropdown();
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+// Close on outside click
+document.addEventListener('click', (e) => {
+  // ignore clicks inside the product-type cell (input + dropdown)
+  if (wrapper && wrapper.contains(e.target)) return;
+  closeDropdown();
+});
+
+  // Close on Escape
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDropdown();
+  });
+})();
 
   console.log("[estimate_mock.js] Initialization complete");
 });
+							

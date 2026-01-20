@@ -532,6 +532,9 @@ const url = isEdit
 
 		await syncNowSilently();
 		calendar.getEventSourceById('fm-feed')?.refetch();
+	const editorModal = window.FlowbiteInstances?.getInstance('Modal', 'event-editor-modal');
+if (editorModal) editorModal.hide();
+
       } catch (err) {
         console.error(err);
         showError(err?.message || 'Save failed. Check console for details.');

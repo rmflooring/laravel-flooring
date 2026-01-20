@@ -128,6 +128,8 @@ Route::prefix('admin')
             Route::post('estimates', [EstimateController::class, 'store'])->name('estimates.store');
             Route::get('estimates/{estimate}/edit', [EstimateController::class, 'edit'])->name('estimates.edit');
             Route::put('estimates/{estimate}', [EstimateController::class, 'update'])->name('estimates.update');
+			Route::get('estimates/api/product-types', [EstimateController::class, 'apiProductTypes'])
+				->name('estimates.api.product-types');
         });
 
         /*
