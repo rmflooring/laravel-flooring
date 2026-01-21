@@ -211,8 +211,9 @@ function render(items) {
 	  <li>
 		<button type="button"
 		  class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-		  data-pt-name="${escapeHtml(pt.name)}"
-		  data-pt-unit="${escapeHtml(unitCode)}">
+		  data-pt-id="${pt.id}"
+data-pt-name="${escapeHtml(pt.name)}"
+data-pt-unit="${escapeHtml(unitCode)}">
 		  <div class="flex justify-between items-center gap-3">
 			<span class="truncate">${escapeHtml(pt.name)}</span>
 			<span class="text-gray-500 text-xs whitespace-nowrap">${escapeHtml(unitLabel)}</span>
@@ -226,7 +227,7 @@ function render(items) {
   let activeIndex = -1;
 
   function getOptionButtons() {
-    return Array.from(list.querySelectorAll('button[data-pt-name]'));
+    return Array.from(list.querySelectorAll('button[data-pt-id]'));
   }
 
   function setActiveIndex(nextIndex) {
@@ -256,26 +257,33 @@ function render(items) {
     });
   }
 
-  function selectFromButton(btn) {
-    if (!btn) return;
+function selectFromButton(btn) {
+  if (!btn) return;
 
-    const name = btn.dataset.ptName || '';
-    const unit = btn.dataset.ptUnit || '';
+  const name = btn.dataset.ptName || '';
+  const unit = btn.dataset.ptUnit || '';
 
-    input.value = name;
-    if (unitInput) unitInput.value = unit;
+  input.value = name;
+  if (unitInput) unitInput.value = unit;
 
-    closeDropdown();
-    activeIndex = -1;
-  }
+  // ✅ store selected product type id for manufacturer filtering
+  input.dataset.productTypeId = btn.dataset.ptId || '';
+
+	const manuInput = row ? row.querySelector('[data-manufacturer-input]') : null;
+	if (manuInput) manuInput.value = '';
+	if (manuInput) manuInput.dispatchEvent(new Event('change', { bubbles: true }));
+	
+  closeDropdown();
+  activeIndex = -1;
+}
 
   // Click selection (use mousedown so it selects before blur)
-  list.addEventListener('mousedown', (e) => {
-    const btn = e.target.closest('button[data-pt-name]');
-    if (!btn) return;
-    e.preventDefault();
-    selectFromButton(btn);
-  });
+	list.addEventListener('mousedown', (e) => {
+	  const btn = e.target.closest('button[data-manu-name]');
+	  if (!btn) return;
+	  e.preventDefault();
+	  selectFromButton(btn);
+	});
 
   // Keyboard control on the input field
   input.addEventListener('keydown', (e) => {
@@ -345,13 +353,18 @@ input.addEventListener('focus', () => {
   });
 
   list.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-pt-name]');
-    if (!btn) return;
-    input.value = btn.getAttribute('data-pt-name') || '';
-    const unit = btn.getAttribute('data-pt-unit') || '';
-    if (unitInput && unit) unitInput.value = unit;
-    closeDropdown();
-  });
+  const btn = e.target.closest('button[data-pt-id]');
+  if (!btn) return;
+
+  input.value = btn.getAttribute('data-pt-name') || '';
+  const unit = btn.getAttribute('data-pt-unit') || '';
+  if (unitInput && unit) unitInput.value = unit;
+
+  // ✅ store selected product type id for manufacturer filtering
+  input.dataset.productTypeId = btn.dataset.ptId || '';
+
+  closeDropdown();
+});
 
   document.addEventListener('click', (e) => {
     if (roomCard.contains(e.target)) return;
@@ -359,6 +372,202 @@ input.addEventListener('focus', () => {
   });
 }
 
+function initManufacturerDropdownForRoom(roomCard) {
+  const input = roomCard.querySelector('[data-manufacturer-input]');
+  const dropdown = roomCard.querySelector('[data-manufacturer-dropdown]');
+  const list = roomCard.querySelector('[data-manufacturer-options]');
+  if (!input || !dropdown || !list) return;
+
+  // We read selected product type id from the product type input in the same row
+  const row = input.closest('tr');
+  const productTypeInput = row ? row.querySelector('[data-product-type-input]') : null;
+
+  let manufacturers = [];
+
+  function openDropdown() { dropdown.classList.remove('hidden'); }
+  function closeDropdown() { dropdown.classList.add('hidden'); }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function render(items) {
+    const arr = items || [];
+    if (arr.length === 0) {
+      list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+      return;
+    }
+
+    list.innerHTML = arr.map(name => `
+      <li>
+        <button type="button"
+          class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+          data-manu-name="${escapeHtml(name)}">
+          <span class="truncate">${escapeHtml(name)}</span>
+        </button>
+      </li>
+    `).join('');
+  }
+
+  // --- Keyboard navigation (ArrowUp/ArrowDown/Enter/Escape) ---
+  let activeIndex = -1;
+
+  function getOptionButtons() {
+    return Array.from(list.querySelectorAll('button[data-manu-name]'));
+  }
+
+  function setActiveIndex(nextIndex) {
+    const opts = getOptionButtons();
+    if (!opts.length) {
+      activeIndex = -1;
+      return;
+    }
+
+    if (nextIndex < 0) nextIndex = opts.length - 1;
+    if (nextIndex >= opts.length) nextIndex = 0;
+
+    activeIndex = nextIndex;
+
+    opts.forEach((btn, i) => {
+      if (i === activeIndex) {
+        btn.classList.add('bg-gray-100');
+        btn.setAttribute('aria-selected', 'true');
+        btn.scrollIntoView({ block: 'nearest' });
+      } else {
+        btn.classList.remove('bg-gray-100');
+        btn.setAttribute('aria-selected', 'false');
+      }
+    });
+  }
+
+  function selectFromButton(btn) {
+    if (!btn) return;
+    input.value = btn.getAttribute('data-manu-name') || '';
+    closeDropdown();
+    activeIndex = -1;
+  }
+
+  input.addEventListener('keydown', (e) => {
+    const opts = getOptionButtons();
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      openDropdown();
+      if (activeIndex === -1) setActiveIndex(0);
+      else setActiveIndex(activeIndex + 1);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      openDropdown();
+      if (activeIndex === -1) setActiveIndex(opts.length - 1);
+      else setActiveIndex(activeIndex - 1);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+        e.preventDefault();
+        selectFromButton(opts[activeIndex]);
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      if (!dropdown.classList.contains('hidden')) {
+        e.preventDefault();
+        closeDropdown();
+        activeIndex = -1;
+      }
+      return;
+    }
+  });
+  // --- end keyboard navigation ---
+
+  async function loadManufacturersForSelectedProductType() {
+    const ptId = productTypeInput ? (productTypeInput.dataset.productTypeId || '') : '';
+    manufacturers = [];
+    render([]);
+
+    if (!ptId) {
+      // No product type selected yet
+      return;
+    }
+
+    const url = `${window.FM_ESTIMATE_MANUFACTURERS_URL}?product_type_id=${encodeURIComponent(ptId)}`;
+
+    try {
+      const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!resp.ok) throw new Error(`Manufacturers fetch failed (${resp.status})`);
+      const data = await resp.json();
+      manufacturers = Array.isArray(data?.manufacturers) ? data.manufacturers : [];
+      render(manufacturers);
+    } catch (e) {
+      console.error('[estimate_mock] Failed to load manufacturers', e);
+      list.innerHTML = `<li class="px-3 py-2 text-red-600">Failed to load manufacturers</li>`;
+    }
+  }
+
+  function applyFilter() {
+    const q = (input.value || '').trim().toLowerCase();
+    const filtered = manufacturers.filter(n => String(n).toLowerCase().includes(q));
+    render(filtered);
+  }
+
+  // Open on click/focus
+  input.addEventListener('mousedown', async () => {
+    // Ensure list is loaded for current product type
+    await loadManufacturersForSelectedProductType();
+    openDropdown();
+    applyFilter();
+  });
+
+  input.addEventListener('focus', async () => {
+    await loadManufacturersForSelectedProductType();
+    openDropdown();
+    applyFilter();
+  });
+
+  input.addEventListener('input', () => {
+    openDropdown();
+    applyFilter();
+  });
+
+  // Click selection
+  list.addEventListener('mousedown', (e) => {
+    const btn = e.target.closest('button[data-manu-name]');
+    if (!btn) return;
+    e.preventDefault();
+    input.value = btn.getAttribute('data-manu-name') || '';
+    closeDropdown();
+  });
+
+  // If product type changes, clear manufacturer and refresh list next open
+  if (productTypeInput) {
+    productTypeInput.addEventListener('change', () => {
+      input.value = '';
+      manufacturers = [];
+      render([]);
+    });
+  }
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (roomCard.contains(e.target)) return;
+    closeDropdown();
+  });
+
+  // Close on Escape
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDropdown();
+  });
+}
 
   // ── Room add/delete/move ────────────────────────────────────────────────
 
@@ -387,6 +596,7 @@ function addRoom() {
 
   // ✅ now it exists, so init is safe
   initProductTypeDropdownForRoom(newRoomCard);
+  initManufacturerDropdownForRoom(newRoomCard);
 
   renumberRooms();
   reindexAllRooms();
