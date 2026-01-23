@@ -28,6 +28,14 @@ class ProductStyleController extends Controller
 
         $currentPosition = ($currentIndex !== false ? $currentIndex + 1 : 1);
         $totalLines = count($allIds);
+		
+		if (request()->wantsJson()) {
+    return response()->json(
+        $product_line->productStyles()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
+}
 
         return view('admin.product_styles.index', compact(
             'product_line',

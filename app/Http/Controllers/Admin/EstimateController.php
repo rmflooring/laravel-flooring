@@ -413,4 +413,75 @@ class EstimateController extends Controller
     );
 }
 
+public function apiManufacturers(Request $request)
+{
+    $request->validate([
+        'product_type_id' => ['required', 'integer'],
+    ]);
+
+    $manufacturers = DB::table('product_lines')
+        ->where('product_type_id', (int) $request->product_type_id)
+        ->whereNotNull('manufacturer')
+        ->where('manufacturer', '!=', '')
+        ->distinct()
+        ->orderBy('manufacturer')
+        ->pluck('manufacturer')
+        ->values();
+
+    return response()->json([
+        'manufacturers' => $manufacturers,
+    ]);
+}
+
+public function apiStyles(Request $request)
+{
+    $productTypeId = (int) $request->query('product_type_id');
+    $manufacturer  = trim((string) $request->query('manufacturer'));
+
+    if (!$productTypeId || $manufacturer === '') {
+        return response()->json([]);
+    }
+
+    // Find product_line IDs matching product type + manufacturer
+    $lineIds = DB::table('product_lines')
+        ->where('product_type_id', $productTypeId)
+        ->whereNotNull('manufacturer')
+        ->where('manufacturer', '!=', '')
+        ->where('manufacturer', $manufacturer)
+        ->pluck('id');
+
+    if ($lineIds->isEmpty()) {
+        return response()->json([]);
+    }
+
+    // Return styles for those product lines
+    $styles = DB::table('product_styles')
+        ->whereIn('product_line_id', $lineIds->all())
+        ->where('status', 'active')   // remove this line if you don't use 'active'
+        ->orderBy('name')
+        ->get(['id', 'product_line_id', 'name', 'sku', 'style_number', 'sell_price']);
+
+    return response()->json($styles);
+}
+
+	public function apiProductLines(\Illuminate\Http\Request $request)
+{
+    $productTypeId = (int) $request->query('product_type_id', 0);
+    $manufacturer  = trim((string) $request->query('manufacturer', ''));
+
+    if ($productTypeId <= 0 || $manufacturer === '') {
+        return response()->json([]);
+    }
+
+    $lines = \DB::table('product_lines')
+        ->select('id', 'name')
+        ->where('status', 'active')
+        ->where('product_type_id', $productTypeId)
+        ->where('manufacturer', $manufacturer)
+        ->orderBy('name')
+        ->get();
+
+    return response()->json($lines);
+}
+
 }

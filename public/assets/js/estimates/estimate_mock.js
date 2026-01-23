@@ -180,395 +180,884 @@ document.addEventListener("DOMContentLoaded", () => {
     updateEstimateTotals();
   }
 
-	function initProductTypeDropdownForRoom(roomCard) {
-  const input = roomCard.querySelector('[data-product-type-input]');
-  const dropdown = roomCard.querySelector('[data-product-type-dropdown]');
-  const list = roomCard.querySelector('[data-product-type-options]');
-  if (!input || !dropdown || !list) return;
+function initProductTypeDropdownForRoom(roomCard) {
+  const inputs = roomCard.querySelectorAll('[data-product-type-input]');
+  if (!inputs.length) return;
 
-  const row = input.closest('tr');
-  const unitInput = row ? row.querySelector('input[name*="[unit]"]') : null;
-
-  let productTypes = [];
-
-  function openDropdown() { dropdown.classList.remove('hidden'); }
-  function closeDropdown() { dropdown.classList.add('hidden'); }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
+  // Cache product types per room so we don’t refetch for every row
+  if (!roomCard._fmProductTypesPromise) {
+    roomCard._fmProductTypesPromise = fetch('/estimates/api/product-types', {
+      headers: { Accept: 'application/json' }
+    })
+      .then(r => r.json())
+      .catch(err => {
+        console.error('[estimate_mock] Failed to load product types', err);
+        return [];
+      });
   }
 
-function render(items) {
-  list.innerHTML = (items || []).map(pt => {
-    const unitCode  = (pt.sold_by_unit && pt.sold_by_unit.code)  ? pt.sold_by_unit.code  : '';
-	const unitLabel = (pt.sold_by_unit && pt.sold_by_unit.label) ? pt.sold_by_unit.label : '';
-    return `
-	  <li>
-		<button type="button"
-		  class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-		  data-pt-id="${pt.id}"
-data-pt-name="${escapeHtml(pt.name)}"
-data-pt-unit="${escapeHtml(unitCode)}">
-		  <div class="flex justify-between items-center gap-3">
-			<span class="truncate">${escapeHtml(pt.name)}</span>
-			<span class="text-gray-500 text-xs whitespace-nowrap">${escapeHtml(unitLabel)}</span>
-		  </div>
-		</button>
-	  </li>`;
-  }).join('');
-}
+  inputs.forEach((input) => {
+    // Prevent double-binding if rows get re-initialized
+    if (input.dataset.ptBound === '1') return;
+    input.dataset.ptBound = '1';
 
-		  // --- Keyboard navigation (ArrowUp/ArrowDown/Enter/Escape) ---
-  let activeIndex = -1;
+    const row = input.closest('tr');
+    if (!row) return;
 
-  function getOptionButtons() {
-    return Array.from(list.querySelectorAll('button[data-pt-id]'));
-  }
+    // IMPORTANT: dropdown/list are usually in the same <td> as the input
+    const cell = input.closest('td') || input.parentElement;
+    if (!cell) return;
 
-  function setActiveIndex(nextIndex) {
-    const opts = getOptionButtons();
-    if (!opts.length) {
-      activeIndex = -1;
-      return;
+    const dropdown = cell.querySelector('[data-product-type-dropdown]');
+    const list = cell.querySelector('[data-product-type-options]');
+    if (!dropdown || !list) return;
+
+    const unitInput = row.querySelector('input[name*="[unit]"]');
+
+    let productTypes = [];
+    let activeIndex = -1;
+
+    function openDropdown() { dropdown.classList.remove('hidden'); }
+    function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
     }
 
-    // clamp
-    if (nextIndex < 0) nextIndex = opts.length - 1;
-    if (nextIndex >= opts.length) nextIndex = 0;
-
-    activeIndex = nextIndex;
-
-    // update styles
-    opts.forEach((btn, i) => {
-      if (i === activeIndex) {
-        btn.classList.add('bg-gray-100');
-        btn.setAttribute('aria-selected', 'true');
-        // keep visible
-        btn.scrollIntoView({ block: 'nearest' });
-      } else {
-        btn.classList.remove('bg-gray-100');
-        btn.setAttribute('aria-selected', 'false');
-      }
-    });
-  }
-
-function selectFromButton(btn) {
-  if (!btn) return;
-
-  const name = btn.dataset.ptName || '';
-  const unit = btn.dataset.ptUnit || '';
-
-  input.value = name;
-  if (unitInput) unitInput.value = unit;
-
-  // ✅ store selected product type id for manufacturer filtering
-  input.dataset.productTypeId = btn.dataset.ptId || '';
-
-	const manuInput = row ? row.querySelector('[data-manufacturer-input]') : null;
-	if (manuInput) manuInput.value = '';
-	if (manuInput) manuInput.dispatchEvent(new Event('change', { bubbles: true }));
-	
-  closeDropdown();
-  activeIndex = -1;
-}
-
-  // Click selection (use mousedown so it selects before blur)
-	list.addEventListener('mousedown', (e) => {
-	  const btn = e.target.closest('button[data-manu-name]');
-	  if (!btn) return;
-	  e.preventDefault();
-	  selectFromButton(btn);
-	});
-
-  // Keyboard control on the input field
-  input.addEventListener('keydown', (e) => {
-    const opts = getOptionButtons();
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      openDropdown();
-      // if nothing active yet, start at first
-      if (activeIndex === -1) setActiveIndex(0);
-      else setActiveIndex(activeIndex + 1);
-      return;
+    function getOptionButtons() {
+      return Array.from(list.querySelectorAll('button[data-pt-id]'));
     }
 
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      openDropdown();
-      if (activeIndex === -1) setActiveIndex(opts.length - 1);
-      else setActiveIndex(activeIndex - 1);
-      return;
+    function setActiveIndex(nextIndex) {
+      const opts = getOptionButtons();
+      if (!opts.length) { activeIndex = -1; return; }
+
+      if (nextIndex < 0) nextIndex = opts.length - 1;
+      if (nextIndex >= opts.length) nextIndex = 0;
+      activeIndex = nextIndex;
+
+      opts.forEach((btn, i) => {
+        if (i === activeIndex) {
+          btn.classList.add('bg-gray-100');
+          btn.setAttribute('aria-selected', 'true');
+          btn.scrollIntoView({ block: 'nearest' });
+        } else {
+          btn.classList.remove('bg-gray-100');
+          btn.setAttribute('aria-selected', 'false');
+        }
+      });
     }
 
-    if (e.key === 'Enter') {
-      // only intercept if dropdown open and we have an active item
-      if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
-        e.preventDefault();
-        selectFromButton(opts[activeIndex]);
-      }
-      return;
-    }
-
-    if (e.key === 'Escape') {
-      if (!dropdown.classList.contains('hidden')) {
-        e.preventDefault();
-        closeDropdown();
+    function render(items) {
+      const arr = items || [];
+      if (!arr.length) {
+        list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
         activeIndex = -1;
+        return;
       }
-      return;
-    }
-  });
-  // --- end keyboard navigation ---
 
-  // fetch once per room for now (we’ll optimize later)
-  fetch('/admin/estimates/api/product-types', { headers: { Accept: 'application/json' }})
-    .then(r => r.json())
-    .then(data => {
-      productTypes = data || [];
-      render(productTypes);
+      list.innerHTML = arr.map(pt => {
+        const unitCode  = (pt.sold_by_unit && pt.sold_by_unit.code)  ? pt.sold_by_unit.code  : '';
+        const unitLabel = (pt.sold_by_unit && pt.sold_by_unit.label) ? pt.sold_by_unit.label : '';
+
+        return `
+          <li>
+            <button type="button"
+              class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+              data-pt-id="${pt.id}"
+              data-pt-name="${escapeHtml(pt.name)}"
+              data-pt-unit="${escapeHtml(unitCode)}">
+              <div class="flex justify-between items-center gap-3">
+                <span class="truncate">${escapeHtml(pt.name)}</span>
+                <span class="text-gray-500 text-xs whitespace-nowrap">${escapeHtml(unitLabel)}</span>
+              </div>
+            </button>
+          </li>
+        `;
+      }).join('');
+
+      activeIndex = -1;
+    }
+
+    function applyFilter() {
+      const q = (input.value || '').toLowerCase();
+      const filtered = productTypes.filter(pt => (pt.name || '').toLowerCase().includes(q));
+      render(filtered);
+    }
+
+    function selectFromButton(btn) {
+      if (!btn) return;
+
+      const name = btn.dataset.ptName || '';
+      const unit = btn.dataset.ptUnit || '';
+
+      input.value = name;
+
+      // ✅ Unit field shows CODE (ex: "SF")
+      if (unitInput) unitInput.value = unit;
+
+      // ✅ store selected product type id for manufacturer filtering
+      input.dataset.productTypeId = btn.dataset.ptId || '';
+
+      // ✅ clear manufacturer in same row (so it reloads correctly)
+      const manuInput = row.querySelector('[data-manufacturer-input]');
+      if (manuInput) {
+        manuInput.value = '';
+        manuInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      closeDropdown();
+    }
+
+    // Selection by mouse (mousedown beats blur)
+    list.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('button[data-pt-id]');
+      if (!btn) return;
+      e.preventDefault();
+      selectFromButton(btn);
     });
 
-  // Open immediately on click (mousedown happens before "click" handlers)
-input.addEventListener('mousedown', () => {
-  openDropdown();
-  // optional: if you want it filtered instantly based on current text:
-  const q = (input.value || '').toLowerCase();
-  render(productTypes.filter(pt => (pt.name || '').toLowerCase().includes(q)));
-});
+    // Keyboard nav on input
+    input.addEventListener('keydown', (e) => {
+      const opts = getOptionButtons();
 
-// Still open when focused (Tab)
-input.addEventListener('focus', () => {
-  openDropdown();
-});
-  input.addEventListener('input', () => {
-    const q = (input.value || '').toLowerCase();
-    render(productTypes.filter(pt => (pt.name || '').toLowerCase().includes(q)));
-    openDropdown();
-  });
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(0);
+        else setActiveIndex(activeIndex + 1);
+        return;
+      }
 
-  list.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-pt-id]');
-  if (!btn) return;
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(opts.length - 1);
+        else setActiveIndex(activeIndex - 1);
+        return;
+      }
 
-  input.value = btn.getAttribute('data-pt-name') || '';
-  const unit = btn.getAttribute('data-pt-unit') || '';
-  if (unitInput && unit) unitInput.value = unit;
+      if (e.key === 'Enter') {
+        if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+          e.preventDefault();
+          selectFromButton(opts[activeIndex]);
+        }
+        return;
+      }
 
-  // ✅ store selected product type id for manufacturer filtering
-  input.dataset.productTypeId = btn.dataset.ptId || '';
+      if (e.key === 'Escape') {
+        if (!dropdown.classList.contains('hidden')) {
+          e.preventDefault();
+          closeDropdown();
+        }
+      }
+    });
 
-  closeDropdown();
-});
+    // Open on click/focus + filter
+    input.addEventListener('mousedown', async () => {
+      productTypes = await roomCard._fmProductTypesPromise;
+      applyFilter();
+      openDropdown();
+    });
 
-  document.addEventListener('click', (e) => {
-    if (roomCard.contains(e.target)) return;
-    closeDropdown();
+    input.addEventListener('focus', async () => {
+      productTypes = await roomCard._fmProductTypesPromise;
+      applyFilter();
+      openDropdown();
+    });
+
+    input.addEventListener('input', () => {
+      applyFilter();
+      openDropdown();
+    });
+
+    // Close on outside click (but allow clicks inside this cell)
+    document.addEventListener('click', (e) => {
+      if (cell.contains(e.target)) return;
+      closeDropdown();
+    });
   });
 }
+
 
 function initManufacturerDropdownForRoom(roomCard) {
-  const input = roomCard.querySelector('[data-manufacturer-input]');
-  const dropdown = roomCard.querySelector('[data-manufacturer-dropdown]');
-  const list = roomCard.querySelector('[data-manufacturer-options]');
-  if (!input || !dropdown || !list) return;
+  const inputs = roomCard.querySelectorAll('[data-manufacturer-input]');
+  if (!inputs.length) return;
 
-  // We read selected product type id from the product type input in the same row
-  const row = input.closest('tr');
-  const productTypeInput = row ? row.querySelector('[data-product-type-input]') : null;
+  inputs.forEach((input) => {
+    // Prevent double-binding
+    if (input.dataset.manuBound === '1') return;
+    input.dataset.manuBound = '1';
 
-  let manufacturers = [];
+    const row = input.closest('tr');
+    if (!row) return;
 
-  function openDropdown() { dropdown.classList.remove('hidden'); }
-  function closeDropdown() { dropdown.classList.add('hidden'); }
+    const cell = input.closest('td') || input.parentElement;
+    if (!cell) return;
 
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  }
+    const dropdown = cell.querySelector('[data-manufacturer-dropdown]');
+    const list = cell.querySelector('[data-manufacturer-options]');
+    if (!dropdown || !list) return;
 
-  function render(items) {
-    const arr = items || [];
-    if (arr.length === 0) {
-      list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
-      return;
+    const productTypeInput = row.querySelector('[data-product-type-input]');
+
+    let manufacturers = [];
+    let activeIndex = -1;
+
+    function openDropdown() { dropdown.classList.remove('hidden'); }
+    function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
     }
 
-    list.innerHTML = arr.map(name => `
-      <li>
-        <button type="button"
-          class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-          data-manu-name="${escapeHtml(name)}">
-          <span class="truncate">${escapeHtml(name)}</span>
-        </button>
-      </li>
-    `).join('');
-  }
-
-  // --- Keyboard navigation (ArrowUp/ArrowDown/Enter/Escape) ---
-  let activeIndex = -1;
-
-  function getOptionButtons() {
-    return Array.from(list.querySelectorAll('button[data-manu-name]'));
-  }
-
-  function setActiveIndex(nextIndex) {
-    const opts = getOptionButtons();
-    if (!opts.length) {
-      activeIndex = -1;
-      return;
-    }
-
-    if (nextIndex < 0) nextIndex = opts.length - 1;
-    if (nextIndex >= opts.length) nextIndex = 0;
-
-    activeIndex = nextIndex;
-
-    opts.forEach((btn, i) => {
-      if (i === activeIndex) {
-        btn.classList.add('bg-gray-100');
-        btn.setAttribute('aria-selected', 'true');
-        btn.scrollIntoView({ block: 'nearest' });
-      } else {
-        btn.classList.remove('bg-gray-100');
-        btn.setAttribute('aria-selected', 'false');
+    function render(items) {
+      const arr = items || [];
+      if (!arr.length) {
+        list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+        return;
       }
-    });
-  }
 
-  function selectFromButton(btn) {
-    if (!btn) return;
-    input.value = btn.getAttribute('data-manu-name') || '';
-    closeDropdown();
-    activeIndex = -1;
-  }
-
-  input.addEventListener('keydown', (e) => {
-    const opts = getOptionButtons();
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      openDropdown();
-      if (activeIndex === -1) setActiveIndex(0);
-      else setActiveIndex(activeIndex + 1);
-      return;
+      list.innerHTML = arr.map(name => `
+        <li>
+          <button type="button"
+            class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+            data-manu-name="${escapeHtml(name)}">
+            <span class="truncate">${escapeHtml(name)}</span>
+          </button>
+        </li>
+      `).join('');
     }
 
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      openDropdown();
-      if (activeIndex === -1) setActiveIndex(opts.length - 1);
-      else setActiveIndex(activeIndex - 1);
-      return;
+    function getOptionButtons() {
+      return Array.from(list.querySelectorAll('button[data-manu-name]'));
     }
 
-    if (e.key === 'Enter') {
-      if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
-        e.preventDefault();
-        selectFromButton(opts[activeIndex]);
-      }
-      return;
+    function setActiveIndex(nextIndex) {
+      const opts = getOptionButtons();
+      if (!opts.length) { activeIndex = -1; return; }
+
+      if (nextIndex < 0) nextIndex = opts.length - 1;
+      if (nextIndex >= opts.length) nextIndex = 0;
+
+      activeIndex = nextIndex;
+
+      opts.forEach((btn, i) => {
+        if (i === activeIndex) {
+          btn.classList.add('bg-gray-100');
+          btn.setAttribute('aria-selected', 'true');
+          btn.scrollIntoView({ block: 'nearest' });
+        } else {
+          btn.classList.remove('bg-gray-100');
+          btn.setAttribute('aria-selected', 'false');
+        }
+      });
     }
 
-    if (e.key === 'Escape') {
-      if (!dropdown.classList.contains('hidden')) {
-        e.preventDefault();
-        closeDropdown();
-        activeIndex = -1;
-      }
-      return;
-    }
-  });
-  // --- end keyboard navigation ---
+	function selectFromButton(btn) {
+	  if (!btn) return;
 
-  async function loadManufacturersForSelectedProductType() {
-    const ptId = productTypeInput ? (productTypeInput.dataset.productTypeId || '') : '';
-    manufacturers = [];
-    render([]);
+	  input.value = btn.getAttribute('data-manu-name') || '';
+	  closeDropdown();
+	  input.dispatchEvent(new Event('change', { bubbles: true }));
 
-    if (!ptId) {
-      // No product type selected yet
-      return;
-    }
-
-    const url = `${window.FM_ESTIMATE_MANUFACTURERS_URL}?product_type_id=${encodeURIComponent(ptId)}`;
-
-    try {
-      const resp = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!resp.ok) throw new Error(`Manufacturers fetch failed (${resp.status})`);
-      const data = await resp.json();
-      manufacturers = Array.isArray(data?.manufacturers) ? data.manufacturers : [];
-      render(manufacturers);
-    } catch (e) {
-      console.error('[estimate_mock] Failed to load manufacturers', e);
-      list.innerHTML = `<li class="px-3 py-2 text-red-600">Failed to load manufacturers</li>`;
-    }
-  }
-
-  function applyFilter() {
-    const q = (input.value || '').trim().toLowerCase();
-    const filtered = manufacturers.filter(n => String(n).toLowerCase().includes(q));
-    render(filtered);
-  }
-
-  // Open on click/focus
-  input.addEventListener('mousedown', async () => {
-    // Ensure list is loaded for current product type
-    await loadManufacturersForSelectedProductType();
-    openDropdown();
-    applyFilter();
-  });
-
-  input.addEventListener('focus', async () => {
-    await loadManufacturersForSelectedProductType();
-    openDropdown();
-    applyFilter();
-  });
-
-  input.addEventListener('input', () => {
-    openDropdown();
-    applyFilter();
-  });
-
-  // Click selection
-  list.addEventListener('mousedown', (e) => {
-    const btn = e.target.closest('button[data-manu-name]');
-    if (!btn) return;
-    e.preventDefault();
-    input.value = btn.getAttribute('data-manu-name') || '';
-    closeDropdown();
-  });
-
-  // If product type changes, clear manufacturer and refresh list next open
-  if (productTypeInput) {
-    productTypeInput.addEventListener('change', () => {
-      input.value = '';
+	  // After selecting manufacturer, clear + pre-load style options for this row
+	  const styleInput = row.querySelector('[data-style-input]');
+	  if (styleInput) {
+		styleInput.value = '';
+		styleInput.dataset.productLineId = '';
+		initStyleDropdownForRoom(roomCard); // ensures binding if needed
+//		styleInput.focus();                 // optional
+	  }
+	}
+	  
+    async function loadManufacturersForSelectedProductType() {
+      const ptId = productTypeInput ? (productTypeInput.dataset.productTypeId || '') : '';
       manufacturers = [];
       render([]);
+
+      if (!ptId) return;
+
+      const url = `${window.FM_ESTIMATE_MANUFACTURERS_URL}?product_type_id=${encodeURIComponent(ptId)}`;
+
+      try {
+        const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!resp.ok) throw new Error(`Manufacturers fetch failed (${resp.status})`);
+        const data = await resp.json();
+        manufacturers = Array.isArray(data?.manufacturers) ? data.manufacturers : [];
+        render(manufacturers);
+      } catch (e) {
+        console.error('[estimate_mock] Failed to load manufacturers', e);
+        list.innerHTML = `<li class="px-3 py-2 text-red-600">Failed to load manufacturers</li>`;
+      }
+    }
+
+    function applyFilter() {
+      const q = (input.value || '').trim().toLowerCase();
+      const filtered = manufacturers.filter(n => String(n).toLowerCase().includes(q));
+      render(filtered);
+    }
+
+    // Click selection (mousedown beats blur)
+    list.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('button[data-manu-name]');
+      if (!btn) return;
+      e.preventDefault();
+      selectFromButton(btn);
     });
-  }
 
-  // Close on outside click
-  document.addEventListener('click', (e) => {
-    if (roomCard.contains(e.target)) return;
-    closeDropdown();
-  });
+    // Keyboard nav
+    input.addEventListener('keydown', (e) => {
+      const opts = getOptionButtons();
 
-  // Close on Escape
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeDropdown();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(0);
+        else setActiveIndex(activeIndex + 1);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(opts.length - 1);
+        else setActiveIndex(activeIndex - 1);
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+          e.preventDefault();
+          selectFromButton(opts[activeIndex]);
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (!dropdown.classList.contains('hidden')) {
+          e.preventDefault();
+          closeDropdown();
+        }
+      }
+    });
+
+    // Open on click/focus
+    input.addEventListener('mousedown', async () => {
+      await loadManufacturersForSelectedProductType();
+      openDropdown();
+      applyFilter();
+    });
+
+    input.addEventListener('focus', async () => {
+      await loadManufacturersForSelectedProductType();
+      openDropdown();
+      applyFilter();
+    });
+
+    input.addEventListener('input', () => {
+      openDropdown();
+      applyFilter();
+    });
+
+    // If product type changes, clear manufacturer
+    if (productTypeInput) {
+      productTypeInput.addEventListener('change', () => {
+        input.value = '';
+        manufacturers = [];
+        render([]);
+      });
+    }
+
+    // Close on outside click (outside this cell)
+    document.addEventListener('click', (e) => {
+      if (cell.contains(e.target)) return;
+      closeDropdown();
+    });
   });
 }
 
+///style dropdown
+	function initStyleDropdownForRoom(roomCard) {
+  const inputs = roomCard.querySelectorAll('[data-style-input]');
+  if (!inputs.length) return;
+
+  inputs.forEach((styleInput) => {
+    if (styleInput.dataset.styleBound === '1') return;
+    styleInput.dataset.styleBound = '1';
+
+    const row = styleInput.closest('tr');
+    if (!row) return;
+
+    const cell = styleInput.closest('td') || styleInput.parentElement;
+    if (!cell) return;
+
+    const dropdown = cell.querySelector('[data-style-dropdown]');
+    const list = cell.querySelector('[data-style-options]');
+    if (!dropdown || !list) return;
+
+    const productTypeInput = row.querySelector('[data-product-type-input]');
+    const manufacturerInput = row.querySelector('[data-manufacturer-input]');
+
+    let productLines = [];
+    let activeIndex = -1;
+
+    function openDropdown() { dropdown.classList.remove('hidden'); }
+    function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function getOptionButtons() {
+      return Array.from(list.querySelectorAll('button[data-line-id]'));
+    }
+
+    function setActiveIndex(nextIndex) {
+      const opts = getOptionButtons();
+      if (!opts.length) { activeIndex = -1; return; }
+
+      if (nextIndex < 0) nextIndex = opts.length - 1;
+      if (nextIndex >= opts.length) nextIndex = 0;
+
+      activeIndex = nextIndex;
+
+      opts.forEach((btn, i) => {
+        if (i === activeIndex) {
+          btn.classList.add('bg-gray-100');
+          btn.setAttribute('aria-selected', 'true');
+          btn.scrollIntoView({ block: 'nearest' });
+        } else {
+          btn.classList.remove('bg-gray-100');
+          btn.setAttribute('aria-selected', 'false');
+        }
+      });
+    }
+
+    function render(items) {
+      const arr = items || [];
+      if (!arr.length) {
+        list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+        activeIndex = -1;
+        return;
+      }
+
+      list.innerHTML = arr.map(line => `
+        <li>
+          <button type="button"
+            class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+            data-line-id="${line.id}"
+            data-line-name="${escapeHtml(line.name)}">
+            <span class="truncate">${escapeHtml(line.name)}</span>
+          </button>
+        </li>
+      `).join('');
+
+      activeIndex = -1;
+    }
+
+    function selectFromButton(btn) {
+      if (!btn) return;
+
+      const name = btn.getAttribute('data-line-name') || '';
+      const id = btn.getAttribute('data-line-id') || '';
+
+      styleInput.value = name;
+      styleInput.dataset.productLineId = id;
+
+      closeDropdown();
+      styleInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    async function loadProductLines() {
+      const ptId = productTypeInput ? (productTypeInput.dataset.productTypeId || '') : '';
+      const manu = manufacturerInput ? (manufacturerInput.value || '').trim() : '';
+
+      productLines = [];
+      render([]);
+
+      if (!ptId || !manu) return;
+
+      try {
+        const url = new URL('/estimates/api/product-lines', window.location.origin);
+        url.searchParams.set('product_type_id', ptId);
+        url.searchParams.set('manufacturer', manu);
+
+        const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+        if (!resp.ok) throw new Error(`Product lines fetch failed (${resp.status})`);
+
+        productLines = await resp.json();
+        render(productLines);
+      } catch (err) {
+        console.error('[style] Failed to load product lines', err);
+        render([]);
+      }
+    }
+
+    function applyFilter() {
+      const q = (styleInput.value || '').trim().toLowerCase();
+      const filtered = (productLines || []).filter(l => (l.name || '').toLowerCase().includes(q));
+      render(filtered);
+    }
+
+    list.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('button[data-line-id]');
+      if (!btn) return;
+      e.preventDefault();
+      selectFromButton(btn);
+    });
+
+    styleInput.addEventListener('keydown', (e) => {
+      const opts = getOptionButtons();
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(0);
+        else setActiveIndex(activeIndex + 1);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(opts.length - 1);
+        else setActiveIndex(activeIndex - 1);
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+          e.preventDefault();
+          selectFromButton(opts[activeIndex]);
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (!dropdown.classList.contains('hidden')) {
+          e.preventDefault();
+          closeDropdown();
+        }
+      }
+    });
+
+    styleInput.addEventListener('mousedown', async () => {
+      if (!productLines.length) await loadProductLines();
+      openDropdown();
+      applyFilter();
+    });
+
+    styleInput.addEventListener('focus', async () => {
+      if (!productLines.length) await loadProductLines();
+      openDropdown();
+      applyFilter();
+    });
+
+    styleInput.addEventListener('input', () => {
+      openDropdown();
+      applyFilter();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (cell.contains(e.target)) return;
+      closeDropdown();
+    });
+
+    if (productTypeInput) {
+      productTypeInput.addEventListener('change', () => {
+        styleInput.value = '';
+        styleInput.dataset.productLineId = '';
+        productLines = [];
+        render([]);
+      });
+    }
+
+    if (manufacturerInput) {
+      manufacturerInput.addEventListener('change', () => {
+        styleInput.value = '';
+        styleInput.dataset.productLineId = '';
+        productLines = [];
+        render([]);
+      });
+    }
+  });
+}
+
+//color dropdown
+	function initColorDropdownForRoom(roomCard) {
+  const inputs = roomCard.querySelectorAll('[data-color-input]');
+  if (!inputs.length) return;
+
+  inputs.forEach((colorInput) => {
+    if (colorInput.dataset.colorBound === '1') return;
+    colorInput.dataset.colorBound = '1';
+
+    const row = colorInput.closest('tr');
+    if (!row) return;
+
+    const cell = colorInput.closest('td') || colorInput.parentElement;
+    if (!cell) return;
+
+    const dropdown = cell.querySelector('[data-color-dropdown]');
+    const list = cell.querySelector('[data-color-options]');
+    if (!dropdown || !list) return;
+
+    const styleInput = row.querySelector('[data-style-input]');
+
+    let styles = [];
+    let activeIndex = -1;
+
+    function openDropdown() { dropdown.classList.remove('hidden'); }
+    function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function getOptionButtons() {
+      return Array.from(list.querySelectorAll('button[data-style-id]'));
+    }
+
+    function setActiveIndex(nextIndex) {
+      const opts = getOptionButtons();
+      if (!opts.length) { activeIndex = -1; return; }
+
+      if (nextIndex < 0) nextIndex = opts.length - 1;
+      if (nextIndex >= opts.length) nextIndex = 0;
+
+      activeIndex = nextIndex;
+
+      opts.forEach((btn, i) => {
+        if (i === activeIndex) {
+          btn.classList.add('bg-gray-100');
+          btn.setAttribute('aria-selected', 'true');
+          btn.scrollIntoView({ block: 'nearest' });
+        } else {
+          btn.classList.remove('bg-gray-100');
+          btn.setAttribute('aria-selected', 'false');
+        }
+      });
+    }
+
+    function render(items) {
+      const arr = items || [];
+      if (!arr.length) {
+        list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+        activeIndex = -1;
+        return;
+      }
+
+      list.innerHTML = arr.map(s => `
+        <li>
+          <button type="button"
+            class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+            data-style-id="${s.id}"
+            data-style-name="${escapeHtml(s.name)}">
+            <span class="truncate">${escapeHtml(s.name)}</span>
+          </button>
+        </li>
+      `).join('');
+
+      activeIndex = -1;
+    }
+
+    function selectFromButton(btn) {
+      if (!btn) return;
+
+      const name = btn.getAttribute('data-style-name') || '';
+      const id = btn.getAttribute('data-style-id') || '';
+
+      // Fill Color / Item # with Product Style "name"
+      colorInput.value = name;
+
+    // Store id for later pricing lookup
+		colorInput.dataset.productStyleId = id;
+
+		// New color selected -> allow autofill again (clear any manual override)
+		const priceInput = row.querySelector('input[name$="[sell_price]"]');
+		if (priceInput) delete priceInput.dataset.userOverridden;
+
+		// Autofill price now (style price, else line default)
+		autofillSellPriceForRow(row);
+
+		closeDropdown();
+		colorInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    async function loadProductStyles() {
+		  const productLineId = styleInput ? (styleInput.dataset.productLineId || '') : '';
+	styles = [];
+	render([]);
+
+	if (!productLineId) return;
+
+	try {
+	  const url = new URL(`/estimates/api/product-lines/${encodeURIComponent(productLineId)}/product-styles`, window.location.origin);
+
+	  const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+	  if (!resp.ok) throw new Error(`Product styles fetch failed (${resp.status})`);
+
+	  styles = await resp.json(); // should be [{id, name}, ...] or a resource array
+	  render(styles);
+	} catch (err) {
+	  console.error('[color] Failed to load product styles', err);
+	  render([]);
+	}
+    }
+
+    function applyFilter() {
+      const q = (colorInput.value || '').trim().toLowerCase();
+      const filtered = (styles || []).filter(s => (s.name || '').toLowerCase().includes(q));
+      render(filtered);
+    }
+
+	  async function autofillSellPriceForRow(row) {
+  const colorInput = row.querySelector('[data-color-input]');
+  const styleInput = row.querySelector('[data-style-input]');
+  const priceInput = row.querySelector('input[name$="[sell_price]"]');
+
+  if (!colorInput || !styleInput || !priceInput) return;
+
+  const productStyleId = colorInput.dataset.productStyleId;
+  const productLineId = styleInput.dataset.productLineId;
+
+  if (!productStyleId || !productLineId) return;
+
+  // If user manually overrode price AND hasn't changed color since, do nothing
+  // (We will clear this flag when color changes — in the select handler)
+  if (priceInput.dataset.userOverridden === '1') return;
+
+  const url = `/api/product-pricing?product_style_id=${encodeURIComponent(productStyleId)}&product_line_id=${encodeURIComponent(productLineId)}`;
+
+  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!resp.ok) return;
+
+  const data = await resp.json();
+  if (typeof data.sell_price !== 'number') return;
+
+  priceInput.value = data.sell_price.toFixed(2);
+
+  // trigger totals recalculation if your script listens to input events
+  priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+    // Click selection (mousedown beats blur)
+    list.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('button[data-style-id]');
+      if (!btn) return;
+      e.preventDefault();
+      selectFromButton(btn);
+    });
+
+    // Keyboard navigation
+    colorInput.addEventListener('keydown', (e) => {
+      const opts = getOptionButtons();
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(0);
+        else setActiveIndex(activeIndex + 1);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(opts.length - 1);
+        else setActiveIndex(activeIndex - 1);
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+          e.preventDefault();
+          selectFromButton(opts[activeIndex]);
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (!dropdown.classList.contains('hidden')) {
+          e.preventDefault();
+          closeDropdown();
+        }
+      }
+    });
+
+    // Open on click/focus
+    colorInput.addEventListener('mousedown', async () => {
+      if (!styles.length) await loadProductStyles();
+      openDropdown();
+      applyFilter();
+    });
+
+    colorInput.addEventListener('focus', async () => {
+      if (!styles.length) await loadProductStyles();
+      openDropdown();
+      applyFilter();
+    });
+
+    colorInput.addEventListener('input', () => {
+      openDropdown();
+      applyFilter();
+    });
+
+    // Close on outside click (outside this cell)
+    document.addEventListener('click', (e) => {
+      if (cell.contains(e.target)) return;
+      closeDropdown();
+    });
+
+    // If Style changes → clear Color and reload next open
+    if (styleInput) {
+      styleInput.addEventListener('change', () => {
+        colorInput.value = '';
+        colorInput.dataset.productStyleId = '';
+        styles = [];
+        render([]);
+      });
+    }
+  });
+}
+
+	//sell price function
+	function initManualPriceOverrideForRoom(roomCard) {
+  // Unit Price input for material rows (name ends with [sell_price])
+  const priceInputs = roomCard.querySelectorAll('input[name*="[materials]"][name$="[sell_price]"]');
+
+  priceInputs.forEach((input) => {
+    if (input.dataset.priceOverrideBound === '1') return;
+    input.dataset.priceOverrideBound = '1';
+
+    input.addEventListener('input', () => {
+      input.dataset.userOverridden = '1';
+    });
+  });
+}
+
+	
   // ── Room add/delete/move ────────────────────────────────────────────────
 
 function addRoom() {
@@ -595,8 +1084,11 @@ function addRoom() {
   ensureDefaultRows(newRoomCard);
 
   // ✅ now it exists, so init is safe
-  initProductTypeDropdownForRoom(newRoomCard);
-  initManufacturerDropdownForRoom(newRoomCard);
+	initProductTypeDropdownForRoom(newRoomCard);
+	initManufacturerDropdownForRoom(newRoomCard);
+	initStyleDropdownForRoom(newRoomCard);
+	initColorDropdownForRoom(newRoomCard);
+	initManualPriceOverrideForRoom(newRoomCard);
 
   renumberRooms();
   reindexAllRooms();
@@ -765,12 +1257,19 @@ function addRoom() {
 
     // Add row
     if (t.closest(".add-material-row")) {
-      const room = t.closest(".room-card");
-      appendRowFromTemplate(room, ".materials-tbody", ".material-row-template");
-      reindexAllRooms();
-      updateRoomTotals(room);
-      return;
-    }
+  const room = t.closest(".room-card");
+  appendRowFromTemplate(room, ".materials-tbody", ".material-row-template");
+
+  initProductTypeDropdownForRoom(room);
+  initManufacturerDropdownForRoom(room);
+  initStyleDropdownForRoom(room); 
+  initColorDropdownForRoom(room);
+  initManualPriceOverrideForRoom(room);
+
+  reindexAllRooms();
+  updateRoomTotals(room);
+  return;
+}
 
     if (t.closest(".add-freight-row")) {
       const room = t.closest(".room-card");
@@ -842,140 +1341,6 @@ function addRoom() {
 
   renumberRooms();
   reindexAllRooms();
-			
-
-// Product Type searchable dropdown (Flowbite-style)
-(async function initProductTypeDropdown() {
-  console.log('[pt] initProductTypeDropdown start');
-  const input = document.querySelector('[data-product-type-input]');
-  const dropdown = document.querySelector('[data-product-type-dropdown]');
-  const list = document.querySelector('[data-product-type-options]');
-
-  if (!input || !dropdown || !list) return;
-
-  // Find the Unit input in the same row
-  const wrapper = input.closest('td') || input.parentElement;
-const row = input.closest('tr') || input.closest('.material-row') || input.closest('tbody');
-  const unitInput = row ? row.querySelector('input[name*="[unit]"]') : null;
-
-  let productTypes = [];
-  let filtered = [];
-
-  function openDropdown() {
-    dropdown.classList.remove('hidden');
-  }
-
-  function closeDropdown() {
-    dropdown.classList.add('hidden');
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  }
-
-  function render(items) {
-    if (!items || items.length === 0) {
-      list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
-      return;
-    }
-
-    list.innerHTML = items
-      .map((pt) => {
-        const unitLabel = (pt.sold_by_unit && (pt.sold_by_unit.code || pt.sold_by_unit.label)) || '';
-        return `
-          <li>
-            <button type="button"
-              class="w-full text-left px-3 py-2 hover:bg-gray-100"
-              data-pt-id="${pt.id}"
-              data-pt-name="${escapeHtml(pt.name)}"
-              data-pt-unit="${escapeHtml(unitLabel)}"
-            >
-              <div class="flex justify-between gap-2">
-                <span class="truncate">${escapeHtml(pt.name)}</span>
-                <span class="text-gray-400 text-xs">${escapeHtml(unitLabel)}</span>
-              </div>
-            </button>
-          </li>
-        `;
-      })
-      .join('');
-  }
-
-  function applyFilter() {
-    const q = (input.value || '').trim().toLowerCase();
-    filtered = productTypes.filter((pt) => pt.name.toLowerCase().includes(q));
-    render(filtered);
-  }
-
-  // Fetch data once
-  try {
-	  console.log('[pt] about to fetch product types');
-    const resp = await fetch('/admin/estimates/api/product-types', {
-      headers: { 'Accept': 'application/json' },
-      credentials: 'same-origin',
-    });
-    if (!resp.ok) throw new Error(`Product types fetch failed (${resp.status})`);
-    productTypes = await resp.json();
-	  console.log('[pt] fetched productTypes:', productTypes.length);
-  } catch (e) {
-    console.error('[estimate_mock] Failed to load product types', e);
-    list.innerHTML = `<li class="px-3 py-2 text-red-600">Failed to load product types</li>`;
-    return;
-  }
-
-  // Initial render
-  render(productTypes);
-console.log('[pt] rendered items:', list.children.length);
-
-  // Open + filter behavior
-  // Open on pointerdown so it happens before the document pointerdown close handler
-input.addEventListener('mousedown', (e) => {
-  openDropdown();
-  applyFilter();
-});
-
-// Keep filtering while typing
-input.addEventListener('input', () => {
-  openDropdown();
-  applyFilter();
-});
-
-  // Click on an option
-  list.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-pt-id]');
-    if (!btn) return;
-
-    const name = btn.getAttribute('data-pt-name') || '';
-    const unit = btn.getAttribute('data-pt-unit') || '';
-
-    input.value = name;
-
-    // Auto-fill unit but keep editable
-    if (unitInput && unit) {
-      unitInput.value = unit;
-    }
-
-    closeDropdown();
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-
-// Close on outside click
-document.addEventListener('click', (e) => {
-  // ignore clicks inside the product-type cell (input + dropdown)
-  if (wrapper && wrapper.contains(e.target)) return;
-  closeDropdown();
-});
-
-  // Close on Escape
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeDropdown();
-  });
-})();
 
   console.log("[estimate_mock.js] Initialization complete");
 });

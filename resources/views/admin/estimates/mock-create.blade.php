@@ -232,21 +232,58 @@
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="Unit">
                         </td>
-                        <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][materials][0][manufacturer]"
-                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="Manufacturer">
-                        </td>
-                        <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][materials][0][style]"
-                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="Style">
-                        </td>
-                        <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][materials][0][color_item_number]"
-                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="Color / Item #">
-                        </td>
+                        <td class="px-3 py-2 relative">
+						  <input
+							type="text"
+							name="rooms[0][materials][0][manufacturer]"
+							class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+							placeholder="Manufacturer"
+							autocomplete="off"
+							data-manufacturer-input
+						  />
+
+						  <div
+							class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+							data-manufacturer-dropdown
+						  >
+							<ul class="py-1 text-sm text-gray-700" data-manufacturer-options></ul>
+						  </div>
+						</td>
+                        <td class="px-3 py-2 relative">
+						  <input
+							type="text"
+							name="rooms[0][materials][0][style]"
+							class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+							placeholder="Style"
+							autocomplete="off"
+							data-style-input
+						  />
+
+						  <div
+							class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+							data-style-dropdown
+						  >
+							<ul class="py-1 text-sm text-gray-700" data-style-options></ul>
+						  </div>
+						</td>
+
+                        <td class="relative">
+  <input
+    type="text"
+    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][color_item_number]"
+    class="..."
+    data-color-input
+    autocomplete="off"
+  />
+
+  <div
+    class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
+    data-color-dropdown
+  >
+    <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
+  </div>
+</td>
+
                         <td class="px-3 py-2">
                             <input type="text" name="rooms[0][materials][0][po_notes]"
                                 class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
@@ -541,6 +578,13 @@
     </div>
 </div>
 </form>
+
+<script>
+  window.FM_ESTIMATE_PRODUCT_TYPES_URL = "{{ route('admin.estimates.api.product-types') }}";
+  window.FM_ESTIMATE_MANUFACTURERS_URL = "/estimates/api/manufacturers";
+  window.FM_ESTIMATE_PRODUCT_STYLES_URL = "/product-lines";
+
+</script>
 
 <script src="{{ asset('assets/js/estimates/estimate_mock.js') }}" defer></script>
 

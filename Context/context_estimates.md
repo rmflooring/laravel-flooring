@@ -1,99 +1,101 @@
-# Estimate Autocomplete Context (Product Type)
+# Context — Estimates Dropdown Permissions Fix
 
-## Goal
-Implement a real autocomplete UX for the **Product Type** field in the Create Estimate flow.
+## Date
+2026-01-23
 
-## What is working
+## Problem
+Dropdowns in the Estimate UI (product type, manufacturer, product line, styles/colors) were **not working for non-admin users**.
 
-### API
-- Endpoint exists and works:
-  - `GET /admin/estimates/api/product-types`
-  - Returns JSON list of product types
+- Admin users: everything worked
+- Non-admin users: dropdowns were empty
+- Browser showed **403 Forbidden** errors
 
-### JavaScript
-File: `estimate_mock.js`
+## Root Cause
+The Estimate UI JavaScript was calling **admin-only routes**:
 
-We implemented a custom dropdown-based autocomplete for Product Type with:
+- `/admin/estimates/api/product-types`
+- `/admin/estimates/api/product-lines`
+- `/admin/estimates/api/manufacturers`
+- `/admin/product-lines/{id}/product-styles`
 
-- Opens on mouse click (not only Tab)
-- Opens on focus
-- Filters on typing
-- Closes on selection
-- Keyboard navigation:
-  - ArrowDown / ArrowUp
-  - Enter to select
-  - Escape to close
+These routes are protected by the `admin` middleware. Regular users correctly received 403 responses, so dropdown data never loaded.
 
-### UX Improvements
-- Dropdown positioning fixed (no clipping)
-- Dropdown width matches input
-- Styled like a real menu
-- Hover states added
-- Focus states added
+Some URLs were:
+- **Hardcoded in JS** (`estimate_mock.js`)
+- Others injected via **Blade globals** (`window.FM_*` variables)
 
-### Unit Autofill Logic
-We split **label vs code** behavior:
+Fixing only one side was not sufficient — both had to be addressed.
 
-- Dropdown shows: `unit.label` (e.g., "Square Feet")
-- Unit input field receives: `unit.code` (e.g., "SF")
+## Investigation Highlights
+- Confirmed JS loaded correctly for non-admin users
+- Network tab showed 403 responses on admin endpoints
+- Verified route middleware via `php artisan route:list -v`
+- Found admin-only APIs grouped under `Route::prefix('admin')->middleware('admin')`
 
-This is done by:
-- Storing both label and code
-- Displaying label
-- Writing code into the input
+## Solution Overview
 
-### Structure Used
-Each option button contains:
-- `data-pt-name`
-- `data-pt-unit` (code)
+### 1. Created Non-Admin, Permission-Based API Routes
+Added new read-only endpoints outside the admin group, protected by permissions:
 
-Unit input is populated from:
-```js
-btn.dataset.ptUnit
+```php
+Route::prefix('estimates/api')
+    ->middleware(['auth', 'permission:create estimates'])
+    ->group(function () {
+        Route::get('product-types', [Admin\EstimateController::class, 'apiProductTypes']);
+        Route::get('product-lines', [Admin\EstimateController::class, 'apiProductLines']);
+        Route::get('manufacturers', [Admin\EstimateController::class, 'apiManufacturers']);
+        Route::get('product-lines/{product_line}/product-styles', [Admin\ProductStyleController::class, 'index']);
+    });
 ```
 
+### 2. Reused Existing Controllers
+- `ProductStyleController@index` already supported JSON via:
+
+```php
+if (request()->wantsJson()) { ... }
+```
+
+No new controller logic was required.
+
+### 3. Updated JavaScript URLs
+In `public/assets/js/estimates/estimate_mock.js`:
+
+- Replaced all `/admin/estimates/api/...` calls with `/estimates/api/...`
+- Replaced:
+
+```js
+/admin/product-lines/${id}/product-styles
+```
+
+with:
+
+```js
+/estimates/api/product-lines/${id}/product-styles
+```
+
+### 4. Updated Blade Globals
+In `resources/views/admin/estimates/mock-create.blade.php`:
+
+- Removed references to `route('admin.*')`
+- Switched to non-admin API paths (e.g. `/estimates/api/manufacturers`)
+
+## Result
+- Non-admin users can now fully use the Estimate UI
+- All dropdowns load correctly
+- All API calls return **200 OK**
+- Admin routes remain locked down
+
+## Architecture Outcome
+- **Admin routes**: CRUD & management UI
+- **Estimate UI**: permission-based read APIs
+- **Security**: enforced server-side via permissions
+- **JS**: role-agnostic, clean, and reusable
+
+## Notes for Future Work
+- Consider naming the new estimate API routes
+- Reuse these APIs for both create/edit estimate pages
+- Optionally extract estimate APIs into a dedicated controller
+
 ---
+This context captures the full investigation and fix so work can resume without re-debugging.
 
-## Known Next Steps (Not Done Yet)
-
-Potential future improvements:
-
-- Click outside to close dropdown
-- Apply same autocomplete logic to:
-  - Manufacturer
-  - Style
-  - Color / Item #
-  - Labor
-  - Freight
-- Autofill price
-- Prevent duplicate listeners on dynamic rows
-- Add loading indicators
-- Add debounce
-- Add "No results" state
-
----
-
-## Important UX Decisions
-
-- Dropdown opens on mouse click (not just focus)
-- Keyboard-first UX supported
-- Human-readable labels shown
-- Machine-friendly codes stored
-
----
-
-## Files Involved
-
-- `estimate_mock.js`
-- Create Estimate Blade
-- `/admin/estimates/api/product-types`
-
----
-
-## Status
-Product Type autocomplete is complete and working as intended.
-
----
-
-When resuming, next logical step:
-➡ Extend this system to Manufacturer.

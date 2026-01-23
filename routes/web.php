@@ -73,8 +73,21 @@ Route::get('/admin/estimates/mock-create', function () {
     return view('admin.estimates.mock-create', [
         'opportunity' => $opportunity,
     ]);
-})->middleware(['auth']);
+})->middleware(['auth', 'permission:create estimates']);
 
+// TEMP: Estimate mock API (permission-based, non-admin)
+Route::prefix('estimates/api')
+    ->middleware(['auth', 'permission:create estimates'])
+    ->group(function () {
+        Route::get('product-types', [\App\Http\Controllers\Admin\EstimateController::class, 'apiProductTypes']);
+        Route::get('manufacturers', [\App\Http\Controllers\Admin\EstimateController::class, 'apiManufacturers']);
+        Route::get('product-lines', [\App\Http\Controllers\Admin\EstimateController::class, 'apiProductLines']);
+        Route::get('styles', [\App\Http\Controllers\Admin\EstimateController::class, 'apiStyles']);
+		
+		Route::get('product-lines/{product_line}/product-styles', [\App\Http\Controllers\Admin\ProductStyleController::class, 'index'])
+    ->middleware(['auth', 'permission:create estimates']);
+
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -130,6 +143,15 @@ Route::prefix('admin')
             Route::put('estimates/{estimate}', [EstimateController::class, 'update'])->name('estimates.update');
 			Route::get('estimates/api/product-types', [EstimateController::class, 'apiProductTypes'])
 				->name('estimates.api.product-types');
+			
+			Route::get('estimates/api/manufacturers', [EstimateController::class, 'apiManufacturers'])
+				->name('estimates.api.manufacturers');
+			
+			Route::get('estimates/api/product-lines', [EstimateController::class, 'apiProductLines'])
+				->name('estimates.api.product-lines');
+			
+			Route::get('estimates/api/styles', [EstimateController::class, 'apiStyles'])
+				->name('estimates.api.styles');
         });
 
         /*
@@ -521,7 +543,7 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
 // Profile routes (authenticated)
 Route::middleware('auth')->group(function () {
 
-    // 🔹 User Calendar Preferences API
+    // User Calendar Preferences API
     Route::get('/api/user/calendar-preferences', [UserCalendarPreferenceController::class, 'show'])
         ->name('api.user.calendar_preferences.show');
 
@@ -532,6 +554,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+	
+	//estimates
+	Route::get('/api/product-pricing', [\App\Http\Controllers\Api\ProductPricingController::class, 'show'])
+    ->middleware([
+        'permission:view estimates',
+        'permission:create estimates',
+        'permission:edit estimates',
+    ])
+    ->name('api.product-pricing');
+
 });
 
 require __DIR__ . '/auth.php';
