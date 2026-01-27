@@ -11,6 +11,20 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+	// Default tax group on page load
+const taxGroupInput = document.getElementById('tax_group_id_input');
+if (taxGroupInput?.value) {
+  const defaultId = String(taxGroupInput.value);
+
+  // Grab the label from the modal button list (so we display the real group name)
+  const btn = document.querySelector(`[data-tax-group-id="${defaultId}"]`);
+  if (btn?.dataset?.taxGroupName) {
+    window.FM_CURRENT_TAX_GROUP_LABEL = btn.dataset.taxGroupName;
+  }
+
+  loadTaxGroupRate(defaultId);
+}
+	
   // Wide/Compact mode toggle (optional)
   const toggleWideBtn = document.getElementById("toggle-wide-mode");
   if (toggleWideBtn) {
@@ -79,6 +93,120 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+	// ── Tax (default group) ──────────────────────────────────────────────
+window.FM_CURRENT_TAX_PERCENT = 0;
+window.FM_CURRENT_TAX_GROUP_ID = null;
+window.FM_CURRENT_TAX_GROUP_LABEL = 'G'; // fallback
+
+async function loadTaxGroupRate(groupId) {
+  if (!groupId) return;
+
+  try {
+    const resp = await fetch(`/estimates/api/tax-groups/${encodeURIComponent(groupId)}/rate`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!resp.ok) throw new Error(`Tax group rate fetch failed (${resp.status})`);
+
+    const data = await resp.json();
+
+    window.FM_CURRENT_TAX_GROUP_ID = groupId;
+    window.FM_CURRENT_TAX_PERCENT = parseFloat(data?.tax_rate_percent || 0);
+
+    // If your endpoint returns a name/label, use it. Otherwise fallback to group id.
+    window.FM_CURRENT_TAX_GROUP_LABEL =
+      (data?.group_name || data?.group_label || '').toString().trim() || `#${groupId}`;
+
+    // re-run totals now that tax is known
+    updateEstimateTotals();
+  } catch (err) {
+    console.error('[tax] Failed to load tax group rate', err);
+    window.FM_CURRENT_TAX_PERCENT = 0;
+    window.FM_CURRENT_TAX_GROUP_ID = null;
+    window.FM_CURRENT_TAX_GROUP_LABEL = 'G';
+    updateEstimateTotals();
+  }
+}
+
+
+const selectTaxGroupBtn = document.getElementById('select-tax-group-btn');
+
+if (selectTaxGroupBtn) {
+  selectTaxGroupBtn.addEventListener('click', () => {
+    const groupId = document.getElementById('tax_group_id_input')?.value;
+
+    if (!groupId) return;
+
+    // For now: just re-emit selection using the default group id.
+    // (Later, the modal will emit this with the *chosen* group id + name.)
+    document.dispatchEvent(new CustomEvent('fm:tax-group-selected', {
+      detail: { id: groupId, name: '' }
+    }));
+  });
+}
+	// Listen for tax group selection coming from the modal
+document.addEventListener('fm:tax-group-selected', (e) => {
+  const groupId = e?.detail?.id;
+  const groupName = (e?.detail?.name || '').trim();
+
+  if (!groupId) return;
+
+// Tax Group modal selection -> dispatch event
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-tax-group-id][data-tax-group-name]');
+  if (!btn) return;
+
+  const groupId = btn.getAttribute('data-tax-group-id');
+  const groupName = btn.getAttribute('data-tax-group-name');
+
+  document.dispatchEvent(new CustomEvent('fm:tax-group-selected', {
+    detail: { id: groupId, name: groupName }
+  }));
+});
+
+// Tax group selection from modal
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-tax-group-id]');
+  if (!btn) return;
+
+  const groupId = btn.dataset.taxGroupId;
+  const groupName = btn.dataset.taxGroupName;
+
+  if (!groupId) return;
+
+window.FM_CURRENT_TAX_GROUP_LABEL = groupName; // ✅ add this
+
+  console.log('[Tax Group Selected]', groupId, groupName);
+
+// Move focus out of the modal before it gets hidden (avoids aria-hidden warning)
+const openBtn = document.getElementById('select-tax-group-btn');
+if (openBtn) openBtn.focus();
+
+  // Update hidden input
+  const taxInput = document.getElementById('tax_group_id_input');
+  if (taxInput) taxInput.value = groupId;
+
+  // Update label immediately
+  const taxLabel = document.querySelector('.estimate-tax-label');
+  if (taxLabel) {
+    taxLabel.textContent = `Tax (${groupName})`;
+  }
+
+  // Fetch tax rate + recalc totals
+  loadTaxGroupRate(groupId);
+});
+
+  // Store label immediately (so UI updates even before fetch returns)
+  window.FM_CURRENT_TAX_GROUP_ID = String(groupId);
+  window.FM_CURRENT_TAX_GROUP_LABEL = groupName || `#${groupId}`;
+
+  // Update hidden input so form submits the selected group
+  const taxGroupInput = document.getElementById('tax_group_id_input');
+  if (taxGroupInput) taxGroupInput.value = String(groupId);
+
+  // Fetch rate + recalc totals (this will also refresh the label + amount)
+  loadTaxGroupRate(groupId);
+});
+											   
   // ── Row template insertion ───────────────────────────────────────────────
 
   function appendRowFromTemplate(roomCard, tbodySelector, templateSelector) {
@@ -612,7 +740,10 @@ function initManufacturerDropdownForRoom(roomCard) {
     let productLines = [];
     let activeIndex = -1;
 
-    function openDropdown() { dropdown.classList.remove('hidden'); }
+    function openDropdown() { 
+  console.log('[freight] openDropdown fired');
+  dropdown.classList.remove('hidden'); 
+}
     function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
 
     function escapeHtml(str) {
@@ -823,7 +954,10 @@ function initManufacturerDropdownForRoom(roomCard) {
     let styles = [];
     let activeIndex = -1;
 
-    function openDropdown() { dropdown.classList.remove('hidden'); }
+    function openDropdown() {
+  console.log('[freight] openDropdown fired (FREIGHT)');
+  dropdown.classList.remove('hidden');
+}
     function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
 
     function escapeHtml(str) {
@@ -1057,7 +1191,577 @@ function initManufacturerDropdownForRoom(roomCard) {
   });
 }
 
+	//Freight dropdown
+	function initFreightDropdownForRoom(roomCard) {
+  const inputs = roomCard.querySelectorAll('[data-freight-desc-input]');
+  if (!inputs.length) return;
+		
+		if (roomCard.dataset.freightClickDebug !== '1') {
+  roomCard.dataset.freightClickDebug = '1';
+
+  roomCard.addEventListener('click', (e) => {
+    const clickedFreightInput = !!e.target.closest('[data-freight-desc-input]');
+    const clickedFreightCell = !!e.target.closest('td')?.querySelector?.('[data-freight-desc-input]');
+    console.log('[freight click debug]', { clickedFreightInput, clickedFreightCell, target: e.target });
+  }, true); // CAPTURE
+}
+		
+
+  // Cache freight items per room so we don’t refetch for every row
+  if (!roomCard._fmFreightItemsPromise) {
+  roomCard._fmFreightItemsPromise = fetch(window.FM_ESTIMATE_FREIGHT_ITEMS_URL, {
+    headers: { Accept: 'application/json' }
+  })
+    .then(async (r) => {
+      const data = await r.json();
+
+      // Normalize common response shapes into a plain array
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.freight_items)) return data.freight_items;
+      if (Array.isArray(data?.items)) return data.items;
+      if (Array.isArray(data?.freightItems)) return data.freightItems;
+
+      return [];
+    })
+    .catch(err => {
+      console.error('[estimate_mock] Failed to load freight items', err);
+      return [];
+    });
+}
+
+  inputs.forEach((input) => {
+    // Prevent double-binding
+    if (input.dataset.freightBound === '1') return;
+    input.dataset.freightBound = '1';
+
+    const row = input.closest('tr');
+    if (!row) return;
+
+    const cell = input.closest('td') || input.parentElement;
+    if (!cell) return;
+
+    const dropdown = cell.querySelector('[data-freight-desc-dropdown]');
+    const list = cell.querySelector('[data-freight-desc-options]');
+    if (!dropdown || !list) return;
+	dropdown.style.overflow = 'visible';
+						
+    // Optional: if your freight API returns unit + price, we can autofill these later
+    const priceInput = row.querySelector('input[name*="[sell_price]"]');
+
+    let freightItems = [];
+    let activeIndex = -1;
+
+function openDropdown() {
+  dropdown.classList.remove('hidden');
+
+  // Proper fix: anchor to the cell so it can overlay below the input
+  cell.style.position = 'relative';
+  cell.style.overflow = 'visible';
+
+  dropdown.style.position = 'absolute';
+  dropdown.style.left = '0';
+  dropdown.style.top = '100%';
+  dropdown.style.width = '100%';
+  dropdown.style.zIndex = '999999';
+
+  // remove temp debug styling if present
+  dropdown.style.outline = '';
+  dropdown.style.background = '';
+}
+
+	function closeDropdown() {
+	  dropdown.classList.add('hidden');
+	  activeIndex = -1;
+	}
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function getOptionButtons() {
+      return Array.from(list.querySelectorAll('button[data-freight-name]'));
+    }
+
+    function setActiveIndex(nextIndex) {
+      const opts = getOptionButtons();
+      if (!opts.length) { activeIndex = -1; return; }
+
+      if (nextIndex < 0) nextIndex = opts.length - 1;
+      if (nextIndex >= opts.length) nextIndex = 0;
+      activeIndex = nextIndex;
+
+      opts.forEach((btn, i) => {
+        if (i === activeIndex) {
+          btn.classList.add('bg-gray-100');
+          btn.setAttribute('aria-selected', 'true');
+          btn.scrollIntoView({ block: 'nearest' });
+        } else {
+          btn.classList.remove('bg-gray-100');
+          btn.setAttribute('aria-selected', 'false');
+        }
+      });
+    }
+
+    function render(items) {
+      const arr = items || [];
+      if (!arr.length) {
+        list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+        activeIndex = -1;
+        return;
+      }
+
+      list.innerHTML = arr.map(item => {
+        const name = item.name ?? item.freight_description ?? item.description ?? String(item);
+        const price = (item && item.sell_price != null) ? String(item.sell_price) : '';
+        return `
+          <li>
+            <button type="button"
+              class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+              data-freight-name="${escapeHtml(name)}"
+              data-freight-price="${escapeHtml(price)}">
+              <span class="truncate">${escapeHtml(name)}</span>
+            </button>
+          </li>
+        `;
+      }).join('');
+
+      activeIndex = -1;
+    }
+
+    function applyFilter() {
+      const q = (input.value || '').trim().toLowerCase();
+      const filtered = freightItems.filter(item => {
+        const name = (item.name ?? item.freight_description ?? item.description ?? String(item));
+        return String(name).toLowerCase().includes(q);
+      });
+      render(filtered);
+    }
+
+    function selectFromButton(btn) {
+      if (!btn) return;
+      input.value = btn.dataset.freightName || '';
+
+      // Optional autofill price if present
+      const p = btn.dataset.freightPrice;
+      if (priceInput && p !== '' && p != null) {
+        const n = Number(p);
+        if (!isNaN(n)) {
+          priceInput.value = n.toFixed(2);
+          priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+
+      closeDropdown();
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Selection by mouse (mousedown beats blur)
+    list.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('button[data-freight-name]');
+      if (!btn) return;
+      e.preventDefault();
+      selectFromButton(btn);
+    });
+
+    // Keyboard nav
+    input.addEventListener('keydown', (e) => {
+      const opts = getOptionButtons();
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(0);
+        else setActiveIndex(activeIndex + 1);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        openDropdown();
+        if (activeIndex === -1) setActiveIndex(opts.length - 1);
+        else setActiveIndex(activeIndex - 1);
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+          e.preventDefault();
+          selectFromButton(opts[activeIndex]);
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (!dropdown.classList.contains('hidden')) {
+          e.preventDefault();
+          closeDropdown();
+        }
+      }
+    });
+
+    // Open on click/focus + filter
+
+	input.addEventListener('pointerdown', (e) => {
+	  // open instantly on click/tap
+	  e.stopPropagation();
+
+	  // show dropdown immediately (even before data arrives)
+	  openDropdown();
+	  list.innerHTML = `<li class="px-3 py-2 text-gray-500">Loading...</li>`;
+
+	  // focus the input without delaying the UI
+	  input.focus();
+
+	  // load + render async without blocking the open
+	  Promise.resolve(roomCard._fmFreightItemsPromise).then((items) => {
+		freightItems = Array.isArray(items) ? items : [];
+		applyFilter();     // renders filtered list
+		openDropdown();    // keep it open
+	  });
+	});
 	
+	input.addEventListener('focus', async () => {
+	  console.log('[freight] input focus fired');
+
+	  freightItems = await roomCard._fmFreightItemsPromise;
+	  applyFilter();
+
+	  console.log('[freight] focus about to openDropdown');
+	  openDropdown();
+	});
+
+    // Close on outside click (capture) — delay so open logic can win the same click
+document.addEventListener('click', (e) => {
+  if (cell.contains(e.target)) return;        // clicked inside input/cell
+  if (dropdown.contains(e.target)) return;    // clicked inside dropdown panel
+
+  setTimeout(() => closeDropdown(), 0);
+}); // ✅ NOT capture
+  });
+}
+
+ //Labour type loader
+async function fetchLabourTypes() {
+  const res = await fetch('/estimates/api/labour-types', {
+    headers: { 'Accept': 'application/json' },
+    credentials: 'same-origin',
+  });
+  if (!res.ok) throw new Error(`[labour-types] HTTP ${res.status}`);
+  return await res.json(); // [{id,name}]
+}
+	//Labour type dropdown function
+function initLabourTypeDropdownForRow(rowEl) {
+const input = rowEl.querySelector('[data-labour-type-input]');
+const dropdown = rowEl.querySelector('[data-labour-type-dropdown]');
+const list = rowEl.querySelector('[data-labour-type-options]');
+  if (!input || !dropdown || !list) return;
+
+  let labourTypes = [];
+  let activeIndex = -1;
+
+  function openDropdown() { dropdown.classList.remove('hidden'); }
+  function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function render(items) {
+    const arr = items || [];
+    if (!arr.length) {
+      list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+      return;
+    }
+
+    list.innerHTML = arr.map((t, idx) => `
+      <li>
+        <button type="button"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+		  data-labour-id="${t.id}"
+          data-labour-name="${escapeHtml(t.name)}"
+          data-index="${idx}">
+          ${escapeHtml(t.name)}
+        </button>
+      </li>
+    `).join('');
+	  activeIndex = -1; // ✅ add this
+  }
+
+  function filterAndShow() {
+    const q = (input.value || '').toLowerCase();
+    const filtered = labourTypes.filter(t => (t.name || '').toLowerCase().includes(q));
+    render(filtered);
+    openDropdown();
+  }
+
+  // Load once (lazy)
+  async function ensureLoaded() {
+    if (labourTypes.length) return;
+    labourTypes = await fetchLabourTypes();
+  }
+
+	  function getOptionButtons() {
+    return Array.from(list.querySelectorAll('button[data-labour-name]'));
+  }
+
+  function setActiveIndex(nextIndex) {
+    const opts = getOptionButtons();
+    if (!opts.length) { activeIndex = -1; return; }
+
+    if (nextIndex < 0) nextIndex = opts.length - 1;
+    if (nextIndex >= opts.length) nextIndex = 0;
+    activeIndex = nextIndex;
+
+    opts.forEach((btn, i) => {
+      if (i === activeIndex) {
+        btn.classList.add('bg-gray-100');
+        btn.setAttribute('aria-selected', 'true');
+        btn.scrollIntoView({ block: 'nearest' });
+      } else {
+        btn.classList.remove('bg-gray-100');
+        btn.setAttribute('aria-selected', 'false');
+      }
+    });
+  }
+
+  function selectFromButton(btn) {
+  if (!btn) return;
+
+  input.value = btn.dataset.labourName || '';
+
+  const row = rowEl; 
+  row.dataset.labourTypeId = String(btn.dataset.labourId);
+
+  closeDropdown();
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+  input.addEventListener('keydown', (e) => {
+    const opts = getOptionButtons();
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      openDropdown();
+      if (activeIndex === -1) setActiveIndex(0);
+      else setActiveIndex(activeIndex + 1);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      openDropdown();
+      if (activeIndex === -1) setActiveIndex(opts.length - 1);
+      else setActiveIndex(activeIndex - 1);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      if (!dropdown.classList.contains('hidden') && activeIndex >= 0 && opts[activeIndex]) {
+        e.preventDefault();
+        selectFromButton(opts[activeIndex]);
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      if (!dropdown.classList.contains('hidden')) {
+        e.preventDefault();
+        closeDropdown();
+      }
+    }
+  });
+		  
+  // Open on click/focus like your preferred behavior
+  input.addEventListener('focus', async () => {
+    await ensureLoaded();
+    filterAndShow();
+  });
+
+  input.addEventListener('click', async () => {
+    await ensureLoaded();
+    filterAndShow();
+  });
+
+  input.addEventListener('input', async () => {
+    await ensureLoaded();
+    filterAndShow();
+  });  
+
+	// Select (mousedown beats blur)
+	list.addEventListener('mousedown', (e) => {
+	const btn = e.target.closest('button[data-labour-name]');
+	if (!btn) return;
+	e.preventDefault(); // prevent focus change / blur timing issues
+	selectFromButton(btn); // reuse the same selection function
+	});
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (e.target === input) return;
+    if (dropdown.contains(e.target)) return;
+    closeDropdown();
+  });
+}							   
+			
+// Labour description dropdown (ROW-based)
+function initLabourDescriptionDropdownForRow(rowEl) {
+  const typeInput = rowEl.querySelector('[data-labour-type-input]');
+  const descInput = rowEl.querySelector('[data-labour-desc-input]');
+  const dropdown  = rowEl.querySelector('[data-labour-desc-dropdown]');
+  const list      = rowEl.querySelector('[data-labour-desc-options]');
+  const unitInput = rowEl.querySelector('[data-labour-unit-input]');
+  const priceInput = rowEl.querySelector('input[name*="[labour]"][name$="[sell_price]"]');
+  const notesInput = rowEl.querySelector('input[name*="[labour]"][name$="[notes]"], textarea[name*="[labour]"][name$="[notes]"]');
+
+  if (!typeInput || !descInput || !dropdown || !list || !unitInput) return;
+  if (rowEl.dataset.labourDescBound === '1') return;
+  rowEl.dataset.labourDescBound = '1';
+
+  let items = [];
+  let activeIndex = -1;
+
+  function openDropdown() { dropdown.classList.remove('hidden'); }
+  function closeDropdown() { dropdown.classList.add('hidden'); activeIndex = -1; }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function getButtons() {
+    return Array.from(list.querySelectorAll('button[data-labour-desc]'));
+  }
+
+  function setActiveIndex(next) {
+    const btns = getButtons();
+    if (!btns.length) { activeIndex = -1; return; }
+    if (next < 0) next = btns.length - 1;
+    if (next >= btns.length) next = 0;
+    activeIndex = next;
+    btns.forEach((b, i) => b.classList.toggle('bg-gray-100', i === activeIndex));
+    btns[activeIndex]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function render(filtered) {
+    const arr = filtered || [];
+    if (!arr.length) {
+      list.innerHTML = `<li class="px-3 py-2 text-gray-500">No matches</li>`;
+      return;
+    }
+
+    list.innerHTML = arr.map((it) => `
+      <li>
+        <button
+          type="button"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+          data-labour-desc="${escapeHtml(it.description)}"
+          data-labour-unit="${escapeHtml(it.unit_code)}"
+		  data-labour-sell="${escapeHtml(it.sell ?? '')}"
+		  data-labour-notes="${escapeHtml(it.notes ?? '')}"
+        >${escapeHtml(it.description)}
+		</button>
+      </li>
+    `).join('');
+
+    // click select
+    getButtons().forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const desc = btn.getAttribute('data-labour-desc') || '';
+        const unit = btn.getAttribute('data-labour-unit') || '';
+        descInput.value = desc;
+        unitInput.value = unit;
+	closeDropdown();
+const sell = btn.getAttribute('data-labour-sell') || '';
+const notes = btn.getAttribute('data-labour-notes') || '';
+
+if (priceInput && sell !== '') {
+  const n = Number(sell);
+  if (!isNaN(n)) {
+    priceInput.value = n.toFixed(2);
+    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+if (notesInput) {
+  notesInput.value = notes;
+  notesInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+        
+        descInput.dispatchEvent(new Event('input', { bubbles: true }));
+        unitInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+  }
+
+  async function loadItemsForSelectedType() {
+    const labourTypeId = rowEl.dataset.labourTypeId;
+    if (!labourTypeId) {
+      items = [];
+      render([]);
+      return;
+    }
+
+    const url = new URL('/estimates/api/labour-items', window.location.origin);
+    url.searchParams.set('labour_type_id', labourTypeId);
+
+    const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`Failed to load labour items (${res.status})`);
+    items = await res.json();
+    render(items);
+  }
+
+  function filterAndRender() {
+    const q = (descInput.value || '').toLowerCase().trim();
+    if (!q) { render(items); return; }
+    render(items.filter((it) => String(it.description || '').toLowerCase().includes(q)));
+  }
+
+  descInput.addEventListener('focus', async () => {
+    try { await loadItemsForSelectedType(); openDropdown(); }
+    catch (e) { console.error('[labour desc] load failed', e); }
+  });
+
+  descInput.addEventListener('click', async () => {
+    try { await loadItemsForSelectedType(); openDropdown(); }
+    catch (e) { console.error('[labour desc] load failed', e); }
+  });
+
+  descInput.addEventListener('input', () => {
+    filterAndRender();
+    openDropdown();
+  });
+
+  descInput.addEventListener('keydown', (e) => {
+    const btns = getButtons();
+    if (!btns.length) return;
+
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(activeIndex + 1); openDropdown(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(activeIndex - 1); openDropdown(); }
+    if (e.key === 'Enter') {
+      if (activeIndex >= 0) { e.preventDefault(); btns[activeIndex].click(); }
+    }
+    if (e.key === 'Escape') { e.preventDefault(); closeDropdown(); }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!rowEl.contains(e.target)) closeDropdown();
+  });
+}
+
   // ── Room add/delete/move ────────────────────────────────────────────────
 
 function addRoom() {
@@ -1089,6 +1793,11 @@ function addRoom() {
 	initStyleDropdownForRoom(newRoomCard);
 	initColorDropdownForRoom(newRoomCard);
 	initManualPriceOverrideForRoom(newRoomCard);
+	initFreightDropdownForRoom(newRoomCard);
+	newRoomCard.querySelectorAll('.labour-tbody tr').forEach((row) => {
+  initLabourTypeDropdownForRow(row);
+  initLabourDescriptionDropdownForRow(row);
+});
 
   renumberRooms();
   reindexAllRooms();
@@ -1194,10 +1903,24 @@ function addRoom() {
       materials += matHidden ? parseNumber(matHidden.value) : 0;
       freight += frHidden ? parseNumber(frHidden.value) : 0;
       labour += labHidden ? parseNumber(labHidden.value) : 0;
-    });
+    });    const pretax = materials + freight + labour;
 
-    const pretax = materials + freight + labour;
-    const tax = 0;
+    const taxPercent = parseNumber(window.FM_CURRENT_TAX_PERCENT || 0);
+
+// Update the "Tax (...)" label in the Estimate Summary
+const taxLabelEl = document.querySelector('.estimate-tax-label');
+if (taxLabelEl) {
+  const label = window.FM_CURRENT_TAX_GROUP_LABEL || 'Tax';
+  const percent = Number(window.FM_CURRENT_TAX_PERCENT || 0)
+    .toFixed(3)
+    .replace(/\.?0+$/, '');
+
+  taxLabelEl.textContent = percent
+    ? `Tax (${label}) ${percent}%`
+    : `Tax (${label})`;
+}
+    const tax = pretax * (taxPercent / 100);
+
     const grand = pretax + tax;
 
     // Visible spans in Estimate Summary (these exist)
@@ -1271,21 +1994,30 @@ function addRoom() {
   return;
 }
 
-    if (t.closest(".add-freight-row")) {
-      const room = t.closest(".room-card");
-      appendRowFromTemplate(room, ".freight-tbody", ".freight-row-template");
-      reindexAllRooms();
-      updateRoomTotals(room);
-      return;
-    }
+if (t.closest(".add-freight-row")) {
+  const room = t.closest(".room-card");
+  appendRowFromTemplate(room, ".freight-tbody", ".freight-row-template");
+
+  initFreightDropdownForRoom(room);
+
+  reindexAllRooms();
+  updateRoomTotals(room);
+  return;
+}
 
     if (t.closest(".add-labour-row")) {
-      const room = t.closest(".room-card");
-      appendRowFromTemplate(room, ".labour-tbody", ".labour-row-template");
-      reindexAllRooms();
-      updateRoomTotals(room);
-      return;
-    }
+  const room = t.closest(".room-card");
+  appendRowFromTemplate(room, ".labour-tbody", ".labour-row-template");
+
+  // ✅ init labour dropdown on the newly added row
+  const tbody = room.querySelector(".labour-tbody");
+  const newRow = tbody ? tbody.querySelector("tr:last-child") : null;
+  if (newRow) initLabourTypeDropdownForRow(newRow);
+
+  reindexAllRooms();
+  updateRoomTotals(room);
+  return;
+}
 
     // Delete room
     if (t.closest(".delete-room")) {
@@ -1335,9 +2067,13 @@ function addRoom() {
 
   // ── Initialize existing rooms ───────────────────────────────────────────
   roomsContainer.querySelectorAll(".room-card").forEach(card => {
-    ensureDefaultRows(card);
-    updateRoomTotals(card);
-  });
+  ensureDefaultRows(card);
+
+  // bind dropdowns for existing rows
+  initFreightDropdownForRoom(card);
+
+  updateRoomTotals(card);
+});
 
   renumberRooms();
   reindexAllRooms();

@@ -6,6 +6,7 @@ use App\Http\Controllers\UserCalendarPreferenceController;
 use App\Http\Controllers\CalendarEventController;
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 use App\Http\Controllers\ProfileController;
 
@@ -39,6 +40,7 @@ use App\Http\Controllers\Admin\ProductStyleController;
 
 use App\Http\Controllers\Admin\EstimateController;
 use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Api\EstimateLabourTypeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,9 +72,30 @@ Route::get('/admin/estimates/mock-create', function () {
         ])->find($opportunityId);
     }
 
-    return view('admin.estimates.mock-create', [
-        'opportunity' => $opportunity,
-    ]);
+    // Employees for Salesperson dropdowns
+    $employees = \App\Models\Employee::where('status', 'active')
+        ->orderBy('first_name')
+        ->get(['id', 'first_name']);
+
+// ✅ Default Tax Group (NEW — add right here)
+$defaultTaxGroupId = \DB::table('default_tax')
+->orderByDesc('id')
+->value('tax_rate_group_id');
+
+
+// ✅ Tax Groups (for modal list) <---- ADD THIS RIGHT HERE
+$taxGroups = \DB::table('tax_rate_groups')
+    ->orderBy('name')
+    ->get();
+
+
+return view('admin.estimates.mock-create', [
+    'opportunity' => $opportunity,
+    'employees'  => $employees,
+    'defaultTaxGroupId' => $defaultTaxGroupId,
+    'taxGroups' => $taxGroups,   // ✅ ADD THIS LINE
+]);
+	
 })->middleware(['auth', 'permission:create estimates']);
 
 // TEMP: Estimate mock API (permission-based, non-admin)
@@ -83,12 +106,48 @@ Route::prefix('estimates/api')
         Route::get('manufacturers', [\App\Http\Controllers\Admin\EstimateController::class, 'apiManufacturers']);
         Route::get('product-lines', [\App\Http\Controllers\Admin\EstimateController::class, 'apiProductLines']);
         Route::get('styles', [\App\Http\Controllers\Admin\EstimateController::class, 'apiStyles']);
-		
 		Route::get('product-lines/{product_line}/product-styles', [\App\Http\Controllers\Admin\ProductStyleController::class, 'index'])
     ->middleware(['auth', 'permission:create estimates']);
+		
+// ✅ Labour Types (for estimate dropdown)
+Route::get('labour-types', [EstimateLabourTypeController::class, 'index']);
 
-    });
+// ✅ Labour Items (descriptions + unit for estimate dropdown)
+Route::get('labour-items', [\App\Http\Controllers\Api\EstimateLabourItemController::class, 'index']);
+		
+// Default Tax Group rate percent (sum of tax_rate_sales in the group)
+Route::get('tax-groups/{tax_group}/rate', function (int $tax_group) {
+// Detect the rate column safely
+$rateCol = 'sales_rate';
+foreach (['tax_rate_sales', 'sales_rate'] as $candidate) {
+if (Schema::hasColumn('tax_rates', $candidate)) {
+$rateCol = $candidate;
+break;
+}
+}
 
+
+$rate = \DB::table('tax_rate_group_items as tgi')
+->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
+->where('tgi.tax_rate_group_id', $tax_group)
+->sum("tr.$rateCol");
+
+
+$group = \DB::table('tax_rate_groups')
+->where('id', $tax_group)
+->first();
+
+
+$groupName = (string) (($group->name ?? $group->group_name ?? $group->groupName ?? '') ?: 'Tax');
+
+
+return response()->json([
+'group_id' => $tax_group,
+'group_name' => $groupName,
+'tax_rate_percent' => (float) $rate,
+]);
+});
+});
 /*
 |--------------------------------------------------------------------------
 | Admin Area
@@ -152,6 +211,19 @@ Route::prefix('admin')
 			
 			Route::get('estimates/api/styles', [EstimateController::class, 'apiStyles'])
 				->name('estimates.api.styles');
+			
+			//freight management
+			Route::get('/freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'index'])
+			  ->name('freight_items.index');
+
+			Route::post('/freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'store'])
+			  ->name('freight_items.store');
+
+			Route::put('/freight-items/{freightItem}', [\App\Http\Controllers\Admin\FreightItemController::class, 'update'])
+			  ->name('freight_items.update');
+			
+			Route::get('/estimates/api/freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'apiIndex'])
+				->name('estimates.api.freight-items');
         });
 
         /*
