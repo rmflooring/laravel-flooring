@@ -64,5 +64,17 @@ public function getParentAccounts(Request $request)
 
     return response()->json($parents);
 }
-	//ended here
+
+public function edit(GLAccount $gl_account)
+{
+    $accountTypes = \App\Models\AccountType::where('status', 'active')->get();
+    $statusOptions = ['active' => 'Active', 'inactive' => 'Inactive'];
+
+    return view('admin.gl_accounts.edit', [
+        'glAccount'     => $gl_account,
+        'accountTypes' => $accountTypes,
+        'statusOptions'=> $statusOptions,
+    ]);
+}
+	
 }
