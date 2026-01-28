@@ -44,18 +44,22 @@ class EstimateController extends Controller
         'q',
         'status',
         'dateFrom',
-        'dateTo'
+        'dateTo' , 
     ));
 }
 	
     public function store(Request $request)
     {
         $data = $request->validate([
+			'opportunity_id' => ['nullable', 'integer'],
             'parent_customer_name' => ['nullable', 'string', 'max:255'],
+			'status' => ['required', 'in:draft,sent,revised,approved,rejected'],
             'job_name'             => ['nullable', 'string', 'max:255'],
             'job_number'           => ['nullable', 'string', 'max:255'],
             'job_address'          => ['nullable', 'string', 'max:255'],
             'pm_name'              => ['nullable', 'string', 'max:255'],
+			'salesperson_1_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
+			'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'notes'                => ['nullable', 'string'],
             'estimate_number'      => ['nullable', 'string', 'max:255'],
             'subtotal_materials'   => ['nullable', 'numeric'],
@@ -113,12 +117,15 @@ class EstimateController extends Controller
             $estimate = Estimate::create([
                 'estimate_number'    => $incomingEstimateNo,
                 'revision_no'        => 0,
+				'opportunity_id' => $data['opportunity_id'] ?? null,
                 'status'             => 'draft',
                 'customer_name'      => $data['parent_customer_name'] ?? null,
                 'job_name'           => $data['job_name'] ?? null,
                 'job_no'             => $data['job_number'] ?? null,
                 'job_address'        => $data['job_address'] ?? null,
                 'pm_name'            => $data['pm_name'] ?? null,
+				'salesperson_1_employee_id' => $data['salesperson_1_employee_id'] ?? null,
+				'salesperson_2_employee_id' => $data['salesperson_2_employee_id'] ?? null,
                 'notes'              => $data['notes'] ?? null,
                 'subtotal_materials' => (float)($data['subtotal_materials'] ?? 0),
                 'subtotal_labour'    => (float)($data['subtotal_labour'] ?? 0),
@@ -208,175 +215,179 @@ class EstimateController extends Controller
             ->with('estimate_id', $estimate->id);
     }
 
-    public function edit(Estimate $estimate)
-    {
-        $estimate->load([
-            'rooms' => fn($q) => $q->orderBy('sort_order'),
-            'rooms.items' => fn($q) => $q->orderBy('sort_order'),
-        ]);
+	public function edit(Estimate $estimate)
+	{
+		$estimate->load([
+			'rooms' => fn($q) => $q->orderBy('sort_order'),
+			'rooms.items' => fn($q) => $q->orderBy('sort_order'),
+			'salesperson1Employee',
+			'salesperson2Employee',
+		]);
 
-        return view('admin.estimates.edit', compact('estimate'));
-    }
+		$taxGroups = DB::table('tax_rate_groups')
+			->select('tax_rate_groups.*')
+			->whereNull('tax_rate_groups.deleted_at')
+			->orderBy('tax_rate_groups.name')
+			->get();
 
-    public function update(Request $request, Estimate $estimate)
-    {
-        $data = $request->validate([
-            'parent_customer_name' => ['nullable', 'string', 'max:255'],
-            'job_name'             => ['nullable', 'string', 'max:255'],
-            'job_number'           => ['nullable', 'string', 'max:255'],
-            'job_address'          => ['nullable', 'string', 'max:255'],
-            'pm_name'              => ['nullable', 'string', 'max:255'],
-            'notes'                => ['nullable', 'string'],
-            'status'               => ['required', 'in:draft,sent,approved,rejected'],
-            'rooms'                => ['nullable', 'array'],
-            'rooms.*.id'           => ['nullable', 'integer', 'exists:estimate_rooms,id'],
-            'rooms.*.room_name'    => ['nullable', 'string', 'max:255'],
-            'rooms.*.materials'    => ['nullable', 'array'],
-            'rooms.*.materials.*.id'                => ['nullable', 'integer', 'exists:estimate_items,id'],
-            'rooms.*.materials.*.product_type'      => ['nullable', 'string'],
-            'rooms.*.materials.*.manufacturer'      => ['nullable', 'string'],
-            'rooms.*.materials.*.style'             => ['nullable', 'string'],
-            'rooms.*.materials.*.color_item_number' => ['nullable', 'string'],
-            'rooms.*.materials.*.po_notes'          => ['nullable', 'string'],
-            'rooms.*.materials.*.quantity'          => ['nullable', 'numeric'],
-            'rooms.*.materials.*.unit'              => ['nullable', 'string', 'max:50'],
-            'rooms.*.materials.*.sell_price'        => ['nullable', 'numeric'],
-            'rooms.*.materials.*.notes'             => ['nullable', 'string'],
-            'rooms.*.freight'                       => ['nullable', 'array'],
-            'rooms.*.freight.*.id'                  => ['nullable', 'integer', 'exists:estimate_items,id'],
-            'rooms.*.freight.*.freight_description' => ['nullable', 'string'],
-            'rooms.*.freight.*.quantity'            => ['nullable', 'numeric'],
-            'rooms.*.freight.*.unit'                => ['nullable', 'string', 'max:50'],
-            'rooms.*.freight.*.sell_price'          => ['nullable', 'numeric'],
-            'rooms.*.freight.*.notes'               => ['nullable', 'string'],
-            'rooms.*.labour'                        => ['nullable', 'array'],
-            'rooms.*.labour.*.id'                   => ['nullable', 'integer', 'exists:estimate_items,id'],
-            'rooms.*.labour.*.labour_type'          => ['nullable', 'string'],
-            'rooms.*.labour.*.description'          => ['nullable', 'string'],
-            'rooms.*.labour.*.quantity'             => ['nullable', 'numeric'],
-            'rooms.*.labour.*.unit'                 => ['nullable', 'string', 'max:50'],
-            'rooms.*.labour.*.sell_price'           => ['nullable', 'numeric'],
-            'rooms.*.labour.*.notes'                => ['nullable', 'string'],
-        ]);
+		$defaultTaxGroupId = DB::table('default_tax')->where('id', 1)->value('tax_rate_group_id');
 
-        DB::transaction(function () use ($estimate, $data) {
-            $estimate->update([
-                'customer_name' => $data['parent_customer_name'] ?? $estimate->customer_name,
-                'job_name'      => $data['job_name'] ?? $estimate->job_name,
-                'job_no'        => $data['job_number'] ?? $estimate->job_no,
-                'job_address'   => $data['job_address'] ?? $estimate->job_address,
-                'pm_name'       => $data['pm_name'] ?? $estimate->pm_name,
-                'notes'         => $data['notes'] ?? $estimate->notes,
-                'status'        => $data['status'],
-                'updated_by'    => auth()->id(),
-            ]);
+		// ✅ ADD THIS LINE RIGHT HERE
+		$employees = \App\Models\Employee::orderBy('first_name')->orderBy('last_name')->get();
 
-            $estimate->items()->delete();
-            $estimate->rooms()->delete();
+		// ✅ AND RETURN WITH employees INCLUDED
+		return view('admin.estimates.edit', compact('estimate', 'taxGroups', 'defaultTaxGroupId', 'employees'));
+	}
 
-            $rooms = $data['rooms'] ?? [];
+public function update(Request $request, Estimate $estimate)
+{
+    $data = $request->validate([
+        'parent_customer_name' => ['nullable', 'string', 'max:255'],
+        'pm_name'              => ['nullable', 'string', 'max:255'],
+        'job_number'           => ['nullable', 'string', 'max:255'],
+        'job_name'             => ['nullable', 'string', 'max:255'],
+        'job_address'          => ['nullable', 'string', 'max:255'],
+        'notes'                => ['nullable', 'string'],
+		'status' => ['required', 'in:draft,sent,revised,approved,rejected'],
 
-            foreach ($rooms as $roomIndex => $room) {
-                if (!empty($room['_delete']) && $room['_delete'] === '1') continue;
+        'subtotal_materials'   => ['nullable', 'numeric'],
+        'subtotal_labour'      => ['nullable', 'numeric'],
+        'subtotal_freight'     => ['nullable', 'numeric'],
+        'pretax_total'         => ['nullable', 'numeric'],
+        'tax_amount'           => ['nullable', 'numeric'],
+        'grand_total'          => ['nullable', 'numeric'],
+        'tax_group_id'         => ['nullable', 'integer'],
+        'tax_rate_percent'     => ['nullable', 'numeric'],
 
-                $roomModel = EstimateRoom::create([
+        'rooms'                => ['nullable', 'array'],
+        'rooms.*.id'           => ['nullable', 'integer'],
+        'rooms.*.room_name'    => ['nullable', 'string', 'max:255'],
+
+        'rooms.*.materials'    => ['nullable', 'array'],
+        'rooms.*.freight'      => ['nullable', 'array'],
+        'rooms.*.labour'       => ['nullable', 'array'],
+    ]);
+
+    DB::transaction(function () use ($estimate, $data) {
+
+        // 1) Update estimate header + totals
+        $estimate->forceFill([
+            'customer_name'      => $data['parent_customer_name'] ?? $estimate->customer_name,
+            'pm_name'            => $data['pm_name'] ?? $estimate->pm_name,
+            'job_no'             => $data['job_number'] ?? $estimate->job_no,
+            'job_name'           => $data['job_name'] ?? $estimate->job_name,
+            'job_address'        => $data['job_address'] ?? $estimate->job_address,
+            'notes'              => $data['notes'] ?? $estimate->notes,
+			'status' => $data['status'],
+
+            'subtotal_materials' => (float)($data['subtotal_materials'] ?? 0),
+            'subtotal_labour'    => (float)($data['subtotal_labour'] ?? 0),
+            'subtotal_freight'   => (float)($data['subtotal_freight'] ?? 0),
+            'pretax_total'       => (float)($data['pretax_total'] ?? 0),
+            'tax_amount'         => (float)($data['tax_amount'] ?? 0),
+            'grand_total'        => (float)($data['grand_total'] ?? 0),
+            'tax_group_id'       => $data['tax_group_id'] ?? $estimate->tax_group_id,
+            'tax_rate_percent'   => (float)($data['tax_rate_percent'] ?? 0),
+
+            'updated_by'         => auth()->id(),
+        ])->save();
+
+        // 2) Rooms + items
+        $rooms = $data['rooms'] ?? [];
+
+        foreach ($rooms as $roomIndex => $roomData) {
+            $roomId = $roomData['id'] ?? null;
+
+// Create or load the room
+if ($roomId) {
+    $room = EstimateRoom::where('id', $roomId)
+        ->where('estimate_id', $estimate->id)
+        ->firstOrFail();
+} else {
+    $room = new EstimateRoom();
+    $room->estimate_id = $estimate->id;
+}
+
+// Save room meta (both update + create)
+$room->room_name  = $roomData['room_name'] ?? null;
+$room->sort_order = (int)$roomIndex;
+$room->save();
+
+// IMPORTANT: use the saved ID for items
+$roomId = $room->id;
+
+            // delete all items for this room then re-insert
+            EstimateItem::where('estimate_id', $estimate->id)
+                ->where('estimate_room_id', $roomId)
+                ->delete();
+
+            // MATERIALS
+            foreach (($roomData['materials'] ?? []) as $i => $item) {
+                if ($this->isRowEmpty($item, ['product_type', 'quantity', 'sell_price'])) continue;
+
+                EstimateItem::create([
+                    'estimate_id'       => $estimate->id,
+                    'estimate_room_id'  => $roomId,
+                    'item_type'         => 'material',
+                    'sort_order'        => (int)$i,
+                    'product_type'      => $item['product_type'] ?? null,
+                    'manufacturer'      => $item['manufacturer'] ?? null,
+                    'style'             => $item['style'] ?? null,
+                    'color_item_number' => $item['color_item_number'] ?? null,
+                    'po_notes'          => $item['po_notes'] ?? null,
+                    'quantity'          => (float)($item['quantity'] ?? 0),
+                    'unit'              => $item['unit'] ?? null,
+                    'sell_price'        => (float)($item['sell_price'] ?? 0),
+                    'line_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'notes'             => $item['notes'] ?? null,
+                ]);
+            }
+
+            // FREIGHT
+            foreach (($roomData['freight'] ?? []) as $i => $item) {
+                if ($this->isRowEmpty($item, ['freight_description', 'quantity', 'sell_price'])) continue;
+
+                EstimateItem::create([
                     'estimate_id'        => $estimate->id,
-                    'room_name'          => $room['room_name'] ?? null,
-                    'sort_order'         => (int) $roomIndex,
-                    'subtotal_materials' => 0,
-                    'subtotal_labour'    => 0,
-                    'subtotal_freight'   => 0,
-                    'room_total'         => 0,
-                ]);
-
-                foreach (($room['materials'] ?? []) as $i => $item) {
-                    if ($this->isRowEmpty($item, ['product_type', 'quantity', 'sell_price'])) continue;
-
-                    EstimateItem::create([
-                        'estimate_id'        => $estimate->id,
-                        'estimate_room_id'   => $roomModel->id,
-                        'item_type'          => 'material',
-                        'sort_order'         => (int) $i,
-                        'product_type'       => $item['product_type'] ?? null,
-                        'manufacturer'       => $item['manufacturer'] ?? null,
-                        'style'              => $item['style'] ?? null,
-                        'color_item_number'  => $item['color_item_number'] ?? null,
-                        'po_notes'           => $item['po_notes'] ?? null,
-                        'quantity'           => (float)($item['quantity'] ?? 0),
-                        'unit'               => $item['unit'] ?? null,
-                        'sell_price'         => (float)($item['sell_price'] ?? 0),
-                        'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
-                        'notes'              => $item['notes'] ?? null,
-                    ]);
-                }
-
-                foreach (($room['freight'] ?? []) as $i => $item) {
-                    if ($this->isRowEmpty($item, ['freight_description', 'quantity', 'sell_price'])) continue;
-
-                    EstimateItem::create([
-                        'estimate_id'         => $estimate->id,
-                        'estimate_room_id'    => $roomModel->id,
-                        'item_type'           => 'freight',
-                        'sort_order'          => (int) $i,
-                        'freight_description' => $item['freight_description'] ?? null,
-                        'quantity'            => (float)($item['quantity'] ?? 0),
-                        'unit'                => $item['unit'] ?? null,
-                        'sell_price'          => (float)($item['sell_price'] ?? 0),
-                        'line_total'          => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
-                        'notes'               => $item['notes'] ?? null,
-                    ]);
-                }
-
-                foreach (($room['labour'] ?? []) as $i => $item) {
-                    if ($this->isRowEmpty($item, ['labour_type', 'quantity', 'sell_price', 'description'])) continue;
-
-                    EstimateItem::create([
-                        'estimate_id'      => $estimate->id,
-                        'estimate_room_id' => $roomModel->id,
-                        'item_type'        => 'labour',
-                        'sort_order'       => (int) $i,
-                        'labour_type'      => $item['labour_type'] ?? null,
-                        'description'      => $item['description'] ?? null,
-                        'quantity'         => (float)($item['quantity'] ?? 0),
-                        'unit'             => $item['unit'] ?? null,
-                        'sell_price'       => (float)($item['sell_price'] ?? 0),
-                        'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
-                        'notes'            => $item['notes'] ?? null,
-                    ]);
-                }
-            }
-
-            $estimate->load('rooms.items');
-
-            foreach ($estimate->rooms as $room) {
-                $mat = (float) $room->items->where('item_type', 'material')->sum('line_total');
-                $fre = (float) $room->items->where('item_type', 'freight')->sum('line_total');
-                $lab = (float) $room->items->where('item_type', 'labour')->sum('line_total');
-
-                $room->update([
-                    'subtotal_materials' => round($mat, 2),
-                    'subtotal_freight'   => round($fre, 2),
-                    'subtotal_labour'    => round($lab, 2),
-                    'room_total'         => round($mat + $fre + $lab, 2),
+                    'estimate_room_id'   => $roomId,
+                    'item_type'          => 'freight',
+                    'sort_order'         => (int)$i,
+                    'freight_description'=> $item['freight_description'] ?? null,
+                    'quantity'           => (float)($item['quantity'] ?? 0),
+                    'unit'               => $item['unit'] ?? null,
+                    'sell_price'         => (float)($item['sell_price'] ?? 0),
+                    'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'notes'              => $item['notes'] ?? null,
                 ]);
             }
 
-            $totalMat = $estimate->rooms->sum('subtotal_materials');
-            $totalFre = $estimate->rooms->sum('subtotal_freight');
-            $totalLab = $estimate->rooms->sum('subtotal_labour');
-            $pretax   = round($totalMat + $totalFre + $totalLab, 2);
+            // LABOUR
+            foreach (($roomData['labour'] ?? []) as $i => $item) {
+                if ($this->isRowEmpty($item, ['labour_type', 'description', 'quantity', 'sell_price'])) continue;
 
-            $estimate->update([
-                'subtotal_materials' => round($totalMat, 2),
-                'subtotal_freight'   => round($totalFre, 2),
-                'subtotal_labour'    => round($totalLab, 2),
-                'pretax_total'       => $pretax,
-            ]);
-        });
+                EstimateItem::create([
+                    'estimate_id'      => $estimate->id,
+                    'estimate_room_id' => $roomId,
+                    'item_type'        => 'labour',
+                    'sort_order'       => (int)$i,
+                    'labour_type'      => $item['labour_type'] ?? null,
+                    'description'      => $item['description'] ?? null,
+                    'quantity'         => (float)($item['quantity'] ?? 0),
+                    'unit'             => $item['unit'] ?? null,
+                    'sell_price'       => (float)($item['sell_price'] ?? 0),
+                    'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'notes'            => $item['notes'] ?? null,
+                ]);
+            }
+        }
+    });
 
-        return redirect()->route('admin.estimates.edit', $estimate->id)
-            ->with('success', 'Estimate updated.');
-    }
+    return redirect()
+        ->route('admin.estimates.edit', $estimate)
+        ->with('success', 'Estimate updated.');
+}
+
+
 
     private function isRowEmpty(array $row, array $keysToCheck): bool
     {

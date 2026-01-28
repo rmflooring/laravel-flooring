@@ -11,6 +11,22 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+	// ✅ INIT EXISTING ROOMS (EDIT MODE FIX)
+document.querySelectorAll('.room-card').forEach((roomCard) => {
+initProductTypeDropdownForRoom(roomCard);
+initManufacturerDropdownForRoom(roomCard);
+initStyleDropdownForRoom(roomCard);
+initColorDropdownForRoom(roomCard);
+initManualPriceOverrideForRoom(roomCard);
+initFreightDropdownForRoom(roomCard);
+
+
+roomCard.querySelectorAll('.labour-tbody tr').forEach((row) => {
+initLabourTypeDropdownForRow(row);
+initLabourDescriptionDropdownForRow(row);
+});
+});
+	
 	// Default tax group on page load
 const taxGroupInput = document.getElementById('tax_group_id_input');
 if (taxGroupInput?.value) {

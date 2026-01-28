@@ -2,6 +2,7 @@
     <div class="py-6">
 	<form method="POST" action="{{ route('admin.estimates.store') }}">
     @csrf
+		<input type="hidden" name="opportunity_id" value="{{ $opportunity?->id }}">
 
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
 
@@ -59,8 +60,8 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
         <label class="block mb-1 text-sm font-medium text-gray-700">Salesperson 1</label>
-        <select name="salesperson_1_id"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+        <select name="salesperson_1_employee_id"
+  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
             <option value="">Select</option>
             @foreach($employees as $emp)
                 <option value="{{ $emp->id }}">{{ $emp->first_name }}</option>
@@ -70,8 +71,8 @@
 
     <div>
         <label class="block mb-1 text-sm font-medium text-gray-700">Salesperson 2</label>
-        <select name="salesperson_2_id"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+        <select name="salesperson_2_employee_id"
+  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
             <option value="">Select</option>
             @foreach($employees as $emp)
                 <option value="{{ $emp->id }}">{{ $emp->first_name }}</option>

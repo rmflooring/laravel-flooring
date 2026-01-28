@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Estimate extends Model
 {
     protected $fillable = [
+		'opportunity_id',
         'estimate_number',
         'revision_no',
         'status',
@@ -17,6 +19,8 @@ class Estimate extends Model
         'job_no',
         'job_address',
         'pm_name',
+		'salesperson_1_employee_id',
+		'salesperson_2_employee_id',
 
         'notes',
 
@@ -50,4 +54,32 @@ class Estimate extends Model
     return $this->belongsTo(\App\Models\Opportunity::class);
 }
 
+	public function salesperson1()
+{
+    return $this->belongsTo(\App\Models\User::class, 'salesperson_1_id');
+}
+		public function salesperson2()
+{
+    return $this->belongsTo(\App\Models\User::class, 'salesperson_2_id');
+}
+
+	public function salesperson1Employee(): BelongsTo
+{
+    return $this->belongsTo(\App\Models\Employee::class, 'salesperson_1_employee_id');
+}
+
+public function salesperson2Employee(): BelongsTo
+{
+    return $this->belongsTo(\App\Models\Employee::class, 'salesperson_2_employee_id');
+}
+	public function creator()
+{
+    return $this->belongsTo(\App\Models\User::class, 'created_by');
+}
+
+public function updater()
+{
+    return $this->belongsTo(\App\Models\User::class, 'updated_by');
+}
+	
 }
