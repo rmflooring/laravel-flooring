@@ -3,6 +3,7 @@
 	<form method="POST" action="{{ route('admin.estimates.store') }}">
     @csrf
 		<input type="hidden" name="opportunity_id" value="{{ $opportunity?->id }}">
+		<input type="hidden" name="status" value="draft">
 
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
 
@@ -19,9 +20,9 @@
 @endif
 
                 <div class="flex items-center gap-2">
-                    <button type="button"
-    class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
-    Save Estimate
+                    <button type="submit"
+  class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+  Save Estimate
 </button>
 					<button id="toggle-wide-mode" type="button"
   class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
