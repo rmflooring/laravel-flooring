@@ -247,6 +247,8 @@ public function update(Request $request, Estimate $estimate)
         'job_number'           => ['nullable', 'string', 'max:255'],
         'job_name'             => ['nullable', 'string', 'max:255'],
         'job_address'          => ['nullable', 'string', 'max:255'],
+		'salesperson_1_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
+		'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         'notes'                => ['nullable', 'string'],
 		'status' => ['required', 'in:draft,sent,revised,approved,rejected'],
 
@@ -274,6 +276,8 @@ public function update(Request $request, Estimate $estimate)
         $estimate->forceFill([
             'customer_name'      => $data['parent_customer_name'] ?? $estimate->customer_name,
             'pm_name'            => $data['pm_name'] ?? $estimate->pm_name,
+			'salesperson_1_employee_id' => $data['salesperson_1_employee_id'] ?? null,
+			'salesperson_2_employee_id' => $data['salesperson_2_employee_id'] ?? null,
             'job_no'             => $data['job_number'] ?? $estimate->job_no,
             'job_name'           => $data['job_name'] ?? $estimate->job_name,
             'job_address'        => $data['job_address'] ?? $estimate->job_address,
