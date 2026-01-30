@@ -189,14 +189,33 @@
 
                                     {{-- Estimates --}}
                                     <td class="px-6 py-4">
+										@php
+											$estimateSort = request('estimate_sort', 'desc'); // desc = newest first
+											$sortedEstimates = $opportunity->estimates
+												->sortBy('created_at')
+												->values();
+
+											if ($estimateSort === 'desc') {
+												$sortedEstimates = $sortedEstimates->reverse()->values();
+											}
+										@endphp
+
+										<div class="mb-2">
+											<a href="{{ request()->fullUrlWithQuery(['estimate_sort' => ($estimateSort === 'desc' ? 'asc' : 'desc')]) }}"
+											   class="inline-flex items-center text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+												Sort: {{ $estimateSort === 'desc' ? 'Newest → Oldest' : 'Oldest → Newest' }}
+											</a>
+										</div>
+
                                         @if($opportunity->estimates && $opportunity->estimates->count())
                                             <ul class="list-disc space-y-1 pl-5 text-gray-700 dark:text-gray-200">
-                                                @foreach($opportunity->estimates as $estimate)
+                                                @foreach($sortedEstimates as $estimate)
                                                     <li>
-                                                        <span class="font-medium text-gray-900 dark:text-white">
-                                                            {{ $estimate->estimate_number ?? ('Draft #'.$estimate->id) }}
-                                                        </span>
-                                                        <span class="text-gray-600 dark:text-gray-300">
+                                                        <a href="{{ route('admin.estimates.edit', $estimate->id) }}"
+														   class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+															{{ $estimate->estimate_number ?? ('Draft #'.$estimate->id) }}
+														</a>
+																		<span class="text-gray-600 dark:text-gray-300">
                                                             ({{ $estimate->grand_total ?? $estimate->total_amount ?? '—' }})
                                                         </span>
                                                     </li>

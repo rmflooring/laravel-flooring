@@ -33,7 +33,7 @@
                         </div>
 
                         {{-- Status --}}
-                        <div class="md:col-span-3">
+                        <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select name="status"
                                     class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
@@ -61,7 +61,7 @@
                         </div>
 						
 						{{-- Sort --}}
-<div class="md:col-span-1">
+<div class="md:col-span-2">
     <label class="block text-sm font-medium text-gray-700 mb-1">Sort</label>
     <select name="sort"
             class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
