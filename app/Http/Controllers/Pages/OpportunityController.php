@@ -7,6 +7,8 @@ use App\Models\Customer;
 use App\Models\ProjectManager;
 use App\Models\Opportunity;
 use Illuminate\Http\Request;
+use App\Models\Employee;
+
 
 class OpportunityController extends Controller
 {
@@ -128,11 +130,17 @@ if ($request->filled('project_manager_id')) {
         'Closed',
     ];
 
+		// Employees (for Sales Person dropdowns)
+$employees = Employee::query()
+    ->orderBy('first_name')
+    ->get(['id', 'first_name']);
+
     return view('pages.opportunities.create', compact(
         'parentCustomers',
         'jobSiteCustomers',
         'projectManagers',
-        'statuses'
+        'statuses',
+		'employees'
     ));
 }
 
@@ -164,17 +172,22 @@ if ($request->filled('project_manager_id')) {
             ->with('success', 'Opportunity created.');
     }
 
-    public function show(string $id)
-    {
-        $opportunity = Opportunity::with([
-            'parentCustomer',
-            'jobSiteCustomer',
-            'projectManager',
-            'estimates',
-        ])->findOrFail($id);
+	public function show(string $id)
+	{
+		$opportunity = Opportunity::with([
+			'parentCustomer',
+			'jobSiteCustomer',
+			'projectManager',
+			'estimates',
+		])->findOrFail($id);
 
-        return view('pages.opportunities.show', compact('opportunity'));
-    }
+		$salesPeople = Employee::whereIn('id', array_filter([
+			$opportunity->sales_person_1,
+			$opportunity->sales_person_2,
+		]))->get()->keyBy('id');
+
+		return view('pages.opportunities.show', compact('opportunity', 'salesPeople'));
+	}
 
     public function edit(string $id)
 {
@@ -205,12 +218,17 @@ if ($request->filled('project_manager_id')) {
         'Closed',
     ];
 
+		$employees = Employee::query()
+    ->orderBy('first_name')
+    ->get(['id', 'first_name']);
+
     return view('pages.opportunities.edit', compact(
         'opportunity',
         'parentCustomers',
         'jobSiteCustomers',
         'projectManagers',
-        'statuses'
+         'statuses',
+		 'employees'
     ));
 }
 

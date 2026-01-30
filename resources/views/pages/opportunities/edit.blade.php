@@ -75,17 +75,29 @@
 
                         <div class="md:col-span-3">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sales Person 1</label>
-                            <input type="text" name="sales_person_1" form="opportunity-form"
-                                   value="{{ old('sales_person_1', $opportunity->sales_person_1) }}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                           <select name="sales_person_1" form="opportunity-form"
+								class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+							<option value="">-- Select --</option>
+							@foreach ($employees as $e)
+								<option value="{{ $e->id }}" @selected((string) $opportunity->sales_person_1 === (string) $e->id)>
+									{{ $e->first_name }}
+								</option>
+							@endforeach
+						</select>
                         </div>
 
                         <div class="md:col-span-3">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sales Person 2</label>
-                            <input type="text" name="sales_person_2" form="opportunity-form"
-                                   value="{{ old('sales_person_2', $opportunity->sales_person_2) }}"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
-                        </div>
+                            <select name="sales_person_2" form="opportunity-form"
+								class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+							<option value="">-- Select --</option>
+							@foreach ($employees as $e)
+								<option value="{{ $e->id }}" @selected((string) $opportunity->sales_person_2 === (string) $e->id)>
+									{{ $e->first_name }}
+								</option>
+							@endforeach
+						</select>
+												</div>
 
                         <div class="md:col-span-6">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>

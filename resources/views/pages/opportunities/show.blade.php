@@ -134,7 +134,7 @@
                                     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                                         <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">Sales Person 1</div>
                                         <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                                            {{ $opportunity->sales_person_1 ?: '—' }}
+                                            {{ $salesPeople[$opportunity->sales_person_1]->first_name ?? '' }}
                                         </div>
                                     </div>
                                 </div>
@@ -143,7 +143,7 @@
                                     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                                         <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">Sales Person 2</div>
                                         <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                                            {{ $opportunity->sales_person_2 ?: '—' }}
+                                            {{ $salesPeople[$opportunity->sales_person_2]->first_name ?? '' }}
                                         </div>
                                     </div>
                                 </div>
