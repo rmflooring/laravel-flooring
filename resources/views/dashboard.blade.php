@@ -19,35 +19,137 @@
             </div>
 
             <!-- Stats Grid (Flowbite Cards) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Card 1 -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Active Jobs</h4>
-                    <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">42</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">+8 this month</p>
-                </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {{-- Card Grid --}}
+    <div class="space-y-6">
 
-                <!-- Card 2 -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Pending Estimates</h4>
-                    <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">19</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">-3 from last week</p>
-                </div>
+        {{-- Row 1: 4-up --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            @php
+                $cardsRow1 = [
+                    [
+                        'title' => 'Customers',
+                        'subtitle' => 'Manage customer records',
+                        'href' => route('admin.customers.index'),
+                        'accent' => 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+                        'icon' => 'M7 20a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H7Z',
+                    ],
+                    [
+                        'title' => 'Opportunities',
+                        'subtitle' => 'Track jobs & leads',
+                        'href' => route('pages.opportunities.index'),
+                        'accent' => 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
+                        'icon' => 'M12 6v6l4 2',
+                    ],
+                    [
+                        'title' => 'Estimates',
+                        'subtitle' => 'Create & manage estimates',
+                        'href' => route('admin.estimates.index'),
+                        'accent' => 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800',
+                        'icon' => 'M7 7h10M7 11h10M7 15h6',
+                    ],
+                    [
+                        'title' => 'Invoices',
+                        'subtitle' => 'Coming soon',
+                        'href' => null,
+                        'accent' => 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
+                        'icon' => 'M8 7h8M8 11h8M8 15h4',
+                    ],
+                ];
+            @endphp
 
-                <!-- Card 3 -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Completed This Month</h4>
-                    <p class="text-3xl font-bold text-green-600 dark:text-green-400">28</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">+12% vs last month</p>
-                </div>
+            @foreach ($cardsRow1 as $c)
+                @include('components.dashboard-card', ['c' => $c])
+            @endforeach
+        </div>
 
-                <!-- Card 4 -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Revenue</h4>
-                    <p class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">$124k</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">YTD</p>
-                </div>
-            </div>
+        {{-- Row 2: 4-up --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            @php
+                $cardsRow2 = [
+                    [
+                        'title' => 'Labour Catalog',
+                        'subtitle' => 'Labour types & pricing',
+                        'href' => route('admin.labour_items.index'),
+                        'accent' => 'bg-fuchsia-50 dark:bg-fuchsia-900/20 border-fuchsia-200 dark:border-fuchsia-800',
+                        'icon' => 'M9 12h6M12 9v6',
+                    ],
+                    [
+                        'title' => 'Product Catalog',
+                        'subtitle' => 'Lines, styles, pricing',
+                        'href' => route('admin.product_lines.index'),
+                        'accent' => 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800',
+                        'icon' => 'M6 7h12M6 12h12M6 17h12',
+                    ],
+                    [
+                        'title' => 'Inventory',
+                        'subtitle' => 'Coming soon',
+                        'href' => null,
+                        'accent' => 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700',
+                        'icon' => 'M4 7h16M6 11h12M6 15h12',
+                    ],
+                    [
+                        'title' => 'Vendors',
+                        'subtitle' => 'Vendors & reps',
+                        'href' => route('admin.vendors.index'),
+                        'accent' => 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800',
+                        'icon' => 'M6 10h12M6 14h12M8 18h8',
+                    ],
+                ];
+            @endphp
+
+            @foreach ($cardsRow2 as $c)
+                @include('components.dashboard-card', ['c' => $c])
+            @endforeach
+        </div>
+
+        {{-- Row 3: 2-up --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @php
+                $cardsRow3 = [
+                    [
+                        'title' => 'Work Orders',
+                        'subtitle' => 'Coming soon',
+                        'href' => null,
+                        'accent' => 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800',
+                        'icon' => 'M7 8h10M7 12h10M7 16h6',
+                    ],
+                    [
+                        'title' => 'Purchase Orders',
+                        'subtitle' => 'Coming soon',
+                        'href' => null,
+                        'accent' => 'bg-lime-50 dark:bg-lime-900/20 border-lime-200 dark:border-lime-800',
+                        'icon' => 'M7 7h10M7 11h10M7 15h10',
+                    ],
+                ];
+            @endphp
+
+            @foreach ($cardsRow3 as $c)
+                @include('components.dashboard-card', ['c' => $c])
+            @endforeach
+        </div>
+
+        {{-- Row 4: 1-up --}}
+        <div class="grid grid-cols-1 gap-4">
+            @php
+                $cardsRow4 = [
+                    [
+                        'title' => 'Calendar',
+                        'subtitle' => 'Schedules & events',
+                        'href' => route('pages.calendar.index'),
+                        'accent' => 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800',
+                        'icon' => 'M7 3v2m10-2v2M5 8h14M7 12h4m-4 4h6',
+                    ],
+                ];
+            @endphp
+
+            @foreach ($cardsRow4 as $c)
+                @include('components.dashboard-card', ['c' => $c])
+            @endforeach
+        </div>
+
+    </div>
+</div>
 
             <!-- Quick Actions (Flowbite Buttons + Dropdown) -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">

@@ -204,7 +204,7 @@
                     <li class="relative">
                         <button id="dropdownEstimatesButton" data-dropdown-toggle="dropdownEstimates"
                                 class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
-                                       {{ (request()->routeIs('admin.estimates.*') || request()->is('admin/estimates/mock-create')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
+                                       {{ (request()->routeIs('pages.estimates.*') || request()->is('pages/estimates/mock-create')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}
                                 type="button">
                             Manage Estimates
                             <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
@@ -213,8 +213,8 @@
                         </button>
                         <div id="dropdownEstimates" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownEstimatesButton">
-                                <li><a href="{{ route('admin.estimates.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">View Estimates</a></li>
-                                <li><a href="{{ url('/admin/estimates/mock-create') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Create Estimate</a></li>
+                                <li><a href="{{ route('pages.estimates.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">View Estimates</a></li>
+<li><a href="{{ url('/pages/estimates/mock-create') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Create Estimate</a></li>
                             </ul>
                         </div>
                     </li>
