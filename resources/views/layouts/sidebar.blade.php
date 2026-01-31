@@ -131,8 +131,8 @@
 
 					<!-- Flyout menu -->
 					<div
-						class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700"
-					>
+  class="absolute left-full top-0 z-50 block w-56 rounded-lg bg-white shadow dark:bg-gray-700"
+>
 						<ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
 							<li>
 								<a href="{{ route('admin.product_types.index') }}"
