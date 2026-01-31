@@ -19,7 +19,7 @@
     <aside id="app-sidebar"
            class="fixed left-0 top-0 z-40 h-screen translate-x-0 border-r border-gray-200 bg-white transition-transform transition-all duration-200 sm:translate-x-0 dark:border-gray-700 dark:bg-gray-900"
            aria-label="Sidebar">
-        <div class="relative h-full px-3 py-4 overflow-visible">
+        <div class="relative h-full px-3 py-4">
 
             <!-- Logo -->
             <a href="{{ route('dashboard') }}" class="mb-6 flex items-center space-x-3 rtl:space-x-reverse">
@@ -131,8 +131,8 @@
 
 					<!-- Flyout menu -->
 					<div
-  class="absolute left-full top-0 z-50 block w-56 rounded-lg bg-white shadow dark:bg-gray-700"
->
+						class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700"
+					>
 						<ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
 							<li>
 								<a href="{{ route('admin.product_types.index') }}"
