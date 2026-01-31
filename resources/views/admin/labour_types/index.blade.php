@@ -9,7 +9,46 @@
                             Add New Labour Type
                         </a>
                     </div>
+				
+					{{-- ================= FILTER BAR GOES HERE ================= --}}
 
+					<form method="GET" action="{{ route('admin.labour_types.index') }}"
+						  class="border border-gray-200 rounded-2xl p-6 mb-6 bg-white">
+
+						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+							<div>
+								<label class="block text-sm font-medium mb-2">Search</label>
+								<input type="text"
+									   name="search"
+									   value="{{ request('search') }}"
+									   placeholder="Name, notes, creator..."
+									   class="w-full rounded-lg border-gray-300 focus:ring-4 focus:ring-blue-300" />
+							</div>
+
+							<div>
+								<label class="block text-sm font-medium mb-2">Per Page</label>
+								<select name="per_page"
+										class="w-full rounded-lg border-gray-300 focus:ring-4 focus:ring-blue-300">
+									@foreach([10,15,25,50,100] as $n)
+										<option value="{{ $n }}" @selected((int)request('per_page', 15) === $n)>{{ $n }}</option>
+									@endforeach
+								</select>
+							</div>
+						</div>
+
+						<div class="mt-6 flex gap-3">
+							<button class="bg-blue-700 text-white px-5 py-2.5 rounded-lg hover:bg-blue-800">
+								Apply
+							</button>
+
+							<a href="{{ route('admin.labour_types.index') }}"
+							   class="border px-5 py-2.5 rounded-lg hover:bg-gray-50">
+								Reset
+							</a>
+						</div>
+					</form>
+
+					{{-- ================= END FILTER BAR ================= --}}
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">

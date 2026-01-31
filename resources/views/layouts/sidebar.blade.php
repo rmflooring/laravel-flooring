@@ -19,7 +19,7 @@
     <aside id="app-sidebar"
            class="fixed left-0 top-0 z-40 h-screen -translate-x-full border-r border-gray-200 bg-white transition-transform transition-all duration-200 sm:translate-x-0 dark:border-gray-700 dark:bg-gray-900"
            aria-label="Sidebar">
-        <div class="h-full overflow-y-auto px-3 py-4">
+        <div class="relative h-full px-3 py-4">
 
             <!-- Logo -->
             <a href="{{ route('dashboard') }}" class="mb-6 flex items-center space-x-3 rtl:space-x-reverse">
@@ -108,29 +108,86 @@
                     </a>
                 </li>
 
-                {{-- Products --}}
-                <li>
-                    <a href="{{ route('admin.product_types.index') }}"
-                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 0 0 5l10 5 10-5L10 0Z"/>
-                            <path d="M0 7l10 5 10-5v8l-10 5L0 15V7Z"/>
-                        </svg>
-                        <span class="sidebar-label">Products</span>
-                    </a>
-                </li>
+                {{-- Products flyout (hover) --}}
+				<li class="relative group">
+					<a
+						href="#"
+						class="sidebar-link flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+						onclick="return false;"
+					>
+						<div class="flex items-center gap-3">
+							<svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+								<path d="M10 0 0 5l10 5 10-5L10 0Z"/>
+								<path d="M0 7l10 5 10-5v8l-10 5L0 15V7Z"/>
+							</svg>
+							<span class="sidebar-label">Products</span>
+						</div>
 
-                {{-- Labour --}}
-                <li>
-                    <a href="{{ route('admin.labour_types.index') }}"
-                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M6 2a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h6v-6a2 2 0 0 1 2-2h6V8a2 2 0 0 0-2-2h-2V4a2 2 0 0 0-2-2H6Z"/>
-                            <path d="M20 14h-6a1 1 0 0 0-1 1v5h6a2 2 0 0 0 2-2v-3a1 1 0 0 0-1-1Z"/>
-                        </svg>
-                        <span class="sidebar-label">Labour</span>
-                    </a>
-                </li>
+						<!-- right arrow -->
+						<svg class="h-4 w-4 text-gray-500 dark:text-gray-400 sidebar-label" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+							<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+						</svg>
+					</a>
+
+					<!-- Flyout menu -->
+					<div
+						class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700"
+					>
+						<ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+							<li>
+								<a href="{{ route('admin.product_types.index') }}"
+								   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+									Product Types
+								</a>
+							</li>
+							<li>
+								<a href="{{ route('admin.product_lines.index') }}"
+								   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+									Product Lines
+								</a>
+							</li>
+						</ul>
+					</div>
+				</li>
+               {{-- Labour flyout (hover) --}}
+<li class="relative group">
+    <a
+        href="#"
+        class="sidebar-link flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+        onclick="return false;"
+    >
+        <div class="flex items-center gap-3">
+            <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M6 2a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h6v-6a2 2 0 0 1 2-2h6V8a2 2 0 0 0-2-2h-2V4a2 2 0 0 0-2-2H6Z"/>
+                <path d="M20 14h-6a1 1 0 0 0-1 1v5h6a2 2 0 0 0 2-2v-3a1 1 0 0 0-1-1Z"/>
+            </svg>
+            <span class="sidebar-label">Labour</span>
+        </div>
+
+        <!-- right arrow -->
+        <svg class="h-4 w-4 text-gray-500 dark:text-gray-400 sidebar-label" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+    </a>
+
+    <!-- Flyout menu -->
+    <div class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700">
+        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+            <li>
+                <a href="{{ route('admin.labour_types.index') }}"
+                   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                    Labour Types
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('admin.labour_items.index') }}"
+                   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                    Labour Items
+                </a>
+            </li>
+        </ul>
+    </div>
+</li>
 
                 {{-- ADMIN --}}
                 @if ($showAdminNav)
@@ -152,31 +209,61 @@
                         </li>
                     @endif
 
-                    {{-- Manage Users --}}
-                    @if ($canManageUsers)
-                        <li>
-                            <a href="{{ route('admin.users.index') }}"
-                               class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                                <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10 0a5 5 0 1 1 0 10A5 5 0 0 1 10 0Z"/>
-                                    <path d="M2 19a8 8 0 0 1 16 0H2Z"/>
-                                </svg>
-                                <span class="sidebar-label">Manage Users</span>
-                            </a>
-                        </li>
-                    @endif
+					{{-- People flyout (hover) --}}
+					<li class="relative group">
+						<a
+							href="#"
+							class="sidebar-link flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+							onclick="return false;"
+						>
+							<div class="flex items-center gap-3">
+								<svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400"
+									 xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+									<path d="M10 0a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/>
+									<path d="M2 20a8 8 0 0 1 16 0H2Z"/>
+								</svg>
+								<span class="sidebar-label">People</span>
+							</div>
 
-                    {{-- Manage Employees --}}
-                    <li>
-                        <a href="{{ route('admin.employees.index') }}"
-                           class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                            <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 0a5 5 0 1 1 0 10A5 5 0 0 1 10 0Z"/>
-                                <path d="M0 19a10 10 0 0 1 20 0H0Z"/>
-                            </svg>
-                            <span class="sidebar-label">Manage Employees</span>
-                        </a>
-                    </li>
+							<!-- right arrow -->
+							<svg class="h-4 w-4 text-gray-500 dark:text-gray-400 sidebar-label"
+								 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+									  d="M9 5l7 7-7 7"/>
+							</svg>
+						</a>
+
+						<!-- Flyout menu -->
+						<div class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700">
+							<ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+
+								@if ($canManageUsers)
+									<li>
+										<a href="{{ route('admin.users.index') }}"
+										   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+											Users
+										</a>
+									</li>
+								@endif
+
+								<li>
+									<a href="{{ route('admin.employees.index') }}"
+									   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+										Employees
+									</a>
+								</li>
+
+								<li>
+									<a href="{{ url('/admin/project-managers') }}"
+									   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+										Project Managers
+									</a>
+								</li>
+
+							</ul>
+						</div>
+					</li>
+					
 
                     {{-- Manage Roles --}}
                     @if ($canManageRoles)
@@ -216,43 +303,104 @@
                         </li>
                     @endif
 
-                    {{-- Chart of Accounts dropdown --}}
-                    <li class="relative">
-                        <button id="dropdownCoaButton" data-dropdown-toggle="dropdownCoa"
-                                class="sidebar-link flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-                                type="button">
-                            <div class="flex items-center gap-3">
-                                <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10 0 0 5l10 5 10-5L10 0Z"/>
-                                    <path d="M0 7l10 5 10-5v8l-10 5L0 15V7Z"/>
-                                </svg>
-                                <span class="sidebar-label">Chart of Accounts</span>
-                            </div>
-                            <svg class="h-4 w-4 text-gray-500 dark:text-gray-400 sidebar-label" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
-                            </svg>
-                        </button>
+                    {{-- Chart of Accounts flyout (hover) --}}
+					<li class="relative group">
+						<a
+							href="#"
+							class="sidebar-link flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+							onclick="return false;"
+						>
+							<div class="flex items-center gap-3">
+								<svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true"
+									 xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+									<path d="M10 0 0 5l10 5 10-5L10 0Z"/>
+									<path d="M0 7l10 5 10-5v8l-10 5L0 15V7Z"/>
+								</svg>
+								<span class="sidebar-label">Chart of Accounts</span>
+							</div>
 
-                        <div id="dropdownCoa" class="z-50 hidden w-56 divide-y divide-gray-100 rounded-lg bg-white shadow dark:divide-gray-600 dark:bg-gray-700">
-                            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownCoaButton">
-                                <li><a href="{{ route('admin.account_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Account Types</a></li>
-                                <li><a href="{{ route('admin.detail_types.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Detail Types</a></li>
-                                <li><a href="{{ route('admin.gl_accounts.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">GL Accounts</a></li>
-                            </ul>
-                        </div>
-                    </li>
+							<!-- right arrow -->
+							<svg class="h-4 w-4 text-gray-500 dark:text-gray-400 sidebar-label" aria-hidden="true"
+								 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+									  d="M9 5l7 7-7 7"/>
+							</svg>
+						</a>
 
-                    {{-- Tax Management --}}
-                    <li>
-                        <a href="{{ route('admin.tax.index') }}"
-                           class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                            <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M3 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3Z"/>
-                                <path d="M6 6h8M6 10h8M6 14h5" stroke="currentColor" stroke-width="2" fill="none"/>
-                            </svg>
-                            <span class="sidebar-label">Tax Management</span>
-                        </a>
-                    </li>
+						<!-- Flyout menu -->
+						<div class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700">
+							<ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+								<li>
+									<a href="{{ route('admin.account_types.index') }}"
+									   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+										Account Types
+									</a>
+								</li>
+								<li>
+									<a href="{{ route('admin.detail_types.index') }}"
+									   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+										Detail Types
+									</a>
+								</li>
+								<li>
+									<a href="{{ route('admin.gl_accounts.index') }}"
+									   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+										GL Accounts
+									</a>
+								</li>
+							</ul>
+						</div>
+					</li>
+
+                    {{-- Tax Management flyout (hover + clickable main) --}}
+					<li class="relative group">
+						<div class="flex items-center justify-between rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+
+							<!-- Main clickable link -->
+							<a href="{{ route('admin.tax.index') }}"
+							   class="sidebar-link flex flex-1 items-center gap-3 px-3 py-2 text-gray-700 hover:text-gray-900 dark:text-gray-200">
+								<svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400"
+									 xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+									<path d="M3 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3Z"/>
+									<path d="M6 6h8M6 10h8M6 14h5" stroke="currentColor" stroke-width="2" fill="none"/>
+								</svg>
+								<span class="sidebar-label">Tax Management</span>
+							</a>
+
+							<!-- Right arrow hover trigger -->
+							<svg class="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400 sidebar-label"
+								 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+								<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+									  d="M9 5l7 7-7 7"/>
+							</svg>
+
+							<!-- Flyout menu -->
+							<div class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700">
+								<ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+									<li>
+										<a href="{{ url('/admin/tax-agencies') }}"
+										   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+											Tax Agencies
+										</a>
+									</li>
+									<li>
+										<a href="{{ url('/admin/tax-rates') }}"
+										   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+											Tax Rates
+										</a>
+									</li>
+									<li>
+										<a href="{{ url('/admin/tax-groups') }}"
+										   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+											Tax Groups
+										</a>
+									</li>
+								</ul>
+							</div>
+
+						</div>
+					</li>
+
                 @endif
 
             </ul>

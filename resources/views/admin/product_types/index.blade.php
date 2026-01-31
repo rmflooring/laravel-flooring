@@ -36,6 +36,13 @@
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900">Product Types List</h3>
                 </div>
+				
+				@include('admin.partials.filter-bar', [
+					'action' => route('admin.product_types.index'),
+					'search' => request('search'),
+					'searchPlaceholder' => 'Search product types...',
+				])
+
 
                 <div class="overflow-x-auto rounded-lg border border-gray-200">
                     <table class="min-w-full text-left text-sm text-gray-700">
@@ -109,6 +116,12 @@
                         </tbody>
                     </table>
                 </div>
+				
+				@if ($productTypes->hasPages())
+					<div class="mt-4">
+						{{ $productTypes->links() }}
+					</div>
+				@endif
 
             </div>
         </div>

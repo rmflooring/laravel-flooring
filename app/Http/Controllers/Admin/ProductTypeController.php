@@ -18,17 +18,27 @@ class ProductTypeController extends Controller
         $this->middleware('permission:delete product types')->only(['destroy']);
     }
 
-    public function index()
-    {
-        $productTypes = ProductType::with([
-            'orderedByUnit',
-            'soldByUnit',
-            'defaultCostGlAccount',
-            'defaultSellGlAccount',
-        ])->get();
 
-        return view('admin.product_types.index', compact('productTypes'));
-    }
+	public function index(Request $request)
+	{
+		$search = trim((string) $request->query('search', ''));
+
+		$productTypes = ProductType::with([
+				'orderedByUnit',
+				'soldByUnit',
+				'defaultCostGlAccount',
+				'defaultSellGlAccount',
+			])
+			->when($search !== '', function ($query) use ($search) {
+				$query->where('name', 'like', "%{$search}%");
+			})
+			->orderBy('name')
+			->paginate(25)
+			->withQueryString();
+
+		return view('admin.product_types.index', compact('productTypes', 'search'));
+	}
+
 
     public function create()
     {

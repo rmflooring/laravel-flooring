@@ -14,13 +14,58 @@ class ProductLineController extends Controller
     /**
      * Display a listing of the product lines.
      */
-    public function index()
+public function index(Request $request)
 {
-    $lines = ProductLine::with(['productType', 'vendorRelation']) // ← add 'vendorRelation'
-        ->latest()
-        ->paginate(20);
+    $query = ProductLine::query()
+        ->with(['productType', 'vendorRelation']); // keep your view working
 
-    return view('admin.product_lines.index', compact('lines'));
+    // Search
+    if ($request->filled('search')) {
+        $search = trim((string) $request->search);
+
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('manufacturer', 'like', "%{$search}%")
+              ->orWhere('model', 'like', "%{$search}%")
+              ->orWhere('collection', 'like', "%{$search}%")
+              ->orWhereHas('productType', function ($pt) use ($search) {
+                  $pt->where('name', 'like', "%{$search}%");
+              })
+              ->orWhereHas('vendorRelation', function ($v) use ($search) {
+                  $v->where('company_name', 'like', "%{$search}%");
+              });
+        });
+    }
+
+    // Filters
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    if ($request->filled('product_type_id')) {
+        $query->where('product_type_id', $request->product_type_id);
+    }
+
+    if ($request->filled('vendor_id')) {
+        $query->where('vendor_id', $request->vendor_id);
+    }
+
+    // Per page
+    $perPage = (int) $request->get('per_page', 15);
+    if (!in_array($perPage, [10, 15, 25, 50, 100], true)) {
+        $perPage = 15;
+    }
+
+    $lines = $query
+        ->orderBy('id', 'desc')
+        ->paginate($perPage)
+        ->withQueryString(); // critical: keeps filters while paging
+
+    // Dropdown data for filters
+    $productTypes = ProductType::orderBy('name')->get(['id', 'name']);
+    $vendors      = Vendor::orderBy('company_name')->get(['id', 'company_name']);
+
+    return view('admin.product_lines.index', compact('lines', 'productTypes', 'vendors', 'perPage'));
 }
 
     /**

@@ -35,9 +35,14 @@
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @forelse($roles as $role)
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {{ $role->name }}
-                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+    <a 
+        href="{{ route('admin.roles.edit', $role) }}" 
+        class="text-indigo-600 hover:text-indigo-900 font-semibold"
+    >
+        {{ $role->name }}
+    </a>
+</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {{ $role->users()->count() }}
                                         </td>

@@ -1,5 +1,6 @@
 @php
     $isDisabled = empty($c['href']);
+    $isHero = str_contains($c['accent'], 'text-white');
 @endphp
 
 <a
@@ -8,16 +9,16 @@
 >
     <div class="flex items-start justify-between gap-4">
         <div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 class="text-lg font-semibold {{ $isHero ? 'text-white' : 'text-gray-900 dark:text-white' }}">
                 {{ $c['title'] }}
             </h3>
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p class="mt-1 text-sm {{ $isHero ? 'text-white/80' : 'text-gray-600 dark:text-gray-300' }}">
                 {{ $c['subtitle'] }}
             </p>
         </div>
 
         <div class="h-10 w-10 rounded-xl bg-white/70 dark:bg-gray-900/30 flex items-center justify-center border border-white/60 dark:border-gray-700">
-            <svg class="h-5 w-5 text-gray-700 dark:text-gray-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg class="h-5 w-5 {{ $isHero ? 'text-white' : 'text-gray-700 dark:text-gray-200' }}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $c['icon'] }}"/>
             </svg>
         </div>
