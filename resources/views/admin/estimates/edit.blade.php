@@ -242,7 +242,7 @@
     <table class="min-w-max text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
-          <th class="px-3 py-3">Product Type2</th>
+          <th class="px-3 py-3">Product Type1</th>
           <th class="px-3 py-3">Qty</th>
           <th class="px-3 py-3">Unit</th>
           <th class="px-3 py-3">Manufacturer</th>
@@ -464,15 +464,16 @@
 {{-- Freight --}}
 <div>
   <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-gray-900">Freight</h3>
+    <h3 class="text-sm font-semibold text-gray-900">Freight1</h3>
     <button type="button"
       class="add-freight-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
       + Add Freight Row
     </button>
   </div>
 
-  <div class="border border-gray-200 rounded-lg overflow-visible">
-    <table class="min-w-full text-sm text-left text-gray-700">
+   <div class="border border-gray-200 rounded-lg overflow-hidden">
+  <div class="w-full overflow-x-auto">
+    <table class="min-w-max text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
           <th class="px-3 py-3">Description</th>
@@ -543,6 +544,7 @@
 </tbody>
     </table>
   </div>
+	</div>
 
   <template class="freight-row-template">
     <tr class="bg-white border-t">
@@ -593,15 +595,16 @@
 {{-- Labour --}}
 <div>
   <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
+    <h3 class="text-sm font-semibold text-gray-900">Labour1</h3>
     <button type="button"
       class="add-labour-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
       + Add Labour Row
     </button>
   </div>
 
-  <div class="border border-gray-200 rounded-lg overflow-visible">
-    <table class="min-w-full text-sm text-left text-gray-700">
+  <div class="border border-gray-200 rounded-lg overflow-hidden">
+  <div class="w-full overflow-x-auto">
+    <table class="min-w-max text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
           <th class="px-3 py-3">Labour Type</th>
@@ -705,6 +708,7 @@
 </tbody>
     </table>
   </div>
+	</div>
 
 	{{-- Room Summary --}}
 <div class="border-t pt-4 mt-6">
