@@ -825,6 +825,7 @@
 
 <template id="room-template">
     <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" data-room-index="{{ $roomIndex }}">
+
         {{-- Room Header --}}
         <div class="flex items-center justify-between px-6 py-4 border-b">
             <div class="flex items-center gap-3">
