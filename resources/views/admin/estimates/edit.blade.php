@@ -242,7 +242,7 @@
     <table class="min-w-max text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
-          <th class="px-3 py-3">Product Type</th>
+          <th class="px-3 py-3">Product Type2</th>
           <th class="px-3 py-3">Qty</th>
           <th class="px-3 py-3">Unit</th>
           <th class="px-3 py-3">Manufacturer</th>
@@ -610,7 +610,7 @@
           <th class="px-3 py-3">Description</th>
           <th class="px-3 py-3">Notes</th>
           <th class="px-3 py-3">Sell</th>
-          <th class="px-3 py-3 w-28 text-right">Total</th>
+          <th class="px-3 py-3">Total</th>
           <th class="px-3 py-3">Action</th>
         </tr>
       </thead>
@@ -872,9 +872,10 @@
                     </button>
                 </div>
 
-                <div class="border border-gray-200 rounded-lg">
-                    <table class="min-w-full text-sm text-left text-gray-700">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+  <div class="w-full overflow-x-auto">
+    <table class="min-w-max text-sm text-left text-gray-700">
+      <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                             <tr>
                                 <th class="px-3 py-3">Product Type</th>
                                 <th class="px-3 py-3">Qty</th>
@@ -892,6 +893,7 @@
                         <tbody class="materials-tbody"></tbody>
                     </table>
                 </div>
+				</div>
 
                 {{-- Material row template (outside the table) --}}
                 <template class="material-row-template">
@@ -958,8 +960,7 @@
 						  </div>
 						</td>
 
-                        <td class="relative">
-<td class="px-3 py-2 relative">
+                        <td class="px-3 py-2 relative">
   <input
     type="text"
     name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][color_item_number]"
@@ -968,15 +969,6 @@
     autocomplete="off"
     data-color-input
   />
-
-  <div
-    class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
-    data-color-dropdown
-  >
-    <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
-  </div>
-</td>
-
 
   <div
     class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
