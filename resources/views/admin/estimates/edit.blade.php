@@ -186,7 +186,7 @@
       $labour    = $room->items->where('item_type', 'labour')->values();
     @endphp
 
-    <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm" data-room-index="{{ $roomIndex }}">
+    <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" data-room-index="{{ $roomIndex }}">
       {{-- Room Header --}}
       <div class="flex items-center justify-between px-6 py-4 border-b">
         <div class="flex items-center gap-3">
@@ -241,8 +241,9 @@
     </button>
   </div>
 
-  <div class="border border-gray-200 rounded-lg">
-    <table class="min-w-full text-sm text-left text-gray-700">
+  <div class="border border-gray-200 rounded-lg overflow-hidden">
+  <div class="w-full overflow-x-auto">
+    <table class="min-w-max text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
           <th class="px-3 py-3">Product Type</th>
@@ -358,9 +359,10 @@
     </tr>
   @endforeach
 </tbody>
-		
+
     </table>
-  </div>
+  </div> 
+</div>  
 
   {{-- Material row template --}}
   <template class="material-row-template">
@@ -822,7 +824,7 @@
 </div>
 
 <template id="room-template">
-    <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" data-room-index="{{ $roomIndex }}">
         {{-- Room Header --}}
         <div class="flex items-center justify-between px-6 py-4 border-b">
             <div class="flex items-center gap-3">
