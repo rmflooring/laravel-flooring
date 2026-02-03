@@ -163,7 +163,7 @@
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">RFQs, estimates, sales, invoices, POs, and work orders linked to this opportunity.</p>
                     </div>
 
-                    <a href="{{ url('/pages/estimates/mock-create') }}?opportunity_id={{ $opportunity->id }}"
+                    <a href="{{ url('/pages/estimates/create') }}?opportunity_id={{ $opportunity->id }}"
                        class="inline-flex items-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                         + Create Estimate
                     </a>

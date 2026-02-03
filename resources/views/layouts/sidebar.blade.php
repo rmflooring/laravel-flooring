@@ -20,6 +20,18 @@
     class="fixed left-0 top-0 z-40 h-screen -translate-x-full border-r border-gray-200 bg-white transition-transform transition-all duration-200 sm:translate-x-0 dark:border-gray-700 dark:bg-gray-900"
     aria-label="Sidebar">
         <div class="relative h-full px-3 py-4">
+			<!-- Desktop: collapse sidebar (inside sidebar) -->
+<button
+    type="button"
+    id="sidebar-collapse-btn"
+    class="hidden sm:inline-flex absolute top-3 right-3 items-center rounded-lg p-2 text-sm text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-600"
+>
+    <span class="sr-only">Collapse sidebar</span>
+    <svg class="h-6 w-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M9 18l6-6-6-6"/>
+    </svg>
+</button>
+
 
             <!-- Logo -->
             <a href="{{ route('dashboard') }}" class="mb-6 flex items-center space-x-3 rtl:space-x-reverse">
@@ -423,18 +435,6 @@
                         <span class="sr-only">Open sidebar</span>
                         <svg class="h-6 w-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                        </svg>
-                    </button>
-
-                    <!-- Desktop: collapse sidebar -->
-                    <button
-                        type="button"
-                        id="sidebar-collapse-btn"
-                        class="hidden sm:inline-flex items-center rounded-lg p-2 text-sm text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-600"
-                    >
-                        <span class="sr-only">Collapse sidebar</span>
-                        <svg class="h-6 w-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M9 18l6-6-6-6"/>
                         </svg>
                     </button>
 

@@ -89,7 +89,7 @@ $taxGroups = \DB::table('tax_rate_groups')
     ->get();
 
 
-return view('admin.estimates.mock-create', [
+return view('admin.estimates.create', [
     'opportunity' => $opportunity,
     'employees'  => $employees,
     'defaultTaxGroupId' => $defaultTaxGroupId,
@@ -224,6 +224,42 @@ Route::prefix('admin')
 			
 			Route::get('/estimates/api/freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'apiIndex'])
 				->name('estimates.api.freight-items');
+			
+			//added here
+			Route::get('estimates/create', function () {
+    $opportunityId = request('opportunity_id');
+
+    $opportunity = null;
+
+    if ($opportunityId) {
+        $opportunity = \App\Models\Opportunity::with([
+            'parentCustomer',
+            'jobSiteCustomer',
+            'projectManager',
+        ])->find($opportunityId);
+    }
+
+    $employees = \App\Models\Employee::where('status', 'active')
+        ->orderBy('first_name')
+        ->get(['id', 'first_name']);
+
+    $defaultTaxGroupId = \DB::table('default_tax')
+        ->orderByDesc('id')
+        ->value('tax_rate_group_id');
+
+    $taxGroups = \DB::table('tax_rate_groups')
+        ->orderBy('name')
+        ->get();
+
+    return view('admin.estimates.create', [
+        'opportunity' => $opportunity,
+        'employees'  => $employees,
+        'defaultTaxGroupId' => $defaultTaxGroupId,
+        'taxGroups' => $taxGroups,
+    ]);
+})->middleware(['auth', 'permission:create estimates'])
+  ->name('estimates.create');
+
         });
 
         /*
@@ -440,6 +476,42 @@ Route::prefix('pages')
 		Route::put('estimates/{estimate}', [EstimateController::class, 'update'])
 			->middleware('permission:create estimates')
 			->name('estimates.update');
+		
+		//added
+		Route::get('estimates/create', function () {
+    $opportunityId = request('opportunity_id');
+
+    $opportunity = null;
+
+    if ($opportunityId) {
+        $opportunity = \App\Models\Opportunity::with([
+            'parentCustomer',
+            'jobSiteCustomer',
+            'projectManager',
+        ])->find($opportunityId);
+    }
+
+    $employees = \App\Models\Employee::where('status', 'active')
+        ->orderBy('first_name')
+        ->get(['id', 'first_name']);
+
+    $defaultTaxGroupId = \DB::table('default_tax')
+        ->orderByDesc('id')
+        ->value('tax_rate_group_id');
+
+    $taxGroups = \DB::table('tax_rate_groups')
+        ->orderBy('name')
+        ->get();
+
+    return view('admin.estimates.create', [
+        'opportunity' => $opportunity,
+        'employees'  => $employees,
+        'defaultTaxGroupId' => $defaultTaxGroupId,
+        'taxGroups' => $taxGroups,
+    ]);
+})->middleware(['auth', 'permission:create estimates'])
+  ->name('estimates.create');
+
 
 		// (optional) if you want the mock UI under /pages instead of /admin
 		Route::get('estimates/mock-create', function () {
@@ -467,7 +539,7 @@ Route::prefix('pages')
 				->orderBy('name')
 				->get();
 
-			return view('admin.estimates.mock-create', [
+			return view('admin.estimates.create', [
 				'opportunity' => $opportunity,
 				'employees'  => $employees,
 				'defaultTaxGroupId' => $defaultTaxGroupId,

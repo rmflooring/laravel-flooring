@@ -1,13 +1,13 @@
-// public/assets/js/estimates/estimate_mock.js
+// public/assets/js/estimates/estimate.js
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[estimate_mock.js] Loaded successfully");
+  console.log("[estimate.js] Loaded successfully");
 
   const roomsContainer = document.getElementById("rooms-container");
   const addRoomBtn = document.getElementById("add-room-btn");
   const roomTemplate = document.getElementById("room-template");
 
   if (!roomsContainer || !addRoomBtn || !roomTemplate) {
-    console.error("[estimate_mock.js] Missing critical DOM elements");
+    console.error("[estimate.js] Missing critical DOM elements");
     return;
   }
 
@@ -53,11 +53,38 @@ if (taxGroupInput?.value) {
     });
   }
 
-  function applyWideMode(isWide) {
-    document.body.classList.toggle("estimate-wide-mode", isWide);
-    if (toggleWideBtn) toggleWideBtn.textContent = isWide ? "Compact Mode" : "Wide Mode";
-    localStorage.setItem("estimateWideMode", isWide ? "1" : "0");
-  }
+function applyWideMode(isWide) {
+  document.body.classList.toggle("estimate-wide-mode", isWide);
+
+  // Grab all the page width containers (top, rooms, bottom summary)
+  const containers = document.querySelectorAll(
+    ".estimate-normal-container, .max-w-7xl.mx-auto"
+  );
+
+  containers.forEach((el) => {
+    // Record original state once so we can restore correctly
+    if (el.dataset.fmInitWidth !== "1") {
+      el.dataset.fmInitWidth = "1";
+      el.dataset.fmHadMaxW = el.classList.contains("max-w-7xl") ? "1" : "0";
+      el.dataset.fmHadMxAuto = el.classList.contains("mx-auto") ? "1" : "0";
+    }
+
+    if (isWide) {
+      // GO WIDE
+      el.classList.add("max-w-none", "w-full");
+      if (el.dataset.fmHadMaxW === "1") el.classList.remove("max-w-7xl");
+      if (el.dataset.fmHadMxAuto === "1") el.classList.remove("mx-auto");
+    } else {
+      // GO COMPACT (restore original)
+      el.classList.remove("max-w-none", "w-full");
+      if (el.dataset.fmHadMaxW === "1") el.classList.add("max-w-7xl");
+      if (el.dataset.fmHadMxAuto === "1") el.classList.add("mx-auto");
+    }
+  });
+
+  if (toggleWideBtn) toggleWideBtn.textContent = isWide ? "Compact Mode" : "Wide Mode";
+  localStorage.setItem("estimateWideMode", isWide ? "1" : "0");
+}
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -2094,6 +2121,6 @@ if (t.closest(".add-freight-row")) {
   renumberRooms();
   reindexAllRooms();
 
-  console.log("[estimate_mock.js] Initialization complete");
+  console.log("[estimate.js] Initialization complete");
 });
 							

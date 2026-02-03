@@ -160,12 +160,14 @@
                 </div>
             </div>
 </div> {{-- end max-w-7xl container --}}
-		   {{-- Full-width Estimate Builder --}}
-<div class="w-full px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16">
+
+{{-- Full-width Estimate Builder --}}
+<div class="w-full">
+  <div id="estimate-builder-padding" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
 	
 {{-- Rooms --}}
 	@if(app()->environment('local'))
-  <div class="mb-2 text-xs text-gray-500">
+  <div class="px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16">
     Rooms loaded: {{ $estimate->rooms?->count() ?? 0 }}
   </div>
 @endif
@@ -182,7 +184,8 @@
       $labour    = $room->items->where('item_type', 'labour')->values();
     @endphp
 
-    <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" data-room-index="{{ $roomIndex }}">
+    <div class="room-card w-full bg-white border border-gray-200 rounded-lg shadow-sm overflow-visible"
+     data-room-index="{{ $roomIndex }}">
       {{-- Room Header --}}
       <div class="flex items-center justify-between px-6 py-4 border-b">
         <div class="flex items-center gap-3">
@@ -237,12 +240,11 @@
     </button>
   </div>
 
-  <div class="border border-gray-200 rounded-lg overflow-hidden">
-  <div class="w-full overflow-x-auto">
-    <table class="min-w-max text-sm text-left text-gray-700">
-      <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+ 		<div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+        <table class="min-w-full text-sm text-left text-gray-700">
+        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
-          <th class="px-3 py-3">Product Type1</th>
+          <th class="px-3 py-3">Product Type</th>
           <th class="px-3 py-3">Qty</th>
           <th class="px-3 py-3">Unit</th>
           <th class="px-3 py-3">Manufacturer</th>
@@ -250,7 +252,7 @@
           <th class="px-3 py-3">Color / Item #</th>
           <th class="px-3 py-3">PO Notes</th>
           <th class="px-3 py-3">Sell</th>
-<th class="px-3 py-3 w-28 text-right">Total</th>
+		<th class="px-3 py-3 w-28 text-right">Total</th>
           <th class="px-3 py-3">Action</th>
         </tr>
       </thead>
@@ -358,7 +360,7 @@
 
     </table>
   </div> 
-</div>  
+
 
   {{-- Material row template --}}
   <template class="material-row-template">
@@ -471,9 +473,8 @@
     </button>
   </div>
 
-   <div class="border border-gray-200 rounded-lg overflow-hidden">
-  <div class="w-full overflow-x-auto">
-    <table class="min-w-max text-sm text-left text-gray-700">
+  <div class="border border-gray-200 rounded-lg overflow-visible">
+    <table class="min-w-full text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
           <th class="px-3 py-3">Description</th>
@@ -544,7 +545,6 @@
 </tbody>
     </table>
   </div>
-	</div>
 
   <template class="freight-row-template">
     <tr class="bg-white border-t">
@@ -595,16 +595,15 @@
 {{-- Labour --}}
 <div>
   <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-gray-900">Labour1</h3>
+    <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
     <button type="button"
       class="add-labour-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
       + Add Labour Row
     </button>
   </div>
 
-  <div class="border border-gray-200 rounded-lg overflow-hidden">
-  <div class="w-full overflow-x-auto">
-    <table class="min-w-max text-sm text-left text-gray-700">
+  <div class="border border-gray-200 rounded-lg overflow-visible">
+    <table class="min-w-full text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
           <th class="px-3 py-3">Labour Type</th>
@@ -708,7 +707,6 @@
 </tbody>
     </table>
   </div>
-	</div>
 
 	{{-- Room Summary --}}
 <div class="border-t pt-4 mt-6">
@@ -825,7 +823,7 @@
 </div>
 
 <template id="room-template">
-<div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" data-room-index="__ROOM_INDEX__">
+<div class="room-card w-full bg-white border border-gray-200 rounded-lg shadow-sm overflow-visible" data-room-index="__ROOM_INDEX__">
         {{-- Room Header --}}
         <div class="flex items-center justify-between px-6 py-4 border-b">
             <div class="flex items-center gap-3">
@@ -876,12 +874,11 @@
                     </button>
                 </div>
 
-                <div class="border border-gray-200 rounded-lg overflow-hidden">
-  <div class="w-full overflow-x-auto">
-    <table class="min-w-max text-sm text-left text-gray-700">
-      <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                <div class="border border-gray-200 rounded-lg overflow-x-auto">
+                    <table class="min-w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                             <tr>
-                                <th class="px-3 py-3">Product Type</th>
+                                <th class="px-3 py-3">Product Type(new)</th>
                                 <th class="px-3 py-3">Qty</th>
                                 <th class="px-3 py-3">Unit</th>
                                 <th class="px-3 py-3">Manufacturer</th>
@@ -897,7 +894,6 @@
                         <tbody class="materials-tbody"></tbody>
                     </table>
                 </div>
-				</div>
 
                 {{-- Material row template (outside the table) --}}
                 <template class="material-row-template">
@@ -964,7 +960,7 @@
 						  </div>
 						</td>
 
-                        <td class="px-3 py-2 relative">
+<td class="px-3 py-2 relative">
   <input
     type="text"
     name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][color_item_number]"
@@ -975,12 +971,13 @@
   />
 
   <div
-    class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
+    class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg"
     data-color-dropdown
   >
     <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
   </div>
 </td>
+
 
                         <td class="px-3 py-2">
                             <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][po_notes]"
@@ -1008,16 +1005,15 @@
             {{-- Freight --}}
             <div>
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-semibold text-gray-900">Freight</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">Freight2</h3>
                     <button type="button"
                         class="add-freight-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
                         + Add Freight Row
                     </button>
                 </div>
 
-<div class="border border-gray-200 rounded-lg overflow-hidden">
-  <div class="w-full overflow-x-auto">
-    <table class="min-w-max text-sm text-left text-gray-700">
+  <div class="border border-gray-200 rounded-lg overflow-visible">
+    <table class="min-w-full text-sm text-left text-gray-700">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50">
         <tr>
           <th class="px-3 py-3">Description</th>
@@ -1031,7 +1027,7 @@
       <tbody class="freight-tbody"></tbody>
     </table>
   </div>
-</div>
+
 
 
                 {{-- Freight row template (outside the table) --}}
@@ -1220,14 +1216,16 @@
     <button id="add-room-btn" type="button"
         class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
         + Add Room
-    </button>
+</button>
 </div>
+
+  </div>
 </div>
 		
 {{-- Back to normal width --}}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
                 {{-- Estimate Summary --}}
-                <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+      <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-lg font-semibold text-gray-900">Estimate Summary</h2>
 
@@ -1373,19 +1371,11 @@
 
 </div>
 
-                            <p class="text-xs text-gray-500">
-                                Totals are display-only. Tax will recalculate after selecting a tax group (later).
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-    </div>
-
-    {{-- Bottom Action Bar --}}
+                  <p class="text-xs text-gray-500">
+                      Totals are display-only. Tax will recalculate after selecting a tax group (later).
+                  </p>
+                            <p class="text-xs text-gray-500"></p>
+		      {{-- Bottom Action Bar --}}
     <div class="mt-10 border-t pt-6">
         <div class="flex items-center justify-between max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="text-sm text-gray-600">
@@ -1406,6 +1396,16 @@
             </div>
         </div>
     </div>
+              </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
 </div>
 </form>
 
@@ -1417,7 +1417,11 @@
   window.FM_ESTIMATE_LABOUR_TYPES_URL = "/estimates/api/labour-types";
 </script>
 
-<script src="{{ asset('assets/js/estimates/estimate_mock.js') }}" defer></script>
+<script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>
 <script src="{{ asset('assets/js/estimates/estimate_edit.js') }}" defer></script>
+<script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
+<script src="{{ asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
+
+
 
 </x-admin-layout>

@@ -12,7 +12,7 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <a href="{{ url('/admin/estimates/mock-create') }}"
+                    <a href="{{ url('/admin/estimates/create') }}"
                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
                         + Create Estimate
                     </a>

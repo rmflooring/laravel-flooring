@@ -10,7 +10,7 @@
             {{-- Page Header --}}
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Create Estimate (Mock)</h1>
+                    <h1 class="text-2xl font-bold text-gray-900">Create Estimate</h1>
                     <p class="text-sm text-gray-600">Status: <span class="font-semibold">Draft</span></p>
                 </div>
 @if (session('success'))
@@ -155,13 +155,15 @@
             </div>
 </div> {{-- end max-w-7xl container --}}
 		   {{-- Full-width Estimate Builder --}}
-<div class="w-full px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16">
+{{-- Full-width Estimate Builder --}}
+<div class="w-full">
+  <div id="estimate-builder-padding" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
 	
 {{-- Rooms --}}
 <div id="rooms-container" class="mt-6 space-y-6"></div>
 
 <template id="room-template">
-    <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div class="room-card bg-white border border-gray-200 rounded-lg shadow-sm overflow-visible">
         {{-- Room Header --}}
         <div class="flex items-center justify-between px-6 py-4 border-b">
             <div class="flex items-center gap-3">
@@ -190,7 +192,7 @@
             {{-- Room Name --}}
             <div>
                 <label class="block mb-1 text-sm font-medium text-gray-700">Room Name</label>
-                <input type="text" name="rooms[0][name]"
+                <input type="text" name="rooms[__ROOM_INDEX__][name]"
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     placeholder="e.g. Living Room">
 				<input type="hidden" class="room-delete-flag" name="rooms[__ROOM_INDEX__][_delete]" value="0">
@@ -211,8 +213,8 @@
                     </button>
                 </div>
 
-                <div class="border border-gray-200 rounded-lg">
-                    <table class="min-w-full text-sm text-left text-gray-700">
+                <div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+    <table class="min-w-full text-sm text-left text-gray-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                             <tr>
                                 <th class="px-3 py-3">Product Type</th>
@@ -347,9 +349,8 @@
                     </button>
                 </div>
 
-				<div class="border border-gray-200 rounded-lg overflow-visible">
-				<table class="min-w-full text-sm text-left text-gray-700">
-					<table class="min-w-full text-sm text-left text-gray-700">
+				<div class="border border-gray-200 rounded-lg overflow-x-auto">
+    <table class="min-w-full text-sm text-left text-gray-700">
 						<thead class="text-xs text-gray-700 uppercase bg-gray-50">
 							<tr>
 								<th class="px-3 py-3">Description</th>
@@ -424,8 +425,8 @@
                     </button>
                 </div>
 
-                <div class="border border-gray-200 rounded-lg overflow-visible">
-                    <table class="min-w-full text-sm text-left text-gray-700">
+                <div class="border border-gray-200 rounded-lg overflow-x-auto">
+    <table class="min-w-full text-sm text-left text-gray-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                             <tr>
                                 <th class="px-3 py-3">Labour Type</th>
@@ -552,6 +553,8 @@
         + Add Room
     </button>
 </div>
+
+  </div>
 </div>
 		
 {{-- Back to normal width --}}
@@ -680,7 +683,7 @@
 
     {{-- Bottom Action Bar --}}
     <div class="mt-10 border-t pt-6">
-        <div class="flex items-center justify-between max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
             <div class="text-sm text-gray-600">
                 Status:
                 <span class="font-semibold">Draft</span>
@@ -711,6 +714,8 @@
   window.FM_ESTIMATE_LABOUR_TYPES_URL = "/estimates/api/labour-types";
 </script>
 
-<script src="{{ asset('assets/js/estimates/estimate_mock.js') }}" defer></script>
+<script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
+<script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>
+
 
 </x-admin-layout>

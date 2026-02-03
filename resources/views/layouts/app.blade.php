@@ -26,7 +26,7 @@
        
 
             <!-- Page Content -->
-            <main class="sm:ml-64 p-4">
+            <main class="sm:ml-64 p-4 max-w-none">
     @isset($header)
         <div class="mb-6">
             {{ $header }}
