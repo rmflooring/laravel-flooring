@@ -2,18 +2,20 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 
 export default defineConfig({
-    server: {
-        host: '0.0.0.0',
-        port: 5173,
-        hmr: {
-            host: '127.0.0.1', // your LAN IP
-        },
+  plugins: [
+    laravel({
+      input: ['resources/css/app.css', 'resources/js/app.js'],
+      refresh: true,
+    }),
+  ],
+  server: {
+    host: '0.0.0.0',      // expose to LAN
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      host: '192.168.1.141', // e.g. 192.168.0.25
+      protocol: 'ws',
+      port: 5173,
     },
-
-    plugins: [
-        laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/pages/calendar.js'],
-            refresh: true,
-        }),
-    ],
+  },
 });

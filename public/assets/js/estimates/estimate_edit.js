@@ -8,3 +8,38 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }, 0);
 });
+
+function renumberLineItems(tbody) {
+  tbody.querySelectorAll('tr').forEach((row, index) => {
+    const orderInput = row.querySelector('.js-line-item-order');
+    if (orderInput) {
+      orderInput.value = index + 1;
+    }
+  });
+}
+
+document.addEventListener('click', function (e) {
+
+  if (e.target.closest('.js-move-row-up')) {
+    const row = e.target.closest('tr');
+    const tbody = row.parentElement;
+    const prev = row.previousElementSibling;
+
+    if (prev) {
+      tbody.insertBefore(row, prev);
+      renumberLineItems(tbody);
+    }
+  }
+
+  if (e.target.closest('.js-move-row-down')) {
+    const row = e.target.closest('tr');
+    const tbody = row.parentElement;
+    const next = row.nextElementSibling;
+
+    if (next) {
+      tbody.insertBefore(next, row);
+      renumberLineItems(tbody);
+    }
+  }
+
+});
