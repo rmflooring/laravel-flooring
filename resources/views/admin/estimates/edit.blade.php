@@ -372,8 +372,19 @@
 </td>
 
 <td class="px-3 py-2">
-  <button type="button" class="delete-material-row text-red-600 hover:underline">Delete</button>
+  <div class="flex items-center gap-2">
+    <button type="button"
+      class="js-copy-line-item text-blue-700 hover:underline"
+      data-section="materials">
+      Copy
+    </button>
+
+    <button type="button" class="delete-material-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
 </td>
+
 
     </tr>
   @endforeach
@@ -492,9 +503,17 @@
 </td>
 
 <td class="px-3 py-2">
-  <button type="button" class="delete-material-row text-red-600 hover:underline">
-    Delete
-  </button>
+  <div class="flex items-center gap-2">
+    <button type="button"
+      class="js-copy-line-item text-blue-700 hover:underline"
+      data-section="materials">
+      Copy
+    </button>
+
+    <button type="button" class="delete-material-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
 </td>
 
     </tr>
@@ -589,7 +608,17 @@
 </td>
 
 <td class="px-3 py-2">
-  <button type="button" class="delete-freight-row text-red-600 hover:underline">Delete</button>
+  <div class="flex items-center gap-2">
+    <button type="button"
+	  class="js-copy-line-item text-blue-700 hover:underline"
+	  data-section="freight">
+	  Copy
+	</button>
+
+    <button type="button" class="delete-freight-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
 </td>
     </tr>
   @endforeach
@@ -651,7 +680,17 @@
 </td>
 
 <td class="px-3 py-2">
-  <button type="button" class="delete-freight-row text-red-600 hover:underline">Delete</button>
+  <div class="flex items-center gap-2">
+    <button type="button"
+	  class="js-copy-line-item text-blue-700 hover:underline"
+	  data-section="freight">
+	  Copy
+	</button>
+
+    <button type="button" class="delete-freight-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
 </td>
     </tr>
   </template>
@@ -779,7 +818,17 @@
 </td>
 
 <td class="px-3 py-2">
-  <button type="button" class="delete-labour-row text-red-600 hover:underline">Delete</button>
+  <div class="flex items-center gap-2">
+    <button type="button"
+	  class="js-copy-line-item text-blue-700 hover:underline"
+	  data-section="labour">
+	  Copy
+	</button>
+
+    <button type="button" class="delete-labour-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
 </td>
     </tr>
   @endforeach
@@ -896,10 +945,29 @@
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][line_total]"
           class="labour-line-total-input" value="0">
       </td>
+		
+<td class="px-3 py-2">
+  <div class="flex items-center gap-1">
+    <button type="button"
+      class="js-move-row-up w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50">↑</button>
+    <button type="button"
+      class="js-move-row-down w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50">↓</button>
+  </div>
+</td>
+		
+<td class="px-3 py-2">
+  <div class="flex items-center gap-2">
+    <button type="button"
+	  class="js-copy-line-item text-blue-700 hover:underline"
+	  data-section="labour">
+	  Copy
+	</button>
 
-      <td class="px-3 py-2">
-        <button type="button" class="delete-labour-row text-red-600 hover:underline">Delete</button>
-      </td>
+    <button type="button" class="delete-labour-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
+</td>
     </tr>
   </template>
 </div>
@@ -972,9 +1040,10 @@
                                 <th class="px-3 py-3">Color / Item #</th>
                                 <th class="px-3 py-3">PO Notes</th>
                                 <th class="px-3 py-3">Sell</th>
-                                <th class="px-3 py-3">Total</th>
-                                <th class="px-3 py-3">Action</th>
-                            </tr>
+                                <th class="px-3 py-3 w-28 text-right">Total</th>
+								<th class="px-3 py-3">Order</th>
+								<th class="px-3 py-3">Action</th>
+								</tr>
                         </thead>
 
                         <tbody class="materials-tbody"></tbody>
@@ -982,110 +1051,143 @@
                 </div>
 
                 {{-- Material row template (outside the table) --}}
-                <template class="material-row-template">
-                    <tr class="bg-white border-t">
-                        <td class="px-3 py-2 relative">
-  <input
-    type="text"
-    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_type]"
-    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-    placeholder="Product Type"
-    autocomplete="off"
-    data-product-type-input
-  />
+<template class="material-row-template">
+  <tr class="bg-white border-t">
+    <td class="px-3 py-2 relative">
+      <input
+        type="text"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_type]"
+        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="Product Type"
+        autocomplete="off"
+        data-product-type-input
+      />
 
-  <div
-  class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
-  data-product-type-dropdown
->
-    <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
-  </div>
-</td>
-                        <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]"
-                                class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="0">
-                        </td>
-                        <td class="px-3 py-2">
-                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]"
-                                class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="Unit">
-                        </td>
-                        <td class="px-3 py-2 relative">
-						  <input
-							type="text"
-							name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][manufacturer]"
-							class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-							placeholder="Manufacturer"
-							autocomplete="off"
-							data-manufacturer-input
-						  />
+      <!-- REQUIRED for ordering + renumbering -->
+      <input type="hidden"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][line_item_order]"
+        class="js-line-item-order"
+        value="0" />
 
-						  <div
-							class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
-							data-manufacturer-dropdown
-						  >
-							<ul class="py-1 text-sm text-gray-700" data-manufacturer-options></ul>
-						  </div>
-						</td>
-                        <td class="px-3 py-2 relative">
-						  <input
-							type="text"
-							name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][style]"
-							class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-							placeholder="Style"
-							autocomplete="off"
-							data-style-input
-						  />
+      <div
+        class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+        data-product-type-dropdown
+      >
+        <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
+      </div>
+    </td>
 
-						  <div
-							class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
-							data-style-dropdown
-						  >
-							<ul class="py-1 text-sm text-gray-700" data-style-options></ul>
-						  </div>
-						</td>
+    <td class="px-3 py-2">
+      <input type="number" step="0.01"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]"
+        class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="0">
+    </td>
 
-<td class="px-3 py-2 relative">
-  <input
-    type="text"
-    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][color_item_number]"
-    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-    placeholder="Color / Item #"
-    autocomplete="off"
-    data-color-input
-  />
+    <td class="px-3 py-2">
+      <input type="text"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]"
+        class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="Unit">
+    </td>
 
-  <div
-    class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg"
-    data-color-dropdown
-  >
-    <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
-  </div>
-</td>
+    <td class="px-3 py-2 relative">
+      <input
+        type="text"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][manufacturer]"
+        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="Manufacturer"
+        autocomplete="off"
+        data-manufacturer-input
+      />
+      <div
+        class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+        data-manufacturer-dropdown
+      >
+        <ul class="py-1 text-sm text-gray-700" data-manufacturer-options></ul>
+      </div>
+    </td>
 
+    <td class="px-3 py-2 relative">
+      <input
+        type="text"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][style]"
+        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="Style"
+        autocomplete="off"
+        data-style-input
+      />
+      <div
+        class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+        data-style-dropdown
+      >
+        <ul class="py-1 text-sm text-gray-700" data-style-options></ul>
+      </div>
+    </td>
 
-                        <td class="px-3 py-2">
-                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][po_notes]"
-                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="PO Notes">
-                        </td>
-                        <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][sell_price]"
-                                class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="0.00">
-                        </td>
-                        <td class="px-3 py-2">
-    <span class="material-line-total inline-block w-28 text-right font-medium">$0.00</span>
-    <input type="hidden" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][line_total]" class="material-line-total-input" value="0">
-</td>
-                        <td class="px-3 py-2">
-                            <button type="button" class="delete-material-row text-red-600 hover:underline">
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                </template>
+    <td class="px-3 py-2 relative">
+      <input
+        type="text"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][color_item_number]"
+        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="Color / Item #"
+        autocomplete="off"
+        data-color-input
+      />
+      <div
+        class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg"
+        data-color-dropdown
+      >
+        <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
+      </div>
+    </td>
+
+    <td class="px-3 py-2">
+      <input type="text"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][po_notes]"
+        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="PO Notes">
+    </td>
+
+    <td class="px-3 py-2">
+      <input type="number" step="0.01"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][sell_price]"
+        class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        placeholder="0.00">
+    </td>
+
+    <td class="px-3 py-2">
+      <span class="material-line-total inline-block w-28 text-right font-medium">$0.00</span>
+      <input type="hidden"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][line_total]"
+        class="material-line-total-input"
+        value="0">
+    </td>
+
+    <!-- Order column -->
+    <td class="px-3 py-2">
+      <div class="flex items-center gap-1">
+        <button type="button"
+          class="js-move-row-up w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50">↑</button>
+        <button type="button"
+          class="js-move-row-down w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50">↓</button>
+      </div>
+    </td>
+
+    <!-- Action column -->
+    <td class="px-3 py-2">
+      <div class="flex items-center gap-2">
+        <button type="button"
+          class="js-copy-line-item text-blue-700 hover:underline"
+          data-section="materials">Copy</button>
+
+        <button type="button"
+          class="delete-material-row text-red-600 hover:underline">Delete</button>
+      </div>
+    </td>
+  </tr>
+</template>
+
             </div>
 
             {{-- Freight --}}
@@ -1129,7 +1231,11 @@
           autocomplete="off"
           data-freight-desc-input
         >
-
+<input type="hidden"
+  name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][line_item_order]"
+  class="js-line-item-order"
+  value="0">
+		  
         <div
           class="absolute z-50 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg hidden"
           data-freight-desc-dropdown
@@ -1166,9 +1272,17 @@
 </td>
 
 <td class="px-3 py-2">
-  <button type="button" class="delete-freight-row text-red-600 hover:underline">
-    Delete
-  </button>
+  <div class="flex items-center gap-2">
+    <button type="button"
+	  class="js-copy-line-item text-blue-700 hover:underline"
+	  data-section="freight">
+	  Copy
+	</button>
+
+    <button type="button" class="delete-freight-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
 </td>
   </tr>
 </template>
@@ -1217,7 +1331,11 @@
 							  autocomplete="off"
 							  data-labour-type-input
 							/>
-
+						<input type="hidden"
+						  name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][line_item_order]"
+						  class="js-line-item-order"
+						  value="0">
+							  
 							<div
 							  class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
 							  data-labour-type-dropdown
@@ -1281,9 +1399,17 @@
 </td>
 
 <td class="px-3 py-2">
-  <button type="button" class="delete-labour-row text-red-600 hover:underline">
-    Delete
-  </button>
+  <div class="flex items-center gap-2">
+    <button type="button"
+	  class="js-copy-line-item text-blue-700 hover:underline"
+	  data-section="labour">
+	  Copy
+	</button>
+
+    <button type="button" class="delete-labour-row text-red-600 hover:underline">
+      Delete
+    </button>
+  </div>
 </td>
                     </tr>
                 </template>
@@ -1512,6 +1638,49 @@
 
 
 </div>
+
+<div id="copy-line-item-modal" tabindex="-1" aria-hidden="true"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+  <div class="relative w-full max-w-lg bg-white rounded-lg shadow">
+    <div class="flex items-center justify-between p-4 border-b rounded-t">
+      <h3 class="text-lg font-semibold text-gray-900">Copy line item</h3>
+      <button type="button"
+        class="text-gray-400 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex items-center justify-center"
+        data-modal-hide="copy-line-item-modal">✕</button>
+    </div>
+
+    <div class="p-4 space-y-4">
+      <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Copy to room</label>
+        <select id="copy-target-room"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"></select>
+      </div>
+
+      <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Copy to section</label>
+        <select id="copy-target-section"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5">
+          <option value="materials">Materials</option>
+          <option value="freight">Freight</option>
+          <option value="labour">Labour</option>
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Defaults to the same section you copied from.</p>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 p-4 border-t rounded-b">
+      <button type="button"
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+        data-modal-hide="copy-line-item-modal">Cancel</button>
+
+      <button type="button" id="confirm-copy-line-item"
+        class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
+        Copy
+      </button>
+    </div>
+  </div>
+</div>
+
 </form>
 
 <script>
