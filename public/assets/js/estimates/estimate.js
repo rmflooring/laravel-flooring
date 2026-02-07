@@ -11,21 +11,37 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-	// ✅ INIT EXISTING ROOMS (EDIT MODE FIX)
-document.querySelectorAll('.room-card').forEach((roomCard) => {
-initProductTypeDropdownForRoom(roomCard);
-initManufacturerDropdownForRoom(roomCard);
-initStyleDropdownForRoom(roomCard);
-initColorDropdownForRoom(roomCard);
-initManualPriceOverrideForRoom(roomCard);
-initFreightDropdownForRoom(roomCard);
+  // ── Unsaved changes warning (Create Estimate) ───────────────────────────
+  let fmHasUnsavedChanges = false;
 
+  const form = roomsContainer.closest("form");
+  if (form) {
+    form.addEventListener("input", () => { fmHasUnsavedChanges = true; }, true);
+    form.addEventListener("change", () => { fmHasUnsavedChanges = true; }, true);
+    form.addEventListener("submit", () => { fmHasUnsavedChanges = false; });
+  }
 
-roomCard.querySelectorAll('.labour-tbody tr').forEach((row) => {
-initLabourTypeDropdownForRow(row);
-initLabourDescriptionDropdownForRow(row);
-});
-});
+  window.addEventListener("beforeunload", (e) => {
+    if (!fmHasUnsavedChanges) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+
+  // ✅ INIT EXISTING ROOMS (EDIT MODE FIX)
+  document.querySelectorAll('.room-card').forEach((roomCard) => {
+    initProductTypeDropdownForRoom(roomCard);
+    initManufacturerDropdownForRoom(roomCard);
+    initStyleDropdownForRoom(roomCard);
+    initColorDropdownForRoom(roomCard);
+    initManualPriceOverrideForRoom(roomCard);
+    initFreightDropdownForRoom(roomCard);
+
+    roomCard.querySelectorAll('.labour-tbody tr').forEach((row) => {
+      initLabourTypeDropdownForRow(row);
+      initLabourDescriptionDropdownForRow(row);
+    });
+  });
+
 	
 	// Default tax group on page load
 const taxGroupInput = document.getElementById('tax_group_id_input');

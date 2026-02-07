@@ -1,3 +1,51 @@
+// ── Unsaved changes warning (Edit Estimate) ───────────────────────────────
+(function () {
+  let fmHasUnsavedChanges = false;
+  let fmIsInitializing = true;
+
+  function markDirty() {
+    if (fmIsInitializing) return;
+    fmHasUnsavedChanges = true;
+  }
+
+  document.addEventListener("input", markDirty, true);
+  document.addEventListener("change", markDirty, true);
+  document.addEventListener("fm:dirty", markDirty);
+
+  document.addEventListener("submit", () => { fmHasUnsavedChanges = false; }, true);
+
+  window.addEventListener("beforeunload", (e) => {
+    if (!fmHasUnsavedChanges) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      fmIsInitializing = false;
+    }));
+  });
+})();
+
+// Helper: allow other code to mark the form "dirty"
+function fmMarkDirty() {
+  window.dispatchEvent(new Event("fm:dirty"));
+}
+
+// Mark dirty when delete a ROOM
+document.addEventListener("click", function (e) {
+  if (e.target.closest(".delete-room")) {
+    fmMarkDirty();
+  }
+}, true);
+
+// Mark dirty when moving a ROOM up/down
+document.addEventListener("click", function (e) {
+  if (e.target.closest(".move-up") || e.target.closest(".move-down")) {
+    fmMarkDirty();
+  }
+}, true);
+
 document.addEventListener("DOMContentLoaded", () => {
   // Kick calculations for existing rows on Edit page:
   // estimate.js updates totals when inputs fire, but edit loads with values already set.
@@ -20,6 +68,7 @@ function renumberLineItems(tbody) {
 
 document.addEventListener('click', function (e) {
 
+  // Move up
   if (e.target.closest('.js-move-row-up')) {
     const row = e.target.closest('tr');
     const tbody = row.parentElement;
@@ -28,9 +77,12 @@ document.addEventListener('click', function (e) {
     if (prev) {
       tbody.insertBefore(row, prev);
       renumberLineItems(tbody);
+      fmMarkDirty(); // mark unsaved changes
     }
+    return;
   }
 
+  // Move down
   if (e.target.closest('.js-move-row-down')) {
     const row = e.target.closest('tr');
     const tbody = row.parentElement;
@@ -39,7 +91,9 @@ document.addEventListener('click', function (e) {
     if (next) {
       tbody.insertBefore(next, row);
       renumberLineItems(tbody);
+      fmMarkDirty(); // mark unsaved changes
     }
+    return;
   }
 
 }); // ✅ close the move up/down click handler
@@ -186,11 +240,13 @@ document.addEventListener('click', function (e) {
 
       copyRowValues(sourceRow, result.newRow);
 renumberLineItems(result.tbody);
+if (typeof fmMarkDirty === "function") fmMarkDirty();
 
 if (window.FM_RECALC_ESTIMATE_FROM_ROW) {
   window.FM_RECALC_ESTIMATE_FROM_ROW(result.newRow);
 }
 
+fmMarkDirty();
 closeCopyModal();
     }
   });
