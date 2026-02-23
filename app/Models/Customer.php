@@ -67,4 +67,28 @@ class Customer extends Model
             $customer->updated_by = auth()->id();
         });
     }
+	
+	public function setPhoneAttribute($value): void
+{
+    // Remove everything except digits
+    $digits = preg_replace('/\D+/', '', (string) $value);
+
+    // Handle leading country code 1 (North America)
+    if (strlen($digits) === 11 && str_starts_with($digits, '1')) {
+        $this->attributes['phone'] =
+            '1-' . substr($digits, 1, 3) . '-' . substr($digits, 4, 3) . '-' . substr($digits, 7, 4);
+        return;
+    }
+
+    // Standard 10-digit
+    if (strlen($digits) === 10) {
+        $this->attributes['phone'] =
+            substr($digits, 0, 3) . '-' . substr($digits, 3, 3) . '-' . substr($digits, 6, 4);
+        return;
+    }
+
+    // Fallback: store cleaned digits (so you don't lose data)
+    $this->attributes['phone'] = $digits;
+}
+
 }

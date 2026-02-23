@@ -1,6 +1,6 @@
 # context_dashboard.md
 
-Date: 2026-01-30 (America/Vancouver)
+Date: 2026-02-21 (America/Vancouver)
 
 ## Goal
 Update the Dashboard Blade design to feel **more modern** (less pastel) while keeping Flowbite/Tailwind styling.
@@ -28,7 +28,9 @@ Dashboard layout: top nav + main content with a grid of clickable cards linking 
 - Product Catalog: `route('admin.product_lines.index')`
 - Vendors: `route('admin.vendors.index')`
 - Calendar: `route('pages.calendar.index')`
+- Sales: `route('pages.sales.index')`
 - Invoices / Inventory / Work Orders / Purchase Orders: currently **Coming soon** (href null)
+- Temp Invoices card was replaced by **Sales** and now links to the Sales index.
 
 ## Card UX Enhancements already done
 1) Modern hover (Option A)
@@ -68,6 +70,16 @@ Change Opportunities accent to:
 ### Component tweaks suggested for solid-color card readability
 In `dashboard-card.blade.php`, we planned to adjust the title/subtitle text classes so solid cards render readable text.
 (This was queued next, after you preview A vs B.)
+
+## Recent Changes (Feb 2026)
+- Replaced **Temp Invoices** dashboard card with **Sales**.
+- Sales card config:
+  - Title: `Sales`
+  - Subtitle: `View & manage sales`
+  - Href: `route('pages.sales.index')`
+  - Current accent (stripe style): `bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 border-l-4 border-l-gray-300 dark:border-l-gray-700`
+- Verified route exists:
+  - `GET pages/sales` → `pages.sales.index` (Pages\\SaleController@index)
 
 ## Next Steps (when resuming)
 1) Apply the A/B test changes to Customers + Opportunities and refresh dashboard to compare.

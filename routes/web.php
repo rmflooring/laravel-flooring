@@ -127,26 +127,27 @@ break;
 }
 
 
-$rate = \DB::table('tax_rate_group_items as tgi')
-->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
-->where('tgi.tax_rate_group_id', $tax_group)
-->sum("tr.$rateCol");
+$taxes = \DB::table('tax_rate_group_items as tgi')
+  ->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
+  ->where('tgi.tax_rate_group_id', $tax_group)
+  ->selectRaw("tr.name as tax_name, tr.$rateCol as tax_rate_sales")
+  ->get();
 
+$rate = (float) $taxes->sum('tax_rate_sales');
 
 $group = \DB::table('tax_rate_groups')
-->where('id', $tax_group)
-->first();
-
+  ->where('id', $tax_group)
+  ->first();
 
 $groupName = (string) (($group->name ?? $group->group_name ?? $group->groupName ?? '') ?: 'Tax');
 
-
 return response()->json([
-'group_id' => $tax_group,
-'group_name' => $groupName,
-'tax_rate_percent' => (float) $rate,
+  'group_id' => $tax_group,
+  'group_name' => $groupName,
+  'tax_rate_percent' => $rate,
+  'taxes' => $taxes, // <-- critical for GST/PST split
 ]);
-});
+})->name('estimates.api.tax-groups.rate');
 });
 /*
 |--------------------------------------------------------------------------
@@ -513,6 +514,26 @@ Route::prefix('pages')
   ->name('estimates.create');
 
 
+		// Convert Estimate -> Sale
+Route::post('estimates/{estimate}/convert-to-sale', [\App\Http\Controllers\Admin\EstimateController::class, 'convertToSale'])
+  ->name('admin.estimates.convert-to-sale');
+
+Route::post('estimates/{estimate}/convert-to-sale', [\App\Http\Controllers\Admin\EstimateController::class, 'convertToSale'])
+  ->name('estimates.convert-to-sale');
+		
+		Route::get('sales/{sale}/edit', [\App\Http\Controllers\Pages\SaleController::class, 'edit'])
+  ->name('sales.edit');
+		
+		Route::put('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'update'])
+  ->name('sales.update');
+
+		Route::get('sales', [\App\Http\Controllers\Pages\SaleController::class, 'index'])
+    ->name('sales.index');
+
+		Route::get('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'show'])
+    ->name('sales.show');
+
+		
 		// (optional) if you want the mock UI under /pages instead of /admin
 		Route::get('estimates/mock-create', function () {
 			$opportunityId = request('opportunity_id');

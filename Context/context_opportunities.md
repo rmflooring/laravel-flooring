@@ -110,3 +110,33 @@ Sorted in blade using `created_at`
 - One step at a time
 - Never assume
 - Always verify via Tinker or blade output
+
+---
+
+## Recent Work (2026-02-21)
+
+### Add Sales to Opportunity Show
+**Goal:** Show Sales linked to an Opportunity on `resources/views/pages/opportunities/show.blade.php`, inside the existing “Job Transactions” table (Sales column).
+
+**Confirmed DB Link:**
+- `sales.opportunity_id` exists (direct relationship).
+
+**Controller change (OpportunityController@show):**
+- After loading the Opportunity + relationships, load Sales:
+  - `$sales = Sale::where('opportunity_id', $opportunity->id)->latest('updated_at')->get();`
+- Pass to view:
+  - `return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales'));`
+- Ensure controller includes:
+  - `use App\Models\Sale;`
+
+**Blade change (Job Transactions table):**
+- Replace the Sales column placeholder (`—`) with a list of sales:
+  - Show `sale_number` (fallback `Sale #id`) and totals.
+  - Total display priority: `revised_contract_total` → `locked_grand_total` → `grand_total`.
+  - Optional chips/labels: Locked (`locked_at`), status (`status`), invoicing state (`is_fully_invoiced`, `invoiced_total`).
+- Link target for now: `route('pages.sales.edit', $sale->id)` (we can switch to a “show” route later if preferred).
+
+**Deferred:**
+- Add “Sort Newest/Oldest” toggle for Sales if needed later.
+- Add “Create Sale” button on Opportunity show once the desired create flow/route is confirmed.
+

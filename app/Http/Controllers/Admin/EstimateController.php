@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Estimate;
 use App\Models\EstimateRoom;
 use App\Models\EstimateItem;
+use App\Models\Sale;
+use App\Models\SaleRoom;
+use App\Models\SaleItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EstimateController extends Controller
 {
@@ -97,6 +101,26 @@ class EstimateController extends Controller
             'rooms.*.labour.*.notes'                => ['nullable', 'string'],
         ]);
 
+		// Force tax_rate_percent to be the TAX GROUP TOTAL (not the effective %)
+$taxGroupId = $data['tax_group_id'] ?? null;
+
+$rateCol = 'sales_rate';
+foreach (['tax_rate_sales', 'sales_rate'] as $candidate) {
+    if (\Schema::hasColumn('tax_rates', $candidate)) {
+        $rateCol = $candidate;
+        break;
+    }
+}
+
+$groupPercent = $taxGroupId
+    ? (float) \DB::table('tax_rate_group_items as tgi')
+        ->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
+        ->where('tgi.tax_rate_group_id', $taxGroupId)
+        ->sum("tr.$rateCol")
+    : 0.0;
+
+$data['tax_rate_percent'] = $groupPercent;
+
         $rooms = $data['rooms'] ?? [];
 
         $estimate = DB::transaction(function () use ($data, $rooms) {
@@ -132,7 +156,25 @@ class EstimateController extends Controller
                 'subtotal_freight'   => (float)($data['subtotal_freight'] ?? 0),
                 'pretax_total'       => (float)($data['pretax_total'] ?? 0),
                 'tax_group_id'       => $data['tax_group_id'] ?? null,
-                'tax_rate_percent'   => (float)($data['tax_rate_percent'] ?? 0),
+                'tax_rate_percent' => (function () use ($data) {
+
+    $taxGroupId = $data['tax_group_id'] ?? null;
+    if (!$taxGroupId) return 0;
+
+    $rateCol = 'sales_rate';
+    foreach (['tax_rate_sales', 'sales_rate'] as $candidate) {
+        if (\Schema::hasColumn('tax_rates', $candidate)) {
+            $rateCol = $candidate;
+            break;
+        }
+    }
+
+    return (float) \DB::table('tax_rate_group_items as tgi')
+        ->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
+        ->where('tgi.tax_rate_group_id', $taxGroupId)
+        ->sum("tr.$rateCol");
+
+})(),
                 'tax_amount'         => (float)($data['tax_amount'] ?? 0),
                 'grand_total'        => (float)($data['grand_total'] ?? 0),
                 'created_by'         => auth()->id(),
@@ -251,6 +293,10 @@ public function update(Request $request, Estimate $estimate)
 		'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         'notes'                => ['nullable', 'string'],
 		'status' => ['required', 'in:draft,sent,revised,approved,rejected'],
+		
+		'homeowner_name'  => ['nullable', 'string', 'max:255'],
+		'homeowner_phone' => ['nullable', 'string', 'max:255'],
+		'homeowner_email' => ['nullable', 'string', 'max:255'],
 
         'subtotal_materials'   => ['nullable', 'numeric'],
         'subtotal_labour'      => ['nullable', 'numeric'],
@@ -270,7 +316,91 @@ public function update(Request $request, Estimate $estimate)
         'rooms.*.labour'       => ['nullable', 'array'],
     ]);
 
+	// Force tax_rate_percent to be the TAX GROUP TOTAL (not the effective %)
+$taxGroupId = $data['tax_group_id'] ?? null;
+
+$rateCol = 'sales_rate';
+foreach (['tax_rate_sales', 'sales_rate'] as $candidate) {
+    if (\Schema::hasColumn('tax_rates', $candidate)) {
+        $rateCol = $candidate;
+        break;
+    }
+}
+
+$groupPercent = $taxGroupId
+    ? (float) \DB::table('tax_rate_group_items as tgi')
+        ->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
+        ->where('tgi.tax_rate_group_id', $taxGroupId)
+        ->sum("tr.$rateCol")
+    : 0.0;
+
+$data['tax_rate_percent'] = $groupPercent;
+
     DB::transaction(function () use ($estimate, $data) {
+
+		// --- Server-side tax calc (authoritative) ---
+$taxGroupId = $data['tax_group_id'] ?? $estimate->tax_group_id;
+
+$taxRatePercent = 0.0;
+
+if (!empty($taxGroupId)) {
+    $taxRatePercent = (float) DB::table('tax_rate_group_items as gi')
+        ->join('tax_rates as tr', 'tr.id', '=', 'gi.tax_rate_id')
+        ->where('gi.tax_rate_group_id', (int) $taxGroupId)
+        ->sum('tr.sales_rate');// percent values (e.g. 5.00)
+}
+
+$pretaxTotal = (float) ($data['pretax_total'] ?? 0);
+
+$taxAmount  = round($pretaxTotal * ($taxRatePercent / 100), 2);
+$grandTotal = round($pretaxTotal + $taxAmount, 2);
+
+		// --- Tax calculation (GST/PST can apply to different bases) ---
+$taxGroupId = $data['tax_group_id'] ?? $estimate->tax_group_id;
+
+$subtotalMaterials = (float) ($data['subtotal_materials'] ?? 0);
+$subtotalLabour    = (float) ($data['subtotal_labour'] ?? 0);
+$subtotalFreight   = (float) ($data['subtotal_freight'] ?? 0);
+
+$pretaxTotal = (float) ($data['pretax_total'] ?? ($subtotalMaterials + $subtotalLabour + $subtotalFreight));
+
+$taxAmount = 0.0;
+$effectivePercent = 0.0;
+
+if ($taxGroupId) {
+    $taxRates = DB::table('tax_rate_group_items as gi')
+        ->join('tax_rates as tr', 'tr.id', '=', 'gi.tax_rate_id')
+        ->where('gi.tax_rate_group_id', (int) $taxGroupId)
+        ->select('tr.sales_rate', 'tr.applies_to')
+        ->get();
+
+    foreach ($taxRates as $tr) {
+        $rate = (float) ($tr->sales_rate ?? 0);
+
+        $base = match ($tr->applies_to) {
+            'materials' => $subtotalMaterials,
+            'labour'    => $subtotalLabour,
+            'freight'   => $subtotalFreight,
+            default     => $pretaxTotal, // 'all' or anything unknown
+        };
+
+        $taxAmount += ($base * ($rate / 100));
+    }
+
+    $taxAmount = round($taxAmount, 2);
+
+    // Effective % for display: tax / pretax (handles mixed bases)
+    $effectivePercent = $pretaxTotal > 0 ? round(($taxAmount / $pretaxTotal) * 100, 3) : 0.0;
+}
+
+		\Log::info('[Estimate update] homeowner before save', [
+    'incoming_name'  => $data['homeowner_name']  ?? '(missing)',
+    'incoming_phone' => $data['homeowner_phone'] ?? '(missing)',
+    'incoming_email' => $data['homeowner_email'] ?? '(missing)',
+    'db_name'        => $estimate->homeowner_name,
+    'db_phone'       => $estimate->homeowner_phone,
+    'db_email'       => $estimate->homeowner_email,
+]);
 
         // 1) Update estimate header + totals
         $estimate->forceFill([
@@ -281,23 +411,48 @@ public function update(Request $request, Estimate $estimate)
             'job_no'             => $data['job_number'] ?? $estimate->job_no,
             'job_name'           => $data['job_name'] ?? $estimate->job_name,
             'job_address'        => $data['job_address'] ?? $estimate->job_address,
+			'homeowner_name'  => $data['homeowner_name'] ?? $estimate->homeowner_name,
+			'homeowner_phone' => $data['homeowner_phone'] ?? $estimate->homeowner_phone,
+			'homeowner_email' => $data['homeowner_email'] ?? $estimate->homeowner_email,
             'notes'              => $data['notes'] ?? $estimate->notes,
 			'status' => $data['status'],
 
             'subtotal_materials' => (float)($data['subtotal_materials'] ?? 0),
             'subtotal_labour'    => (float)($data['subtotal_labour'] ?? 0),
             'subtotal_freight'   => (float)($data['subtotal_freight'] ?? 0),
-            'pretax_total'       => (float)($data['pretax_total'] ?? 0),
-            'tax_amount'         => (float)($data['tax_amount'] ?? 0),
-            'grand_total'        => (float)($data['grand_total'] ?? 0),
-            'tax_group_id'       => $data['tax_group_id'] ?? $estimate->tax_group_id,
-            'tax_rate_percent'   => (float)($data['tax_rate_percent'] ?? 0),
+            'pretax_total'       => $pretaxTotal,
+			
+            'tax_group_id'       => $taxGroupId,
+			'tax_rate_percent'   => $effectivePercent,
+			'tax_amount'         => $taxAmount,
+			'grand_total'        => round($pretaxTotal + $taxAmount, 2),
 
             'updated_by'         => auth()->id(),
         ])->save();
 
         // 2) Rooms + items
         $rooms = $data['rooms'] ?? [];
+		
+		// DELETE rooms that were removed in the UI
+$existingRoomIds = $estimate->rooms()->pluck('id')->all();
+
+$submittedRoomIds = collect($rooms)
+    ->pluck('id')
+    ->filter()
+    ->map(fn ($v) => (int) $v)
+    ->all();
+
+$roomIdsToDelete = array_values(array_diff($existingRoomIds, $submittedRoomIds));
+
+if (!empty($roomIdsToDelete)) {
+    EstimateItem::where('estimate_id', $estimate->id)
+        ->whereIn('estimate_room_id', $roomIdsToDelete)
+        ->delete();
+
+    EstimateRoom::where('estimate_id', $estimate->id)
+        ->whereIn('id', $roomIdsToDelete)
+        ->delete();
+}
 
         foreach ($rooms as $roomIndex => $roomData) {
             $roomId = $roomData['id'] ?? null;
@@ -497,6 +652,122 @@ public function apiStyles(Request $request)
         ->get();
 
     return response()->json($lines);
+}
+
+	public function convertToSale(\App\Models\Estimate $estimate)
+{
+    abort_unless($estimate->status === 'approved', 422, 'Only approved estimates can be converted to a sale.');
+
+    // Prevent duplicates (1 sale per estimate)
+    $existing = \App\Models\Sale::where('source_estimate_id', $estimate->id)->first();
+    if ($existing) {
+        // NOTE: adjust this route if your sales edit route name differs
+        return redirect()->route('pages.sales.edit', $existing->id)
+            ->with('info', 'A sale already exists for this estimate.');
+    }
+
+    $sale = DB::transaction(function () use ($estimate) {
+
+        // Create sale header
+        $sale = \App\Models\Sale::create([
+            'opportunity_id'            => $estimate->opportunity_id ?? null,
+            'source_estimate_id'        => $estimate->id,
+            'source_estimate_number'    => $estimate->estimate_number ?? null,
+
+            'status' => 'open',
+
+            'customer_name'             => $estimate->customer_name ?? null,
+            'job_name'                  => $estimate->job_name ?? null,
+            'job_no'                    => $estimate->job_no ?? null,
+            'job_address'               => $estimate->job_address ?? null,
+            'pm_name'                   => $estimate->pm_name ?? null,
+
+            'salesperson_1_employee_id' => $estimate->salesperson_1_employee_id ?? null,
+            'salesperson_2_employee_id' => $estimate->salesperson_2_employee_id ?? null,
+
+            'notes'                     => $estimate->notes ?? null,
+
+            // Totals
+            'subtotal_materials'        => (float) ($estimate->subtotal_materials ?? 0),
+            'subtotal_labour'           => (float) ($estimate->subtotal_labour ?? 0),
+            'subtotal_freight'          => (float) ($estimate->subtotal_freight ?? 0),
+            'pretax_total'              => (float) ($estimate->pretax_total ?? 0),
+
+            'tax_group_id'              => $estimate->tax_group_id ?? null,
+            'tax_rate_percent'          => (float) ($estimate->tax_rate_percent ?? 0),
+            'tax_amount'                => (float) ($estimate->tax_amount ?? 0),
+            'grand_total'               => (float) ($estimate->grand_total ?? 0),
+
+            'created_by'                => auth()->id(),
+            'updated_by'                => auth()->id(),
+        ]);
+
+        // Copy rooms
+        $roomIdMap = []; // estimate_room_id => sale_room_id
+
+        $estimateRooms = \App\Models\EstimateRoom::where('estimate_id', $estimate->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach ($estimateRooms as $er) {
+            $sr = \App\Models\SaleRoom::create([
+                'sale_id'                 => $sale->id,
+                'source_estimate_room_id' => $er->id,
+                'room_name'               => $er->room_name,
+                'sort_order'              => $er->sort_order,
+                'subtotal_materials'      => (float) ($er->subtotal_materials ?? 0),
+                'subtotal_labour'         => (float) ($er->subtotal_labour ?? 0),
+                'subtotal_freight'        => (float) ($er->subtotal_freight ?? 0),
+                'room_total'              => (float) ($er->room_total ?? 0),
+                'is_changed'              => false,
+            ]);
+
+            $roomIdMap[$er->id] = $sr->id;
+        }
+
+        // Copy items
+        $estimateItems = \App\Models\EstimateItem::where('estimate_id', $estimate->id)
+            ->orderBy('estimate_room_id')
+            ->orderBy('sort_order')
+            ->get();
+
+        foreach ($estimateItems as $ei) {
+            $saleRoomId = $roomIdMap[$ei->estimate_room_id] ?? null;
+
+            \App\Models\SaleItem::create([
+                'sale_id'                 => $sale->id,
+                'sale_room_id'            => $saleRoomId,
+                'source_estimate_item_id' => $ei->id,
+
+                'item_type'               => $ei->item_type,
+                'quantity'                => (float) ($ei->quantity ?? 0),
+                'unit'                    => $ei->unit,
+                'sell_price'              => (float) ($ei->sell_price ?? 0),
+                'line_total'              => (float) ($ei->line_total ?? 0),
+                'notes'                   => $ei->notes,
+                'sort_order'              => (int) ($ei->sort_order ?? 0),
+
+                'product_type'            => $ei->product_type,
+                'manufacturer'            => $ei->manufacturer,
+                'style'                   => $ei->style,
+                'color_item_number'       => $ei->color_item_number,
+                'po_notes'                => $ei->po_notes,
+
+                'labour_type'             => $ei->labour_type,
+                'description'             => $ei->description,
+                'freight_description'     => $ei->freight_description,
+
+                'is_changed'              => false,
+                'is_removed'              => false,
+            ]);
+        }
+
+        return $sale;
+    });
+
+    // NOTE: adjust this route if your sales edit route name differs
+    return redirect()->route('pages.sales.edit', $sale->id)
+        ->with('success', 'Sale created from approved estimate.');
 }
 
 }

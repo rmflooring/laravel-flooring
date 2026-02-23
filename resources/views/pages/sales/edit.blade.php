@@ -1,7 +1,7 @@
 <x-admin-layout>
 
     <div class="py-6">
-	<form method="POST" action="{{ route('admin.estimates.update', $estimate) }}">
+	<form method="POST" action="{{ route('pages.sales.update', $estimate->id) }}">
 	  @csrf
 	  @method('PUT')
 
@@ -10,7 +10,7 @@
             {{-- Page Header --}}
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Edit Estimate</h1>
+                    <h1 class="text-2xl font-bold text-gray-900">Edit Sale</h1>
                     <p class="text-sm text-gray-600">Status: <span class="font-semibold">Draft</span></p>
                 </div>
 @if (session('success'))
@@ -30,7 +30,7 @@
 
 <button type="submit"
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
-  Save Estimate
+  Save Sale
 </button>
 					<button id="toggle-wide-mode" type="button"
   class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -144,7 +144,7 @@
                                 <div>
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Phone</label>
                                     <input type="text" name="homeowner_phone"
-                                            value="{{ old('homeowner_phone', $estimate->homeowner_phone ?? '') }}"
+                                            value="{{ old('job_phone', $estimate->job_phone ?? '') }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="Phone Number">
                                 </div>
@@ -152,7 +152,7 @@
                                 <div class="md:col-span-2">
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Email</label>
                                     <input type="email" name="homeowner_email"
-                                            value="{{ old('homeowner_email', $estimate->homeowner_email ?? '') }}"
+                                            value="{{ old('job_email', $estimate->job_email ?? '') }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="email@example.com">
                                 </div>
@@ -384,7 +384,6 @@
     <button type="button"
   class="js-copy-line-item text-blue-700 hover:underline"
   data-section="materials">
- 
   Copy
 </button>
 
@@ -1673,12 +1672,6 @@
 
 </div>
 
-<button type="button"
-  class="hidden"
-  data-modal-target="copy-line-item-modal"
-  data-modal-toggle="copy-line-item-modal">
-</button>
-
 <div id="copy-line-item-modal" tabindex="-1" aria-hidden="true"
   class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
   <div class="relative w-full max-w-lg bg-white rounded-lg shadow">
@@ -1741,10 +1734,10 @@
     "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
 </script>
 
-<script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/estimate_edit.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
+<script src="{{ asset('assets/js/sales/sale.js') }}" defer></script>
+<script src="{{ asset('assets/js/sales/sale_edit.js') }}" defer></script>
+<script src="{{ asset('assets/js/sales/dropdown_pin.js') }}" defer></script>
+<script src="{{ asset('assets/js/sales/wide_mode_toggle.js') }}" defer></script>
 
 
 

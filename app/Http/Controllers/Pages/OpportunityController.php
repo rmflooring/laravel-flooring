@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\ProjectManager;
 use App\Models\Opportunity;
+use App\Models\Sale;
 use Illuminate\Http\Request;
 use App\Models\Employee;
 
@@ -172,22 +173,28 @@ $employees = Employee::query()
             ->with('success', 'Opportunity created.');
     }
 
-	public function show(string $id)
-	{
-		$opportunity = Opportunity::with([
-			'parentCustomer',
-			'jobSiteCustomer',
-			'projectManager',
-			'estimates',
-		])->findOrFail($id);
+		public function show(string $id)
+		{
+			$opportunity = Opportunity::with([
+				'parentCustomer',
+				'jobSiteCustomer',
+				'projectManager',
+				'estimates',
+			])->findOrFail($id);
 
-		$salesPeople = Employee::whereIn('id', array_filter([
-			$opportunity->sales_person_1,
-			$opportunity->sales_person_2,
-		]))->get()->keyBy('id');
+			$salesPeople = Employee::whereIn('id', array_filter([
+				$opportunity->sales_person_1,
+				$opportunity->sales_person_2,
+			]))->get()->keyBy('id');
 
-		return view('pages.opportunities.show', compact('opportunity', 'salesPeople'));
-	}
+			// Sales for this opportunity
+			$sales = Sale::where('opportunity_id', $opportunity->id)
+				->latest('updated_at')
+				->get();
+
+			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales'));
+		}
+
 
     public function edit(string $id)
 {

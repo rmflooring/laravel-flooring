@@ -227,7 +227,58 @@
                                     </td>
 
                                     {{-- Sales --}}
-                                    <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>
+<td class="px-6 py-4">
+    @if(isset($sales) && $sales->count())
+        <ul class="list-disc space-y-1 pl-5 text-gray-700 dark:text-gray-200">
+            @foreach($sales as $sale)
+                @php
+                    // Display total: revised -> locked -> current
+                    $displayTotal = $sale->revised_contract_total
+                        ?? $sale->locked_grand_total
+                        ?? $sale->grand_total
+                        ?? 0;
+
+                    $locked = !is_null($sale->locked_at);
+
+                    $invoiceLabel = '';
+                    if (!empty($sale->is_fully_invoiced)) $invoiceLabel = 'Fully invoiced';
+                    elseif (($sale->invoiced_total ?? 0) > 0) $invoiceLabel = 'Partially invoiced';
+                @endphp
+
+                <li>
+                    <a href="{{ route('pages.sales.edit', $sale->id) }}"
+                       class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                        {{ $sale->sale_number ?? ('Sale #'.$sale->id) }}
+                    </a>
+
+                    <span class="text-gray-600 dark:text-gray-300">
+                        (${{ number_format((float)$displayTotal, 2) }})
+                    </span>
+
+                    @if($locked)
+                        <span class="ml-1 inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200">
+                            Locked
+                        </span>
+                    @endif
+
+                    @if($sale->status)
+                        <span class="ml-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-100">
+                            {{ $sale->status }}
+                        </span>
+                    @endif
+
+                    @if($invoiceLabel)
+                        <span class="ml-1 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800 dark:bg-green-900/40 dark:text-green-200">
+                            {{ $invoiceLabel }}
+                        </span>
+                    @endif
+                </li>
+            @endforeach
+        </ul>
+    @else
+        <span class="text-gray-400 dark:text-gray-500">—</span>
+    @endif
+</td>
 
                                     {{-- Invoices --}}
                                     <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>

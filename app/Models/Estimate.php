@@ -21,6 +21,10 @@ class Estimate extends Model
         'pm_name',
 		'salesperson_1_employee_id',
 		'salesperson_2_employee_id',
+		
+		'homeowner_name',
+		'homeowner_phone',
+		'homeowner_email',
 
         'notes',
 

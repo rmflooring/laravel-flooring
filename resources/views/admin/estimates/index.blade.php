@@ -139,7 +139,7 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-right font-medium text-gray-900">
-                                        {{ number_format((float) ($estimate->total_amount ?? 0), 2) }}
+                                        {{ number_format((float) ($estimate->grand_amount ?? 0), 2) }}
                                     </td>
                                     <td class="px-6 py-4 text-gray-600">
                                         {{ optional($estimate->created_at)->format('Y-m-d') }}

@@ -49,10 +49,10 @@
                         'icon' => 'M7 7h10M7 11h10M7 15h6',
                     ],
                     [
-                        'title' => 'Invoices',
-                        'subtitle' => 'Coming soon',
-                        'href' => null,
-                        'accent' => 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 border-l-4 border-l-gray-300 dark:border-l-gray-700',
+                        'title' => 'Sales',
+                        'subtitle' => 'View & manage sales',
+                        'href' => route('pages.sales.index'),
+						'accent' => 'bg-indigo-600 text-white border border-indigo-700 dark:bg-indigo-700 dark:border-indigo-800',
                         'icon' => 'M8 7h8M8 11h8M8 15h4',
                     ],
                 ];

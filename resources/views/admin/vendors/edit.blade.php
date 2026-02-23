@@ -27,14 +27,18 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                                <input type="text" name="phone" value="{{ old('phone', $vendor->phone) }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            </div>
+								<label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+								<input type="text" name="phone"
+									value="{{ old('phone', $vendor->phone) }}"
+									class="phone-input block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+							</div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Mobile</label>
-                                <input type="text" name="mobile" value="{{ old('mobile', $vendor->mobile) }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            </div>
+								<label class="block text-sm font-medium text-gray-700 mb-2">Mobile</label>
+								<input type="text" name="mobile"
+									value="{{ old('mobile', $vendor->mobile) }}"
+									class="phone-input block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+							</div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Vendor Type</label>

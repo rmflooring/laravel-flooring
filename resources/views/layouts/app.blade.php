@@ -68,5 +68,6 @@
           });
         });
         </script>
+		<script src="{{ asset('assets/js/phone-format.js') }}"></script>
     </body>
 </html>
