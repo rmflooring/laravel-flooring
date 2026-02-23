@@ -1,7 +1,7 @@
 <x-admin-layout>
 
     <div class="py-6">
-	<form method="POST" action="{{ route('pages.sales.update', $estimate->id) }}">
+	<form method="POST" action="{{ route('pages.sales.update', $sale->id) }}">
 	  @csrf
 	  @method('PUT')
 
@@ -20,13 +20,7 @@
 @endif
 
                 <div class="flex items-center gap-2">
-                    @if(($estimate->status ?? '') === 'approved')
-  <button type="button"
-    class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 mr-2"
-    onclick="if(confirm('Convert this approved estimate to a Sale? This will create a new Sale and copy rooms/items.')) document.getElementById('convert-to-sale-form').submit();">
-    Convert to Sale
-  </button>
-@endif
+
 
 <button type="submit"
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
@@ -41,7 +35,7 @@
                 </div>
             </div>
 
-            {{-- Estimate Header Card --}}
+            {{-- Sale Header Card --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Customer & Job Information</h2>
 
@@ -52,7 +46,7 @@
     <div>
         <label class="block mb-1 text-sm font-medium text-gray-700">Parent Customer</label>
         <input type="text" name="parent_customer_name"
-               value="{{ old('parent_customer_name', $estimate->customer_name) }}"
+               value="{{ old('parent_customer_name', $sale->customer_name) }}"
                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                placeholder="Restoration Company Name">
     </div>
@@ -60,7 +54,7 @@
     <div>
         <label class="block mb-1 text-sm font-medium text-gray-700">Project Manager (PM)</label>
         <input type="text" name="pm_name"
-               value="{{ old('pm_name', $estimate->pm_name) }}"
+               value="{{ old('pm_name', $sale->pm_name) }}"
                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                placeholder="PM Name">
     </div>
@@ -75,7 +69,7 @@
             <option value="">Select</option>
             @foreach($employees as $emp)
                 <option value="{{ $emp->id }}"
-                  @selected(old('salesperson_1_employee_id', $estimate->salesperson_1_employee_id) == $emp->id)>
+                  @selected(old('salesperson_1_employee_id', $sale->salesperson_1_employee_id) == $emp->id)>
                     {{ $emp->first_name }} {{ $emp->last_name }}
                 </option>
             @endforeach
@@ -89,7 +83,7 @@
             <option value="">Select</option>
             @foreach($employees as $emp)
                 <option value="{{ $emp->id }}"
-                  @selected(old('salesperson_2_employee_id', $estimate->salesperson_2_employee_id) == $emp->id)>
+                  @selected(old('salesperson_2_employee_id', $sale->salesperson_2_employee_id) == $emp->id)>
                     {{ $emp->first_name }} {{ $emp->last_name }}
                 </option>
             @endforeach
@@ -104,7 +98,7 @@
                             <div>
                                 <label class="block mb-1 text-sm font-medium text-gray-700">Job Number</label>
                                 <input type="text" name="job_number"
-                                        value="{{ old('job_number', $estimate->job_no) }}"
+                                        value="{{ old('job_number', $sale->job_no) }}"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                     placeholder="e.g. 12345">
                             </div>
@@ -112,20 +106,21 @@
                             <div class="md:col-span-2">
                                 <label class="block mb-1 text-sm font-medium text-gray-700">Job Name</label>
 <input type="text" name="job_name"
-    value="{{ old('job_name', $estimate->job_name) }}"
+    value="{{ old('job_name', $sale->job_name) }}"
     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
     placeholder="e.g. Smith - Water Damage Repair">
                             </div>
                         </div>
 
                         <div>
-                            <label class="block mb-1 text-sm font-medium text-gray-700">Estimate Number</label>
-							<input type="text" name="estimate_number" value="{{ old('estimate_number', $estimate->estimate_number) }}"
+                            <label class="block mb-1 text-sm font-medium text-gray-700">Sale Number</label>
+							<input type="text" name="sale_number"
+value="{{ old('sale_number', $sale->sale_number ?? '') }}"
 								class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
 								/>
 
 							<p class="mt-1 text-xs text-gray-500">
-								Automatically assigned when the estimate is saved.
+								Automatically assigned when the sale is saved.
 							</p>
                         </div>
 
@@ -136,7 +131,7 @@
                                 <div>
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Name</label>
                                     <input type="text" name="homeowner_name"
-  value="{{ old('homeowner_name', $estimate->homeowner_name ?? '') }}"
+  value="{{ old('homeowner_name', $sale->homeowner_name ?? '') }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="Homeowner Name">
                                 </div>
@@ -144,7 +139,7 @@
                                 <div>
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Phone</label>
                                     <input type="text" name="homeowner_phone"
-                                            value="{{ old('job_phone', $estimate->job_phone ?? '') }}"
+                                            value="{{ old('job_phone', $sale->job_phone ?? '') }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="Phone Number">
                                 </div>
@@ -152,14 +147,14 @@
                                 <div class="md:col-span-2">
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Email</label>
                                     <input type="email" name="homeowner_email"
-                                            value="{{ old('job_email', $estimate->job_email ?? '') }}"
+                                            value="{{ old('job_email', $sale->job_email ?? '') }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="email@example.com">
                                 </div>
 
                                 <div class="md:col-span-2">
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Job Address</label>
-                                    <textarea name="job_address" rows="3"    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Full job address">{{ old('job_address', $estimate->job_address) }}</textarea>
+                                    <textarea name="job_address" rows="3"    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Full job address">{{ old('job_address', $sale->job_address) }}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -169,19 +164,19 @@
             </div>
 </div> {{-- end max-w-7xl container --}}
 
-{{-- Full-width Estimate Builder --}}
+{{-- Full-width Sale Builder --}}
 <div class="w-full">
   <div id="estimate-builder-padding" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
 	
 {{-- Rooms --}}
 	@if(app()->environment('local'))
   <div class="px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16">
-    Rooms loaded: {{ $estimate->rooms?->count() ?? 0 }}
+    Rooms loaded: {{ $sale->rooms?->count() ?? 0 }}
   </div>
 @endif
 	
 <div id="rooms-container" class="mt-6 space-y-6">
-  @foreach($estimate->rooms as $roomIndex => $room)
+  @foreach($sale->rooms as $roomIndex => $room)
 	<div class="text-xs text-blue-600 mb-2">
   item_types:
   {{ $room->items->pluck('item_type')->unique()->implode(', ') }}
@@ -1463,10 +1458,10 @@
 		
 {{-- Back to normal width --}}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
-                {{-- Estimate Summary --}}
+                {{-- Sale Summary --}}
       <div class="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-gray-900">Estimate Summary</h2>
+                        <h2 class="text-lg font-semibold text-gray-900">Sale Summary</h2>
 
 <button
   id="select-tax-group-btn"
@@ -1570,18 +1565,18 @@
     <span class="estimate-grand-total-value text-base font-bold text-gray-900">$0.00</span>
 </div>
 
-					<!-- Step 13: Hidden inputs for estimate totals (used on save) -->
+					<!-- Step 13: Hidden inputs for sale totals (used on save) -->
 <input type="hidden" name="subtotal_materials" id="subtotal_materials_input" value="0">
 <input type="hidden" name="subtotal_labour" id="subtotal_labour_input" value="0">
 <input type="hidden" name="subtotal_freight" id="subtotal_freight_input" value="0">
 <input type="hidden" name="pretax_total" id="pretax_total_input" value="0">
 <input type="hidden" name="tax_amount" id="tax_amount_input" value="0">
 <input type="hidden" name="grand_total" id="grand_total_input" value="0">
-<input type="hidden" name="tax_group_id" id="tax_group_id_input" value="{{ old('tax_group_id', $estimate->tax_group_id ?? $defaultTaxGroupId ?? '') }}">
+<input type="hidden" name="tax_group_id" id="tax_group_id_input" value="{{ old('tax_group_id', $sale->tax_group_id ?? $defaultTaxGroupId ?? '') }}">
 <input type="hidden"
   name="tax_rate_percent"
   id="tax_rate_percent_input"
-  value="{{ old('tax_rate_percent', number_format((float)($estimate->tax_rate_percent ?? 0), 3, '.', '')) }}">
+  value="{{ old('tax_rate_percent', number_format((float)($sale->tax_rate_percent ?? 0), 3, '.', '')) }}">
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -1589,7 +1584,7 @@
     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <p class="text-xs text-gray-500">Prepared by</p>
         <p class="text-sm font-semibold text-gray-900">
-            {{ optional($estimate->creator)->name ?? '—' }}
+            {{ optional($sale->creator)->name ?? '—' }}
         </p>
     </div>
 
@@ -1597,7 +1592,7 @@
     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <p class="text-xs text-gray-500">Last edited by</p>
         <p class="text-sm font-semibold text-gray-900">
-            {{ optional($estimate->updater)->name ?? '—' }}
+            {{ optional($sale->updater)->name ?? '—' }}
         </p>
     </div>
 
@@ -1606,7 +1601,7 @@
     <label class="block text-xs text-gray-500">Status</label>
 
     @php
-        $currentStatus = old('status', $estimate->status);
+        $currentStatus = old('status', $sale->status);
 
         $statusColors = [
             'draft'    => 'bg-gray-200 text-gray-800',
@@ -1655,7 +1650,7 @@
 
                 <button type="submit"
 				  class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 						focus:ring-blue-300">
-				  Save Estimate
+				  Save Sale
 				</button>
             </div>
         </div>
@@ -1716,21 +1711,14 @@
 
 </form>
 
-{{-- Convert to Sale hidden form --}}
-<form id="convert-to-sale-form"
-      method="POST"
-      action="{{ route('pages.estimates.convert-to-sale', $estimate->id) }}"
-      class="hidden">
-    @csrf
-</form>
-
 <script>
-  window.FM_ESTIMATE_PRODUCT_TYPES_URL = "{{ route('admin.estimates.api.product-types') }}";
-  window.FM_ESTIMATE_MANUFACTURERS_URL = "/estimates/api/manufacturers";
-  window.FM_ESTIMATE_PRODUCT_STYLES_URL = "/product-lines";
-  window.FM_ESTIMATE_FREIGHT_ITEMS_URL = "{{ route('admin.estimates.api.freight-items') }}";
-  window.FM_ESTIMATE_LABOUR_TYPES_URL = "/estimates/api/labour-types";
-  window.FM_ESTIMATE_TAX_GROUP_RATE_URL_TEMPLATE =
+  // Neutral (shared) endpoints for both Estimates + Sales
+  window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('admin.estimates.api.product-types') }}";
+  window.FM_CATALOG_MANUFACTURERS_URL = "/estimates/api/manufacturers";
+  window.FM_CATALOG_PRODUCT_STYLES_URL = "/product-lines";
+  window.FM_CATALOG_FREIGHT_ITEMS_URL = "{{ route('admin.estimates.api.freight-items') }}";
+  window.FM_CATALOG_LABOUR_TYPES_URL = "/estimates/api/labour-types";
+  window.FM_TAX_GROUP_RATE_URL_TEMPLATE =
     "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
 </script>
 

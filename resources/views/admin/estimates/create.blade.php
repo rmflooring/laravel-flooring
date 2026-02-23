@@ -707,11 +707,14 @@
 </form>
 
 <script>
-  window.FM_ESTIMATE_PRODUCT_TYPES_URL = "{{ route('admin.estimates.api.product-types') }}";
-  window.FM_ESTIMATE_MANUFACTURERS_URL = "/estimates/api/manufacturers";
-  window.FM_ESTIMATE_PRODUCT_STYLES_URL = "/product-lines";
-  window.FM_ESTIMATE_FREIGHT_ITEMS_URL = "{{ route('admin.estimates.api.freight-items') }}";
-  window.FM_ESTIMATE_LABOUR_TYPES_URL = "/estimates/api/labour-types";
+  // Neutral (shared) endpoints for both Estimates + Sales
+  window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('admin.estimates.api.product-types') }}";
+  window.FM_CATALOG_MANUFACTURERS_URL = "/estimates/api/manufacturers";
+  window.FM_CATALOG_PRODUCT_STYLES_URL = "/product-lines";
+  window.FM_CATALOG_FREIGHT_ITEMS_URL = "{{ route('admin.estimates.api.freight-items') }}";
+  window.FM_CATALOG_LABOUR_TYPES_URL = "/estimates/api/labour-types";
+  window.FM_TAX_GROUP_RATE_URL_TEMPLATE =
+    "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
 </script>
 
 <script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>

@@ -531,7 +531,7 @@ async function renderRows() {
     return;
   }
 
-  const tpl = window.FM_ESTIMATE_TAX_GROUP_RATE_URL_TEMPLATE;
+  const tpl = window.FM_TAX_GROUP_RATE_URL_TEMPLATE;
   if (!tpl) {
     rowsWrap.innerHTML = `<div class="text-sm text-red-500">Tax URL template missing.</div>`;
     return;

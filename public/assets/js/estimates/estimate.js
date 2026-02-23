@@ -696,7 +696,7 @@ function initManufacturerDropdownForRoom(roomCard) {
 
       if (!ptId) return;
 
-      const url = `${window.FM_ESTIMATE_MANUFACTURERS_URL}?product_type_id=${encodeURIComponent(ptId)}`;
+      const url = `${window.FM_CATALOG_MANUFACTURERS_URL}?product_type_id=${encodeURIComponent(ptId)}`;
 
       try {
         const resp = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -1289,7 +1289,7 @@ function initManufacturerDropdownForRoom(roomCard) {
 
   // Cache freight items per room so we don’t refetch for every row
   if (!roomCard._fmFreightItemsPromise) {
-  roomCard._fmFreightItemsPromise = fetch(window.FM_ESTIMATE_FREIGHT_ITEMS_URL, {
+  roomCard._fmFreightItemsPromise = fetch(window.FM_CATALOG_FREIGHT_ITEMS_URL, {
     headers: { Accept: 'application/json' }
   })
     .then(async (r) => {

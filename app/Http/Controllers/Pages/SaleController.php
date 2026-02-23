@@ -120,7 +120,6 @@ class SaleController extends Controller
 
         return view('pages.sales.edit', [
             'sale' => $sale,
-            'estimate' => $sale, // temporary bridge
             'employees' => $employees,
             'taxGroups' => $taxGroups,
             'defaultTaxGroupId' => $defaultTaxGroupId,
