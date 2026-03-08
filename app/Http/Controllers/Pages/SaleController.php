@@ -96,6 +96,8 @@ class SaleController extends Controller
     public function edit(Sale $sale)
     {
         $sale->load([
+			'creator',
+			'updater',
             'rooms' => function ($q) {
                 $q->orderBy('sort_order');
             },
@@ -158,7 +160,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
     \DB::transaction(function () use ($sale, $data) {
 
         // 1) Header
-        $sale->forceFill([
+        $sale->fill([
             'customer_name'      => $data['parent_customer_name'] ?? $sale->customer_name,
             'pm_name'            => $data['pm_name'] ?? $sale->pm_name,
             'job_no'             => $data['job_number'] ?? $sale->job_no,
@@ -252,6 +254,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
 
                     'quantity'         => (float)($item['quantity'] ?? 0),
                     'unit'             => $item['unit'] ?? null,
+					'cost_price'        => (float)($item['cost_price'] ?? 0),
+					'cost_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price'       => (float)($item['sell_price'] ?? 0),
                     'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
@@ -272,6 +276,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'freight_description'=> $item['freight_description'] ?? null,
                     'quantity'           => (float)($item['quantity'] ?? 0),
                     'unit'               => $item['unit'] ?? null,
+					'cost_price'       => (float)($item['cost_price'] ?? 0),
+					'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price'         => (float)($item['sell_price'] ?? 0),
                     'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
@@ -293,6 +299,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'description'  => $item['description'] ?? null,
                     'quantity'     => (float)($item['quantity'] ?? 0),
                     'unit'         => $item['unit'] ?? null,
+					'cost_price'       => (float)($item['cost_price'] ?? 0),
+					'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price'   => (float)($item['sell_price'] ?? 0),
                     'line_total'   => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
@@ -305,6 +313,38 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
     return back()->with('success', 'Sale updated.');
 }
 
+	public function saveProfitCosts(\Illuminate\Http\Request $request, \App\Models\Sale $sale)
+{
+    $data = $request->validate([
+        'items' => ['required', 'array'],
+        'items.*.id' => ['required', 'integer'],
+        'items.*.cost_price' => ['nullable', 'numeric'],
+    ]);
+
+    \DB::transaction(function () use ($sale, $data) {
+        foreach ($data['items'] as $row) {
+            $item = \App\Models\SaleItem::where('sale_id', $sale->id)
+                ->where('id', (int) $row['id'])
+                ->first();
+
+            if (!$item) {
+                continue;
+            }
+
+            $costPrice = (float) ($row['cost_price'] ?? 0);
+            $qty = (float) ($item->quantity ?? 0);
+
+            $item->cost_price = $costPrice;
+            $item->cost_total = round($qty * $costPrice, 2);
+            $item->save();
+        }
+    });
+
+    return response()->json([
+        'success' => true,
+    ]);
+}
+	
 private function isRowEmpty(array $row, array $keysToCheck): bool
 {
     foreach ($keysToCheck as $key) {

@@ -123,8 +123,14 @@
             $isLocked = !empty($sale->locked_at);
             $lockedBadge = $isLocked ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800';
 
-            $revised = (float) ($sale->revised_contract_total ?? $sale->locked_grand_total ?? $sale->grand_total ?? 0);
-            $invoiced = (float) ($sale->invoiced_total ?? 0);
+            $revisedContract = (float) ($sale->revised_contract_total ?? 0);
+			$lockedGrand     = (float) ($sale->locked_grand_total ?? 0);
+			$grandTotal      = (float) ($sale->grand_total ?? 0);
+
+			$revised = $revisedContract != 0.0
+				? $revisedContract
+				: ($lockedGrand != 0.0 ? $lockedGrand : $grandTotal);
+						$invoiced = (float) ($sale->invoiced_total ?? 0);
         @endphp
 
         <tr class="bg-white border-b hover:bg-gray-50">

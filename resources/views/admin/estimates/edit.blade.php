@@ -32,6 +32,16 @@
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
   Save Estimate
 </button>
+					<button type="button"
+  class="relative z-10 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
+  data-modal-target="profits-modal-estimate-{{ $estimate->id }}"
+  data-modal-toggle="profits-modal-estimate-{{ $estimate->id }}">
+  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.12-3 2.5S10.343 13 12 13s3 1.12 3 2.5S13.657 18 12 18m0-10v10m0-10V6m0 12v2" />
+  </svg>
+  Profits
+</button>
+					
 					<button id="toggle-wide-mode" type="button"
   class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
   Wide Mode
@@ -297,11 +307,21 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="text"
-          name="rooms[{{ $roomIndex }}][materials][{{ $i }}][unit]"
-          value="{{ old("rooms.$roomIndex.materials.$i.unit", $item->unit) }}"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
-      </td>
+		  <input type="text"
+			name="rooms[{{ $roomIndex }}][materials][{{ $i }}][unit]"
+			value="{{ old("rooms.$roomIndex.materials.$i.unit", $item->unit) }}"
+			class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+
+		  <input type="hidden"
+			name="rooms[{{ $roomIndex }}][materials][{{ $i }}][cost_price]"
+			value="{{ old("rooms.$roomIndex.materials.$i.cost_price", number_format((float)($item->cost_price ?? 0), 2, '.', '')) }}"
+			class="material-cost-price-input">
+
+		  <input type="hidden"
+			name="rooms[{{ $roomIndex }}][materials][{{ $i }}][cost_total]"
+			value="{{ old("rooms.$roomIndex.materials.$i.cost_total", number_format((float)($item->cost_total ?? 0), 2, '.', '')) }}"
+			class="material-cost-total-input">
+		</td>
 
       <td class="px-3 py-2 relative">
         <input type="text"
@@ -584,11 +604,21 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
-          name="rooms[{{ $roomIndex }}][freight][{{ $i }}][quantity]"
-          value="{{ old("rooms.$roomIndex.freight.$i.quantity", $qty) }}"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
-      </td>
+  <input type="number" step="0.01"
+    name="rooms[{{ $roomIndex }}][freight][{{ $i }}][quantity]"
+    value="{{ old("rooms.$roomIndex.freight.$i.quantity", $qty) }}"
+    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+
+  <input type="hidden"
+    name="rooms[{{ $roomIndex }}][freight][{{ $i }}][cost_price]"
+    value="{{ old("rooms.$roomIndex.freight.$i.cost_price", number_format((float)($item->cost_price ?? 0), 2, '.', '')) }}"
+    class="freight-cost-price-input">
+
+  <input type="hidden"
+    name="rooms[{{ $roomIndex }}][freight][{{ $i }}][cost_total]"
+    value="{{ old("rooms.$roomIndex.freight.$i.cost_total", number_format((float)($item->cost_total ?? 0), 2, '.', '')) }}"
+    class="freight-cost-total-input">
+</td>
 
       <td class="px-3 py-2">
         <input type="number" step="0.01"
@@ -740,12 +770,13 @@
     @endphp
 
     <tr class="bg-white border-t">
-      <td class="px-3 py-2 overflow-visible">
-        <div class="relative">
-          <input type="hidden"
-		  name="rooms[{{ $roomIndex }}][labour][{{ $i }}][line_item_order]"
-		  class="js-line-item-order"
-		  value="{{ $item->line_item_order ?? ($i + 1) }}">
+  <td class="px-3 py-2 overflow-visible">
+    <div class="relative">
+      <input type="hidden" name="rooms[{{ $roomIndex }}][labour][{{ $i }}][id]" value="{{ $item->id }}">
+      <input type="hidden"
+      name="rooms[{{ $roomIndex }}][labour][{{ $i }}][line_item_order]"
+      class="js-line-item-order"
+      value="{{ $item->line_item_order ?? ($i + 1) }}">
 
 
           <input type="text"
@@ -770,12 +801,22 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="text"
-          name="rooms[{{ $roomIndex }}][labour][{{ $i }}][unit]"
-          value="{{ old("rooms.$roomIndex.labour.$i.unit", $item->unit ?? '') }}"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
-          data-labour-unit-input>
-      </td>
+  <input type="text"
+    name="rooms[{{ $roomIndex }}][labour][{{ $i }}][unit]"
+    value="{{ old("rooms.$roomIndex.labour.$i.unit", $item->unit ?? '') }}"
+    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+    data-labour-unit-input>
+
+  <input type="hidden"
+    name="rooms[{{ $roomIndex }}][labour][{{ $i }}][cost_price]"
+    value="{{ old("rooms.$roomIndex.labour.$i.cost_price", number_format((float)($item->cost_price ?? 0), 2, '.', '')) }}"
+    class="labour-cost-price-input">
+
+  <input type="hidden"
+    name="rooms[{{ $roomIndex }}][labour][{{ $i }}][cost_total]"
+    value="{{ old("rooms.$roomIndex.labour.$i.cost_total", number_format((float)($item->cost_total ?? 0), 2, '.', '')) }}"
+    class="labour-cost-total-input">
+</td>
 
       <td class="px-3 py-2 overflow-visible">
         <div class="relative">
@@ -1721,6 +1762,7 @@
   </div>
 </div>
 
+<x-modals.profits-modal context="estimate" :record-id="$estimate->id" />
 </form>
 
 {{-- Convert to Sale hidden form --}}

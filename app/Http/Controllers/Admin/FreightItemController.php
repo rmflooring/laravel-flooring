@@ -48,11 +48,12 @@ class FreightItemController extends Controller
     }
 
     public function apiIndex()
-    {
-        return FreightItem::orderBy('description')->get([
-            'id',
-            'description',
-            'sell_price',
-        ]);
-    }
+{
+    return FreightItem::orderBy('description')->get([
+        'id',
+        'description',
+        'sell_price',
+        'cost_price',
+    ]);
+}
 }

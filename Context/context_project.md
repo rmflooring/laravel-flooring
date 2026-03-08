@@ -123,3 +123,74 @@ End of Updated Project Context
   - Render Sales in the “Job Transactions” table (Sales column) as a list of linked sales (link to `pages.sales.edit` for now).
 - Styling requirement: keep using Flowbite/Tailwind components to match the Opportunities show layout.
 
+
+
+------------------------------------------------------------------------
+
+## Sales Profit Modal (March 2026)
+
+A profit‑editing modal is available on **Edit Sale** allowing cost values to be edited and saved without saving the entire Sale.
+
+### Behaviour
+- Modal edits **cost_price** for each SaleItem
+- cost_total recalculated as:
+  cost_total = quantity × cost_price
+- Save button performs **AJAX POST** request
+- Database updates immediately
+- No need to click **Save Sale**
+
+### Route
+
+POST  
+/pages/sales/{sale}/profits/save-costs  
+
+Route name:
+pages.sales.profits.save-costs
+
+### Controller Method
+
+Location:
+app/Http/Controllers/Pages/SaleController.php
+
+Method:
+saveProfitCosts()
+
+Core logic:
+- Validate incoming items
+- Loop each item
+- Ensure item belongs to the sale
+- Update cost_price
+- Recalculate cost_total
+- Save SaleItem
+- Return JSON success response
+
+### Request Format
+
+{
+  items: [
+    { id: 123, cost_price: 12.50 },
+    { id: 124, cost_price: 5.75 }
+  ]
+}
+
+### Result
+
+- SaleItem.cost_price updated
+- SaleItem.cost_total updated
+- UI updated instantly in modal
+
+### Future Improvements (planned)
+
+1. Auto‑recalculate sale‑level totals
+   - material cost
+   - labour cost
+   - freight cost
+   - overall profit
+
+2. Add profit columns
+   - Profit $
+   - Profit %
+
+3. Add recalculation endpoint to ensure totals remain accurate if items are edited concurrently.
+
+------------------------------------------------------------------------

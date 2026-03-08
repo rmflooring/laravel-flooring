@@ -27,6 +27,17 @@
             </div>
 
             {{-- Summary cards --}}
+            @php
+                $revisedContract = (float) ($sale->revised_contract_total ?? 0);
+                $lockedGrand     = (float) ($sale->locked_grand_total ?? 0);
+                $grandTotal      = (float) ($sale->grand_total ?? 0);
+
+                // Treat 0.00 as "not set" (common when column has a default), so we can fall back.
+                $revisedContractDisplay = $revisedContract != 0.0
+                    ? $revisedContract
+                    : ($lockedGrand != 0.0 ? $lockedGrand : $grandTotal);
+            @endphp
+
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div class="text-xs text-gray-500">Status</div>
@@ -43,7 +54,7 @@
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div class="text-xs text-gray-500">Revised Contract Total</div>
                     <div class="mt-1 font-semibold text-gray-900">
-                        {{ number_format((float) ($sale->revised_contract_total ?? $sale->locked_grand_total ?? $sale->grand_total ?? 0), 2) }}
+                        {{ number_format($revisedContractDisplay, 2) }}
                     </div>
                 </div>
 

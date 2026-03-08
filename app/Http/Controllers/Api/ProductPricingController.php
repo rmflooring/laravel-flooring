@@ -16,7 +16,7 @@ class ProductPricingController extends Controller
             'product_line_id'  => ['required', 'integer'],
         ]);
 
-        $style = ProductStyle::query()->select('id', 'sell_price')->findOrFail((int) $data['product_style_id']);
+        $style = ProductStyle::query()->select('id', 'sell_price', 'cost_price')->findOrFail((int) $data['product_style_id']);
         $line  = ProductLine::query()->select('id', 'default_sell_price')->findOrFail((int) $data['product_line_id']);
 
         $stylePrice = $style->sell_price; // may be null
@@ -26,10 +26,11 @@ class ProductPricingController extends Controller
         $source = $stylePrice !== null ? 'style' : 'line';
 
         return response()->json([
-            'sell_price' => (float) $finalPrice,
-            'source' => $source,
-            'style_sell_price' => $stylePrice !== null ? (float) $stylePrice : null,
-            'line_default_sell_price' => (float) $linePrice,
-        ]);
+    'sell_price' => (float) $finalPrice,
+    'cost_price' => (float) ($style->cost_price ?? 0),
+    'source' => $source,
+    'style_sell_price' => $stylePrice !== null ? (float) $stylePrice : null,
+    'line_default_sell_price' => (float) $linePrice,
+]);
     }
 }

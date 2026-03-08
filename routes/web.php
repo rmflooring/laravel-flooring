@@ -478,6 +478,12 @@ Route::prefix('pages')
 			->middleware('permission:create estimates')
 			->name('estimates.update');
 		
+		Route::post('estimates/{estimate}/profits/save-costs', [EstimateController::class, 'saveProfitCosts'])
+			->name('estimates.profits.save-costs');
+		
+		Route::post('sales/{sale}/profits/save-costs', [\App\Http\Controllers\Pages\SaleController::class, 'saveProfitCosts'])
+			->name('sales.profits.save-costs');
+		
 		//added
 		Route::get('estimates/create', function () {
     $opportunityId = request('opportunity_id');

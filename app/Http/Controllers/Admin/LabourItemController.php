@@ -106,4 +106,27 @@ class LabourItemController extends Controller
         return redirect()->route('admin.labour_items.index')
             ->with('success', 'Labour Item updated successfully!');
     }
+	public function apiIndex(Request $request)
+{
+    $labourTypeId = $request->get('labour_type_id');
+
+    $query = LabourItem::query()
+        ->with(['unitMeasure'])
+        ->orderBy('description');
+
+    if ($labourTypeId) {
+        $query->where('labour_type_id', $labourTypeId);
+    }
+
+    return $query->get()->map(function ($item) {
+        return [
+            'id'        => $item->id,
+            'description' => $item->description,
+            'unit_code' => optional($item->unitMeasure)->code ?? optional($item->unitMeasure)->label ?? '',
+            'cost'      => (string) $item->cost,
+            'sell'      => (string) $item->sell,
+            'notes'     => (string) ($item->notes ?? ''),
+        ];
+    });
+}
 }

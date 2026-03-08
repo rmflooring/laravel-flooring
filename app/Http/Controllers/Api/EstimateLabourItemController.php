@@ -22,6 +22,7 @@ class EstimateLabourItemController extends Controller
     'labour_items.id',
     'labour_items.description',
     'unit_measures.code as unit_code',
+    'labour_items.cost',   // ✅ add this
     'labour_items.sell',
     'labour_items.notes',
 ])

@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const roomsContainer = document.getElementById("rooms-container");
   const addRoomBtn = document.getElementById("add-room-btn");
   const roomTemplate = document.getElementById("room-template");
+  const toggleWideBtn = document.getElementById("toggle-wide-btn");
 
   if (!roomsContainer || !addRoomBtn || !roomTemplate) {
     console.error("[estimate.js] Missing critical DOM elements");
@@ -1096,6 +1097,49 @@ function initManufacturerDropdownForRoom(roomCard) {
       activeIndex = -1;
     }
 
+	  	  async function autofillSellPriceForRow(row) {
+  const colorInput = row.querySelector('[data-color-input]');
+  const styleInput = row.querySelector('[data-style-input]');
+  const priceInput = row.querySelector('input[name$="[sell_price]"]');
+
+  // cost fields (hidden)
+  const costPriceInput = row.querySelector('input[name$="[cost_price]"]');
+  const costTotalInput = row.querySelector('input[name$="[cost_total]"]');
+  const qtyInput = row.querySelector('input[name*="[quantity]"]');
+
+  if (!colorInput || !styleInput || !priceInput) return;
+
+  const productStyleId = colorInput.dataset.productStyleId;
+  const productLineId = styleInput.dataset.productLineId;
+
+  if (!productStyleId || !productLineId) return;
+
+  // If user manually overrode price AND hasn't changed color since, do nothing
+  if (priceInput.dataset.userOverridden === '1') return;
+
+  const url = `/api/product-pricing?product_style_id=${encodeURIComponent(productStyleId)}&product_line_id=${encodeURIComponent(productLineId)}`;
+
+  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!resp.ok) return;
+
+  const data = await resp.json();
+
+  // --- SELL PRICE ---
+  if (typeof data.sell_price === 'number') {
+    priceInput.value = data.sell_price.toFixed(2);
+    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // --- COST ---
+  const cost = Number(data.cost_price ?? data.cost ?? 0);
+  if (costPriceInput) costPriceInput.value = (!isNaN(cost) ? cost : 0).toFixed(2);
+
+  const qty = qtyInput ? Number(qtyInput.value || 0) : 0;
+  const costTotal = (!isNaN(qty) ? qty : 0) * (!isNaN(cost) ? cost : 0);
+
+  if (costTotalInput) costTotalInput.value = costTotal.toFixed(2);
+}
+	  
     function selectFromButton(btn) {
       if (!btn) return;
 
@@ -1109,8 +1153,8 @@ function initManufacturerDropdownForRoom(roomCard) {
 		colorInput.dataset.productStyleId = id;
 
 		// New color selected -> allow autofill again (clear any manual override)
-		const priceInput = row.querySelector('input[name$="[sell_price]"]');
-		if (priceInput) delete priceInput.dataset.userOverridden;
+const priceInput = row.querySelector('input[name*="[materials]"][name$="[sell_price]"]');
+if (priceInput) delete priceInput.dataset.userOverridden;
 
 		// Autofill price now (style price, else line default)
 		autofillSellPriceForRow(row);
@@ -1146,36 +1190,8 @@ function initManufacturerDropdownForRoom(roomCard) {
       render(filtered);
     }
 
-	  async function autofillSellPriceForRow(row) {
-  const colorInput = row.querySelector('[data-color-input]');
-  const styleInput = row.querySelector('[data-style-input]');
-  const priceInput = row.querySelector('input[name$="[sell_price]"]');
 
-  if (!colorInput || !styleInput || !priceInput) return;
-
-  const productStyleId = colorInput.dataset.productStyleId;
-  const productLineId = styleInput.dataset.productLineId;
-
-  if (!productStyleId || !productLineId) return;
-
-  // If user manually overrode price AND hasn't changed color since, do nothing
-  // (We will clear this flag when color changes — in the select handler)
-  if (priceInput.dataset.userOverridden === '1') return;
-
-  const url = `/api/product-pricing?product_style_id=${encodeURIComponent(productStyleId)}&product_line_id=${encodeURIComponent(productLineId)}`;
-
-  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!resp.ok) return;
-
-  const data = await resp.json();
-  if (typeof data.sell_price !== 'number') return;
-
-  priceInput.value = data.sell_price.toFixed(2);
-
-  // trigger totals recalculation if your script listens to input events
-  priceInput.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
+				 
     // Click selection (mousedown beats blur)
     list.addEventListener('mousedown', (e) => {
       const btn = e.target.closest('button[data-style-id]');
@@ -1327,6 +1343,9 @@ function initManufacturerDropdownForRoom(roomCard) {
 						
     // Optional: if your freight API returns unit + price, we can autofill these later
     const priceInput = row.querySelector('input[name*="[sell_price]"]');
+const costPriceInput = row.querySelector('input[name$="[cost_price]"]');
+const costTotalInput = row.querySelector('input[name$="[cost_total]"]');
+const qtyInput = row.querySelector('input[name*="[quantity]"]');
 
     let freightItems = [];
     let activeIndex = -1;
@@ -1398,12 +1417,14 @@ function openDropdown() {
       list.innerHTML = arr.map(item => {
         const name = item.name ?? item.freight_description ?? item.description ?? String(item);
         const price = (item && item.sell_price != null) ? String(item.sell_price) : '';
+		const cost = (item && item.cost_price != null) ? String(item.cost_price) : '';
         return `
           <li>
             <button type="button"
               class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
               data-freight-name="${escapeHtml(name)}"
-              data-freight-price="${escapeHtml(price)}">
+              data-freight-price="${escapeHtml(price)}"
+data-freight-cost="${escapeHtml(cost)}">
               <span class="truncate">${escapeHtml(name)}</span>
             </button>
           </li>
@@ -1435,6 +1456,21 @@ function openDropdown() {
           priceInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
+
+// ✅ ADD THIS BLOCK RIGHT UNDER IT
+const c = btn.dataset.freightCost;
+if (costPriceInput && c !== '' && c != null) {
+  const n = Number(c);
+  if (!isNaN(n)) {
+    costPriceInput.value = n.toFixed(2);
+
+    const qty = qtyInput ? Number(qtyInput.value || 0) : 0;
+    const costTotal = qty * n;
+
+    if (costTotalInput) costTotalInput.value = costTotal.toFixed(2);
+  }
+}
+
 
       closeDropdown();
       input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1756,6 +1792,7 @@ function initLabourDescriptionDropdownForRow(rowEl) {
           data-labour-desc="${escapeHtml(it.description)}"
           data-labour-unit="${escapeHtml(it.unit_code)}"
 		  data-labour-sell="${escapeHtml(it.sell ?? '')}"
+		  data-labour-cost="${escapeHtml(it.cost ?? '')}"
 		  data-labour-notes="${escapeHtml(it.notes ?? '')}"
         >${escapeHtml(it.description)}
 		</button>
@@ -1772,12 +1809,29 @@ function initLabourDescriptionDropdownForRow(rowEl) {
 	closeDropdown();
 const sell = btn.getAttribute('data-labour-sell') || '';
 const notes = btn.getAttribute('data-labour-notes') || '';
+const cost = btn.getAttribute('data-labour-cost');
 
 if (priceInput && sell !== '') {
   const n = Number(sell);
   if (!isNaN(n)) {
     priceInput.value = n.toFixed(2);
     priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+const costPriceInput = rowEl.querySelector('input[name$="[cost_price]"]');
+const costTotalInput = rowEl.querySelector('input[name$="[cost_total]"]');
+const qtyInput = rowEl.querySelector('input[name*="[quantity]"]');
+
+if (costPriceInput && cost !== '') {
+  const c = Number(cost);
+  if (!isNaN(c)) {
+    costPriceInput.value = c.toFixed(2);
+
+    const qty = qtyInput ? Number(qtyInput.value || 0) : 0;
+    if (costTotalInput) {
+      costTotalInput.value = (qty * c).toFixed(2);
+    }
   }
 }
 
@@ -2053,13 +2107,31 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const price = parseNumber(row.querySelector('input[name*="sell_price"]')?.value || 0);
     const lineTotal = qty * price;
 
+	// update cost total
+	const costPriceEl = row.querySelector('input[name$="[cost_price]"]');
+	const costTotalEl = row.querySelector('input[name$="[cost_total]"]');
+
+	if (costPriceEl && costTotalEl) {
+	  const costPrice = parseNumber(costPriceEl.value || 0);
+	  costTotalEl.value = (qty * costPrice).toFixed(2);
+	}
+
     // Update visible line total (your spans exist in the 2nd last td)
     const totalSpan = row.querySelector("td:nth-last-child(2) span");
     if (totalSpan) totalSpan.textContent = formatMoney(lineTotal);
 
     // Update hidden line_total
-    const hidden = row.querySelector('input[name*="line_total"]');
+    const hidden = row.querySelector('input[name$="[line_total]"]');
     if (hidden) hidden.value = lineTotal.toFixed(2);
+
+	// --- update cost_total as well ---
+	const costPriceInput = row.querySelector('input[name$="[cost_price]"]');
+	const costTotalInput = row.querySelector('input[name$="[cost_total]"]');
+
+	if (costPriceInput && costTotalInput) {
+	  const cost = Number(costPriceInput.value || 0);
+	  costTotalInput.value = (qty * cost).toFixed(2);
+	}
 
     const roomCard = row.closest(".room-card");
     if (roomCard) updateRoomTotals(roomCard);
@@ -2159,10 +2231,14 @@ initLabourDescriptionDropdownForRow(newRow);
 
   // ── Initialize existing rooms ───────────────────────────────────────────
   roomsContainer.querySelectorAll(".room-card").forEach(card => {
-  ensureDefaultRows(card);
+  // do NOT auto-add default rows on edit load
 
-  // bind dropdowns for existing rows
   initFreightDropdownForRoom(card);
+
+  card.querySelectorAll('.labour-tbody tr').forEach((row) => {
+    initLabourTypeDropdownForRow(row);
+    initLabourDescriptionDropdownForRow(row);
+  });
 
   updateRoomTotals(card);
 });

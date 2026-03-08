@@ -84,12 +84,19 @@ class EstimateController extends Controller
             'rooms.*.materials.*.po_notes'          => ['nullable', 'string'],
             'rooms.*.materials.*.quantity'          => ['nullable', 'numeric'],
             'rooms.*.materials.*.unit'              => ['nullable', 'string', 'max:50'],
+			'rooms.*.materials.*.cost_price' => ['nullable', 'numeric'],
+			'rooms.*.materials.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.materials.*.sell_price'        => ['nullable', 'numeric'],
             'rooms.*.materials.*.notes'             => ['nullable', 'string'],
+			'rooms.*.materials.*.line_total' => ['nullable', 'numeric'],
+			'rooms.*.freight.*.line_total'   => ['nullable', 'numeric'],
+			'rooms.*.labour.*.line_total'    => ['nullable', 'numeric'],
             'rooms.*.freight'                       => ['nullable', 'array'],
             'rooms.*.freight.*.freight_description' => ['nullable', 'string'],
             'rooms.*.freight.*.quantity'            => ['nullable', 'numeric'],
             'rooms.*.freight.*.unit'                => ['nullable', 'string', 'max:50'],
+			'rooms.*.freight.*.cost_price' => ['nullable', 'numeric'],
+			'rooms.*.freight.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.freight.*.sell_price'          => ['nullable', 'numeric'],
             'rooms.*.freight.*.notes'               => ['nullable', 'string'],
             'rooms.*.labour'                        => ['nullable', 'array'],
@@ -97,9 +104,12 @@ class EstimateController extends Controller
             'rooms.*.labour.*.description'          => ['nullable', 'string'],
             'rooms.*.labour.*.quantity'             => ['nullable', 'numeric'],
             'rooms.*.labour.*.unit'                 => ['nullable', 'string', 'max:50'],
+			'rooms.*.labour.*.cost_price' => ['nullable', 'numeric'],
+			'rooms.*.labour.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.labour.*.sell_price'           => ['nullable', 'numeric'],
             'rooms.*.labour.*.notes'                => ['nullable', 'string'],
         ]);
+		
 
 		// Force tax_rate_percent to be the TAX GROUP TOTAL (not the effective %)
 $taxGroupId = $data['tax_group_id'] ?? null;
@@ -195,6 +205,12 @@ $data['tax_rate_percent'] = $groupPercent;
                 foreach (($room['materials'] ?? []) as $i => $item) {
                     if ($this->isRowEmpty($item, ['product_type', 'quantity', 'sell_price'])) continue;
 
+					\Log::info('[Estimate update] labour item about to create', [
+						'room_id' => $roomModel->id,
+						'index' => $i,
+						'item' => $item,
+					]);
+					
                     EstimateItem::create([
                         'estimate_id'        => $estimate->id,
                         'estimate_room_id'   => $roomModel->id,
@@ -207,15 +223,33 @@ $data['tax_rate_percent'] = $groupPercent;
                         'po_notes'           => $item['po_notes'] ?? null,
                         'quantity'           => (float)($item['quantity'] ?? 0),
                         'unit'               => $item['unit'] ?? null,
+						'cost_price' => (float)($item['cost_price'] ?? 0),
+						'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                         'sell_price'         => (float)($item['sell_price'] ?? 0),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
                     ]);
+					
+					Log::info('[Estimate store] material item saved', [
+    'estimate_id' => $estimate->id,
+    'room_id'     => $roomModel->id,
+    'qty'         => (float)($item['quantity'] ?? 0),
+    'sell_price'  => (float)($item['sell_price'] ?? 0),
+    'cost_price'  => (float)($item['cost_price'] ?? 0),
+]);
                 }
 
                 foreach (($room['freight'] ?? []) as $i => $item) {
                     if ($this->isRowEmpty($item, ['freight_description', 'quantity', 'sell_price'])) continue;
-
+//for logging freight
+					Log::info('[Estimate store] freight incoming', [
+    'keys' => array_keys($item),
+    'qty'  => $item['quantity'] ?? null,
+    'sell' => $item['sell_price'] ?? null,
+    'cost' => $item['cost_price'] ?? null,
+    'raw'  => $item,
+]);
+					
                     EstimateItem::create([
                         'estimate_id'        => $estimate->id,
                         'estimate_room_id'   => $roomModel->id,
@@ -224,6 +258,8 @@ $data['tax_rate_percent'] = $groupPercent;
                         'freight_description' => $item['freight_description'] ?? null,
                         'quantity'           => (float)($item['quantity'] ?? 0),
                         'unit'               => $item['unit'] ?? null,
+						'cost_price'          => (float)($item['cost_price'] ?? 0),
+						'cost_total'          => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                         'sell_price'         => (float)($item['sell_price'] ?? 0),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
@@ -233,6 +269,15 @@ $data['tax_rate_percent'] = $groupPercent;
                 foreach (($room['labour'] ?? []) as $i => $item) {
                     if ($this->isRowEmpty($item, ['labour_type', 'quantity', 'sell_price', 'description'])) continue;
 
+					//for logginf labour
+					Log::info('[Estimate store] labour incoming', [
+    'keys' => array_keys($item),
+    'qty'  => $item['quantity'] ?? null,
+    'sell' => $item['sell_price'] ?? null,
+    'cost' => $item['cost_price'] ?? null,
+    'raw'  => $item,
+]);
+					
                     EstimateItem::create([
                         'estimate_id'        => $estimate->id,
                         'estimate_room_id'   => $roomModel->id,
@@ -242,6 +287,8 @@ $data['tax_rate_percent'] = $groupPercent;
                         'description'        => $item['description'] ?? null,
                         'quantity'           => (float)($item['quantity'] ?? 0),
                         'unit'               => $item['unit'] ?? null,
+						'cost_price'       => (float)($item['cost_price'] ?? 0),
+						'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                         'sell_price'         => (float)($item['sell_price'] ?? 0),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
@@ -313,9 +360,48 @@ public function update(Request $request, Estimate $estimate)
 
         'rooms.*.materials'    => ['nullable', 'array'],
         'rooms.*.freight'      => ['nullable', 'array'],
-        'rooms.*.labour'       => ['nullable', 'array'],
+        'rooms.*.labour'                 => ['nullable', 'array'],
+'rooms.*.labour.*.id'            => ['nullable', 'integer'],
+'rooms.*.labour.*.line_item_order' => ['nullable', 'integer'],
+'rooms.*.labour.*.labour_type'   => ['nullable', 'string'],
+'rooms.*.labour.*.description'   => ['nullable', 'string'],
+'rooms.*.labour.*.quantity'      => ['nullable', 'numeric'],
+'rooms.*.labour.*.unit'          => ['nullable', 'string', 'max:50'],
+'rooms.*.labour.*.notes'         => ['nullable', 'string'],
+'rooms.*.labour.*.sell_price'    => ['nullable', 'numeric'],
+'rooms.*.labour.*.line_total'    => ['nullable', 'numeric'],
+'rooms.*.labour.*.cost_price'    => ['nullable', 'numeric'],
+'rooms.*.labour.*.cost_total'    => ['nullable', 'numeric'],
+		
+		'rooms.*.materials.*.product_type'      => ['nullable', 'string'],
+'rooms.*.materials.*.manufacturer'      => ['nullable', 'string'],
+'rooms.*.materials.*.style'             => ['nullable', 'string'],
+'rooms.*.materials.*.color_item_number' => ['nullable', 'string'],
+'rooms.*.materials.*.po_notes'          => ['nullable', 'string'],
+'rooms.*.materials.*.quantity'          => ['nullable', 'numeric'],
+'rooms.*.materials.*.unit'              => ['nullable', 'string', 'max:50'],
+'rooms.*.materials.*.cost_price'        => ['nullable', 'numeric'],
+'rooms.*.materials.*.cost_total'        => ['nullable', 'numeric'],
+'rooms.*.materials.*.sell_price'        => ['nullable', 'numeric'],
+'rooms.*.materials.*.line_total'        => ['nullable', 'numeric'],
+'rooms.*.materials.*.notes'             => ['nullable', 'string'],
+
+'rooms.*.freight.*.freight_description' => ['nullable', 'string'],
+'rooms.*.freight.*.quantity'            => ['nullable', 'numeric'],
+'rooms.*.freight.*.unit'                => ['nullable', 'string', 'max:50'],
+'rooms.*.freight.*.cost_price'          => ['nullable', 'numeric'],
+'rooms.*.freight.*.cost_total'          => ['nullable', 'numeric'],
+'rooms.*.freight.*.sell_price'          => ['nullable', 'numeric'],
+'rooms.*.freight.*.line_total'          => ['nullable', 'numeric'],
+'rooms.*.freight.*.notes'               => ['nullable', 'string'],
     ]);
 
+			\Log::info('[Estimate update] raw vs validated labour', [
+				'raw_rooms' => $request->input('rooms'),
+				'validated_rooms' => $data['rooms'] ?? null,
+			]);
+
+	
 	// Force tax_rate_percent to be the TAX GROUP TOTAL (not the effective %)
 $taxGroupId = $data['tax_group_id'] ?? null;
 
@@ -456,6 +542,13 @@ if (!empty($roomIdsToDelete)) {
 
         foreach ($rooms as $roomIndex => $roomData) {
             $roomId = $roomData['id'] ?? null;
+			
+			\Log::info('[Estimate update] room costs payload', [
+    'room_index' => $roomIndex,
+    'materials' => $roomData['materials'] ?? [],
+    'freight' => $roomData['freight'] ?? [],
+    'labour' => $roomData['labour'] ?? [],
+]);
 
 // Create or load the room
 if ($roomId) {
@@ -475,6 +568,24 @@ $room->save();
 // IMPORTANT: use the saved ID for items
 $roomId = $room->id;
 
+			\Log::info('[Estimate update] room payload before item delete', [
+    'room_index' => $roomIndex,
+    'room_id' => $roomId,
+    'room_name' => $roomData['room_name'] ?? null,
+    'materials_count' => count($roomData['materials'] ?? []),
+    'freight_count' => count($roomData['freight'] ?? []),
+    'labour_count' => count($roomData['labour'] ?? []),
+    'labour_payload' => $roomData['labour'] ?? [],
+]);
+			//added log
+			\Log::info('[Estimate update] before delete room items', [
+    'room_id' => $roomId,
+    'existing_items' => EstimateItem::where('estimate_id', $estimate->id)
+        ->where('estimate_room_id', $roomId)
+        ->get(['id', 'item_type', 'labour_type', 'description', 'quantity', 'sell_price'])
+        ->toArray(),
+]);
+			
             // delete all items for this room then re-insert
             EstimateItem::where('estimate_id', $estimate->id)
                 ->where('estimate_room_id', $roomId)
@@ -496,6 +607,8 @@ $roomId = $room->id;
                     'po_notes'          => $item['po_notes'] ?? null,
                     'quantity'          => (float)($item['quantity'] ?? 0),
                     'unit'              => $item['unit'] ?? null,
+					'cost_price'        => (float)($item['cost_price'] ?? 0),
+					'cost_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price'        => (float)($item['sell_price'] ?? 0),
                     'line_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'             => $item['notes'] ?? null,
@@ -514,6 +627,8 @@ $roomId = $room->id;
                     'freight_description'=> $item['freight_description'] ?? null,
                     'quantity'           => (float)($item['quantity'] ?? 0),
                     'unit'               => $item['unit'] ?? null,
+					'cost_price' => (float)($item['cost_price'] ?? 0),
+					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price'         => (float)($item['sell_price'] ?? 0),
                     'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'              => $item['notes'] ?? null,
@@ -533,6 +648,8 @@ $roomId = $room->id;
                     'description'      => $item['description'] ?? null,
                     'quantity'         => (float)($item['quantity'] ?? 0),
                     'unit'             => $item['unit'] ?? null,
+					'cost_price' => (float)($item['cost_price'] ?? 0),
+					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price'       => (float)($item['sell_price'] ?? 0),
                     'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'            => $item['notes'] ?? null,
@@ -546,6 +663,36 @@ $roomId = $room->id;
         ->with('success', 'Estimate updated.');
 }
 
+public function saveProfitCosts(Request $request, Estimate $estimate)
+{
+    $data = $request->validate([
+        'items' => ['required', 'array'],
+        'items.*.id' => ['required', 'integer'],
+        'items.*.cost_price' => ['nullable', 'numeric'],
+    ]);
+
+    foreach ($data['items'] as $row) {
+        $item = EstimateItem::where('estimate_id', $estimate->id)
+            ->where('id', $row['id'])
+            ->first();
+
+        if (!$item) {
+            continue;
+        }
+
+        $qty = (float) ($item->quantity ?? 0);
+        $costPrice = (float) ($row['cost_price'] ?? 0);
+
+        $item->cost_price = $costPrice;
+        $item->cost_total = round($qty * $costPrice, 2);
+        $item->save();
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Profit costs saved successfully.',
+    ]);
+}
 
 
     private function isRowEmpty(array $row, array $keysToCheck): bool
@@ -734,6 +881,15 @@ public function apiStyles(Request $request)
         foreach ($estimateItems as $ei) {
             $saleRoomId = $roomIdMap[$ei->estimate_room_id] ?? null;
 
+			\Log::info('[Convert to sale] estimate item costs before sale item create', [
+    'estimate_item_id' => $ei->id,
+    'estimate_id' => $ei->estimate_id,
+    'quantity' => $ei->quantity,
+    'cost_price' => $ei->cost_price,
+    'cost_total' => $ei->cost_total,
+    'raw_attributes' => $ei->getAttributes(),
+]);
+			
             \App\Models\SaleItem::create([
                 'sale_id'                 => $sale->id,
                 'sale_room_id'            => $saleRoomId,
@@ -744,6 +900,7 @@ public function apiStyles(Request $request)
                 'unit'                    => $ei->unit,
                 'sell_price'              => (float) ($ei->sell_price ?? 0),
                 'line_total'              => (float) ($ei->line_total ?? 0),
+				'cost_price'              => (float) ($ei->cost_price ?? 0),
                 'notes'                   => $ei->notes,
                 'sort_order'              => (int) ($ei->sort_order ?? 0),
 
