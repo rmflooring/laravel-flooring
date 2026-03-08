@@ -218,6 +218,26 @@
         </ul>
     </div>
 </li>
+      {{-- Freight --}}
+                <li>
+                    <a href="{{ route('admin.freight_items.index') }}"
+				   class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+
+					<svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400"
+						 xmlns="http://www.w3.org/2000/svg"
+						 fill="none"
+						 viewBox="0 0 24 24"
+						 stroke="currentColor"
+						 stroke-width="1.5">
+						<path stroke-linecap="round"
+							  stroke-linejoin="round"
+							  d="M3 7.5h11.25M3 12h11.25m-11.25 4.5h11.25M16.5 8.25h2.25l2.25 2.25v4.5h-4.5M6.75 17.25a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>
+					</svg>
+
+					<span class="sidebar-label">Freight</span>
+
+				</a>
+                </li>
 
                 {{-- ADMIN --}}
                 @if ($showAdminNav)
