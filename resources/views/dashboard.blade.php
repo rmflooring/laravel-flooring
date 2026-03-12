@@ -44,7 +44,7 @@
                     [
                         'title' => 'Estimates',
                         'subtitle' => 'Create & manage estimates',
-                        'href' => route('admin.estimates.index'),
+                        'href' => route('pages.estimates.index'),
                         'accent' => 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-700 dark:border-blue-800',
                         'icon' => 'M7 7h10M7 11h10M7 15h6',
                     ],

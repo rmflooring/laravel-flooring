@@ -299,7 +299,7 @@ $data['tax_rate_percent'] = $groupPercent;
             return $estimate;
         });
 
-        return redirect()->route('admin.estimates.edit', $estimate->id)
+        return redirect()->route('pages.estimates.edit', $estimate->id)
             ->with('success', 'Estimate saved (Draft).')
             ->with('estimate_id', $estimate->id);
     }
@@ -659,7 +659,7 @@ $roomId = $room->id;
     });
 
     return redirect()
-        ->route('admin.estimates.edit', $estimate)
+        ->route('pages.estimates.edit', $estimate)
         ->with('success', 'Estimate updated.');
 }
 
@@ -688,10 +688,9 @@ public function saveProfitCosts(Request $request, Estimate $estimate)
         $item->save();
     }
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Profit costs saved successfully.',
-    ]);
+    return redirect()
+    ->route('pages.estimates.profits.show', $estimate->id)
+    ->with('success', 'Profit costs saved successfully.');
 }
 
 
@@ -926,5 +925,17 @@ public function apiStyles(Request $request)
     return redirect()->route('pages.sales.edit', $sale->id)
         ->with('success', 'Sale created from approved estimate.');
 }
+	public function showProfits(Estimate $estimate)
+{
+    $estimate->load([
+        'rooms.items',
+    ]);
 
+    return view('pages.profits.show', [
+        'recordType' => 'estimate',
+        'record' => $estimate,
+        'rooms' => $estimate->rooms,
+    ]);
+}
+	
 }

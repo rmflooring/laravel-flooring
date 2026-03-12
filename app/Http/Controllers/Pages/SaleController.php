@@ -340,9 +340,9 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
         }
     });
 
-    return response()->json([
-        'success' => true,
-    ]);
+    return redirect()
+    ->route('pages.sales.profits.show', $sale->id)
+    ->with('success', 'Profit costs saved successfully.');
 }
 	
 private function isRowEmpty(array $row, array $keysToCheck): bool
@@ -353,5 +353,17 @@ private function isRowEmpty(array $row, array $keysToCheck): bool
     return true;
 }
 
+public function showProfits(Sale $sale)
+{
+    $sale->load([
+        'rooms.items',
+    ]);
 
+    return view('pages.profits.show', [
+        'recordType' => 'sale',
+        'record' => $sale,
+        'rooms' => $sale->rooms,
+    ]);
+}
+	
 }

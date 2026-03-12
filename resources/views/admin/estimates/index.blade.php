@@ -145,7 +145,7 @@
                                         {{ optional($estimate->created_at)->format('Y-m-d') }}
                                     </td>
                                     <td class="px-6 py-4 text-right">
-                                        <a href="{{ route('admin.estimates.edit', $estimate->id) }}"
+                                        <a href="{{ route('pages.estimates.edit', $estimate->id) }}"
                                            class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300">
                                             Edit
                                         </a>

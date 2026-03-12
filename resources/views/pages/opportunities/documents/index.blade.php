@@ -275,7 +275,21 @@
 
                     <tbody>
                         @forelse ($documents as $doc)
-                            <tr class="border-t border-gray-200 {{ $doc->trashed() ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-white dark:bg-gray-800' }} hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            @php
+                                $docType = match(strtolower($doc->extension ?? '')) {
+                                    'pdf'  => 'pdf',
+                                    'docx' => 'docx',
+                                    default => null,
+                                };
+                            @endphp
+                            <tr class="border-t border-gray-200 {{ $doc->trashed() ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-white dark:bg-gray-800' }} hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                                @if($docType)
+                                    data-doc-id="{{ $doc->id }}"
+                                    data-doc-url="{{ asset('storage/' . $doc->path) }}"
+                                    data-doc-name="{{ $doc->original_name }}"
+                                    data-doc-type="{{ $docType }}"
+                                @endif
+                            >
                                 <td class="px-4 py-3">
                                     <input type="checkbox"
                                            class="doc-checkbox h-4 w-4 rounded border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
@@ -352,11 +366,19 @@
 
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-2">
-                                        <a href="{{ asset('storage/' . $doc->path) }}"
-                                           target="_blank"
-                                           class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
-                                            View
-                                        </a>
+                                        @if($docType)
+                                            <button type="button"
+                                                    class="doc-view-btn inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+                                                    data-doc-id="{{ $doc->id }}">
+                                                View
+                                            </button>
+                                        @else
+                                            <a href="{{ asset('storage/' . $doc->path) }}"
+                                               target="_blank"
+                                               class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
+                                                View
+                                            </a>
+                                        @endif
 
                                         @if ($doc->trashed())
                                             <form method="POST" action="{{ route('pages.opportunities.documents.restore', [$opportunity->id, $doc->id]) }}">
@@ -413,7 +435,103 @@
 
     </div>
 
+    {{-- ============================================================ --}}
+    {{-- Document Viewer Modal                                        --}}
+    {{-- ============================================================ --}}
+    <div id="docViewer"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-0 sm:p-6"
+         aria-hidden="true">
+
+        {{-- Panel --}}
+        <div class="relative flex flex-col w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:w-full sm:rounded-xl bg-white sm:shadow-xl overflow-hidden">
+
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span id="docViewerBadge"
+                          class="shrink-0 inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide">
+                        —
+                    </span>
+                    <span id="docViewerName"
+                          class="truncate text-sm font-medium text-gray-900">
+                    </span>
+                </div>
+                <button type="button"
+                        id="docViewerClose"
+                        class="ml-4 shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    ✕
+                </button>
+            </div>
+
+            {{-- Body --}}
+            <div class="relative flex-1 overflow-hidden bg-gray-100">
+
+                {{-- Loading spinner --}}
+                <div id="docViewerLoading"
+                     class="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                    <div class="flex flex-col items-center gap-3 text-gray-500">
+                        <svg class="animate-spin h-8 w-8 text-blue-600"
+                             xmlns="http://www.w3.org/2000/svg"
+                             fill="none"
+                             viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10"
+                                    stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm">Loading document…</span>
+                    </div>
+                </div>
+
+                {{-- PDF renderer (PDF.js renders pages as <canvas> elements here) --}}
+                <div id="docViewerPdf"
+                     class="hidden w-full overflow-y-auto bg-gray-200 px-4 py-4"
+                     style="height: 75vh;">
+                </div>
+
+                {{-- Word renderer --}}
+                <div id="docViewerWord"
+                     class="hidden w-full overflow-y-auto"
+                     style="height: 75vh;">
+                    <div id="docViewerWordContent"
+                         class="max-w-3xl mx-auto bg-white shadow-sm my-6 px-10 py-12 text-sm text-gray-900 leading-relaxed">
+                    </div>
+                </div>
+
+            </div>
+
+            {{-- Footer --}}
+            <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-white shrink-0">
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                            id="docViewerPrev"
+                            class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        ← Prev
+                    </button>
+                    <button type="button"
+                            id="docViewerNext"
+                            class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Next →
+                    </button>
+                </div>
+                <div id="docViewerCounter"
+                     class="text-sm text-gray-500">
+                    — / —
+                </div>
+            </div>
+
+        </div>
+    </div>
+    {{-- ============================================================ --}}
+
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
     <script>
+        // Set PDF.js worker before any document interactions
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js';
+        }
         document.addEventListener('DOMContentLoaded', () => {
 
             // -------------------------
@@ -690,6 +808,207 @@
                     }
                 });
             });
+
+            // =========================================================
+            // Document Viewer
+            // =========================================================
+
+            // Build viewable docs array from table rows with data-doc-type
+            const viewableDocs = Array.from(
+                document.querySelectorAll('tr[data-doc-type]')
+            ).map(row => ({
+                id:   row.dataset.docId,
+                url:  row.dataset.docUrl,
+                name: row.dataset.docName,
+                type: row.dataset.docType,
+            }));
+
+            // Modal elements
+            const docViewer          = document.getElementById('docViewer');
+            const docViewerBadge     = document.getElementById('docViewerBadge');
+            const docViewerName      = document.getElementById('docViewerName');
+            const docViewerClose     = document.getElementById('docViewerClose');
+            const docViewerPrev      = document.getElementById('docViewerPrev');
+            const docViewerNext      = document.getElementById('docViewerNext');
+            const docViewerCounter   = document.getElementById('docViewerCounter');
+            const docViewerLoading   = document.getElementById('docViewerLoading');
+            const docViewerPdf       = document.getElementById('docViewerPdf');
+            const docViewerWord      = document.getElementById('docViewerWord');
+            const docViewerWordContent = document.getElementById('docViewerWordContent');
+
+            let docCurrentIndex = -1;
+
+            function docShowLoading() {
+                docViewerLoading.classList.remove('hidden');
+                docViewerPdf.classList.add('hidden');
+                docViewerWord.classList.add('hidden');
+            }
+
+            async function docOpenPdf(url) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status} fetching PDF`);
+                    const arrayBuffer = await response.arrayBuffer();
+
+                    // PDF.js checks data.length (TypedArray), not data.byteLength (ArrayBuffer).
+                    // Wrap in Uint8Array so the length property is readable.
+                    const pdfData = new Uint8Array(arrayBuffer);
+                    if (pdfData.length === 0) {
+                        throw new Error('__empty__');
+                    }
+
+                    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+
+                    // Clear any previous render
+                    docViewerPdf.innerHTML = '';
+
+                    // Render each page as a canvas, stacked vertically
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 1.5 });
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width  = viewport.width;
+                        canvas.height = viewport.height;
+                        canvas.style.display     = 'block';
+                        canvas.style.width       = '100%';
+                        canvas.style.marginBottom = '6px';
+                        canvas.style.background  = '#fff';
+                        canvas.style.boxShadow   = '0 1px 3px rgba(0,0,0,.15)';
+
+                        docViewerPdf.appendChild(canvas);
+                        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                    }
+
+                    docViewerPdf.scrollTop = 0;
+                    docViewerPdf.classList.remove('hidden');
+                    docViewerLoading.classList.add('hidden');
+                } catch (err) {
+                    const msg = (err?.message === '__empty__' || err?.message?.includes('zero bytes'))
+                        ? 'This file appears to be empty or was not uploaded correctly. Try re-uploading it.'
+                        : `Could not render PDF. Try downloading the file instead. (${err?.message ?? err})`;
+                    docViewerPdf.innerHTML = `<p style="color:#b91c1c;padding:1rem;">${msg}</p>`;
+                    docViewerPdf.classList.remove('hidden');
+                    docViewerLoading.classList.add('hidden');
+                }
+            }
+
+            async function docOpenWord(url) {
+                try {
+                    const response = await fetch(url);
+                    const arrayBuffer = await response.arrayBuffer();
+                    const result = await mammoth.convertToHtml({ arrayBuffer });
+                    docViewerWordContent.innerHTML = result.value;
+                    docViewerWord.scrollTop = 0;
+                    docViewerWord.classList.remove('hidden');
+                    docViewerLoading.classList.add('hidden');
+                } catch (err) {
+                    docViewerWordContent.innerHTML =
+                        '<p style="color:#b91c1c;">Failed to load document. Please download it to view.</p>';
+                    docViewerWord.classList.remove('hidden');
+                    docViewerLoading.classList.add('hidden');
+                }
+            }
+
+            function docOpen(index) {
+                if (index < 0 || index >= viewableDocs.length) return;
+                docCurrentIndex = index;
+                const doc = viewableDocs[index];
+
+                // Badge
+                if (doc.type === 'pdf') {
+                    docViewerBadge.textContent = 'PDF';
+                    docViewerBadge.style.background = '#fee2e2';
+                    docViewerBadge.style.color = '#b91c1c';
+                } else {
+                    docViewerBadge.textContent = 'Word';
+                    docViewerBadge.style.background = '#dbeafe';
+                    docViewerBadge.style.color = '#1d4ed8';
+                }
+
+                // Filename + counter
+                docViewerName.textContent = doc.name;
+                docViewerCounter.textContent = `${index + 1} / ${viewableDocs.length}`;
+
+                // Reset renderers
+                docShowLoading();
+                docViewerWordContent.innerHTML = '';
+
+                // Render
+                if (doc.type === 'pdf') {
+                    docOpenPdf(doc.url);
+                } else {
+                    docOpenWord(doc.url);
+                }
+
+                // Show modal
+                docViewer.classList.remove('hidden');
+                docViewer.classList.add('flex');
+                document.documentElement.classList.add('overflow-hidden');
+            }
+
+            function docClose() {
+                docViewer.classList.add('hidden');
+                docViewer.classList.remove('flex');
+                document.documentElement.classList.remove('overflow-hidden');
+                docViewerPdf.innerHTML = '';
+                docViewerWordContent.innerHTML = '';
+            }
+
+            function docNext() {
+                if (!viewableDocs.length) return;
+                docOpen((docCurrentIndex + 1) % viewableDocs.length);
+            }
+
+            function docPrev() {
+                if (!viewableDocs.length) return;
+                docOpen((docCurrentIndex - 1 + viewableDocs.length) % viewableDocs.length);
+            }
+
+            // View button clicks
+            document.querySelectorAll('.doc-view-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id  = btn.dataset.docId;
+                    const idx = viewableDocs.findIndex(d => d.id === id);
+                    if (idx !== -1) docOpen(idx);
+                });
+            });
+
+            // Controls
+            docViewerClose?.addEventListener('click', docClose);
+            docViewerPrev?.addEventListener('click', docPrev);
+            docViewerNext?.addEventListener('click', docNext);
+
+            // Backdrop click — close when clicking the overlay itself, not the panel
+            docViewer?.addEventListener('click', e => {
+                if (e.target === docViewer) docClose();
+            });
+
+            // Keyboard
+            document.addEventListener('keydown', e => {
+                if (!docViewer || docViewer.classList.contains('hidden')) return;
+                if (e.key === 'Escape')     docClose();
+                if (e.key === 'ArrowRight') docNext();
+                if (e.key === 'ArrowLeft')  docPrev();
+            });
+
+            // Swipe — same 40px threshold as media gallery
+            let docSwipeStartX = null;
+
+            docViewer?.addEventListener('touchstart', e => {
+                if (!e.touches || e.touches.length !== 1) return;
+                docSwipeStartX = e.touches[0].clientX;
+            }, { passive: true });
+
+            docViewer?.addEventListener('touchend', e => {
+                if (docSwipeStartX === null) return;
+                const endX = e.changedTouches?.[0]?.clientX ?? docSwipeStartX;
+                const diff = endX - docSwipeStartX;
+                docSwipeStartX = null;
+                if (Math.abs(diff) < 40) return;
+                if (diff < 0) docNext();
+                else docPrev();
+            }, { passive: true });
 
         });
     </script>

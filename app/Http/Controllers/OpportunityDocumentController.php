@@ -270,16 +270,19 @@ public function index(Opportunity $opportunity, Request $request)
 		return back()->with('success', 'Document restored.');
 	}
 
-    public function forceDestroy(Opportunity $opportunity, OpportunityDocument $document)
+    public function forceDestroy(Opportunity $opportunity, $document)
     {
-        $this->assertBelongsToOpportunity($opportunity, $document);
+        $doc = OpportunityDocument::withTrashed()
+            ->where('opportunity_id', $opportunity->id)
+            ->where('id', $document)
+            ->firstOrFail();
 
         // Remove the physical file too:
-        if ($document->disk && $document->path) {
-            Storage::disk($document->disk)->delete($document->path);
+        if ($doc->disk && $doc->path) {
+            Storage::disk($doc->disk)->delete($doc->path);
         }
 
-        $document->forceDelete();
+        $doc->forceDelete();
 
         return back()->with('success', 'Document permanently deleted.');
     }

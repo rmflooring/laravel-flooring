@@ -13,13 +13,20 @@
         }
     }
 
-    // Flatten to a single list of items
-    $rows = collect();
-    if ($record) {
-        $rows = $record->rooms
-            ->flatMap(fn ($room) => $room->items)
-            ->values();
-    }
+    // Flatten to a single list of items, but keep room metadata with each row
+$rows = collect();
+
+if ($record) {
+    $rows = $record->rooms->flatMap(function ($room) {
+        return $room->items->map(function ($item) use ($room) {
+            return [
+                'item' => $item,
+                'room_id' => $room->id,
+                'room_name' => $room->room_name ?: ('Room ' . $room->id),
+            ];
+        });
+    })->values();
+}
 @endphp
 @props([
     // required: 'sale' or 'estimate'
@@ -44,8 +51,8 @@
             <div class="flex items-start justify-between rounded-t border-b border-gray-200 p-4 dark:border-gray-700">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        Profits
-                    </h3>
+                      Quick Profit Editor
+                  </h3>
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
                         Enter costs per line item. Totals update live.
                     </p>
@@ -112,7 +119,12 @@
                             </thead>
 
                             <tbody id="{{ $modalId }}-items" class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-						  @forelse($rows as $item)
+						  @forelse($rows as $row)
+								@php
+									$item = $row['item'];
+									$roomId = $row['room_id'];
+									$roomName = $row['room_name'];
+								@endphp
 							@php
 							  $qty      = (float)($item->quantity ?? 0);
 							  $sell     = (float)($item->sell_price ?? $item->unit_price ?? 0);
@@ -137,7 +149,12 @@
 							  $unit = $item->unit ?? '—';
 							@endphp
 
-							<tr data-profit-row data-item-type="{{ strtolower($type) }}">
+							<tr
+  data-profit-row
+  data-item-type="{{ strtolower($type) }}"
+  data-room-id="{{ $roomId }}"
+  data-room-name="{{ $roomName }}"
+>
 							  <td class="px-3 py-2">{{ ucfirst($type) }}</td>
 							  <td class="px-3 py-2">{{ $desc }}</td>
 							  <td class="px-3 py-2 text-right">{{ number_format($qty, 2) }}</td>
@@ -169,34 +186,50 @@
 						  @endforelse
 						</tbody>
                         </table>
-                    </div>
-
+                    </div>					
+					
                     {{-- Group summaries --}}
                     <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                         <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                            <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Grouped Totals</h4>
+                            <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Grouped Total Profits</h4>
 
                             <div class="space-y-2 text-sm">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-gray-600 dark:text-gray-300">Materials</span>
-                                    <span class="font-medium text-gray-900 dark:text-white" id="{{ $modalId }}-sum-materials">$0.00</span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-gray-600 dark:text-gray-300">Labour</span>
-                                    <span class="font-medium text-gray-900 dark:text-white" id="{{ $modalId }}-sum-labour">$0.00</span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-gray-600 dark:text-gray-300">Freight</span>
-                                    <span class="font-medium text-gray-900 dark:text-white" id="{{ $modalId }}-sum-freight">$0.00</span>
-                                </div>
 
-                                <div class="my-2 border-t border-gray-200 dark:border-gray-700"></div>
+    <div class="flex items-center justify-between">
+        <span class="text-gray-600 dark:text-gray-300">Materials</span>
+        <div class="flex items-center gap-6">
+            <span class="font-medium text-gray-900 dark:text-white" id="{{ $modalId }}-sum-materials">$0.00</span>
+            <span class="text-gray-500 dark:text-gray-300" id="{{ $modalId }}-margin-materials">0.0%</span>
+        </div>
+    </div>
 
-                                <div class="flex items-center justify-between">
-                                    <span class="text-gray-600 dark:text-gray-300">Grand Total Profit</span>
-                                    <span class="font-semibold text-gray-900 dark:text-white" id="{{ $modalId }}-sum-grand">$0.00</span>
-                                </div>
-                            </div>
+    <div class="flex items-center justify-between">
+        <span class="text-gray-600 dark:text-gray-300">Labour</span>
+        <div class="flex items-center gap-6">
+            <span class="font-medium text-gray-900 dark:text-white" id="{{ $modalId }}-sum-labour">$0.00</span>
+            <span class="text-gray-500 dark:text-gray-300" id="{{ $modalId }}-margin-labour">0.0%</span>
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+        <span class="text-gray-600 dark:text-gray-300">Freight</span>
+        <div class="flex items-center gap-6">
+            <span class="font-medium text-gray-900 dark:text-white" id="{{ $modalId }}-sum-freight">$0.00</span>
+            <span class="text-gray-500 dark:text-gray-300" id="{{ $modalId }}-margin-freight">0.0%</span>
+        </div>
+    </div>
+
+    <div class="my-2 border-t border-gray-200 dark:border-gray-700"></div>
+
+    <div class="flex items-center justify-between">
+        <span class="font-semibold text-gray-900 dark:text-white">Grand Total</span>
+        <div class="flex items-center gap-6">
+            <span class="font-semibold text-gray-900 dark:text-white" id="{{ $modalId }}-sum-grand">$0.00</span>
+            <span class="font-semibold text-gray-900 dark:text-white" id="{{ $modalId }}-margin-grand">0.0%</span>
+        </div>
+    </div>
+
+</div>
                         </div>
 
                         <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
@@ -218,7 +251,7 @@
                         </div>
                     </div>
                 </div>
-
+				
                 {{-- Locked --}}
                 <div id="{{ $modalId }}-tab-locked" role="tabpanel" class="hidden">
                     <div class="rounded-lg border border-gray-200 p-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
@@ -274,40 +307,68 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function calculateGroupedTotals() {
-        let materialsTotal = 0;
-        let labourTotal = 0;
-        let freightTotal = 0;
+    let materialsTotal = 0;
+    let labourTotal = 0;
+    let freightTotal = 0;
 
-        const rows = document.querySelectorAll(`#${modalId} [data-profit-row]`);
+    let materialsSellTotal = 0;
+    let labourSellTotal = 0;
+    let freightSellTotal = 0;
 
-        rows.forEach(row => {
-            const type = (row.dataset.itemType || '').toLowerCase();
-            const profitCell = row.querySelector('[data-profit]');
-            const profit = parseMoney(profitCell ? profitCell.textContent : '0');
+    const rows = document.querySelectorAll(`#${modalId} [data-profit-row]`);
 
-            if (type === 'material' || type === 'materials' || type === 'product') {
-                materialsTotal += profit;
-            } else if (type === 'labour' || type === 'labor') {
-                labourTotal += profit;
-            } else if (type === 'freight') {
-                freightTotal += profit;
-            }
-        });
+    rows.forEach(row => {
+        const type = (row.dataset.itemType || '').toLowerCase();
 
-        const grandTotal = materialsTotal + labourTotal + freightTotal;
+        const profitCell = row.querySelector('[data-profit]');
+        const sellTotalCell = row.querySelector('[data-sell-total]');
 
-        const materialsEl = document.getElementById(`${modalId}-sum-materials`);
-        const labourEl = document.getElementById(`${modalId}-sum-labour`);
-        const freightEl = document.getElementById(`${modalId}-sum-freight`);
-        const grandEl = document.getElementById(`${modalId}-sum-grand`);
+        const profit = parseMoney(profitCell ? profitCell.textContent : '0');
+        const sellTotal = parseMoney(sellTotalCell ? sellTotalCell.textContent : '0');
 
-        if (materialsEl) materialsEl.textContent = formatMoney(materialsTotal);
-        if (labourEl) labourEl.textContent = formatMoney(labourTotal);
-        if (freightEl) freightEl.textContent = formatMoney(freightTotal);
-        if (grandEl) grandEl.textContent = formatMoney(grandTotal);
-    }
+        if (type === 'material' || type === 'materials' || type === 'product') {
+            materialsTotal += profit;
+            materialsSellTotal += sellTotal;
+        } else if (type === 'labour' || type === 'labor') {
+            labourTotal += profit;
+            labourSellTotal += sellTotal;
+        } else if (type === 'freight') {
+            freightTotal += profit;
+            freightSellTotal += sellTotal;
+        }
+    });
+
+    const grandTotal = materialsTotal + labourTotal + freightTotal;
+    const grandSellTotal = materialsSellTotal + labourSellTotal + freightSellTotal;
+
+    const materialsMargin = materialsSellTotal > 0 ? (materialsTotal / materialsSellTotal) * 100 : 0;
+    const labourMargin = labourSellTotal > 0 ? (labourTotal / labourSellTotal) * 100 : 0;
+    const freightMargin = freightSellTotal > 0 ? (freightTotal / freightSellTotal) * 100 : 0;
+    const grandMargin = grandSellTotal > 0 ? (grandTotal / grandSellTotal) * 100 : 0;
+
+    const materialsEl = document.getElementById(`${modalId}-sum-materials`);
+    const labourEl = document.getElementById(`${modalId}-sum-labour`);
+    const freightEl = document.getElementById(`${modalId}-sum-freight`);
+    const grandEl = document.getElementById(`${modalId}-sum-grand`);
+
+    const materialsMarginEl = document.getElementById(`${modalId}-margin-materials`);
+    const labourMarginEl = document.getElementById(`${modalId}-margin-labour`);
+    const freightMarginEl = document.getElementById(`${modalId}-margin-freight`);
+    const grandMarginEl = document.getElementById(`${modalId}-margin-grand`);
+
+    if (materialsEl) materialsEl.textContent = formatMoney(materialsTotal);
+    if (labourEl) labourEl.textContent = formatMoney(labourTotal);
+    if (freightEl) freightEl.textContent = formatMoney(freightTotal);
+    if (grandEl) grandEl.textContent = formatMoney(grandTotal);
+
+    if (materialsMarginEl) materialsMarginEl.textContent = materialsMargin.toFixed(1) + '%';
+    if (labourMarginEl) labourMarginEl.textContent = labourMargin.toFixed(1) + '%';
+    if (freightMarginEl) freightMarginEl.textContent = freightMargin.toFixed(1) + '%';
+    if (grandMarginEl) grandMarginEl.textContent = grandMargin.toFixed(1) + '%';
+}
 
     calculateGroupedTotals();
+	
 
     document.querySelectorAll(`#${modalId} [data-cost-input]`).forEach(input => {
         input.addEventListener('input', function () {
@@ -335,6 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             calculateGroupedTotals();
+			
         });
     });
 
@@ -412,5 +474,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+	
+	
+	
 });
+	
+	
 </script>

@@ -32,15 +32,13 @@
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
   Save Estimate
 </button>
-					<button type="button"
-  class="relative z-10 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
-  data-modal-target="profits-modal-estimate-{{ $estimate->id }}"
-  data-modal-toggle="profits-modal-estimate-{{ $estimate->id }}">
+		<a href="{{ route('pages.estimates.profits.show', $estimate->id) }}"
+  class="relative z-10 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
   <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
     <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 1.12-3 2.5S10.343 13 12 13s3 1.12 3 2.5S13.657 18 12 18m0-10v10m0-10V6m0 12v2" />
   </svg>
   Profits
-</button>
+</a>
 					
 					<button id="toggle-wide-mode" type="button"
   class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -1135,11 +1133,21 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="text"
-        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]"
-        class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
-        placeholder="Unit">
-    </td>
+  <input type="text"
+    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]"
+    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+    placeholder="Unit">
+
+  <input type="hidden"
+    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][cost_price]"
+    value="0.00"
+    class="material-cost-price-input">
+
+  <input type="hidden"
+    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][cost_total]"
+    value="0.00"
+    class="material-cost-total-input">
+</td>
 
     <td class="px-3 py-2 relative">
       <input
@@ -1296,10 +1304,20 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]"
-        class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
-        placeholder="0">
-    </td>
+  <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]"
+    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+    placeholder="0">
+
+  <input type="hidden"
+    name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][cost_price]"
+    value="0.00"
+    class="freight-cost-price-input">
+
+  <input type="hidden"
+    name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][cost_total]"
+    value="0.00"
+    class="freight-cost-total-input">
+</td>
 
     <td class="px-3 py-2">
       <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][sell_price]"
@@ -1400,11 +1418,21 @@
                                 placeholder="0">
                         </td>
                         <td class="px-3 py-2">
-                            <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][unit]"
-							  class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
-							  placeholder="Unit"
-							  data-labour-unit-input>
-                        </td>
+    <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][unit]"
+      class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+      placeholder="Unit"
+      data-labour-unit-input>
+
+    <input type="hidden"
+      name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][cost_price]"
+      value="0.00"
+      class="labour-cost-price-input">
+
+    <input type="hidden"
+      name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][cost_total]"
+      value="0.00"
+      class="labour-cost-total-input">
+</td>
                         <td class="px-3 py-2 overflow-visible">
 						  <div class="relative">
 							<input
@@ -1762,7 +1790,6 @@
   </div>
 </div>
 
-<x-modals.profits-modal context="estimate" :record-id="$estimate->id" />
 </form>
 
 {{-- Convert to Sale hidden form --}}

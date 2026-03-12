@@ -484,6 +484,12 @@ Route::prefix('pages')
 		Route::post('sales/{sale}/profits/save-costs', [\App\Http\Controllers\Pages\SaleController::class, 'saveProfitCosts'])
 			->name('sales.profits.save-costs');
 		
+		Route::get('estimates/{estimate}/profits', [EstimateController::class, 'showProfits'])
+			->name('estimates.profits.show');
+
+		Route::get('sales/{sale}/profits', [\App\Http\Controllers\Pages\SaleController::class, 'showProfits'])
+			->name('sales.profits.show');
+		
 		//added
 		Route::get('estimates/create', function () {
     $opportunityId = request('opportunity_id');
