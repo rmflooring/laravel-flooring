@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
-Owner: Richard  
-Updated: 2026-03-08
+Owner: Richard
+Updated: 2026-03-12
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -17,6 +17,7 @@ Internal operations platform for RM Flooring using Laravel 12.
 
 Current core modules include:
 - Opportunities
+- RFMs (Requests for Measure) — see `Context/context_rfm.md`
 - Estimates
 - Sales
 - Documents / Media
@@ -262,11 +263,33 @@ Still keep in mind the broader cost-tracking roadmap:
 
 ---
 
+---
+
+## RFM module summary
+
+Full details in `Context/context_rfm.md`. Summary:
+
+- RFMs (Requests for Measure) are scheduled site visits by an estimator before producing an estimate
+- Belong to an Opportunity; one opportunity can have many RFMs
+- Routes: 6 routes nested under `pages/opportunities/{opportunity}/rfms/`
+- MS365 calendar event created on RFM store (best-effort, non-blocking)
+- Show page includes clickable calendar event modal (estimator name + scheduled time)
+- Job Transactions card on opportunity show lists RFMs as clickable links
+
+### RFM known gaps (next work items)
+1. Sync MS365 calendar event when RFM is edited
+2. Delete RFM route + cancel/delete calendar event on cancel/delete
+3. RFM → Estimate creation shortcut from the show page
+
+---
+
 ## Resume prompts for a future chat
 Use one of these:
 
-1. `Resume from the master dev handoff. We fixed the Sales profits modal direct-save. Continue one step at a time.`
+1. `Read CLAUDE.md and Context/context_rfm.md, then resume RFM module work. Next priority: sync MS365 calendar event on edit.`
 
-2. `Use this master context file. Next I want to improve sale profit totals and modal UX, one step at a time.`
+2. `Resume from the master dev handoff. We fixed the Sales profits modal direct-save. Continue one step at a time.`
 
-3. `Resume from the master handoff and help me continue cost tracking from estimate through sale.`
+3. `Use this master context file. Next I want to improve sale profit totals and modal UX, one step at a time.`
+
+4. `Resume from the master handoff and help me continue cost tracking from estimate through sale.`

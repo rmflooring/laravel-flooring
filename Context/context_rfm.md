@@ -1,6 +1,6 @@
 # RFM Module Context — RM Flooring / Floor Manager
 
-Updated: 2026-03-12
+Updated: 2026-03-12 (session 2)
 
 ---
 
@@ -34,7 +34,7 @@ One opportunity can have multiple RFMs (e.g. re-schedules, or multiple site visi
 | File | What changed |
 |------|-------------|
 | `routes/web.php` | Added all 6 RFM routes under `opportunities/{opportunity}` prefix |
-| `resources/views/pages/opportunities/show.blade.php` | Added RFM section (table + status dropdown + View/Edit links); fixed full address display for Parent Customer and Job Site Customer |
+| `resources/views/pages/opportunities/show.blade.php` | Added RFM section (table + status dropdown + View/Edit links); fixed full address display for Parent Customer and Job Site Customer; renamed "RFQ's" column to "RFM's" in Job Transactions card with linked RFM entries |
 | `database/seeders/PermissionsSeeder.php` | Added `view rfms`, `create rfms`, `edit rfms` permissions |
 | `database/seeders/RolesSeeder.php` | Assigned RFM permissions to roles |
 
@@ -130,8 +130,13 @@ Read-only view of all RFM fields. Layout mirrors create/edit Job Info structure.
 - Job Info: Parent Customer + PM, Job Site + full address
 - Measure Details: estimator, flooring type pills, scheduled date/time
 - Special Instructions (hidden if empty)
-- Calendar sync indicator (shown if `calendar_event_id` is set)
+- Calendar section (shown if `calendar_event_id` is set): clickable link reading **"[First Last initial]. scheduled in Calendar for [date/time]"** — opens the Flowbite `event-details-modal` populated with title, start, end, location, description, and provider from the local `CalendarEvent` record
 - Created/updated timestamps at bottom
+
+#### Calendar modal on show page
+- Includes `components.calendar.event-details-modal` (same Flowbite modal used on the calendar index page)
+- Event data is built server-side in a `$ceData` PHP array and passed to JS via `@json($ceData)` — **do not pass a multi-line array directly to `@json()` inside a `<script>` tag, Blade's parser will throw a ParseError**
+- `Modal` constructor is available globally via the Flowbite CDN script already loaded in `app.blade.php`
 
 ### edit.blade.php (extra)
 Status section at top — clickable pill buttons that submit a PATCH to `updateStatus` individually (no page reload required beyond form submit). Each button is its own mini form.
@@ -175,6 +180,8 @@ When an RFM is **created** (`store`), the controller attempts (best-effort — n
 - [x] PM info displayed in Job Info section (from opportunity)
 - [x] RFM table on opportunity show page with View/Edit links and inline status dropdown
 - [x] Permissions seeded and assigned to all roles
+- [x] Job Transactions card on opportunity show page — "RFQ's" renamed to "RFM's", RFMs listed as clickable date links with status badges linking to show page
+- [x] Calendar event modal on RFM show page — clickable link with estimator name (first name + last initial) and scheduled date/time, opens event details modal
 
 ---
 
