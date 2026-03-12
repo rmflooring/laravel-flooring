@@ -72,11 +72,25 @@
                                         @if($opportunity->parentCustomer->email)
                                             <div><span class="text-gray-500 dark:text-gray-400">Email:</span> {{ $opportunity->parentCustomer->email }}</div>
                                         @endif
-                                        @if($opportunity->parentCustomer->address || $opportunity->parentCustomer->city)
-                                            <div>
-                                                <span class="text-gray-500 dark:text-gray-400">Address:</span>
-                                                {{ $opportunity->parentCustomer->address }}
-                                                {{ $opportunity->parentCustomer->city ? ', '.$opportunity->parentCustomer->city : '' }}
+                                        @php
+                                            $pcAddr = array_filter([
+                                                $opportunity->parentCustomer->address,
+                                                $opportunity->parentCustomer->address2,
+                                                $opportunity->parentCustomer->city,
+                                                $opportunity->parentCustomer->postal_code,
+                                            ]);
+                                        @endphp
+                                        @if($pcAddr)
+                                            <div class="pt-0.5">
+                                                @if($opportunity->parentCustomer->address)
+                                                    <div>{{ $opportunity->parentCustomer->address }}</div>
+                                                @endif
+                                                @if($opportunity->parentCustomer->address2)
+                                                    <div>{{ $opportunity->parentCustomer->address2 }}</div>
+                                                @endif
+                                                @if($opportunity->parentCustomer->city || $opportunity->parentCustomer->postal_code)
+                                                    <div>{{ implode(', ', array_filter([$opportunity->parentCustomer->city, $opportunity->parentCustomer->postal_code])) }}</div>
+                                                @endif
                                             </div>
                                         @endif
                                     </div>
@@ -103,11 +117,25 @@
                                         @if($opportunity->jobSiteCustomer->email)
                                             <div><span class="text-gray-500 dark:text-gray-400">Email:</span> {{ $opportunity->jobSiteCustomer->email }}</div>
                                         @endif
-                                        @if($opportunity->jobSiteCustomer->address || $opportunity->jobSiteCustomer->city)
-                                            <div>
-                                                <span class="text-gray-500 dark:text-gray-400">Address:</span>
-                                                {{ $opportunity->jobSiteCustomer->address }}
-                                                {{ $opportunity->jobSiteCustomer->city ? ', '.$opportunity->jobSiteCustomer->city : '' }}
+                                        @php
+                                            $jsAddr = array_filter([
+                                                $opportunity->jobSiteCustomer->address,
+                                                $opportunity->jobSiteCustomer->address2,
+                                                $opportunity->jobSiteCustomer->city,
+                                                $opportunity->jobSiteCustomer->postal_code,
+                                            ]);
+                                        @endphp
+                                        @if($jsAddr)
+                                            <div class="pt-0.5">
+                                                @if($opportunity->jobSiteCustomer->address)
+                                                    <div>{{ $opportunity->jobSiteCustomer->address }}</div>
+                                                @endif
+                                                @if($opportunity->jobSiteCustomer->address2)
+                                                    <div>{{ $opportunity->jobSiteCustomer->address2 }}</div>
+                                                @endif
+                                                @if($opportunity->jobSiteCustomer->city || $opportunity->jobSiteCustomer->postal_code)
+                                                    <div>{{ implode(', ', array_filter([$opportunity->jobSiteCustomer->city, $opportunity->jobSiteCustomer->postal_code])) }}</div>
+                                                @endif
                                             </div>
                                         @endif
                                     </div>
@@ -380,7 +408,12 @@
                                                 {{ $rfm->estimator?->first_name }} {{ $rfm->estimator?->last_name }}
                                             </td>
                                             <td class="px-4 py-3">{{ implode(', ', (array) $rfm->flooring_type) }}</td>
-                                            <td class="px-4 py-3">{{ $rfm->site_address ?? '—' }}</td>
+                                            <td class="px-4 py-3">
+                                                @php
+                                                    $addrParts = array_filter([$rfm->site_address, $rfm->site_city, $rfm->site_postal_code]);
+                                                @endphp
+                                                {{ $addrParts ? implode(', ', $addrParts) : '—' }}
+                                            </td>
                                             <td class="px-4 py-3">
                                                 <form method="POST"
                                                       action="{{ route('pages.opportunities.rfms.updateStatus', [$opportunity->id, $rfm->id]) }}">
@@ -396,7 +429,11 @@
                                                     </select>
                                                 </form>
                                             </td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-4 py-3 flex items-center gap-3">
+                                                <a href="{{ route('pages.opportunities.rfms.show', [$opportunity->id, $rfm->id]) }}"
+                                                   class="text-sm font-medium text-gray-600 hover:underline dark:text-gray-400">
+                                                    View
+                                                </a>
                                                 <a href="{{ route('pages.opportunities.rfms.edit', [$opportunity->id, $rfm->id]) }}"
                                                    class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
                                                     Edit

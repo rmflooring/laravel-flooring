@@ -73,18 +73,70 @@
                     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Job Info</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Parent Customer</label>
-                            <input type="text" disabled
-                                   value="{{ $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?? '—' }}"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-600">
+                        {{-- Parent Customer + PM --}}
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Parent Customer</label>
+                                <input type="text" disabled
+                                       value="{{ $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?? '—' }}"
+                                       class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-600">
+                            </div>
+                            @if($opportunity->projectManager)
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                                    <p class="font-medium text-gray-700 mb-1">PM: {{ $opportunity->projectManager->name }}</p>
+                                    @if($opportunity->projectManager->phone)
+                                        <p class="text-gray-500">{{ $opportunity->projectManager->phone }}</p>
+                                    @endif
+                                    @if($opportunity->projectManager->email)
+                                        <p class="text-gray-500">{{ $opportunity->projectManager->email }}</p>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Job Site</label>
-                            <input type="text" disabled
-                                   value="{{ $opportunity->jobSiteCustomer?->company_name ?: $opportunity->jobSiteCustomer?->name ?? '—' }}"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-600">
+                        {{-- Job Site + Address --}}
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Job Site</label>
+                                <input type="text" disabled
+                                       value="{{ $opportunity->jobSiteCustomer?->company_name ?: $opportunity->jobSiteCustomer?->name ?? '—' }}"
+                                       class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-600">
+                            </div>
+
+                            <div>
+                                <label for="site_address" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Street Address
+                                </label>
+                                <input type="text" id="site_address" name="site_address"
+                                       value="{{ old('site_address', $rfm->site_address) }}"
+                                       placeholder="123 Main St"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_address') border-red-500 @enderror">
+                                @error('site_address')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="site_city" class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                    <input type="text" id="site_city" name="site_city"
+                                           value="{{ old('site_city', $rfm->site_city) }}"
+                                           placeholder="City"
+                                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_city') border-red-500 @enderror">
+                                    @error('site_city')
+                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label for="site_postal_code" class="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                                    <input type="text" id="site_postal_code" name="site_postal_code"
+                                           value="{{ old('site_postal_code', $rfm->site_postal_code) }}"
+                                           placeholder="A1A 1A1"
+                                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_postal_code') border-red-500 @enderror">
+                                    @error('site_postal_code')
+                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -154,18 +206,6 @@
                                 @enderror
                             </div>
 
-                            {{-- Site Address --}}
-                            <div>
-                                <label for="site_address" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Site Address
-                                </label>
-                                <input type="text" id="site_address" name="site_address"
-                                       value="{{ old('site_address', $rfm->site_address) }}"
-                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_address') border-red-500 @enderror">
-                                @error('site_address')
-                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
 
                         </div>
 

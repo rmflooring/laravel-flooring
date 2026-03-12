@@ -13,6 +13,8 @@ class Rfm extends Model
         'parent_customer_id',
         'job_site_customer_id',
         'site_address',
+        'site_city',
+        'site_postal_code',
         'flooring_type',
         'scheduled_at',
         'special_instructions',

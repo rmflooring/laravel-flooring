@@ -309,6 +309,12 @@
 										Project Managers
 									</a>
 								</li>
+								<li>
+									<a href="{{ url('/admin/vendor-reps') }}"
+									   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+										Vendor Reps
+									</a>
+								</li>
 
 							</ul>
 						</div>

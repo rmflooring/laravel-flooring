@@ -772,6 +772,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->middleware('role_or_permission:admin|create rfms')
                 ->name('opportunities.rfms.store');
 
+            Route::get('rfms/{rfm}', [RfmController::class, 'show'])
+                ->middleware('role_or_permission:admin|view rfms')
+                ->name('opportunities.rfms.show');
+
             Route::get('rfms/{rfm}/edit', [RfmController::class, 'edit'])
                 ->middleware('role_or_permission:admin|edit rfms')
                 ->name('opportunities.rfms.edit');

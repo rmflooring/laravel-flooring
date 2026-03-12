@@ -19,7 +19,7 @@ class RfmController extends Controller
         $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name']);
 
         return view('pages.rfms.create', [
-            'opportunity' => $opportunity->load(['parentCustomer', 'jobSiteCustomer']),
+            'opportunity' => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
             'estimators'  => $estimators,
             'flooringTypes' => Rfm::FLOORING_TYPES,
         ]);
@@ -33,6 +33,8 @@ class RfmController extends Controller
             'flooring_type.*'     => ['string', 'in:' . implode(',', Rfm::FLOORING_TYPES)],
             'scheduled_at'        => ['required', 'date'],
             'site_address'        => ['nullable', 'string', 'max:500'],
+            'site_city'           => ['nullable', 'string', 'max:255'],
+            'site_postal_code'    => ['nullable', 'string', 'max:20'],
             'special_instructions'=> ['nullable', 'string'],
         ]);
 
@@ -44,6 +46,8 @@ class RfmController extends Controller
             'flooring_type'       => $data['flooring_type'],
             'scheduled_at'        => $data['scheduled_at'],
             'site_address'        => $data['site_address'] ?? null,
+            'site_city'           => $data['site_city'] ?? null,
+            'site_postal_code'    => $data['site_postal_code'] ?? null,
             'special_instructions'=> $data['special_instructions'] ?? null,
             'status'              => 'pending',
         ]);
@@ -81,14 +85,21 @@ class RfmController extends Controller
 
                     $notesParts = [];
                     if ($estimatorName) $notesParts[] = 'Estimator: ' . $estimatorName;
-                    if ($rfm->site_address) $notesParts[] = 'Address: ' . $rfm->site_address;
+                    $addressLine = implode(', ', array_filter([$rfm->site_address, $rfm->site_city, $rfm->site_postal_code]));
+                    if ($addressLine) $notesParts[] = 'Address: ' . $addressLine;
                     if ($rfm->special_instructions) $notesParts[] = "\nNotes:\n" . $rfm->special_instructions;
+
+                    $fullAddress = implode(', ', array_filter([
+                        $rfm->site_address,
+                        $rfm->site_city,
+                        $rfm->site_postal_code,
+                    ]));
 
                     $eventData = [
                         'title'    => $title,
                         'start'    => $start,
                         'end'      => $end,
-                        'location' => $rfm->site_address,
+                        'location' => $fullAddress ?: null,
                         'notes'    => implode("\n", $notesParts),
                     ];
 
@@ -138,6 +149,18 @@ class RfmController extends Controller
             ->with('success', 'RFM created successfully.');
     }
 
+    public function show(Opportunity $opportunity, Rfm $rfm)
+    {
+        abort_if($rfm->opportunity_id !== $opportunity->id, 404);
+
+        $rfm->load(['estimator', 'parentCustomer', 'jobSiteCustomer', 'calendarEvent']);
+
+        return view('pages.rfms.show', [
+            'opportunity' => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
+            'rfm'         => $rfm,
+        ]);
+    }
+
     public function edit(Opportunity $opportunity, Rfm $rfm)
     {
         abort_if($rfm->opportunity_id !== $opportunity->id, 404);
@@ -145,7 +168,7 @@ class RfmController extends Controller
         $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name']);
 
         return view('pages.rfms.edit', [
-            'opportunity'   => $opportunity->load(['parentCustomer', 'jobSiteCustomer']),
+            'opportunity'   => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
             'rfm'           => $rfm,
             'estimators'    => $estimators,
             'flooringTypes' => Rfm::FLOORING_TYPES,
@@ -162,6 +185,8 @@ class RfmController extends Controller
             'flooring_type.*'     => ['string', 'in:' . implode(',', Rfm::FLOORING_TYPES)],
             'scheduled_at'        => ['required', 'date'],
             'site_address'        => ['nullable', 'string', 'max:500'],
+            'site_city'           => ['nullable', 'string', 'max:255'],
+            'site_postal_code'    => ['nullable', 'string', 'max:20'],
             'special_instructions'=> ['nullable', 'string'],
         ]);
 
