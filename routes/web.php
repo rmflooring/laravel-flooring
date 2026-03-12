@@ -12,6 +12,7 @@ use App\Http\Controllers\ProfileController;
 
 use App\Http\Controllers\Pages\OpportunityController;
 use App\Http\Controllers\Pages\JobSiteCustomerController;
+use App\Http\Controllers\Pages\RfmController;
 
 use App\Http\Controllers\OpportunityDocumentController;
 use App\Http\Controllers\Pages\OpportunityMediaController;
@@ -761,6 +762,27 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             Route::delete('documents/{document}/force', [OpportunityDocumentController::class, 'forceDestroy'])
                 ->name('opportunities.documents.forceDestroy')
                 ->middleware('role_or_permission:admin');
+
+            // RFM routes
+            Route::get('rfms/create', [RfmController::class, 'create'])
+                ->middleware('role_or_permission:admin|create rfms')
+                ->name('opportunities.rfms.create');
+
+            Route::post('rfms', [RfmController::class, 'store'])
+                ->middleware('role_or_permission:admin|create rfms')
+                ->name('opportunities.rfms.store');
+
+            Route::get('rfms/{rfm}/edit', [RfmController::class, 'edit'])
+                ->middleware('role_or_permission:admin|edit rfms')
+                ->name('opportunities.rfms.edit');
+
+            Route::patch('rfms/{rfm}', [RfmController::class, 'update'])
+                ->middleware('role_or_permission:admin|edit rfms')
+                ->name('opportunities.rfms.update');
+
+            Route::patch('rfms/{rfm}/status', [RfmController::class, 'updateStatus'])
+                ->middleware('role_or_permission:admin|edit rfms')
+                ->name('opportunities.rfms.updateStatus');
         });
 
     });

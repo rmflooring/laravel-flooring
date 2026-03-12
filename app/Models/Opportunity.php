@@ -83,7 +83,12 @@ class Opportunity extends Model
 	
 	public function documents()
 	{
-    return $this->hasMany(OpportunityDocument::class);
+        return $this->hasMany(OpportunityDocument::class);
 	}
+
+    public function rfms()
+    {
+        return $this->hasMany(Rfm::class)->orderByDesc('scheduled_at');
+    }
 
 }

@@ -35,15 +35,17 @@ class RolesSeeder extends Seeder
         // Helper: build permissions by name list
         $perm = fn (array $names) => Permission::whereIn('name', $names)->get();
 
-        // Reception: can view dashboard + customers
+        // Reception: can view dashboard + customers + RFMs
         $reception->syncPermissions($perm([
             'view dashboard',
             'view customers',
             'create customers',
             'edit customers',
+
+            'view rfms',
         ]));
 
-        // Sales: customer + vendor + PM + products
+        // Sales: customer + vendor + PM + products + RFMs
         $sales->syncPermissions($perm([
             'view dashboard',
 
@@ -59,9 +61,11 @@ class RolesSeeder extends Seeder
 
             'view labour types', 'create labour types', 'edit labour types',
             'view unit measures', 'create unit measures', 'edit unit measures',
+
+            'view rfms', 'create rfms',
         ]));
 
-        // Estimator: mostly view reference data
+        // Estimator: mostly view reference data + full RFM access
         $estimator->syncPermissions($perm([
             'view dashboard',
             'view customers',
@@ -72,6 +76,8 @@ class RolesSeeder extends Seeder
             'view product lines',
             'view labour types',
             'view unit measures',
+
+            'view rfms', 'create rfms', 'edit rfms',
         ]));
 
         // Accounting: mostly view
@@ -81,6 +87,8 @@ class RolesSeeder extends Seeder
             'view vendors',
             'view vendor reps',
             'view project managers',
+
+            'view rfms',
         ]));
     }
 }

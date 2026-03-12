@@ -68,6 +68,11 @@ class PermissionsSeeder extends Seeder
             'create unit measures',
             'edit unit measures',
             'delete unit measures',
+
+            // ===== RFMs =====
+            'view rfms',
+            'create rfms',
+            'edit rfms',
         ];
 
         foreach ($permissions as $permission) {

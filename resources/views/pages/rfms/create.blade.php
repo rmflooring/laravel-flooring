@@ -1,0 +1,162 @@
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            {{-- Page Header --}}
+            <div class="mb-6 flex items-start justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Request for Measure</h1>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Job #{{ $opportunity->job_no ?? '—' }} &mdash;
+                        {{ $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?? '—' }}
+                    </p>
+                </div>
+                <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
+                   class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </a>
+            </div>
+
+            {{-- Validation Errors --}}
+            @if ($errors->any())
+                <div class="mb-4 p-4 text-red-800 bg-red-100 border border-red-200 rounded-lg">
+                    <ul class="list-disc pl-5 space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('pages.opportunities.rfms.store', $opportunity->id) }}">
+                @csrf
+
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-100">
+
+                    {{-- Job Info (read-only) --}}
+                    <div class="p-6">
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Job Info</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Parent Customer</label>
+                                <input type="text" disabled
+                                       value="{{ $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?? '—' }}"
+                                       class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-600">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Job Site</label>
+                                <input type="text" disabled
+                                       value="{{ $opportunity->jobSiteCustomer?->company_name ?: $opportunity->jobSiteCustomer?->name ?? '—' }}"
+                                       class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-600">
+                            </div>
+
+                        </div>
+                    </div>
+
+                    {{-- Measure Details --}}
+                    <div class="p-6">
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Measure Details</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                            {{-- Estimator --}}
+                            <div>
+                                <label for="estimator_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Estimator <span class="text-red-500">*</span>
+                                </label>
+                                <select id="estimator_id" name="estimator_id"
+                                        class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('estimator_id') border-red-500 @enderror">
+                                    <option value="">— Select Estimator —</option>
+                                    @foreach ($estimators as $e)
+                                        <option value="{{ $e->id }}" {{ old('estimator_id') == $e->id ? 'selected' : '' }}>
+                                            {{ $e->first_name }} {{ $e->last_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('estimator_id')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            {{-- Flooring Type --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Flooring Type <span class="text-red-500">*</span>
+                                </label>
+                                <div class="space-y-2">
+                                    @foreach ($flooringTypes as $type)
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" name="flooring_type[]" value="{{ $type }}"
+                                                   {{ in_array($type, old('flooring_type', [])) ? 'checked' : '' }}
+                                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                            <span class="text-sm text-gray-700">{{ $type }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error('flooring_type')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            {{-- Scheduled Date/Time --}}
+                            <div>
+                                <label for="scheduled_at" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Scheduled Date & Time <span class="text-red-500">*</span>
+                                </label>
+                                <input type="datetime-local" id="scheduled_at" name="scheduled_at"
+                                       value="{{ old('scheduled_at') }}"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('scheduled_at') border-red-500 @enderror">
+                                @error('scheduled_at')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            {{-- Site Address --}}
+                            <div>
+                                <label for="site_address" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Site Address
+                                </label>
+                                <input type="text" id="site_address" name="site_address"
+                                       value="{{ old('site_address', $opportunity->jobSiteCustomer?->address) }}"
+                                       placeholder="Pre-filled from job site — override if needed"
+                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_address') border-red-500 @enderror">
+                                @error('site_address')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                        </div>
+                    </div>
+
+                    {{-- Special Instructions --}}
+                    <div class="p-6">
+                        <label for="special_instructions" class="block text-sm font-medium text-gray-700 mb-1">
+                            Special Instructions
+                        </label>
+                        <textarea id="special_instructions" name="special_instructions" rows="4"
+                                  placeholder="Parking instructions, access codes, contact on site, etc."
+                                  class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('special_instructions') border-red-500 @enderror">{{ old('special_instructions') }}</textarea>
+                        @error('special_instructions')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Actions --}}
+                    <div class="p-6 flex justify-end gap-3">
+                        <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
+                           class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                                class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
+                            Create RFM
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+</x-app-layout>

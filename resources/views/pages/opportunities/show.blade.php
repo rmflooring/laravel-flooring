@@ -322,7 +322,92 @@
                             Create Estimate
                         </a>
 
+                        {{-- Request for Measure --}}
+                        <a href="{{ route('pages.opportunities.rfms.create', $opportunity->id) }}"
+                           class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
+                            + Request for Measure
+                        </a>
+
                     </div>
+                </div>
+            </div>
+
+            {{-- RFMs --}}
+            <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex flex-col gap-3 border-b border-gray-200 p-6 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Requests for Measure</h2>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Site measure appointments linked to this opportunity.</p>
+                    </div>
+                    <a href="{{ route('pages.opportunities.rfms.create', $opportunity->id) }}"
+                       class="inline-flex items-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                        + Request for Measure
+                    </a>
+                </div>
+
+                <div class="p-6">
+                    @if($opportunity->rfms->isEmpty())
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No RFMs yet.</p>
+                    @else
+                        <div class="relative overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                                <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                        <th class="px-4 py-3">Scheduled</th>
+                                        <th class="px-4 py-3">Estimator</th>
+                                        <th class="px-4 py-3">Flooring Type</th>
+                                        <th class="px-4 py-3">Site Address</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($opportunity->rfms as $rfm)
+                                        @php
+                                            $statusColors = [
+                                                'pending'   => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200',
+                                                'confirmed' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+                                                'completed' => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+                                                'cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+                                            ];
+                                            $statusColor = $statusColors[$rfm->status] ?? 'bg-gray-100 text-gray-800';
+                                        @endphp
+                                        <tr class="border-b bg-white last:border-0 dark:border-gray-700 dark:bg-gray-800">
+                                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                                                {{ $rfm->scheduled_at->format('M j, Y g:i A') }}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                {{ $rfm->estimator?->first_name }} {{ $rfm->estimator?->last_name }}
+                                            </td>
+                                            <td class="px-4 py-3">{{ implode(', ', (array) $rfm->flooring_type) }}</td>
+                                            <td class="px-4 py-3">{{ $rfm->site_address ?? '—' }}</td>
+                                            <td class="px-4 py-3">
+                                                <form method="POST"
+                                                      action="{{ route('pages.opportunities.rfms.updateStatus', [$opportunity->id, $rfm->id]) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <select name="status" onchange="this.form.submit()"
+                                                            class="rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-300 {{ $statusColor }}">
+                                                        @foreach(\App\Models\Rfm::STATUSES as $s)
+                                                            <option value="{{ $s }}" {{ $rfm->status === $s ? 'selected' : '' }}>
+                                                                {{ ucfirst($s) }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </form>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <a href="{{ route('pages.opportunities.rfms.edit', [$opportunity->id, $rfm->id]) }}"
+                                                   class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                    Edit
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 </div>
             </div>
 

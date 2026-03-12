@@ -180,6 +180,7 @@ $employees = Employee::query()
 				'jobSiteCustomer',
 				'projectManager',
 				'estimates',
+				'rfms.estimator',
 			])->findOrFail($id);
 
 			$salesPeople = Employee::whereIn('id', array_filter([
