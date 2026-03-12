@@ -147,15 +147,19 @@
 
                 {{-- Calendar Event --}}
                 @if($rfm->calendarEvent)
+                @php $ce = $rfm->calendarEvent; @endphp
+                @php $ceStarts = $ce->starts_at?->format('M j, Y \a\t g:i A'); @endphp
                 <div class="p-6">
                     <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Calendar</h2>
-                    <div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                        <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button type="button"
+                            onclick="openRfmCalendarModal()"
+                            class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
-                        <span>Synced to MS365 calendar</span>
-                    </div>
+                        {{ $rfm->estimator ? ($rfm->estimator->first_name . ' ' . strtoupper(substr($rfm->estimator->last_name, 0, 1)) . '.') : 'Estimator' }} scheduled in Calendar for {{ $ceStarts }}
+                    </button>
                 </div>
                 @endif
 
@@ -168,4 +172,38 @@
             </div>
         </div>
     </div>
+
+    {{-- Calendar event details modal --}}
+    @if($rfm->calendarEvent)
+    @include('components.calendar.event-details-modal')
+
+    @php
+        $ce = $rfm->calendarEvent;
+        $ceData = [
+            'title'       => $ce->title,
+            'start'       => $ce->starts_at?->format('M j, Y \a\t g:i A'),
+            'end'         => $ce->ends_at?->format('M j, Y \a\t g:i A'),
+            'location'    => $ce->location,
+            'description' => $ce->description,
+            'provider'    => 'Microsoft 365',
+        ];
+    @endphp
+    <script>
+        function openRfmCalendarModal() {
+            const event = @json($ceData);
+
+            document.getElementById('event-modal-title').textContent       = event.title       ?? '';
+            document.getElementById('event-modal-start').textContent       = event.start       ?? '';
+            document.getElementById('event-modal-end').textContent         = event.end         ?? '';
+            document.getElementById('event-modal-location').textContent    = event.location    ?? '';
+            document.getElementById('event-modal-description').textContent = event.description ?? '';
+            document.getElementById('event-modal-provider').textContent    = event.provider    ?? '';
+
+            const modalEl = document.getElementById('event-details-modal');
+            const modal   = new Modal(modalEl);
+            modal.show();
+        }
+    </script>
+    @endif
+
 </x-app-layout>

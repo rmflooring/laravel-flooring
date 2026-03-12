@@ -188,7 +188,7 @@
                 <div class="flex flex-col gap-3 border-b border-gray-200 p-6 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Job Transactions</h2>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">RFQs, estimates, sales, invoices, POs, and work orders linked to this opportunity.</p>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">RFMs, estimates, sales, invoices, POs, and work orders linked to this opportunity.</p>
                     </div>
 
                     <a href="{{ url('/pages/estimates/create') }}?opportunity_id={{ $opportunity->id }}"
@@ -202,7 +202,7 @@
                         <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
                             <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3">RFQ's</th>
+                                    <th scope="col" class="px-6 py-3">RFM's</th>
                                     <th scope="col" class="px-6 py-3">Estimates</th>
                                     <th scope="col" class="px-6 py-3">Sales</th>
                                     <th scope="col" class="px-6 py-3">Invoices</th>
@@ -212,8 +212,35 @@
                             </thead>
                             <tbody>
                                 <tr class="border-b bg-white align-top dark:border-gray-700 dark:bg-gray-800">
-                                    {{-- RFQs --}}
-                                    <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>
+                                    {{-- RFMs --}}
+                                    <td class="px-6 py-4">
+                                        @if($opportunity->rfms->count())
+                                            <ul class="list-disc space-y-1 pl-5 text-gray-700 dark:text-gray-200">
+                                                @foreach($opportunity->rfms->sortBy('scheduled_at') as $rfmItem)
+                                                    @php
+                                                        $rfmStatusColors = [
+                                                            'pending'   => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200',
+                                                            'confirmed' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+                                                            'completed' => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+                                                            'cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+                                                        ];
+                                                        $rfmStatusColor = $rfmStatusColors[$rfmItem->status] ?? 'bg-gray-100 text-gray-800';
+                                                    @endphp
+                                                    <li>
+                                                        <a href="{{ route('pages.opportunities.rfms.show', [$opportunity->id, $rfmItem->id]) }}"
+                                                           class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                            {{ $rfmItem->scheduled_at->format('M j, Y') }}
+                                                        </a>
+                                                        <span class="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium {{ $rfmStatusColor }}">
+                                                            {{ ucfirst($rfmItem->status) }}
+                                                        </span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <span class="text-gray-400 dark:text-gray-500">—</span>
+                                        @endif
+                                    </td>
 
                                     {{-- Estimates --}}
                                     <td class="px-6 py-4">
