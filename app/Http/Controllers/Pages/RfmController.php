@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Mail\RfmCreatedMail;
 use App\Models\Employee;
 use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
@@ -143,6 +144,19 @@ class RfmController extends Controller
             ]);
         }
         // --- end calendar ---
+
+        // --- Email notification (best-effort, never blocks the save) ---
+        try {
+            $rfm->load(['estimator']);
+            $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
+            (new RfmCreatedMail($rfm, $opportunity))->send();
+        } catch (\Throwable $e) {
+            Log::error('[RFM] Email notification failed', [
+                'rfm_id' => $rfm->id,
+                'error'  => $e->getMessage(),
+            ]);
+        }
+        // --- end email ---
 
         return redirect()
             ->route('pages.opportunities.show', $opportunity->id)

@@ -174,6 +174,11 @@ Route::prefix('admin')
                 return view('admin.settings');
             })->name('settings');
 
+            Route::get('/settings/mail', [\App\Http\Controllers\Admin\MailSettingsController::class, 'index'])
+                ->name('settings.mail');
+            Route::post('/settings/mail', [\App\Http\Controllers\Admin\MailSettingsController::class, 'update'])
+                ->name('settings.mail.update');
+
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);
 

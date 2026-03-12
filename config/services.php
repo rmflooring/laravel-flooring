@@ -35,10 +35,11 @@ return [
         ],
     ],
 	
-	'microsoft' => [
-    'client_id' => env('MICROSOFT_CLIENT_ID'),
-    'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
-    'tenant_id' => env('MICROSOFT_TENANT_ID'),
-	],
+    'microsoft' => [
+        'client_id'        => env('MICROSOFT_CLIENT_ID'),
+        'client_secret'    => env('MICROSOFT_CLIENT_SECRET'),
+        'tenant_id'        => env('MICROSOFT_TENANT_ID'),
+        'mail_from_address'=> env('MAIL_GRAPH_FROM_ADDRESS', 'team@rmflooring.ca'),
+    ],
 
 ];
