@@ -23,11 +23,11 @@ One opportunity can have multiple RFMs (e.g. re-schedules, or multiple site visi
 |------|---------|
 | `app/Models/Rfm.php` | Rfm model — statuses, flooring types, relationships, audit hooks |
 | `app/Http/Controllers/Pages/RfmController.php` | CRUD controller — create, store, show, edit, update, updateStatus |
-| `resources/views/pages/rfms/create.blade.php` | Create RFM form |
-| `resources/views/pages/rfms/edit.blade.php` | Edit RFM form |
-| `resources/views/pages/rfms/show.blade.php` | Read-only RFM detail view |
-| `app/Mail/RfmCreatedMail.php` | Create notification — estimator (detailed) + PM (customer-facing) |
-| `app/Mail/RfmUpdatedMail.php` | Update notification — estimator (change diff + full details) + PM (clean summary) |
+| `resources/views/pages/rfms/create.blade.php` | Create RFM form with Notifications section |
+| `resources/views/pages/rfms/edit.blade.php` | Edit RFM form with Notifications section + auto-check JS |
+| `resources/views/pages/rfms/show.blade.php` | Read-only RFM detail view with calendar modal |
+| `app/Mail/RfmCreatedMail.php` | Create notification — estimator (detailed internal) + PM (customer-facing) |
+| `app/Mail/RfmUpdatedMail.php` | Update notification — estimator (change diff + details) + PM (clean summary) |
 | `database/migrations/2026_03_12_190221_create_rfms_table.php` | Initial rfms table |
 | `database/migrations/2026_03_12_193228_change_flooring_type_to_json_in_rfms_table.php` | Changed flooring_type from string to JSON |
 | `database/migrations/2026_03_12_215426_add_site_city_and_postal_to_rfms_table.php` | Added site_city and site_postal_code columns |
@@ -36,13 +36,9 @@ One opportunity can have multiple RFMs (e.g. re-schedules, or multiple site visi
 | File | What changed |
 |------|-------------|
 | `routes/web.php` | Added all 6 RFM routes under `opportunities/{opportunity}` prefix |
-| `resources/views/pages/opportunities/show.blade.php` | Added RFM section (table + status dropdown + View/Edit links); fixed full address display for Parent Customer and Job Site Customer; renamed "RFQ's" column to "RFM's" in Job Transactions card with linked RFM entries |
+| `resources/views/pages/opportunities/show.blade.php` | Added RFM section (table + status dropdown + View/Edit links); fixed full address display for Parent Customer and Job Site Customer; renamed "RFQ's" to "RFM's" in Job Transactions card with linked RFM entries |
 | `database/seeders/PermissionsSeeder.php` | Added `view rfms`, `create rfms`, `edit rfms` permissions |
 | `database/seeders/RolesSeeder.php` | Assigned RFM permissions to roles |
-| `app/Http/Controllers/Pages/RfmController.php` | Added notify flags to store(); added change snapshotting + RfmUpdatedMail dispatch to update(); email field added to estimator queries |
-| `app/Mail/RfmCreatedMail.php` | Added `$notifyEstimator`/`$notifyPm` params; split into distinct estimator (detailed) and PM (customer-facing) email bodies |
-| `resources/views/pages/rfms/create.blade.php` | Added Notifications section with estimator (default ON) and PM (default OFF) checkboxes; live JS hint shows estimator email on dropdown select |
-| `resources/views/pages/rfms/edit.blade.php` | Restructured to single `<form>` (address fields were outside the form — now fixed); added Notifications section; JS auto-checks estimator box when key fields change |
 
 ---
 
@@ -114,63 +110,124 @@ All routes are nested under `pages/opportunities/{opportunity}/` and carry the `
 
 ## Views
 
-### create.blade.php / edit.blade.php
-Layout has two sections:
+### create.blade.php
+
+Sections (top to bottom, all inside a single `<form>`):
 
 **Job Info (read-only)** — two-column grid:
 - Left: Parent Customer name → PM info card (name, phone, email) if a PM is assigned to the opportunity
-- Right: Job Site name → Street Address input → City + Postal Code inputs (2-col grid)
-  - On create: address fields pre-filled from `jobSiteCustomer->address/city/postal_code`
-  - On edit: address fields pre-filled from saved `rfm->site_address/city/postal_code`
+- Right: Job Site name → Street Address → City + Postal Code (2-col grid), pre-filled from `jobSiteCustomer`
 
 **Measure Details** (editable):
-- Estimator dropdown (from employees table)
+- Estimator dropdown
 - Flooring Type checkboxes (multi-select)
-- Scheduled Date & Time (datetime-local input)
+- Scheduled Date & Time (`datetime-local`)
 
 **Special Instructions** — full-width textarea
 
-**Notifications** section (bottom of form):
-- **Create form:** "Notify estimator" (default ON) + "Notify Project Manager" (default OFF). Live JS hint shows estimator's email as you select from the dropdown. PM checkbox disabled with a note if no PM email exists on the opportunity.
-- **Edit form:** "Notify estimator about this change" (auto-checked by JS when `scheduled_at`, `estimator_id`, `site_address`, `site_city`, or `site_postal_code` change from their original values) + "Notify Project Manager about this change" (always default OFF). Both show target email as a hint.
+**Notifications:**
+- "Notify estimator" checkbox — **default ON**
+  - Live JS hint below shows the selected estimator's email (updates on dropdown change)
+  - If estimator has no email on record, hint says so
+- "Notify Project Manager" checkbox — **default OFF**
+  - Shows PM name and email as hint text
+  - Rendered as disabled (greyed out) if no PM with an email is assigned to the opportunity
 
-> **Edit form structure note:** The address fields (`site_address`, `site_city`, `site_postal_code`) are inside the main `<form>`. This was fixed — they were previously outside the form and not being submitted.
+### edit.blade.php
 
-### Email content
+> **Form structure:** The entire editable form is a single `<form id="rfm-edit-form">`. This was fixed — previously the address fields were in a read-only section outside the form and were not being submitted.
 
-**Estimator emails** (both create and update) are detailed and internal:
-- Create: full job details, site address, flooring types, special instructions, link to RFM
-- Update: "CHANGES" block showing old → new for each affected field, then full current details + link
+**Status** (top, outside the main form) — pill buttons that each submit their own mini PATCH form to `updateStatus`.
 
-**PM emails** are clean and customer-facing:
-- Create: greeting by name, measurement date/time, location, estimator name, access reminder
-- Update: same format as create but with "updated" messaging — no diff shown, no internal jargon
+**Main form sections:**
 
-Both email types use `GraphMailService` (Track 1 shared mailbox) with `type: 'rfm_notification'`.
+**Job Info (read-only display + editable address):**
+- Parent Customer name (disabled input)
+- PM info card if assigned
+- Job Site name (disabled input)
+- Street Address, City, Postal Code inputs (pre-filled from saved `rfm` values)
+
+**Measure Details:**
+- Estimator dropdown
+- Flooring Type checkboxes
+- Scheduled Date & Time
+
+**Special Instructions**
+
+**Notifications:**
+- "Notify estimator about this change" checkbox — **default OFF, auto-checked by JS**
+  - JS watches `estimator_id`, `scheduled_at`, `site_address`, `site_city`, `site_postal_code`
+  - Auto-checks this box the moment any of those fields differ from their original saved values
+  - Hint text shows the estimator's email address (updates on dropdown change)
+- "Notify Project Manager about this change" checkbox — **always default OFF**
+  - Staff must manually check this — PM notification is always a deliberate decision
+  - Shows PM name and email as hint text
+  - Rendered as disabled if no PM with an email is assigned
 
 ### show.blade.php
-Read-only view of all RFM fields. Layout mirrors create/edit Job Info structure. Includes:
+
+Read-only view. Includes:
 - Status badge
-- Job Info: Parent Customer + PM, Job Site + full address
+- Job Info: Parent Customer + PM card, Job Site + full address
 - Measure Details: estimator, flooring type pills, scheduled date/time
 - Special Instructions (hidden if empty)
-- Calendar section (shown if `calendar_event_id` is set): clickable link reading **"[First Last initial]. scheduled in Calendar for [date/time]"** — opens the Flowbite `event-details-modal` populated with title, start, end, location, description, and provider from the local `CalendarEvent` record
+- Calendar section (shown if `calendar_event_id` is set): clickable link — **"[First Last initial]. scheduled in Calendar for [date/time]"** — opens the Flowbite `event-details-modal`
 - Created/updated timestamps at bottom
 
-#### Calendar modal on show page
-- Includes `components.calendar.event-details-modal` (same Flowbite modal used on the calendar index page)
-- Event data is built server-side in a `$ceData` PHP array and passed to JS via `@json($ceData)` — **do not pass a multi-line array directly to `@json()` inside a `<script>` tag, Blade's parser will throw a ParseError**
-- `Modal` constructor is available globally via the Flowbite CDN script already loaded in `app.blade.php`
+**Calendar modal:**
+- Uses `components.calendar.event-details-modal` (same Flowbite modal used on calendar index page)
+- Event data built server-side as `$ceData` array in a `@php` block, then passed via `@json($ceData)`
+- **Do not pass a multi-line array literal directly inside `@json()` in a `<script>` tag** — Blade's parser throws a ParseError. Always assign to a variable first.
+- `Modal` constructor available globally via Flowbite CDN in `app.blade.php`
 
-### edit.blade.php (extra)
-Status section at top — clickable pill buttons that submit a PATCH to `updateStatus` individually (no page reload required beyond form submit). Each button is its own mini form.
+---
+
+## Email Notifications
+
+Both `RfmCreatedMail` and `RfmUpdatedMail` are plain PHP classes (not Laravel Mailables). They call `GraphMailService::send()` directly using the Track 1 shared mailbox.
+
+All sends are **best-effort** — wrapped in try/catch in the controller, never block the save. Failed sends are logged to `[RFM]` channel and written to the `mail_log` table with `type: 'rfm_notification'`.
+
+### RfmCreatedMail
+
+**Trigger:** `RfmController::store()` — fires after the MS365 calendar block
+
+**Constructor:** `__construct(Rfm $rfm, Opportunity $opportunity, bool $notifyEstimator = true, bool $notifyPm = false)`
+
+**Estimator email** (internal, detailed):
+- Subject: `RFM Scheduled: #JOB-NO Customer Name`
+- Body includes: job number, customer, job site, estimator name, scheduled date/time, full address, flooring types, special instructions, link to RFM show page
+
+**PM email** (customer-facing, clean):
+- Subject: `RFM Scheduled: #JOB-NO Customer Name`
+- Body: greeting by PM name, measurement context sentence, date/time, location, estimator name, site access reminder, signed "RM Flooring"
+- No internal fields, no special instructions, no links
+
+### RfmUpdatedMail
+
+**Trigger:** `RfmController::update()` — fires after save, only if at least one notify checkbox was checked
+
+**Constructor:** `__construct(Rfm $rfm, Opportunity $opportunity, array $changes = [], bool $notifyEstimator = false, bool $notifyPm = false)`
+
+**Change detection** (done in controller before `$rfm->update()`):
+Compares old vs new values for: `estimator` (name), `scheduled_at`, `site_address`, `site_city`, `site_postal_code`
+Each changed field is added to `$changes` as `['Field Label' => ['from' => '...', 'to' => '...']]`
+
+**Estimator email** (internal, detailed):
+- Subject: `RFM Updated: #JOB-NO Customer Name`
+- Body: intro line, `=== CHANGES ===` block listing each changed field with Was/Now lines, then full current RFM details + link
+
+**PM email** (customer-facing, clean):
+- Subject: `Measurement Update: #JOB-NO Customer Name`
+- Body: greeting, "updated" context sentence, current date/time + location + estimator, site access reminder
+- No change diff, no internal fields, no links
 
 ---
 
 ## MS365 Calendar Integration
 
 ### How it works
-When an RFM is **created** (`store`), the controller attempts (best-effort — never blocks the save) to:
+When an RFM is **created** (`store`), the controller attempts (best-effort) to:
 
 1. Find a connected `MicrosoftAccount` for the current user
 2. Find the `MicrosoftCalendar` with `group_id = 'b8483c56-fc4b-4734-8011-335b88c7e4ad'` (the "RM–RFM/Measures" calendar)
@@ -185,53 +242,53 @@ When an RFM is **created** (`store`), the controller attempts (best-effort — n
 6. Save `microsoft_calendar_id` and `calendar_event_id` back on the RFM
 
 ### Important caveats
-- **Edit does NOT sync back to MS365** — editing an RFM (changing date, estimator, etc.) updates the DB record but does NOT update the calendar event in MS365. This is a known gap — needs to be implemented.
-- **Status changes do NOT touch the calendar event** — cancelling an RFM does not delete or update the MS365 event.
-- **Calendar is hardcoded by group_id** — if the RFM/Measures calendar is ever recreated or its ID changes, this will silently fail (logged as a warning).
-- All calendar failures are caught and logged — they never cause a 500 or block the RFM from saving.
+- **Edit does NOT sync back to MS365** — editing an RFM updates the DB record but does NOT update the calendar event. Known gap.
+- **Status changes do NOT touch the calendar event** — cancelling an RFM does not cancel the MS365 event.
+- **Calendar is hardcoded by group_id** — if the RFM/Measures calendar is ever recreated, this will silently fail (logged as a warning).
+- All calendar failures are caught and logged — never block the save.
 
 ---
 
 ## Current Status — What Works
 
-- [x] Create RFM from opportunity (form + validation + DB save)
-- [x] MS365 calendar event created on RFM store
-- [x] Edit RFM (form pre-filled, DB save)
-- [x] Status update via dropdown (opportunity show) or pill buttons (edit page)
+- [x] Create RFM (form + validation + DB save)
+- [x] MS365 calendar event created on store
+- [x] Edit RFM (form pre-filled, DB save — address fields now correctly inside the form)
+- [x] Status update via pill buttons (edit page) or inline dropdown (opportunity show page)
 - [x] Show RFM detail page (read-only)
 - [x] Full address fields (street, city, postal code) on create/edit/show
 - [x] Address pre-filled from job site customer on create
 - [x] PM info displayed in Job Info section (from opportunity)
 - [x] RFM table on opportunity show page with View/Edit links and inline status dropdown
 - [x] Permissions seeded and assigned to all roles
-- [x] Job Transactions card on opportunity show page — "RFQ's" renamed to "RFM's", RFMs listed as clickable date links with status badges linking to show page
-- [x] Calendar event modal on RFM show page — clickable link with estimator name (first name + last initial) and scheduled date/time, opens event details modal
-- [x] Email notifications on create — checkbox-driven: estimator (default ON, detailed internal email), PM (default OFF, clean customer-facing email)
-- [x] Email notifications on edit — checkbox-driven: estimator (auto-checked when key fields change, shows change diff), PM (always default OFF, clean summary)
-- [x] Edit form restructured — address fields now inside the main form (previously outside and not submitted)
+- [x] Job Transactions card on opportunity show page — "RFM's" with clickable date links + status badges
+- [x] Calendar event modal on RFM show page — estimator name (first + last initial) + date/time, opens Flowbite event details modal
+- [x] Email notifications on **create** — estimator (default ON, detailed internal), PM (default OFF, customer-facing); checkboxes shown in Notifications section
+- [x] Email notifications on **edit** — estimator (auto-checked by JS when key fields change, shows change diff), PM (always OFF by default); both show target email as hint
+- [x] `RfmUpdatedMail` — new class, separate subjects and bodies for estimator vs PM
 
 ---
 
 ## What Still Needs to Be Done
 
 ### High priority
-1. **Sync MS365 calendar event on edit** — when the RFM's date, estimator, address, or flooring type changes, update the existing calendar event via Graph API. Use `rfm->calendarEvent->external_id` to identify the event.
-2. **Delete RFM + cancel calendar event** — add a delete route/button. On delete (or status → cancelled), delete or cancel the MS365 event.
+1. **Sync MS365 calendar event on edit** — when date, estimator, address, or flooring type changes, update the existing MS365 event via Graph API using `rfm->calendarEvent->external_id`.
+2. **Delete RFM + cancel calendar event** — add a delete route/button and permission. On delete (or status → cancelled), delete or cancel the MS365 event. No `delete rfms` permission exists yet — add to seeder before building the route.
 
 ### Medium priority
-3. **Delete route** — currently there is no way to delete an RFM through the UI.
-4. **RFM → Estimate link** — once a measure is completed, there should be a path to create an estimate directly from the RFM (pre-filling job/customer info).
+3. **RFM → Estimate link** — from the RFM show page, a shortcut to create an estimate pre-filled with job/customer info.
 
 ### Low priority
-6. **Province/state field** — address currently has street, city, postal code but no province. May be needed for completeness.
-7. **Multiple RFMs per opportunity** — already supported in the data model, but the UI doesn't indicate which RFM an estimate was created from.
+4. **Province/state field** — address has street, city, postal code but no province.
+5. **Multiple RFMs per opportunity** — data model supports it; UI doesn't indicate which RFM an estimate came from.
 
 ---
 
 ## Known Issues / Things to Watch Out For
 
-- **`flooring_type` is JSON** — was originally a plain string column, then migrated to JSON. The model casts it as `array`. Always treat it as an array, never a string.
-- **Route order matters** — `rfms/create` must be registered before `rfms/{rfm}` in `web.php` to prevent `create` being interpreted as an `{rfm}` wildcard. This is already correct.
-- **`abort_if` scope check** — every controller method that accepts an `{rfm}` parameter must include `abort_if($rfm->opportunity_id !== $opportunity->id, 404)`. Don't skip this.
-- **Calendar group_id is hardcoded** — `b8483c56-fc4b-4734-8011-335b88c7e4ad` is the RM–RFM/Measures calendar. This is in `RfmController::store` and will need updating if the calendar changes.
-- **No `delete rfms` permission yet** — the permission doesn't exist in the seeder. Add it before building the delete route.
+- **`flooring_type` is JSON** — was a plain string column, migrated to JSON. The model casts it as `array`. Always treat as array, never string.
+- **Route order matters** — `rfms/create` must be registered before `rfms/{rfm}` in `web.php`. Already correct — don't reorder.
+- **`abort_if` scope check** — every controller method accepting `{rfm}` must include `abort_if($rfm->opportunity_id !== $opportunity->id, 404)`.
+- **Calendar group_id is hardcoded** — `b8483c56-fc4b-4734-8011-335b88c7e4ad` in `RfmController::store()`.
+- **No `delete rfms` permission yet** — add to `PermissionsSeeder` and `RolesSeeder` before building the delete route.
+- **`@json()` + multi-line arrays** — never pass a multi-line PHP array literal directly into `@json()` inside a `<script>` tag. Build the array in a `@php` block first, then pass the variable.
