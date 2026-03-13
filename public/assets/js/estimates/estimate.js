@@ -155,7 +155,7 @@ async function loadTaxGroupRate(groupId) {
   if (!groupId) return;
 
   try {
-    const resp = await fetch(`/estimates/api/tax-groups/${encodeURIComponent(groupId)}/rate`, {
+    const resp = await fetch(`/pages/estimates/api/tax-groups/${encodeURIComponent(groupId)}/rate`, {
       headers: { Accept: 'application/json' }
     });
     if (!resp.ok) throw new Error(`Tax group rate fetch failed (${resp.status})`);
@@ -395,7 +395,7 @@ function initProductTypeDropdownForRoom(roomCard) {
 
   // Cache product types per room so we don’t refetch for every row
   if (!roomCard._fmProductTypesPromise) {
-    roomCard._fmProductTypesPromise = fetch('/estimates/api/product-types', {
+    roomCard._fmProductTypesPromise = fetch('/pages/estimates/api/product-types', {
       headers: { Accept: 'application/json' }
     })
       .then(r => r.json())
@@ -765,13 +765,13 @@ function initManufacturerDropdownForRoom(roomCard) {
     input.addEventListener('mousedown', async () => {
       await loadManufacturersForSelectedProductType();
       openDropdown();
-      applyFilter();
+      render(manufacturers);
     });
 
     input.addEventListener('focus', async () => {
       await loadManufacturersForSelectedProductType();
       openDropdown();
-      applyFilter();
+      render(manufacturers);
     });
 
     input.addEventListener('input', () => {
@@ -906,7 +906,7 @@ function initManufacturerDropdownForRoom(roomCard) {
       if (!ptId || !manu) return;
 
       try {
-        const url = new URL('/estimates/api/product-lines', window.location.origin);
+        const url = new URL('/pages/estimates/api/product-lines', window.location.origin);
         url.searchParams.set('product_type_id', ptId);
         url.searchParams.set('manufacturer', manu);
 
@@ -970,15 +970,15 @@ function initManufacturerDropdownForRoom(roomCard) {
     });
 
     styleInput.addEventListener('mousedown', async () => {
-      if (!productLines.length) await loadProductLines();
+      await loadProductLines();
       openDropdown();
-      applyFilter();
+      render(productLines);
     });
 
     styleInput.addEventListener('focus', async () => {
-      if (!productLines.length) await loadProductLines();
+      await loadProductLines();
       openDropdown();
-      applyFilter();
+      render(productLines);
     });
 
     styleInput.addEventListener('input', () => {
@@ -1171,7 +1171,7 @@ if (priceInput) delete priceInput.dataset.userOverridden;
 	if (!productLineId) return;
 
 	try {
-	  const url = new URL(`/estimates/api/product-lines/${encodeURIComponent(productLineId)}/product-styles`, window.location.origin);
+	  const url = new URL(`/pages/estimates/api/product-lines/${encodeURIComponent(productLineId)}/product-styles`, window.location.origin);
 
 	  const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
 	  if (!resp.ok) throw new Error(`Product styles fetch failed (${resp.status})`);
@@ -1238,15 +1238,15 @@ if (priceInput) delete priceInput.dataset.userOverridden;
 
     // Open on click/focus
     colorInput.addEventListener('mousedown', async () => {
-      if (!styles.length) await loadProductStyles();
+      await loadProductStyles();
       openDropdown();
-      applyFilter();
+      render(styles);
     });
 
     colorInput.addEventListener('focus', async () => {
-      if (!styles.length) await loadProductStyles();
+      await loadProductStyles();
       openDropdown();
-      applyFilter();
+      render(styles);
     });
 
     colorInput.addEventListener('input', () => {
@@ -1542,12 +1542,8 @@ if (costPriceInput && c !== '' && c != null) {
 	});
 	
 	input.addEventListener('focus', async () => {
-	  console.log('[freight] input focus fired');
-
 	  freightItems = await roomCard._fmFreightItemsPromise;
-	  applyFilter();
-
-	  console.log('[freight] focus about to openDropdown');
+	  render(freightItems);
 	  openDropdown();
 	});
 
@@ -1563,7 +1559,7 @@ document.addEventListener('click', (e) => {
 
  //Labour type loader
 async function fetchLabourTypes() {
-  const res = await fetch('/estimates/api/labour-types', {
+  const res = await fetch('/pages/estimates/api/labour-types', {
     headers: { 'Accept': 'application/json' },
     credentials: 'same-origin',
   });
@@ -1854,7 +1850,7 @@ if (notesInput) {
       return;
     }
 
-    const url = new URL('/estimates/api/labour-items', window.location.origin);
+    const url = new URL('/pages/estimates/api/labour-items', window.location.origin);
     url.searchParams.set('labour_type_id', labourTypeId);
 
     const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });

@@ -11,6 +11,7 @@ use App\Models\SaleRoom;
 use App\Models\SaleItem;
 use App\Services\EmailTemplateService;
 use App\Services\GraphMailService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -63,6 +64,10 @@ class EstimateController extends Controller
             'job_name'             => ['nullable', 'string', 'max:255'],
             'job_number'           => ['nullable', 'string', 'max:255'],
             'job_address'          => ['nullable', 'string', 'max:255'],
+            'job_street'           => ['nullable', 'string', 'max:255'],
+            'job_city'             => ['nullable', 'string', 'max:100'],
+            'job_province'         => ['nullable', 'string', 'max:100'],
+            'job_postal'           => ['nullable', 'string', 'max:20'],
             'pm_name'              => ['nullable', 'string', 'max:255'],
 			'salesperson_1_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
 			'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
@@ -158,7 +163,7 @@ $data['tax_rate_percent'] = $groupPercent;
                 'customer_name'      => $data['parent_customer_name'] ?? null,
                 'job_name'           => $data['job_name'] ?? null,
                 'job_no'             => $data['job_number'] ?? null,
-                'job_address'        => $data['job_address'] ?? null,
+                'job_address'        => $this->buildJobAddress($data),
                 'pm_name'            => $data['pm_name'] ?? null,
 				'salesperson_1_employee_id' => $data['salesperson_1_employee_id'] ?? null,
 				'salesperson_2_employee_id' => $data['salesperson_2_employee_id'] ?? null,
@@ -305,6 +310,38 @@ $data['tax_rate_percent'] = $groupPercent;
             ->with('success', 'Estimate saved (Draft).')
             ->with('estimate_id', $estimate->id);
     }
+
+	public function show(Estimate $estimate)
+	{
+		$estimate->load([
+			'rooms' => fn($q) => $q->orderBy('sort_order'),
+			'rooms.items' => fn($q) => $q->orderBy('sort_order'),
+			'salesperson1Employee',
+			'salesperson2Employee',
+		]);
+
+		$user            = auth()->user();
+		$templateService = app(EmailTemplateService::class);
+		$template        = $templateService->getTemplate($user, 'estimate');
+		$templateVars    = [
+			'customer_name'    => $estimate->homeowner_name ?: $estimate->customer_name,
+			'estimate_number'  => $estimate->estimate_number,
+			'grand_total'      => '$' . number_format((float) $estimate->grand_total, 2),
+			'job_name'         => $estimate->job_name,
+			'job_address'      => $estimate->job_address,
+			'pm_name'          => $estimate->pm_name,
+			'pm_first_name'    => explode(' ', trim($estimate->pm_name ?? ''))[0],
+			'salesperson_name' => $estimate->salesperson1Employee?->first_name
+				? $estimate->salesperson1Employee->first_name . ' ' . $estimate->salesperson1Employee->last_name
+				: $user->name,
+			'sender_name'      => $user->name,
+			'sender_email'     => $user->email,
+		];
+		$emailSubject = $templateService->render($template['subject'], $templateVars);
+		$emailBody    = $templateService->render($template['body'], $templateVars);
+
+		return view('pages.estimates.show', compact('estimate', 'emailSubject', 'emailBody'));
+	}
 
 	public function edit(Estimate $estimate)
 	{
@@ -762,7 +799,7 @@ public function apiManufacturers(Request $request)
     $manufacturers = DB::table('product_lines')
         ->where('product_type_id', (int) $request->product_type_id)
         ->whereNotNull('manufacturer')
-        ->where('manufacturer', '!=', '')
+        ->where('manufacturer', '<>', '')
         ->distinct()
         ->orderBy('manufacturer')
         ->pluck('manufacturer')
@@ -786,7 +823,7 @@ public function apiStyles(Request $request)
     $lineIds = DB::table('product_lines')
         ->where('product_type_id', $productTypeId)
         ->whereNotNull('manufacturer')
-        ->where('manufacturer', '!=', '')
+        ->where('manufacturer', '<>', '')
         ->where('manufacturer', $manufacturer)
         ->pluck('id');
 
@@ -962,6 +999,17 @@ public function apiStyles(Request $request)
     ]);
 }
 
+    public function previewPdf(Estimate $estimate)
+    {
+        $estimate->loadMissing(['rooms.items']);
+        $pdf = Pdf::loadView('pdf.estimate', compact('estimate'));
+        $filename = 'Estimate-' . ($estimate->estimate_number ?? $estimate->id) . '.pdf';
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
+
     public function sendEmail(Request $request, Estimate $estimate)
     {
         $request->validate([
@@ -973,12 +1021,19 @@ public function apiStyles(Request $request)
         $user   = auth()->user();
         $mailer = app(GraphMailService::class);
 
+        $estimate->loadMissing(['rooms.items']);
+        $pdfContent = Pdf::loadView('pdf.estimate', compact('estimate'))->output();
+        $attachment = [
+            'filename' => 'Estimate-' . ($estimate->estimate_number ?? $estimate->id) . '.pdf',
+            'content'  => base64_encode($pdfContent),
+        ];
+
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate')
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate');
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', null, $attachment);
         }
 
         if (! $sent) {
@@ -988,6 +1043,23 @@ public function apiStyles(Request $request)
         $estimate->update(['status' => 'sent']);
 
         return back()->with('success', 'Estimate emailed to ' . $request->input('to') . ' and status updated to Sent.');
+    }
+
+    private function buildJobAddress(array $data): ?string
+    {
+        // If a raw job_address was submitted (e.g. from the edit form), use it directly
+        if (! empty($data['job_address'])) {
+            return $data['job_address'];
+        }
+
+        $street   = trim($data['job_street'] ?? '');
+        $cityLine = trim(collect([
+            $data['job_city']     ?? '',
+            $data['job_province'] ?? '',
+            $data['job_postal']   ?? '',
+        ])->filter()->implode(', '));
+
+        return trim(collect([$street, $cityLine])->filter()->implode("\n")) ?: null;
     }
 
 }

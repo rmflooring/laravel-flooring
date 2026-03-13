@@ -266,7 +266,7 @@
                                             <ul class="list-disc space-y-1 pl-5 text-gray-700 dark:text-gray-200">
                                                 @foreach($sortedEstimates as $estimate)
                                                     <li>
-                                                        <a href="{{ route('admin.estimates.edit', $estimate->id) }}"
+                                                        <a href="{{ route('pages.estimates.edit', $estimate->id) }}"
 														   class="font-medium text-blue-600 hover:underline dark:text-blue-400">
 															{{ $estimate->estimate_number ?? ('Draft #'.$estimate->id) }}
 														</a>
@@ -372,7 +372,7 @@
                         </a>
 						
                         {{-- Create Estimate (Secondary) --}}
-                        <a href="{{ url('/admin/estimates/mock-create') }}?opportunity_id={{ $opportunity->id }}"
+                        <a href="{{ route('pages.estimates.create') }}?opportunity_id={{ $opportunity->id }}"
                            class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
                             Create Estimate
                         </a>

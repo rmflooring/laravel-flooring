@@ -137,23 +137,33 @@
                         </div>
 
                         <div class="lg:col-span-6">
-                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                            <div x-data="jobSiteEdit()" class="bg-gray-50 border border-gray-200 rounded-xl p-5">
                                 <div class="flex justify-between items-center mb-3">
                                     <h2 class="text-lg font-semibold">Job Site</h2>
 
-                                    <button id="open-job-site-modal"
-                                            type="button"
-                                            data-modal-target="create-job-site-modal"
-                                            data-modal-toggle="create-job-site-modal"
-                                            class="px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg">
-                                        + Create Job Site
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button"
+                                                x-show="selectedId"
+                                                x-cloak
+                                                @click="openEdit()"
+                                                class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                                            Edit Job Site
+                                        </button>
+                                        <button id="open-job-site-modal"
+                                                type="button"
+                                                data-modal-target="create-job-site-modal"
+                                                data-modal-toggle="create-job-site-modal"
+                                                class="px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg">
+                                            + Create Job Site
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <select id="job_site_customer_id"
                                         name="job_site_customer_id"
                                         form="opportunity-form"
                                         class="w-full bg-white border border-gray-300 rounded-lg p-2.5 text-sm"
+                                        @change="selectedId = $event.target.value"
                                         disabled>
                                     <option value="">— Select Job Site —</option>
 
@@ -169,6 +179,126 @@
                                 <p class="mt-2 text-xs text-gray-500">
                                     Select a Parent Customer first to see available job sites.
                                 </p>
+
+                                {{-- Edit Job Site Modal --}}
+                                <div x-show="editOpen"
+                                     x-cloak
+                                     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                                     style="background: rgba(0,0,0,0.5)">
+                                    <div class="bg-white rounded-xl shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+                                         @click.outside="editOpen = false">
+
+                                        <form method="POST" :action="editAction">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="redirect_to" value="{{ request()->url() }}">
+
+                                            <div class="flex items-center justify-between px-6 py-4 border-b">
+                                                <h3 class="text-lg font-semibold">Edit Job Site</h3>
+                                                <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+                                            </div>
+
+                                            <div class="p-6 space-y-4">
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Name</label>
+                                                        <input type="text" name="name" x-model="form.name"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Company Name</label>
+                                                        <input type="text" name="company_name" x-model="form.company_name"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Email</label>
+                                                        <input type="email" name="email" x-model="form.email"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Phone</label>
+                                                        <input type="text" name="phone" x-model="form.phone"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Mobile</label>
+                                                        <input type="text" name="mobile" x-model="form.mobile"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Address</label>
+                                                        <input type="text" name="address" x-model="form.address"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Address 2</label>
+                                                        <input type="text" name="address2" x-model="form.address2"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">City</label>
+                                                        <input type="text" name="city" x-model="form.city"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Province</label>
+                                                        <select name="province" x-model="form.province"
+                                                                class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                            <option value="">Select Province</option>
+                                                            <option value="AB">Alberta</option>
+                                                            <option value="BC">British Columbia</option>
+                                                            <option value="MB">Manitoba</option>
+                                                            <option value="NB">New Brunswick</option>
+                                                            <option value="NL">Newfoundland and Labrador</option>
+                                                            <option value="NS">Nova Scotia</option>
+                                                            <option value="NT">Northwest Territories</option>
+                                                            <option value="NU">Nunavut</option>
+                                                            <option value="ON">Ontario</option>
+                                                            <option value="PE">Prince Edward Island</option>
+                                                            <option value="QC">Quebec</option>
+                                                            <option value="SK">Saskatchewan</option>
+                                                            <option value="YT">Yukon</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium mb-1">Postal Code</label>
+                                                        <input type="text" name="postal_code" x-model="form.postal_code"
+                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                    </div>
+
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-sm font-medium mb-1">Notes</label>
+                                                    <textarea name="notes" rows="3" x-model="form.notes"
+                                                              class="w-full border border-gray-300 rounded-lg p-2 text-sm"></textarea>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex justify-end gap-3 px-6 py-4 border-t">
+                                                <button type="button" @click="editOpen = false"
+                                                        class="px-4 py-2 text-sm border rounded-lg">
+                                                    Cancel
+                                                </button>
+                                                <button type="submit"
+                                                        class="px-4 py-2 text-sm text-white bg-blue-700 rounded-lg hover:bg-blue-800">
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 
@@ -508,5 +638,38 @@
             filterJobSites();
             loadProjectManagers();
         });
+    </script>
+
+    <script>
+        const jobSiteData = @json($jobSiteCustomers->keyBy('id'));
+
+        function jobSiteEdit() {
+            return {
+                editOpen: false,
+                selectedId: '{{ old('job_site_customer_id', $opportunity->job_site_customer_id) }}',
+                editAction: '',
+                form: {
+                    name: '', company_name: '', email: '', phone: '', mobile: '',
+                    address: '', address2: '', city: '', province: '', postal_code: '', notes: ''
+                },
+                openEdit() {
+                    const site = jobSiteData[this.selectedId];
+                    if (!site) return;
+                    this.editAction = '/pages/job-sites/' + site.id;
+                    this.form.name          = site.name || '';
+                    this.form.company_name  = site.company_name || '';
+                    this.form.email         = site.email || '';
+                    this.form.phone         = site.phone || '';
+                    this.form.mobile        = site.mobile || '';
+                    this.form.address       = site.address || '';
+                    this.form.address2      = site.address2 || '';
+                    this.form.city          = site.city || '';
+                    this.form.province      = site.province || '';
+                    this.form.postal_code   = site.postal_code || '';
+                    this.form.notes         = site.notes || '';
+                    this.editOpen = true;
+                }
+            };
+        }
     </script>
 </x-app-layout>

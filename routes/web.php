@@ -59,97 +59,33 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
-// TEMP: Estimate UI mock preview
-Route::get('/admin/estimates/mock-create', function () {
-    $opportunityId = request('opportunity_id');
-
-    $opportunity = null;
-
-    if ($opportunityId) {
-        $opportunity = \App\Models\Opportunity::with([
-            'parentCustomer',
-            'jobSiteCustomer',
-            'projectManager',
-        ])->find($opportunityId);
+// Estimate API — tax group rate (used by estimate/sale edit JS)
+Route::get('estimates/api/tax-groups/{tax_group}/rate', function (int $tax_group) {
+    $rateCol = 'sales_rate';
+    foreach (['tax_rate_sales', 'sales_rate'] as $candidate) {
+        if (Schema::hasColumn('tax_rates', $candidate)) {
+            $rateCol = $candidate;
+            break;
+        }
     }
 
-    // Employees for Salesperson dropdowns
-    $employees = \App\Models\Employee::where('status', 'active')
-        ->orderBy('first_name')
-        ->get(['id', 'first_name']);
+    $taxes = \DB::table('tax_rate_group_items as tgi')
+        ->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
+        ->where('tgi.tax_rate_group_id', $tax_group)
+        ->selectRaw("tr.name as tax_name, tr.$rateCol as tax_rate_sales")
+        ->get();
 
-// ✅ Default Tax Group (NEW — add right here)
-$defaultTaxGroupId = \DB::table('default_tax')
-->orderByDesc('id')
-->value('tax_rate_group_id');
+    $rate     = (float) $taxes->sum('tax_rate_sales');
+    $group    = \DB::table('tax_rate_groups')->where('id', $tax_group)->first();
+    $groupName = (string) (($group->name ?? $group->group_name ?? $group->groupName ?? '') ?: 'Tax');
 
-
-// ✅ Tax Groups (for modal list) <---- ADD THIS RIGHT HERE
-$taxGroups = \DB::table('tax_rate_groups')
-    ->orderBy('name')
-    ->get();
-
-
-return view('admin.estimates.create', [
-    'opportunity' => $opportunity,
-    'employees'  => $employees,
-    'defaultTaxGroupId' => $defaultTaxGroupId,
-    'taxGroups' => $taxGroups,   // ✅ ADD THIS LINE
-]);
-	
-})->middleware(['auth', 'permission:create estimates']);
-
-// TEMP: Estimate mock API (permission-based, non-admin)
-Route::prefix('estimates/api')
-    ->middleware(['auth', 'permission:create estimates'])
-    ->group(function () {
-        Route::get('product-types', [\App\Http\Controllers\Admin\EstimateController::class, 'apiProductTypes']);
-        Route::get('manufacturers', [\App\Http\Controllers\Admin\EstimateController::class, 'apiManufacturers']);
-        Route::get('product-lines', [\App\Http\Controllers\Admin\EstimateController::class, 'apiProductLines']);
-        Route::get('styles', [\App\Http\Controllers\Admin\EstimateController::class, 'apiStyles']);
-		Route::get('product-lines/{product_line}/product-styles', [\App\Http\Controllers\Admin\ProductStyleController::class, 'index'])
-    ->middleware(['auth', 'permission:create estimates']);
-		
-// ✅ Labour Types (for estimate dropdown)
-Route::get('labour-types', [EstimateLabourTypeController::class, 'index']);
-
-// ✅ Labour Items (descriptions + unit for estimate dropdown)
-Route::get('labour-items', [\App\Http\Controllers\Api\EstimateLabourItemController::class, 'index']);
-		
-// Default Tax Group rate percent (sum of tax_rate_sales in the group)
-Route::get('tax-groups/{tax_group}/rate', function (int $tax_group) {
-// Detect the rate column safely
-$rateCol = 'sales_rate';
-foreach (['tax_rate_sales', 'sales_rate'] as $candidate) {
-if (Schema::hasColumn('tax_rates', $candidate)) {
-$rateCol = $candidate;
-break;
-}
-}
-
-
-$taxes = \DB::table('tax_rate_group_items as tgi')
-  ->join('tax_rates as tr', 'tr.id', '=', 'tgi.tax_rate_id')
-  ->where('tgi.tax_rate_group_id', $tax_group)
-  ->selectRaw("tr.name as tax_name, tr.$rateCol as tax_rate_sales")
-  ->get();
-
-$rate = (float) $taxes->sum('tax_rate_sales');
-
-$group = \DB::table('tax_rate_groups')
-  ->where('id', $tax_group)
-  ->first();
-
-$groupName = (string) (($group->name ?? $group->group_name ?? $group->groupName ?? '') ?: 'Tax');
-
-return response()->json([
-  'group_id' => $tax_group,
-  'group_name' => $groupName,
-  'tax_rate_percent' => $rate,
-  'taxes' => $taxes, // <-- critical for GST/PST split
-]);
-})->name('estimates.api.tax-groups.rate');
-});
+    return response()->json([
+        'group_id'         => $tax_group,
+        'group_name'       => $groupName,
+        'tax_rate_percent' => $rate,
+        'taxes'            => $taxes,
+    ]);
+})->middleware(['auth'])->name('estimates.api.tax-groups.rate');
 /*
 |--------------------------------------------------------------------------
 | Admin Area
@@ -191,6 +127,16 @@ Route::prefix('admin')
             Route::post('/settings/mail/test-user/{user}', [\App\Http\Controllers\Admin\MailSettingsController::class, 'testUserSend'])
                 ->name('settings.mail.test-user');
 
+            // Branding
+            Route::get('/settings/branding', [\App\Http\Controllers\Admin\BrandingController::class, 'show'])
+                ->name('settings.branding');
+            Route::put('/settings/branding', [\App\Http\Controllers\Admin\BrandingController::class, 'update'])
+                ->name('settings.branding.update');
+            Route::post('/settings/branding/logo', [\App\Http\Controllers\Admin\BrandingController::class, 'uploadLogo'])
+                ->name('settings.branding.upload-logo');
+            Route::delete('/settings/branding/logo', [\App\Http\Controllers\Admin\BrandingController::class, 'removeLogo'])
+                ->name('settings.branding.remove-logo');
+
             // Email templates (system/admin)
             Route::get('/settings/email-templates', [\App\Http\Controllers\Admin\AdminEmailTemplateController::class, 'index'])
                 ->name('settings.email-templates.index');
@@ -222,24 +168,7 @@ Route::prefix('admin')
                     ->name('gl_accounts.parent_accounts');
             });
 
-            // Estimates (admin-only for now)
-            Route::get('estimates', [EstimateController::class, 'index'])->name('estimates.index');
-            Route::post('estimates', [EstimateController::class, 'store'])->name('estimates.store');
-            Route::get('estimates/{estimate}/edit', [EstimateController::class, 'edit'])->name('estimates.edit');
-            Route::put('estimates/{estimate}', [EstimateController::class, 'update'])->name('estimates.update');
-			Route::get('estimates/api/product-types', [EstimateController::class, 'apiProductTypes'])
-				->name('estimates.api.product-types');
-			
-			Route::get('estimates/api/manufacturers', [EstimateController::class, 'apiManufacturers'])
-				->name('estimates.api.manufacturers');
-			
-			Route::get('estimates/api/product-lines', [EstimateController::class, 'apiProductLines'])
-				->name('estimates.api.product-lines');
-			
-			Route::get('estimates/api/styles', [EstimateController::class, 'apiStyles'])
-				->name('estimates.api.styles');
-			
-			//freight management
+            //freight management
 			Route::get('/freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'index'])
 			  ->name('freight_items.index');
 
@@ -248,44 +177,6 @@ Route::prefix('admin')
 
 			Route::put('/freight-items/{freightItem}', [\App\Http\Controllers\Admin\FreightItemController::class, 'update'])
 			  ->name('freight_items.update');
-			
-			Route::get('/estimates/api/freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'apiIndex'])
-				->name('estimates.api.freight-items');
-			
-			//added here
-			Route::get('estimates/create', function () {
-    $opportunityId = request('opportunity_id');
-
-    $opportunity = null;
-
-    if ($opportunityId) {
-        $opportunity = \App\Models\Opportunity::with([
-            'parentCustomer',
-            'jobSiteCustomer',
-            'projectManager',
-        ])->find($opportunityId);
-    }
-
-    $employees = \App\Models\Employee::where('status', 'active')
-        ->orderBy('first_name')
-        ->get(['id', 'first_name']);
-
-    $defaultTaxGroupId = \DB::table('default_tax')
-        ->orderByDesc('id')
-        ->value('tax_rate_group_id');
-
-    $taxGroups = \DB::table('tax_rate_groups')
-        ->orderBy('name')
-        ->get();
-
-    return view('admin.estimates.create', [
-        'opportunity' => $opportunity,
-        'employees'  => $employees,
-        'defaultTaxGroupId' => $defaultTaxGroupId,
-        'taxGroups' => $taxGroups,
-    ]);
-})->middleware(['auth', 'permission:create estimates'])
-  ->name('estimates.create');
 
         });
 
@@ -496,6 +387,34 @@ Route::prefix('pages')
 			->middleware('permission:create estimates')
 			->name('estimates.store');
 
+		Route::get('estimates/create', function () {
+			$opportunityId = request('opportunity_id');
+			$opportunity = null;
+			if ($opportunityId) {
+				$opportunity = \App\Models\Opportunity::with([
+					'parentCustomer',
+					'jobSiteCustomer',
+					'projectManager',
+				])->find($opportunityId);
+			}
+			$employees = \App\Models\Employee::where('status', 'active')
+				->orderBy('first_name')
+				->get(['id', 'first_name']);
+			$defaultTaxGroupId = \DB::table('default_tax')
+				->orderByDesc('id')
+				->value('tax_rate_group_id');
+			$taxGroups = \DB::table('tax_rate_groups')
+				->orderBy('name')
+				->get();
+			return view('admin.estimates.create', [
+				'opportunity'       => $opportunity,
+				'employees'         => $employees,
+				'defaultTaxGroupId' => $defaultTaxGroupId,
+				'taxGroups'         => $taxGroups,
+			]);
+		})->middleware('permission:create estimates')
+		  ->name('estimates.create');
+
 		Route::get('estimates/{estimate}/edit', [EstimateController::class, 'edit'])
 			->middleware('permission:create estimates')
 			->name('estimates.edit');
@@ -507,10 +426,21 @@ Route::prefix('pages')
 		Route::post('estimates/{estimate}/profits/save-costs', [EstimateController::class, 'saveProfitCosts'])
 			->name('estimates.profits.save-costs');
 
+		Route::get('estimates/{estimate}', [EstimateController::class, 'show'])
+			->middleware('permission:view estimates')
+			->name('estimates.show');
+
 		Route::post('estimates/{estimate}/send-email', [EstimateController::class, 'sendEmail'])
 			->middleware('permission:create estimates')
 			->name('estimates.send-email');
-		
+
+		Route::get('estimates/{estimate}/pdf', [EstimateController::class, 'previewPdf'])
+			->middleware('permission:view estimates')
+			->name('estimates.pdf');
+
+		Route::get('sales/{sale}/pdf', [\App\Http\Controllers\Pages\SaleController::class, 'previewPdf'])
+			->name('sales.pdf');
+
 		Route::post('sales/{sale}/profits/save-costs', [\App\Http\Controllers\Pages\SaleController::class, 'saveProfitCosts'])
 			->name('sales.profits.save-costs');
 		
@@ -519,50 +449,34 @@ Route::prefix('pages')
 
 		Route::get('sales/{sale}/profits', [\App\Http\Controllers\Pages\SaleController::class, 'showProfits'])
 			->name('sales.profits.show');
+
+		// Estimate API endpoints (used by estimate + sale edit pages)
+		Route::prefix('estimates/api')
+			->middleware('permission:create estimates')
+			->group(function () {
+				Route::get('product-types', [EstimateController::class, 'apiProductTypes'])
+					->name('estimates.api.product-types');
+				Route::get('manufacturers', [EstimateController::class, 'apiManufacturers'])
+					->name('estimates.api.manufacturers');
+				Route::get('product-lines', [EstimateController::class, 'apiProductLines'])
+					->name('estimates.api.product-lines');
+				Route::get('styles', [EstimateController::class, 'apiStyles'])
+					->name('estimates.api.styles');
+				Route::get('product-lines/{product_line}/product-styles', [\App\Http\Controllers\Admin\ProductStyleController::class, 'index'])
+					->name('estimates.api.product-styles');
+				Route::get('labour-types', [\App\Http\Controllers\Api\EstimateLabourTypeController::class, 'index'])
+					->name('estimates.api.labour-types');
+				Route::get('labour-items', [\App\Http\Controllers\Api\EstimateLabourItemController::class, 'index'])
+					->name('estimates.api.labour-items');
+				Route::get('freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'apiIndex'])
+					->name('estimates.api.freight-items');
+			});
 		
-		//added
-		Route::get('estimates/create', function () {
-    $opportunityId = request('opportunity_id');
-
-    $opportunity = null;
-
-    if ($opportunityId) {
-        $opportunity = \App\Models\Opportunity::with([
-            'parentCustomer',
-            'jobSiteCustomer',
-            'projectManager',
-        ])->find($opportunityId);
-    }
-
-    $employees = \App\Models\Employee::where('status', 'active')
-        ->orderBy('first_name')
-        ->get(['id', 'first_name']);
-
-    $defaultTaxGroupId = \DB::table('default_tax')
-        ->orderByDesc('id')
-        ->value('tax_rate_group_id');
-
-    $taxGroups = \DB::table('tax_rate_groups')
-        ->orderBy('name')
-        ->get();
-
-    return view('admin.estimates.create', [
-        'opportunity' => $opportunity,
-        'employees'  => $employees,
-        'defaultTaxGroupId' => $defaultTaxGroupId,
-        'taxGroups' => $taxGroups,
-    ]);
-})->middleware(['auth', 'permission:create estimates'])
-  ->name('estimates.create');
-
-
 		// Convert Estimate -> Sale
-Route::post('estimates/{estimate}/convert-to-sale', [\App\Http\Controllers\Admin\EstimateController::class, 'convertToSale'])
-  ->name('admin.estimates.convert-to-sale');
+		Route::post('estimates/{estimate}/convert-to-sale', [EstimateController::class, 'convertToSale'])
+			->middleware('permission:create estimates')
+			->name('estimates.convert-to-sale');
 
-Route::post('estimates/{estimate}/convert-to-sale', [\App\Http\Controllers\Admin\EstimateController::class, 'convertToSale'])
-  ->name('estimates.convert-to-sale');
-		
 		Route::get('sales/{sale}/edit', [\App\Http\Controllers\Pages\SaleController::class, 'edit'])
   ->name('sales.edit');
 		
@@ -579,42 +493,11 @@ Route::post('estimates/{estimate}/convert-to-sale', [\App\Http\Controllers\Admin
 			->name('sales.send-email');
 
 		
-		// (optional) if you want the mock UI under /pages instead of /admin
-		Route::get('estimates/mock-create', function () {
-			$opportunityId = request('opportunity_id');
-
-			$opportunity = null;
-
-			if ($opportunityId) {
-				$opportunity = \App\Models\Opportunity::with([
-					'parentCustomer',
-					'jobSiteCustomer',
-					'projectManager',
-				])->find($opportunityId);
-			}
-
-			$employees = \App\Models\Employee::where('status', 'active')
-				->orderBy('first_name')
-				->get(['id', 'first_name']);
-
-			$defaultTaxGroupId = \DB::table('default_tax')
-				->orderByDesc('id')
-				->value('tax_rate_group_id');
-
-			$taxGroups = \DB::table('tax_rate_groups')
-				->orderBy('name')
-				->get();
-
-			return view('admin.estimates.create', [
-				'opportunity' => $opportunity,
-				'employees'  => $employees,
-				'defaultTaxGroupId' => $defaultTaxGroupId,
-				'taxGroups' => $taxGroups,
-			]);
-		})->middleware(['auth', 'permission:create estimates'])->name('estimates.mock-create');
-
         Route::post('job-sites', [JobSiteCustomerController::class, 'store'])
             ->name('job-sites.store');
+
+        Route::patch('job-sites/{customer}', [JobSiteCustomerController::class, 'update'])
+            ->name('job-sites.update');
 
         Route::get('customers/{customer}/project-managers', [OpportunityController::class, 'projectManagersForCustomer'])
             ->name('customers.project-managers');

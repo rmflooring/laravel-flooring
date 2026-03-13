@@ -7,6 +7,7 @@ use App\Models\Sale;
 use App\Models\Employee;
 use App\Services\EmailTemplateService;
 use App\Services\GraphMailService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
@@ -92,7 +93,12 @@ class SaleController extends Controller
 	
 	public function show(Sale $sale)
 	{
-		$sale->load('sourceEstimate', 'salesperson1Employee');
+		$sale->load([
+			'sourceEstimate',
+			'salesperson1Employee',
+			'rooms' => fn($q) => $q->orderBy('sort_order'),
+			'rooms.items' => fn($q) => $q->where('is_removed', false)->orderBy('sort_order'),
+		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody'));
 	}
@@ -362,6 +368,17 @@ public function showProfits(Sale $sale)
     ]);
 }
 
+    public function previewPdf(Sale $sale)
+    {
+        $sale->loadMissing(['rooms.items', 'sourceEstimate']);
+        $pdf = Pdf::loadView('pdf.sale', compact('sale'));
+        $filename = 'Sale-' . ($sale->sale_number ?? $sale->id) . '.pdf';
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
+
     public function sendEmail(Request $request, Sale $sale)
     {
         $request->validate([
@@ -373,12 +390,19 @@ public function showProfits(Sale $sale)
         $user   = auth()->user();
         $mailer = app(GraphMailService::class);
 
+        $sale->loadMissing(['rooms.items', 'sourceEstimate']);
+        $pdfContent = Pdf::loadView('pdf.sale', compact('sale'))->output();
+        $attachment = [
+            'filename' => 'Sale-' . ($sale->sale_number ?? $sale->id) . '.pdf',
+            'content'  => base64_encode($pdfContent),
+        ];
+
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale')
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale');
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment);
         }
 
         if (! $sent) {

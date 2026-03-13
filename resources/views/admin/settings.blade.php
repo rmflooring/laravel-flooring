@@ -49,6 +49,9 @@
                         <a href="{{ route('pages.settings.integrations.microsoft.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Manage Calendar Settings
                         </a>
+                        <a href="{{ route('admin.settings.branding') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Branding
+                        </a>
                         <a href="{{ route('admin.settings.mail') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Mail Settings
                         </a>

@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-13 (session 2)
+Updated: 2026-03-13 (session 3)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -129,6 +129,62 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 ---
 
+## Estimates & Sales — completed this session (2026-03-13 session 3)
+
+### Route cleanup: admin → pages
+- All estimate routes moved from `/admin/estimates/` → `/pages/estimates/`
+- Estimate views still live in `resources/views/admin/estimates/` (no move needed)
+- All API endpoints now at `pages.estimates.api.*` (e.g. `pages.estimates.api.manufacturers`)
+- `estimates/create` route must appear BEFORE `estimates/{estimate}` in routes/web.php (static before wildcard)
+
+### Estimate/Sale JS API URLs fixed
+- `public/assets/js/estimates/estimate.js` — all `/estimates/api/` hardcoded paths updated to `/pages/estimates/api/`
+- `public/assets/js/sales/sale.js` — same fix
+- Both create + edit blades (`admin/estimates/create.blade.php`, `admin/estimates/edit.blade.php`, `pages/sales/edit.blade.php`) set `window.FM_CATALOG_*` vars using `route('pages.estimates.api.*')` named routes
+
+### Manufacturer query bug
+- `->where('manufacturer', '!=', '')` generates broken SQL in Laravel/MariaDB (`= '\!='`)
+- Fixed to `->where('manufacturer', '<>', '')` in `EstimateController::apiManufacturers` and `apiStyles`
+
+### Dropdown UX fix
+- All dropdowns (manufacturer, product-line/style, colour/product-style, freight) now show ALL available options when clicked/focused
+- Previously `applyFilter()` was called on open — this filtered to the selected value, showing only 1 option
+- Fixed to call `render(allItems)` on open; `applyFilter()` still fires on text input
+
+### PDF attachments on emails
+- `barryvdh/laravel-dompdf` installed and wired
+- `EstimateController::previewPdf()` and `SaleController::previewPdf()` — inline browser preview
+- Routes: `GET /pages/estimates/{estimate}/pdf` and `GET /pages/sales/{sale}/pdf`
+- PDF is auto-attached when sending estimate/sale email (base64 encoded via Graph API fileAttachment)
+- PDF templates: `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php`
+- Room headers: blue (`#1d4ed8`), logo: `height:100px; max-width:320px`
+
+### Admin branding settings
+- Route: `GET/PUT /admin/settings/branding`, `POST /admin/settings/branding/logo`
+- Controller: `app/Http/Controllers/Admin/BrandingController.php`
+- View: `resources/views/admin/settings/branding.blade.php`
+- Fields: company_name, tagline, street address, city, province, postal, phone, email, website, logo
+- Logo stored in `storage/public/branding/`, embedded as base64 data URI in PDFs
+- Settings stored in `app_settings` table as key/value with key prefix `branding_*`
+
+### Create estimate form
+- "Homeowner" label renamed to "Site Info"
+- Address split into: Street, City, Province, Postal Code (separate fields, pre-filled from job site customer)
+- Controller `buildJobAddress()` assembles them into `job_address` on save
+- Validation accepts `job_street`, `job_city`, `job_province`, `job_postal`
+
+### Job site edit on opportunity edit page
+- "Edit Job Site" button appears when a job site is selected
+- Opens Alpine.js modal pre-filled with child customer fields
+- Submits `PATCH /pages/job-sites/{customer}` → `JobSiteCustomerController::update()`
+- `$jobSiteCustomers` query in `OpportunityController::edit()` must select all address fields
+
+### Print buttons
+- Added to estimate edit + show pages (opens PDF preview in new tab)
+- Added to sale edit + show pages
+
+---
+
 ## Key file locations
 
 | What | Where |
@@ -148,6 +204,10 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 | Email portal | `resources/views/admin/settings/mail.blade.php` |
 | Profits page | `resources/views/pages/profits/show.blade.php` |
 | Estimate builder JS | `public/assets/js/estimates/estimate.js` |
+| Sale builder JS | `public/assets/js/sales/sale.js` |
+| PDF templates | `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php` |
+| Branding controller | `app/Http/Controllers/Admin/BrandingController.php` |
+| Branding settings view | `resources/views/admin/settings/branding.blade.php` |
 
 ---
 
@@ -161,6 +221,9 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 **To continue profits / cost tracking:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to improve the profits modal and sale-level cost rollups. One step at a time.
+
+**To continue estimates/sales work:**
+> Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to continue working on estimates and sales. One step at a time.
 
 **To start a fresh feature:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md, then tell me the current state of the system before we begin.

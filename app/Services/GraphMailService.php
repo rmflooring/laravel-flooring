@@ -61,6 +61,7 @@ class GraphMailService
         string $body,
         string $type = 'system',
         ?string $fromAddress = null,
+        ?array $attachment = null,
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -102,6 +103,15 @@ class GraphMailService
                     ['emailAddress' => ['address' => $replyTo]],
                 ],
             ];
+
+            if ($attachment) {
+                $message['attachments'] = [[
+                    '@odata.type'  => '#microsoft.graph.fileAttachment',
+                    'name'         => $attachment['filename'],
+                    'contentType'  => 'application/pdf',
+                    'contentBytes' => $attachment['content'],
+                ]];
+            }
 
             $response = Http::withToken($token)
                 ->acceptJson()
@@ -256,6 +266,7 @@ class GraphMailService
         string $subject,
         string $body,
         string $type = 'system',
+        ?array $attachment = null,
     ): bool {
         $token = $this->getUserToken($user);
 
@@ -281,6 +292,15 @@ class GraphMailService
                 ],
                 'toRecipients' => $recipients,
             ];
+
+            if ($attachment) {
+                $message['attachments'] = [[
+                    '@odata.type'  => '#microsoft.graph.fileAttachment',
+                    'name'         => $attachment['filename'],
+                    'contentType'  => 'application/pdf',
+                    'contentBytes' => $attachment['content'],
+                ]];
+            }
 
             $response = Http::withToken($token)
                 ->acceptJson()

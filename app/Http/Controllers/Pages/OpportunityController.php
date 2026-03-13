@@ -115,7 +115,7 @@ if ($request->filled('project_manager_id')) {
     // Job sites = child customers
     $jobSiteCustomers = Customer::whereNotNull('parent_id')
         ->orderBy('name')
-        ->get(['id', 'parent_id', 'company_name', 'name']);
+        ->get(['id', 'parent_id', 'company_name', 'name', 'email', 'phone', 'mobile', 'address', 'address2', 'city', 'province', 'postal_code', 'notes']);
 
     // Project Managers
     $projectManagers = ProjectManager::orderBy('name')
@@ -210,7 +210,7 @@ $employees = Employee::query()
     // Job sites = child customers
     $jobSiteCustomers = Customer::whereNotNull('parent_id')
         ->orderBy('name')
-        ->get(['id', 'parent_id', 'company_name', 'name']);
+        ->get(['id', 'parent_id', 'company_name', 'name', 'email', 'phone', 'mobile', 'address', 'address2', 'city', 'province', 'postal_code', 'notes']);
 
     // Project Managers (same as create; JS will filter by parent)
     $projectManagers = ProjectManager::orderBy('name')

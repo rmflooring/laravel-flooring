@@ -1,6 +1,6 @@
 <x-admin-layout>
     <div class="py-6">
-	<form method="POST" action="{{ route('admin.estimates.store') }}">
+	<form method="POST" action="{{ route('pages.estimates.store') }}">
     @csrf
 		<input type="hidden" name="opportunity_id" value="{{ $opportunity?->id }}">
 		<input type="hidden" name="status" value="draft">
@@ -116,7 +116,7 @@
                         </div>
 
                         <div class="border-t pt-4">
-                            <h3 class="text-sm font-semibold text-gray-900 mb-3">Homeowner</h3>
+                            <h3 class="text-sm font-semibold text-gray-900 mb-3">Site Info</h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -124,7 +124,7 @@
                                     <input type="text" name="homeowner_name"
                                             value="{{ $opportunity?->jobSiteCustomer?->name ?: $opportunity?->jobSiteCustomer?->company_name }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                                        placeholder="Homeowner Name">
+                                        placeholder="Site Contact Name">
                                 </div>
 
                                 <div>
@@ -143,9 +143,39 @@
                                         placeholder="email@example.com">
                                 </div>
 
+                                @php $site = $opportunity?->jobSiteCustomer; @endphp
+
                                 <div class="md:col-span-2">
-                                    <label class="block mb-1 text-sm font-medium text-gray-700">Job Address</label>
-                                    <textarea name="job_address" rows="3"    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Full job address">{{ $opportunity?->jobSiteCustomer?->address }}</textarea>
+                                    <label class="block mb-1 text-sm font-medium text-gray-700">Street Address</label>
+                                    <input type="text" name="job_street"
+                                        value="{{ trim(collect([$site?->address, $site?->address2])->filter()->implode(', ')) }}"
+                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                        placeholder="123 Main St">
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-medium text-gray-700">City</label>
+                                    <input type="text" name="job_city"
+                                        value="{{ $site?->city }}"
+                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                        placeholder="City">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block mb-1 text-sm font-medium text-gray-700">Province</label>
+                                        <input type="text" name="job_province"
+                                            value="{{ $site?->province }}"
+                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                            placeholder="AB">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-1 text-sm font-medium text-gray-700">Postal Code</label>
+                                        <input type="text" name="job_postal"
+                                            value="{{ $site?->postal_code }}"
+                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                            placeholder="T2A 1B3">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -714,11 +744,11 @@
 
 <script>
   // Neutral (shared) endpoints for both Estimates + Sales
-  window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('admin.estimates.api.product-types') }}";
-  window.FM_CATALOG_MANUFACTURERS_URL = "/estimates/api/manufacturers";
-  window.FM_CATALOG_PRODUCT_STYLES_URL = "/product-lines";
-  window.FM_CATALOG_FREIGHT_ITEMS_URL = "{{ route('admin.estimates.api.freight-items') }}";
-  window.FM_CATALOG_LABOUR_TYPES_URL = "/estimates/api/labour-types";
+  window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('pages.estimates.api.product-types') }}";
+  window.FM_CATALOG_MANUFACTURERS_URL = "{{ route('pages.estimates.api.manufacturers') }}";
+  window.FM_CATALOG_PRODUCT_STYLES_URL = "{{ route('pages.estimates.api.product-lines') }}";
+  window.FM_CATALOG_FREIGHT_ITEMS_URL = "{{ route('pages.estimates.api.freight-items') }}";
+  window.FM_CATALOG_LABOUR_TYPES_URL = "{{ route('pages.estimates.api.labour-types') }}";
   window.FM_TAX_GROUP_RATE_URL_TEMPLATE =
     "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
 </script>

@@ -12,7 +12,7 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <a href="{{ url('/admin/estimates/create') }}"
+                    <a href="{{ route('pages.estimates.create') }}"
                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
                         + Create Estimate
                     </a>
@@ -27,7 +27,7 @@
             @endif
 
             {{-- Filters / Search --}}
-            <form method="GET" action="{{ route('admin.estimates.index') }}" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <form method="GET" action="{{ route('pages.estimates.index') }}" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 
                     {{-- Search --}}
@@ -78,7 +78,7 @@
                             Apply Filters
                         </button>
 
-                        <a href="{{ route('admin.estimates.index') }}"
+                        <a href="{{ route('pages.estimates.index') }}"
                            class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
                             Reset
                         </a>
@@ -139,16 +139,22 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-right font-medium text-gray-900">
-                                        {{ number_format((float) ($estimate->grand_amount ?? 0), 2) }}
+                                        ${{ number_format((float) ($estimate->grand_total ?? 0), 2) }}
                                     </td>
                                     <td class="px-6 py-4 text-gray-600">
                                         {{ optional($estimate->created_at)->format('Y-m-d') }}
                                     </td>
                                     <td class="px-6 py-4 text-right">
-                                        <a href="{{ route('pages.estimates.edit', $estimate->id) }}"
-                                           class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300">
-                                            Edit
-                                        </a>
+                                        <div class="flex items-center justify-end gap-2">
+                                            <a href="{{ route('pages.estimates.show', $estimate->id) }}"
+                                               class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
+                                                View
+                                            </a>
+                                            <a href="{{ route('pages.estimates.edit', $estimate->id) }}"
+                                               class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300">
+                                                Edit
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty

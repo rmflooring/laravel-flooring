@@ -1,7 +1,7 @@
 <x-admin-layout>
 
     <div class="py-6">
-	<form method="POST" action="{{ route('admin.estimates.update', $estimate) }}">
+	<form method="POST" action="{{ route('pages.estimates.update', $estimate) }}">
 	  @csrf
 	  @method('PUT')
 
@@ -37,6 +37,13 @@
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800 focus:outline-none focus:ring-4 focus:ring-purple-300">
   Send Email
 </button>
+<a href="{{ route('pages.estimates.pdf', $estimate) }}" target="_blank"
+   class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"/>
+    </svg>
+    Print
+</a>
 		<a href="{{ route('pages.estimates.profits.show', $estimate->id) }}"
   class="relative z-10 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
   <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -1807,11 +1814,11 @@
 
 <script>
   // Neutral (shared) endpoints for both Estimates + Sales
-  window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('admin.estimates.api.product-types') }}";
-  window.FM_CATALOG_MANUFACTURERS_URL = "/estimates/api/manufacturers";
-  window.FM_CATALOG_PRODUCT_STYLES_URL = "/product-lines";
-  window.FM_CATALOG_FREIGHT_ITEMS_URL = "{{ route('admin.estimates.api.freight-items') }}";
-  window.FM_CATALOG_LABOUR_TYPES_URL = "/estimates/api/labour-types";
+  window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('pages.estimates.api.product-types') }}";
+  window.FM_CATALOG_MANUFACTURERS_URL = "{{ route('pages.estimates.api.manufacturers') }}";
+  window.FM_CATALOG_PRODUCT_STYLES_URL = "{{ route('pages.estimates.api.product-lines') }}";
+  window.FM_CATALOG_FREIGHT_ITEMS_URL = "{{ route('pages.estimates.api.freight-items') }}";
+  window.FM_CATALOG_LABOUR_TYPES_URL = "{{ route('pages.estimates.api.labour-types') }}";
   window.FM_TAX_GROUP_RATE_URL_TEMPLATE =
     "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
 </script>
@@ -1866,6 +1873,18 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
                     <textarea name="body" rows="10"
                               class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm font-mono">{{ $emailBody }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Attachment</label>
+                    <a href="{{ route('pages.estimates.pdf', $estimate) }}" target="_blank"
+                       class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                        <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Estimate-{{ $estimate->estimate_number ?? $estimate->id }}.pdf</span>
+                        <span class="text-xs text-gray-400 ml-1">— click to preview</span>
+                    </a>
                 </div>
 
                 <p class="text-xs text-gray-400">
