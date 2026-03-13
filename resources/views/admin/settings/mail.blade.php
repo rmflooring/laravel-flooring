@@ -175,6 +175,7 @@
                                     <th class="px-4 py-3">To</th>
                                     <th class="px-4 py-3">Subject</th>
                                     <th class="px-4 py-3">Type</th>
+                                    <th class="px-4 py-3">Track</th>
                                     <th class="px-4 py-3">Status</th>
                                 </tr>
                             </thead>
@@ -192,6 +193,19 @@
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                                                 {{ $log->type }}
                                             </span>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            @if (($log->track ?? 1) == 2)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+                                                      title="Sent from: {{ $log->sent_from }}">
+                                                    Track 2 — {{ $log->sent_from ?? 'personal' }}
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                                                      title="Sent from: {{ $log->sent_from }}">
+                                                    Track 1 — shared
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3 whitespace-nowrap">
                                             @if ($log->status === 'sent')
@@ -217,10 +231,10 @@
                     <div class="flex items-center gap-2">
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">Track 2</span>
                         <h2 class="text-sm font-semibold text-gray-800 dark:text-white">Per-User MS365 Accounts — Customer-Facing Email</h2>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">Coming Soon</span>
                     </div>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Each staff member can connect their personal MS365 account to send customer-facing emails (estimates, invoices) from their own address. OAuth delegated flow — coming in a future update.
+                        Connect each staff member's personal MS365 account so customer-facing emails (estimates, invoices) are sent from their own @rmflooring.ca address and appear in their Sent folder.
+                        Admin clicks <strong>Connect</strong> for each user and completes the Microsoft login for that user's account.
                     </p>
                 </div>
 
@@ -230,14 +244,17 @@
                             <tr>
                                 <th class="px-4 py-3">User</th>
                                 <th class="px-4 py-3">MS365 Account</th>
-                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Mail Status</th>
                                 <th class="px-4 py-3">Connected</th>
                                 <th class="px-4 py-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach ($users as $user)
-                                @php $account = $user->microsoftAccount; @endphp
+                                @php
+                                    $account      = $user->microsoftAccount;
+                                    $mailConnected = $account && $account->mail_connected;
+                                @endphp
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                     <td class="px-4 py-3">
                                         <div class="font-medium text-gray-800 dark:text-white">{{ $user->name }}</div>
@@ -247,22 +264,42 @@
                                         {{ $account?->email ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        @if ($account && $account->is_connected)
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">Connected</span>
+                                        @if ($mailConnected)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                                                Connected
+                                            </span>
+                                        @elseif ($account && $account->is_connected)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+                                                  title="Calendar is connected but mail scope has not been granted. Click Connect to add mail access.">
+                                                Calendar only
+                                            </span>
                                         @else
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Not Connected</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                                Not Connected
+                                            </span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $account?->connected_at?->format('M j, Y') ?? '—' }}
+                                        {{ $account?->mail_connected_at?->format('M j, Y') ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        <button type="button"
-                                                disabled
-                                                title="Track 2 email — coming soon"
-                                                class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed opacity-60 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600">
-                                            Disconnect
-                                        </button>
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ route('admin.settings.mail.connect', $user->id) }}"
+                                               class="px-3 py-1.5 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700">
+                                                {{ $mailConnected ? 'Reconnect' : 'Connect' }}
+                                            </a>
+                                            @if ($mailConnected)
+                                                <form method="POST"
+                                                      action="{{ route('admin.settings.mail.disconnect', $user->id) }}"
+                                                      onsubmit="return confirm('Disconnect mail for {{ addslashes($user->name) }}? They will fall back to the shared mailbox until reconnected.')">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="px-3 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-red-600 dark:hover:bg-red-900/20">
+                                                        Disconnect
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach

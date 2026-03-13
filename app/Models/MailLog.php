@@ -13,6 +13,8 @@ class MailLog extends Model
         'subject',
         'status',
         'type',
+        'track',
+        'sent_from',
         'error',
     ];
 }

@@ -4,11 +4,16 @@ namespace App\Services;
 
 use App\Models\MailLog;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GraphMailService
 {
+    // =========================================================================
+    // Track 1 — Shared Mailbox (app-level client credentials)
+    // =========================================================================
+
     /**
      * Obtain an app-level access token via the client credentials grant.
      * No user is involved — uses the Azure app registration credentials only.
@@ -41,7 +46,7 @@ class GraphMailService
     }
 
     /**
-     * Send an email via Microsoft Graph using the shared mailbox.
+     * Send an email via Microsoft Graph using the shared mailbox (Track 1).
      *
      * @param  string|array  $to           Single address or array of addresses
      * @param  string        $subject
@@ -98,17 +103,15 @@ class GraphMailService
                 ],
             ];
 
-            $payload = [
-                'message'         => $message,
-                'saveToSentItems' => true,
-            ];
-
             $response = Http::withToken($token)
                 ->acceptJson()
-                ->post("https://graph.microsoft.com/v1.0/users/{$from}/sendMail", $payload);
+                ->post("https://graph.microsoft.com/v1.0/users/{$from}/sendMail", [
+                    'message'         => $message,
+                    'saveToSentItems' => true,
+                ]);
 
             if ($response->successful()) {
-                Log::info('[GraphMail] Email sent', [
+                Log::info('[GraphMail] Track 1 email sent', [
                     'from'    => $from,
                     'to'      => $to,
                     'subject' => $subject,
@@ -116,10 +119,12 @@ class GraphMailService
 
                 foreach ((array) $to as $address) {
                     MailLog::create([
-                        'to'      => $address,
-                        'subject' => $subject,
-                        'status'  => 'sent',
-                        'type'    => $type,
+                        'to'        => $address,
+                        'subject'   => $subject,
+                        'status'    => 'sent',
+                        'type'      => $type,
+                        'track'     => 1,
+                        'sent_from' => $from,
                     ]);
                 }
 
@@ -128,7 +133,7 @@ class GraphMailService
 
             $errorBody = $response->body();
 
-            Log::error('[GraphMail] Send failed', [
+            Log::error('[GraphMail] Track 1 send failed', [
                 'from'    => $from,
                 'to'      => $to,
                 'subject' => $subject,
@@ -138,18 +143,20 @@ class GraphMailService
 
             foreach ((array) $to as $address) {
                 MailLog::create([
-                    'to'      => $address,
-                    'subject' => $subject,
-                    'status'  => 'failed',
-                    'type'    => $type,
-                    'error'   => $errorBody,
+                    'to'        => $address,
+                    'subject'   => $subject,
+                    'status'    => 'failed',
+                    'type'      => $type,
+                    'track'     => 1,
+                    'sent_from' => $from,
+                    'error'     => $errorBody,
                 ]);
             }
 
             return false;
 
         } catch (\Throwable $e) {
-            Log::error('[GraphMail] Exception during send', [
+            Log::error('[GraphMail] Track 1 exception during send', [
                 'from'    => $from ?? '?',
                 'to'      => $to,
                 'subject' => $subject,
@@ -158,11 +165,194 @@ class GraphMailService
 
             foreach ((array) $to as $address) {
                 MailLog::create([
-                    'to'      => $address,
-                    'subject' => $subject,
-                    'status'  => 'failed',
-                    'type'    => $type,
-                    'error'   => $e->getMessage(),
+                    'to'        => $address,
+                    'subject'   => $subject,
+                    'status'    => 'failed',
+                    'type'      => $type,
+                    'track'     => 1,
+                    'sent_from' => $from ?? null,
+                    'error'     => $e->getMessage(),
+                ]);
+            }
+
+            return false;
+        }
+    }
+
+    // =========================================================================
+    // Track 2 — Per-User Delegated Token
+    // =========================================================================
+
+    /**
+     * Get a valid access token for the user's personal MS365 account.
+     * Refreshes automatically if expired.
+     * Returns null (and marks mail_connected=false) if the token cannot be refreshed.
+     */
+    public function getUserToken(User $user): ?string
+    {
+        $account = $user->microsoftAccount;
+
+        if (! $account || ! $account->mail_connected || ! $account->refresh_token) {
+            return null;
+        }
+
+        // Token still valid
+        if ($account->token_expires_at && now()->lt($account->token_expires_at)) {
+            return $account->access_token;
+        }
+
+        // Token expired — attempt refresh
+        $tenantId = config('services.microsoft.tenant_id');
+
+        $response = Http::asForm()->post(
+            "https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/token",
+            [
+                'client_id'     => config('services.microsoft.client_id'),
+                'client_secret' => config('services.microsoft.client_secret'),
+                'grant_type'    => 'refresh_token',
+                'refresh_token' => $account->refresh_token,
+                'scope'         => 'offline_access User.Read Mail.Send',
+            ]
+        );
+
+        if (! $response->successful()) {
+            Log::warning('[GraphMail] Track 2 token refresh failed — marking mail disconnected', [
+                'user_id'    => $user->id,
+                'account_id' => $account->id,
+                'status'     => $response->status(),
+            ]);
+
+            $account->update(['mail_connected' => false]);
+            return null;
+        }
+
+        $token = $response->json();
+
+        $account->update([
+            'access_token'      => $token['access_token'],
+            'refresh_token'     => $token['refresh_token'] ?? $account->refresh_token,
+            'token_expires_at'  => now()->addSeconds((int) ($token['expires_in'] ?? 3600) - 60),
+        ]);
+
+        Log::info('[GraphMail] Track 2 token refreshed', ['user_id' => $user->id]);
+
+        return $token['access_token'];
+    }
+
+    /**
+     * Send an email using the user's personal MS365 delegated token (Track 2).
+     * Email appears in their personal Sent folder and arrives from their @rmflooring.ca address.
+     *
+     * @param  User          $user     The sending user
+     * @param  string|array  $to       Single address or array of addresses
+     * @param  string        $subject
+     * @param  string        $body     Plain text body
+     * @param  string        $type     Log type label
+     * @return bool
+     */
+    public function sendAsUser(
+        User $user,
+        string|array $to,
+        string $subject,
+        string $body,
+        string $type = 'system',
+    ): bool {
+        $token = $this->getUserToken($user);
+
+        if (! $token) {
+            Log::warning('[GraphMail] Track 2 sendAsUser: no valid token for user', [
+                'user_id' => $user->id,
+            ]);
+            return false;
+        }
+
+        $senderEmail = $user->microsoftAccount?->email ?? $user->email;
+
+        $recipients = collect((array) $to)->map(fn ($address) => [
+            'emailAddress' => ['address' => $address],
+        ])->values()->all();
+
+        try {
+            $message = [
+                'subject' => $subject,
+                'body'    => [
+                    'contentType' => 'Text',
+                    'content'     => $body,
+                ],
+                'toRecipients' => $recipients,
+            ];
+
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->post('https://graph.microsoft.com/v1.0/me/sendMail', [
+                    'message'         => $message,
+                    'saveToSentItems' => true,
+                ]);
+
+            if ($response->successful()) {
+                Log::info('[GraphMail] Track 2 email sent', [
+                    'user_id'  => $user->id,
+                    'from'     => $senderEmail,
+                    'to'       => $to,
+                    'subject'  => $subject,
+                ]);
+
+                foreach ((array) $to as $address) {
+                    MailLog::create([
+                        'to'        => $address,
+                        'subject'   => $subject,
+                        'status'    => 'sent',
+                        'type'      => $type,
+                        'track'     => 2,
+                        'sent_from' => $senderEmail,
+                    ]);
+                }
+
+                return true;
+            }
+
+            $errorBody = $response->body();
+
+            Log::error('[GraphMail] Track 2 send failed', [
+                'user_id' => $user->id,
+                'from'    => $senderEmail,
+                'to'      => $to,
+                'subject' => $subject,
+                'status'  => $response->status(),
+                'body'    => $errorBody,
+            ]);
+
+            foreach ((array) $to as $address) {
+                MailLog::create([
+                    'to'        => $address,
+                    'subject'   => $subject,
+                    'status'    => 'failed',
+                    'type'      => $type,
+                    'track'     => 2,
+                    'sent_from' => $senderEmail,
+                    'error'     => $errorBody,
+                ]);
+            }
+
+            return false;
+
+        } catch (\Throwable $e) {
+            Log::error('[GraphMail] Track 2 exception during sendAsUser', [
+                'user_id' => $user->id,
+                'to'      => $to,
+                'subject' => $subject,
+                'error'   => $e->getMessage(),
+            ]);
+
+            foreach ((array) $to as $address) {
+                MailLog::create([
+                    'to'        => $address,
+                    'subject'   => $subject,
+                    'status'    => 'failed',
+                    'type'      => $type,
+                    'track'     => 2,
+                    'sent_from' => $senderEmail ?? null,
+                    'error'     => $e->getMessage(),
                 ]);
             }
 

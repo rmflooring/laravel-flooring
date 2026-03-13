@@ -181,6 +181,14 @@ Route::prefix('admin')
             Route::post('/settings/mail/test', [\App\Http\Controllers\Admin\MailSettingsController::class, 'testSend'])
                 ->name('settings.mail.test');
 
+            // Track 2 — per-user MS365 mail OAuth (admin-initiated on behalf of a user)
+            Route::get('/settings/mail/connect/{user}', [\App\Http\Controllers\Admin\AdminMicrosoftMailConnectController::class, 'redirect'])
+                ->name('settings.mail.connect');
+            Route::get('/settings/mail/callback', [\App\Http\Controllers\Admin\AdminMicrosoftMailConnectController::class, 'callback'])
+                ->name('settings.mail.callback');
+            Route::post('/settings/mail/disconnect/{user}', [\App\Http\Controllers\Admin\AdminMicrosoftMailConnectController::class, 'disconnect'])
+                ->name('settings.mail.disconnect');
+
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);
 

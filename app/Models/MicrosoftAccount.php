@@ -20,6 +20,8 @@ class MicrosoftAccount extends Model
         'is_connected',
         'connected_at',
         'disconnected_at',
+        'mail_connected',
+        'mail_connected_at',
     ];
 
     protected $casts = [
@@ -28,12 +30,14 @@ class MicrosoftAccount extends Model
         'refresh_token' => 'encrypted',
 
         // Dates
-        'token_expires_at' => 'datetime',
-        'connected_at'     => 'datetime',
-        'disconnected_at'  => 'datetime',
+        'token_expires_at'  => 'datetime',
+        'connected_at'      => 'datetime',
+        'disconnected_at'   => 'datetime',
+        'mail_connected_at' => 'datetime',
 
-        // Boolean
-        'is_connected' => 'boolean',
+        // Booleans
+        'is_connected'   => 'boolean',
+        'mail_connected' => 'boolean',
     ];
 
     public function user(): BelongsTo
