@@ -178,6 +178,8 @@ Route::prefix('admin')
                 ->name('settings.mail');
             Route::post('/settings/mail', [\App\Http\Controllers\Admin\MailSettingsController::class, 'update'])
                 ->name('settings.mail.update');
+            Route::post('/settings/mail/test', [\App\Http\Controllers\Admin\MailSettingsController::class, 'testSend'])
+                ->name('settings.mail.test');
 
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);

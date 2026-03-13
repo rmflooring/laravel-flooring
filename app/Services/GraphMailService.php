@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\MailLog;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -45,22 +46,32 @@ class GraphMailService
      * @param  string|array  $to           Single address or array of addresses
      * @param  string        $subject
      * @param  string        $body         Plain text body
+     * @param  string        $type         Log type label (rfm_notification, test, etc.)
      * @param  string|null   $fromAddress  Overrides the configured shared mailbox address
-     * @param  string|null   $fromName     Display name shown in the From field
-     * @param  string|null   $replyTo      Address replies are directed to
      * @return bool
      */
     public function send(
         string|array $to,
         string $subject,
         string $body,
+        string $type = 'system',
         ?string $fromAddress = null,
-        ?string $fromName = null,
-        ?string $replyTo = null,
     ): bool {
-        $from = $fromAddress
+        // Respect the global notifications toggle
+        if (! Setting::get('mail_notifications_enabled', '1')) {
+            Log::info('[GraphMail] Notifications disabled — skipping send', [
+                'to'      => $to,
+                'subject' => $subject,
+            ]);
+            return false;
+        }
+
+        $from     = $fromAddress
             ?? Setting::get('mail_from_address')
-            ?? config('services.microsoft.mail_from_address', 'team@rmflooring.ca');
+            ?? config('services.microsoft.mail_from_address', 'reception@rmflooring.ca');
+
+        $fromName = Setting::get('mail_from_name', 'RM Flooring Notifications');
+        $replyTo  = Setting::get('mail_reply_to', 'noreply@rmflooring.ca');
 
         $recipients = collect((array) $to)->map(fn ($address) => [
             'emailAddress' => ['address' => $address],
@@ -76,19 +87,16 @@ class GraphMailService
                     'content'     => $body,
                 ],
                 'toRecipients' => $recipients,
-                'from' => [
+                'from'         => [
                     'emailAddress' => array_filter([
                         'address' => $from,
                         'name'    => $fromName,
                     ]),
                 ],
-            ];
-
-            if ($replyTo) {
-                $message['replyTo'] = [
+                'replyTo' => [
                     ['emailAddress' => ['address' => $replyTo]],
-                ];
-            }
+                ],
+            ];
 
             $payload = [
                 'message'         => $message,
@@ -105,25 +113,59 @@ class GraphMailService
                     'to'      => $to,
                     'subject' => $subject,
                 ]);
+
+                foreach ((array) $to as $address) {
+                    MailLog::create([
+                        'to'      => $address,
+                        'subject' => $subject,
+                        'status'  => 'sent',
+                        'type'    => $type,
+                    ]);
+                }
+
                 return true;
             }
+
+            $errorBody = $response->body();
 
             Log::error('[GraphMail] Send failed', [
                 'from'    => $from,
                 'to'      => $to,
                 'subject' => $subject,
                 'status'  => $response->status(),
-                'body'    => $response->body(),
+                'body'    => $errorBody,
             ]);
+
+            foreach ((array) $to as $address) {
+                MailLog::create([
+                    'to'      => $address,
+                    'subject' => $subject,
+                    'status'  => 'failed',
+                    'type'    => $type,
+                    'error'   => $errorBody,
+                ]);
+            }
+
             return false;
 
         } catch (\Throwable $e) {
             Log::error('[GraphMail] Exception during send', [
-                'from'    => $from,
+                'from'    => $from ?? '?',
                 'to'      => $to,
                 'subject' => $subject,
                 'error'   => $e->getMessage(),
             ]);
+
+            foreach ((array) $to as $address) {
+                MailLog::create([
+                    'to'      => $address,
+                    'subject' => $subject,
+                    'status'  => 'failed',
+                    'type'    => $type,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
+
             return false;
         }
     }
