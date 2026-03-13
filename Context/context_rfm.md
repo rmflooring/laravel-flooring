@@ -1,6 +1,6 @@
 # RFM Module Context — RM Flooring / Floor Manager
 
-Updated: 2026-03-12 (session 2)
+Updated: 2026-03-13
 
 ---
 
@@ -26,6 +26,8 @@ One opportunity can have multiple RFMs (e.g. re-schedules, or multiple site visi
 | `resources/views/pages/rfms/create.blade.php` | Create RFM form |
 | `resources/views/pages/rfms/edit.blade.php` | Edit RFM form |
 | `resources/views/pages/rfms/show.blade.php` | Read-only RFM detail view |
+| `app/Mail/RfmCreatedMail.php` | Create notification — estimator (detailed) + PM (customer-facing) |
+| `app/Mail/RfmUpdatedMail.php` | Update notification — estimator (change diff + full details) + PM (clean summary) |
 | `database/migrations/2026_03_12_190221_create_rfms_table.php` | Initial rfms table |
 | `database/migrations/2026_03_12_193228_change_flooring_type_to_json_in_rfms_table.php` | Changed flooring_type from string to JSON |
 | `database/migrations/2026_03_12_215426_add_site_city_and_postal_to_rfms_table.php` | Added site_city and site_postal_code columns |
@@ -37,6 +39,10 @@ One opportunity can have multiple RFMs (e.g. re-schedules, or multiple site visi
 | `resources/views/pages/opportunities/show.blade.php` | Added RFM section (table + status dropdown + View/Edit links); fixed full address display for Parent Customer and Job Site Customer; renamed "RFQ's" column to "RFM's" in Job Transactions card with linked RFM entries |
 | `database/seeders/PermissionsSeeder.php` | Added `view rfms`, `create rfms`, `edit rfms` permissions |
 | `database/seeders/RolesSeeder.php` | Assigned RFM permissions to roles |
+| `app/Http/Controllers/Pages/RfmController.php` | Added notify flags to store(); added change snapshotting + RfmUpdatedMail dispatch to update(); email field added to estimator queries |
+| `app/Mail/RfmCreatedMail.php` | Added `$notifyEstimator`/`$notifyPm` params; split into distinct estimator (detailed) and PM (customer-facing) email bodies |
+| `resources/views/pages/rfms/create.blade.php` | Added Notifications section with estimator (default ON) and PM (default OFF) checkboxes; live JS hint shows estimator email on dropdown select |
+| `resources/views/pages/rfms/edit.blade.php` | Restructured to single `<form>` (address fields were outside the form — now fixed); added Notifications section; JS auto-checks estimator box when key fields change |
 
 ---
 
@@ -124,6 +130,24 @@ Layout has two sections:
 
 **Special Instructions** — full-width textarea
 
+**Notifications** section (bottom of form):
+- **Create form:** "Notify estimator" (default ON) + "Notify Project Manager" (default OFF). Live JS hint shows estimator's email as you select from the dropdown. PM checkbox disabled with a note if no PM email exists on the opportunity.
+- **Edit form:** "Notify estimator about this change" (auto-checked by JS when `scheduled_at`, `estimator_id`, `site_address`, `site_city`, or `site_postal_code` change from their original values) + "Notify Project Manager about this change" (always default OFF). Both show target email as a hint.
+
+> **Edit form structure note:** The address fields (`site_address`, `site_city`, `site_postal_code`) are inside the main `<form>`. This was fixed — they were previously outside the form and not being submitted.
+
+### Email content
+
+**Estimator emails** (both create and update) are detailed and internal:
+- Create: full job details, site address, flooring types, special instructions, link to RFM
+- Update: "CHANGES" block showing old → new for each affected field, then full current details + link
+
+**PM emails** are clean and customer-facing:
+- Create: greeting by name, measurement date/time, location, estimator name, access reminder
+- Update: same format as create but with "updated" messaging — no diff shown, no internal jargon
+
+Both email types use `GraphMailService` (Track 1 shared mailbox) with `type: 'rfm_notification'`.
+
 ### show.blade.php
 Read-only view of all RFM fields. Layout mirrors create/edit Job Info structure. Includes:
 - Status badge
@@ -182,6 +206,9 @@ When an RFM is **created** (`store`), the controller attempts (best-effort — n
 - [x] Permissions seeded and assigned to all roles
 - [x] Job Transactions card on opportunity show page — "RFQ's" renamed to "RFM's", RFMs listed as clickable date links with status badges linking to show page
 - [x] Calendar event modal on RFM show page — clickable link with estimator name (first name + last initial) and scheduled date/time, opens event details modal
+- [x] Email notifications on create — checkbox-driven: estimator (default ON, detailed internal email), PM (default OFF, clean customer-facing email)
+- [x] Email notifications on edit — checkbox-driven: estimator (auto-checked when key fields change, shows change diff), PM (always default OFF, clean summary)
+- [x] Edit form restructured — address fields now inside the main form (previously outside and not submitted)
 
 ---
 
@@ -193,8 +220,7 @@ When an RFM is **created** (`store`), the controller attempts (best-effort — n
 
 ### Medium priority
 3. **Delete route** — currently there is no way to delete an RFM through the UI.
-4. **Notification/reminder** — optionally notify the assigned estimator when an RFM is created or updated.
-5. **RFM → Estimate link** — once a measure is completed, there should be a path to create an estimate directly from the RFM (pre-filling job/customer info).
+4. **RFM → Estimate link** — once a measure is completed, there should be a path to create an estimate directly from the RFM (pre-filling job/customer info).
 
 ### Low priority
 6. **Province/state field** — address currently has street, city, postal code but no province. May be needed for completeness.

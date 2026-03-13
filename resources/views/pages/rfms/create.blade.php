@@ -182,6 +182,55 @@
                         @enderror
                     </div>
 
+                    {{-- Notifications --}}
+                    <div class="p-6">
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Notifications</h2>
+                        <p class="text-xs text-gray-400 mb-4">Choose who to notify when this RFM is created.</p>
+
+                        <div class="space-y-3">
+
+                            {{-- Notify Estimator --}}
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" name="notify_estimator" value="1" checked
+                                       class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Notify estimator</span>
+                                    <p class="text-xs text-gray-400 mt-0.5" id="estimator-email-hint">
+                                        @if($opportunity->projectManager)
+                                            Select an estimator above to see their email.
+                                        @else
+                                            Select an estimator above to see their email.
+                                        @endif
+                                    </p>
+                                </div>
+                            </label>
+
+                            {{-- Notify Project Manager --}}
+                            @if($opportunity->projectManager && $opportunity->projectManager->email)
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" name="notify_pm" value="1"
+                                           class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-700">Notify Project Manager</span>
+                                        <p class="text-xs text-gray-400 mt-0.5">
+                                            {{ $opportunity->projectManager->name }} &mdash; {{ $opportunity->projectManager->email }}
+                                        </p>
+                                    </div>
+                                </label>
+                            @else
+                                <div class="flex items-start gap-3 opacity-50 cursor-not-allowed">
+                                    <input type="checkbox" disabled
+                                           class="mt-0.5 w-4 h-4 border-gray-300 rounded">
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-500">Notify Project Manager</span>
+                                        <p class="text-xs text-gray-400 mt-0.5">No PM with an email address is assigned to this opportunity.</p>
+                                    </div>
+                                </div>
+                            @endif
+
+                        </div>
+                    </div>
+
                     {{-- Actions --}}
                     <div class="p-6 flex justify-end gap-3">
                         <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
@@ -199,4 +248,29 @@
 
         </div>
     </div>
+
+    @php
+        $estimatorEmails = $estimators->mapWithKeys(fn($e) => [$e->id => $e->email])->toArray();
+    @endphp
+
+    <script>
+        const estimatorEmails = @json($estimatorEmails);
+        const estimatorSelect = document.getElementById('estimator_id');
+        const estimatorHint   = document.getElementById('estimator-email-hint');
+
+        function updateEstimatorHint() {
+            const id    = estimatorSelect.value;
+            const email = estimatorEmails[id] || null;
+            if (email) {
+                estimatorHint.textContent = 'Will be sent to: ' + email;
+            } else if (id) {
+                estimatorHint.textContent = 'This estimator has no email address on record.';
+            } else {
+                estimatorHint.textContent = 'Select an estimator above to see their email.';
+            }
+        }
+
+        estimatorSelect.addEventListener('change', updateEstimatorHint);
+        updateEstimatorHint();
+    </script>
 </x-app-layout>

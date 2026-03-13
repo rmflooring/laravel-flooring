@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Mail\RfmCreatedMail;
+use App\Mail\RfmUpdatedMail;
 use App\Models\Employee;
 use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
@@ -17,7 +18,7 @@ class RfmController extends Controller
 {
     public function create(Opportunity $opportunity)
     {
-        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name']);
+        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']);
 
         return view('pages.rfms.create', [
             'opportunity' => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
@@ -38,6 +39,9 @@ class RfmController extends Controller
             'site_postal_code'    => ['nullable', 'string', 'max:20'],
             'special_instructions'=> ['nullable', 'string'],
         ]);
+
+        $notifyEstimator = $request->boolean('notify_estimator', false);
+        $notifyPm        = $request->boolean('notify_pm', false);
 
         $rfm = Rfm::create([
             'opportunity_id'      => $opportunity->id,
@@ -149,7 +153,7 @@ class RfmController extends Controller
         try {
             $rfm->load(['estimator']);
             $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
-            (new RfmCreatedMail($rfm, $opportunity))->send();
+            (new RfmCreatedMail($rfm, $opportunity, $notifyEstimator, $notifyPm))->send();
         } catch (\Throwable $e) {
             Log::error('[RFM] Email notification failed', [
                 'rfm_id' => $rfm->id,
@@ -179,7 +183,7 @@ class RfmController extends Controller
     {
         abort_if($rfm->opportunity_id !== $opportunity->id, 404);
 
-        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name']);
+        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']);
 
         return view('pages.rfms.edit', [
             'opportunity'   => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
@@ -204,7 +208,64 @@ class RfmController extends Controller
             'special_instructions'=> ['nullable', 'string'],
         ]);
 
+        $notifyEstimator = $request->boolean('notify_estimator', false);
+        $notifyPm        = $request->boolean('notify_pm', false);
+
+        // Snapshot values before save for change detection
+        $oldEstimatorName = $rfm->estimator
+            ? trim($rfm->estimator->first_name . ' ' . $rfm->estimator->last_name)
+            : '—';
+        $oldScheduled  = $rfm->scheduled_at->format('M j, Y g:i A');
+        $oldAddress    = $rfm->site_address ?? '';
+        $oldCity       = $rfm->site_city ?? '';
+        $oldPostal     = $rfm->site_postal_code ?? '';
+
         $rfm->update($data);
+        $rfm->load(['estimator']);
+
+        // Build change list
+        $changes = [];
+
+        $newEstimatorName = $rfm->estimator
+            ? trim($rfm->estimator->first_name . ' ' . $rfm->estimator->last_name)
+            : '—';
+        if ($oldEstimatorName !== $newEstimatorName) {
+            $changes['Estimator'] = ['from' => $oldEstimatorName, 'to' => $newEstimatorName];
+        }
+
+        $newScheduled = $rfm->scheduled_at->format('M j, Y g:i A');
+        if ($oldScheduled !== $newScheduled) {
+            $changes['Scheduled'] = ['from' => $oldScheduled, 'to' => $newScheduled];
+        }
+
+        $newAddress = $data['site_address'] ?? '';
+        if ($oldAddress !== $newAddress) {
+            $changes['Street Address'] = ['from' => $oldAddress ?: '—', 'to' => $newAddress ?: '—'];
+        }
+
+        $newCity = $data['site_city'] ?? '';
+        if ($oldCity !== $newCity) {
+            $changes['City'] = ['from' => $oldCity ?: '—', 'to' => $newCity ?: '—'];
+        }
+
+        $newPostal = $data['site_postal_code'] ?? '';
+        if ($oldPostal !== $newPostal) {
+            $changes['Postal Code'] = ['from' => $oldPostal ?: '—', 'to' => $newPostal ?: '—'];
+        }
+
+        // --- Email notification (best-effort, never blocks the save) ---
+        if ($notifyEstimator || $notifyPm) {
+            try {
+                $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
+                (new RfmUpdatedMail($rfm, $opportunity, $changes, $notifyEstimator, $notifyPm))->send();
+            } catch (\Throwable $e) {
+                Log::error('[RFM] Update email notification failed', [
+                    'rfm_id' => $rfm->id,
+                    'error'  => $e->getMessage(),
+                ]);
+            }
+        }
+        // --- end email ---
 
         return redirect()
             ->route('pages.opportunities.show', $opportunity->id)

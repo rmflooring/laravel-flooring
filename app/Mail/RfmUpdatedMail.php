@@ -7,23 +7,26 @@ use App\Models\Rfm;
 use App\Services\GraphMailService;
 use Illuminate\Support\Facades\Log;
 
-class RfmCreatedMail
+class RfmUpdatedMail
 {
+    /**
+     * @param  array  $changes  [ 'Field Label' => ['from' => '...', 'to' => '...'], ... ]
+     */
     public function __construct(
         protected Rfm $rfm,
         protected Opportunity $opportunity,
-        protected bool $notifyEstimator = true,
+        protected array $changes = [],
+        protected bool $notifyEstimator = false,
         protected bool $notifyPm = false,
     ) {}
 
     /**
-     * Dispatch notifications to the selected recipients.
+     * Dispatch update notifications to the selected recipients.
      * Returns true if at least one send succeeded.
      */
     public function send(): bool
     {
         $mailer  = app(GraphMailService::class);
-        $subject = $this->buildSubject();
         $success = false;
 
         // --- Estimator (detailed internal email) ---
@@ -32,13 +35,13 @@ class RfmCreatedMail
             if ($estimator && filled($estimator->email)) {
                 $sent = $mailer->send(
                     to:      $estimator->email,
-                    subject: $subject,
+                    subject: $this->buildEstimatorSubject(),
                     body:    $this->buildEstimatorBody(),
                     type:    'rfm_notification',
                 );
                 if ($sent) $success = true;
             } else {
-                Log::info('[RFM Mail] Estimator notify requested but no email on record', [
+                Log::info('[RFM Mail] Estimator update notify requested but no email on record', [
                     'rfm_id' => $this->rfm->id,
                 ]);
             }
@@ -50,23 +53,17 @@ class RfmCreatedMail
             if ($pm && filled($pm->email)) {
                 $sent = $mailer->send(
                     to:      $pm->email,
-                    subject: $subject,
+                    subject: $this->buildPmSubject(),
                     body:    $this->buildPmBody(),
                     type:    'rfm_notification',
                 );
                 if ($sent) $success = true;
             } else {
-                Log::info('[RFM Mail] PM notify requested but no email on record', [
+                Log::info('[RFM Mail] PM update notify requested but no email on record', [
                     'rfm_id'         => $this->rfm->id,
                     'opportunity_id' => $this->opportunity->id,
                 ]);
             }
-        }
-
-        if (! $this->notifyEstimator && ! $this->notifyPm) {
-            Log::info('[RFM Mail] No notifications requested — skipping', [
-                'rfm_id' => $this->rfm->id,
-            ]);
         }
 
         return $success;
@@ -74,18 +71,28 @@ class RfmCreatedMail
 
     // -------------------------------------------------------------------------
 
-    protected function buildSubject(): string
+    protected function buildEstimatorSubject(): string
     {
         $jobNo    = $this->opportunity->job_no ? '#' . $this->opportunity->job_no . ' ' : '';
         $customer = $this->opportunity->parentCustomer?->company_name
             ?: $this->opportunity->parentCustomer?->name
             ?: 'Unknown Customer';
 
-        return "RFM Scheduled: {$jobNo}{$customer}";
+        return "RFM Updated: {$jobNo}{$customer}";
+    }
+
+    protected function buildPmSubject(): string
+    {
+        $jobNo    = $this->opportunity->job_no ? '#' . $this->opportunity->job_no . ' ' : '';
+        $customer = $this->opportunity->parentCustomer?->company_name
+            ?: $this->opportunity->parentCustomer?->name
+            ?: 'Unknown Customer';
+
+        return "Measurement Update: {$jobNo}{$customer}";
     }
 
     /**
-     * Detailed internal body for the estimator.
+     * Detailed internal body for the estimator — shows what changed + full current details.
      */
     protected function buildEstimatorBody(): string
     {
@@ -122,16 +129,31 @@ class RfmCreatedMail
         ]);
 
         $lines = [
-            'A new Request for Measure has been scheduled.',
+            'An RFM has been updated. Details below.',
             '',
-            '----------------------------------------',
+        ];
+
+        // What changed block
+        if (! empty($this->changes)) {
+            $lines[] = '=== CHANGES ===';
+            foreach ($this->changes as $label => $change) {
+                $lines[] = "{$label}:";
+                $lines[] = "  Was:  {$change['from']}";
+                $lines[] = "  Now:  {$change['to']}";
+            }
+            $lines[] = '===============';
+            $lines[] = '';
+        }
+
+        $lines = array_merge($lines, [
+            '--- Current RFM Details ---',
             "Job:          {$jobNo} — {$customer}",
             "Job Site:     {$jobSite}",
             "Estimator:    {$estimatorName}",
             "Scheduled:    {$scheduled}",
             "Address:      {$address}",
             "Flooring:     {$flooringTypes}",
-        ];
+        ]);
 
         if (filled($rfm->special_instructions)) {
             $lines[] = '';
@@ -147,7 +169,7 @@ class RfmCreatedMail
     }
 
     /**
-     * Clean customer-facing body for the Project Manager.
+     * Clean customer-facing body for the Project Manager — current details only, no diff.
      */
     protected function buildPmBody(): string
     {
@@ -178,7 +200,7 @@ class RfmCreatedMail
         $lines = [
             "Hi {$pmName},",
             '',
-            "We have scheduled a flooring measurement for {$customer} at {$jobSite}.",
+            "We have updated the flooring measurement details for {$customer} at {$jobSite}.",
             '',
             '----------------------------------------',
             "Date & Time:  {$scheduled}",
@@ -186,7 +208,7 @@ class RfmCreatedMail
             "Estimator:    {$estimatorName}",
             '----------------------------------------',
             '',
-            'Please ensure site access is available at the scheduled time.',
+            'Please ensure site access is available at the updated scheduled time.',
             '',
             'Thank you,',
             'RM Flooring',
