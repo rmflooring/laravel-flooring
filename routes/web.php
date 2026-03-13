@@ -188,6 +188,16 @@ Route::prefix('admin')
                 ->name('settings.mail.callback');
             Route::post('/settings/mail/disconnect/{user}', [\App\Http\Controllers\Admin\AdminMicrosoftMailConnectController::class, 'disconnect'])
                 ->name('settings.mail.disconnect');
+            Route::post('/settings/mail/test-user/{user}', [\App\Http\Controllers\Admin\MailSettingsController::class, 'testUserSend'])
+                ->name('settings.mail.test-user');
+
+            // Email templates (system/admin)
+            Route::get('/settings/email-templates', [\App\Http\Controllers\Admin\AdminEmailTemplateController::class, 'index'])
+                ->name('settings.email-templates.index');
+            Route::post('/settings/email-templates/{type}', [\App\Http\Controllers\Admin\AdminEmailTemplateController::class, 'save'])
+                ->name('settings.email-templates.save');
+            Route::delete('/settings/email-templates/{type}', [\App\Http\Controllers\Admin\AdminEmailTemplateController::class, 'reset'])
+                ->name('settings.email-templates.reset');
 
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);
@@ -496,6 +506,10 @@ Route::prefix('pages')
 		
 		Route::post('estimates/{estimate}/profits/save-costs', [EstimateController::class, 'saveProfitCosts'])
 			->name('estimates.profits.save-costs');
+
+		Route::post('estimates/{estimate}/send-email', [EstimateController::class, 'sendEmail'])
+			->middleware('permission:create estimates')
+			->name('estimates.send-email');
 		
 		Route::post('sales/{sale}/profits/save-costs', [\App\Http\Controllers\Pages\SaleController::class, 'saveProfitCosts'])
 			->name('sales.profits.save-costs');
@@ -560,6 +574,9 @@ Route::post('estimates/{estimate}/convert-to-sale', [\App\Http\Controllers\Admin
 
 		Route::get('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'show'])
     ->name('sales.show');
+
+		Route::post('sales/{sale}/send-email', [\App\Http\Controllers\Pages\SaleController::class, 'sendEmail'])
+			->name('sales.send-email');
 
 		
 		// (optional) if you want the mock UI under /pages instead of /admin
@@ -823,6 +840,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Email templates (per-user)
+    Route::get('/settings/email-templates', [\App\Http\Controllers\Pages\EmailTemplateController::class, 'index'])
+        ->name('pages.settings.email-templates.index');
+    Route::post('/settings/email-templates/{type}', [\App\Http\Controllers\Pages\EmailTemplateController::class, 'save'])
+        ->name('pages.settings.email-templates.save');
+    Route::delete('/settings/email-templates/{type}', [\App\Http\Controllers\Pages\EmailTemplateController::class, 'reset'])
+        ->name('pages.settings.email-templates.reset');
 	
 	//estimates
 	Route::get('/api/product-pricing', [\App\Http\Controllers\Api\ProductPricingController::class, 'show'])

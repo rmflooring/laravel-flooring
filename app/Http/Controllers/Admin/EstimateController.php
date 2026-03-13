@@ -9,6 +9,8 @@ use App\Models\EstimateItem;
 use App\Models\Sale;
 use App\Models\SaleRoom;
 use App\Models\SaleItem;
+use App\Services\EmailTemplateService;
+use App\Services\GraphMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -321,11 +323,33 @@ $data['tax_rate_percent'] = $groupPercent;
 
 		$defaultTaxGroupId = DB::table('default_tax')->where('id', 1)->value('tax_rate_group_id');
 
-		// ✅ ADD THIS LINE RIGHT HERE
 		$employees = \App\Models\Employee::orderBy('first_name')->orderBy('last_name')->get();
 
-		// ✅ AND RETURN WITH employees INCLUDED
-		return view('admin.estimates.edit', compact('estimate', 'taxGroups', 'defaultTaxGroupId', 'employees'));
+		// Pre-render the estimate email template for the Send Email modal
+		$user            = auth()->user();
+		$templateService = app(EmailTemplateService::class);
+		$template        = $templateService->getTemplate($user, 'estimate');
+		$templateVars    = [
+			'customer_name'    => $estimate->homeowner_name ?: $estimate->customer_name,
+			'estimate_number'  => $estimate->estimate_number,
+			'grand_total'      => '$' . number_format((float) $estimate->grand_total, 2),
+			'job_name'         => $estimate->job_name,
+			'job_address'      => $estimate->job_address,
+			'pm_name'          => $estimate->pm_name,
+			'pm_first_name'    => explode(' ', trim($estimate->pm_name ?? ''))[0],
+			'salesperson_name' => $estimate->salesperson1Employee?->first_name
+				? $estimate->salesperson1Employee->first_name . ' ' . $estimate->salesperson1Employee->last_name
+				: $user->name,
+			'sender_name'      => $user->name,
+			'sender_email'     => $user->email,
+		];
+		$emailSubject = $templateService->render($template['subject'], $templateVars);
+		$emailBody    = $templateService->render($template['body'], $templateVars);
+
+		return view('admin.estimates.edit', compact(
+			'estimate', 'taxGroups', 'defaultTaxGroupId', 'employees',
+			'emailSubject', 'emailBody',
+		));
 	}
 
 public function update(Request $request, Estimate $estimate)
@@ -937,5 +961,33 @@ public function apiStyles(Request $request)
         'rooms' => $estimate->rooms,
     ]);
 }
-	
+
+    public function sendEmail(Request $request, Estimate $estimate)
+    {
+        $request->validate([
+            'to'      => ['required', 'email'],
+            'subject' => ['required', 'string', 'max:255'],
+            'body'    => ['required', 'string'],
+        ]);
+
+        $user   = auth()->user();
+        $mailer = app(GraphMailService::class);
+
+        $sent = $user->microsoftAccount?->mail_connected
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate')
+            : false;
+
+        if (! $sent) {
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate');
+        }
+
+        if (! $sent) {
+            return back()->with('error', 'Failed to send estimate email. Check the mail log for details.');
+        }
+
+        $estimate->update(['status' => 'sent']);
+
+        return back()->with('success', 'Estimate emailed to ' . $request->input('to') . ' and status updated to Sent.');
+    }
+
 }

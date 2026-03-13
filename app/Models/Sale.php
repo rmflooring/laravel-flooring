@@ -65,6 +65,16 @@ throw new \RuntimeException('Could not generate a unique sale number.');
         return $this->belongsTo(Opportunity::class);
     }
 	
+	public function salesperson1Employee(): BelongsTo
+	{
+		return $this->belongsTo(\App\Models\Employee::class, 'salesperson_1_employee_id');
+	}
+
+	public function salesperson2Employee(): BelongsTo
+	{
+		return $this->belongsTo(\App\Models\Employee::class, 'salesperson_2_employee_id');
+	}
+
 	public function creator(): BelongsTo
 	{
 		return $this->belongsTo(\App\Models\User::class, 'created_by');

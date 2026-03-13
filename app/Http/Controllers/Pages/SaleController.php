@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Pages;
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use App\Models\Employee;
+use App\Services\EmailTemplateService;
+use App\Services\GraphMailService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
@@ -90,7 +92,9 @@ class SaleController extends Controller
 	
 	public function show(Sale $sale)
 	{
-		return view('pages.sales.show', compact('sale'));
+		$sale->load('sourceEstimate', 'salesperson1Employee');
+		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
+		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody'));
 	}
 
     public function edit(Sale $sale)
@@ -98,17 +102,13 @@ class SaleController extends Controller
         $sale->load([
 			'creator',
 			'updater',
-            'rooms' => function ($q) {
-                $q->orderBy('sort_order');
-            },
-            'rooms.items' => function ($q) {
-                $q->orderBy('sort_order');
-            },
+            'rooms' => function ($q) { $q->orderBy('sort_order'); },
+            'rooms.items' => function ($q) { $q->orderBy('sort_order'); },
+            'sourceEstimate',
+            'salesperson1Employee',
         ]);
 
-        $employees = Employee::orderBy('first_name')
-            ->orderBy('last_name')
-            ->get();
+        $employees = Employee::orderBy('first_name')->orderBy('last_name')->get();
 
         $taxGroups = DB::table('tax_rate_groups')
             ->select('tax_rate_groups.*')
@@ -116,16 +116,14 @@ class SaleController extends Controller
             ->orderBy('tax_rate_groups.name')
             ->get();
 
-        $defaultTaxGroupId = DB::table('default_tax')
-            ->where('id', 1)
-            ->value('tax_rate_group_id');
+        $defaultTaxGroupId = DB::table('default_tax')->where('id', 1)->value('tax_rate_group_id');
 
-        return view('pages.sales.edit', [
-            'sale' => $sale,
-            'employees' => $employees,
-            'taxGroups' => $taxGroups,
-            'defaultTaxGroupId' => $defaultTaxGroupId,
-        ]);
+        [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
+
+        return view('pages.sales.edit', compact(
+            'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
+            'emailSubject', 'emailBody',
+        ));
     }
 	
 public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale)
@@ -355,9 +353,7 @@ private function isRowEmpty(array $row, array $keysToCheck): bool
 
 public function showProfits(Sale $sale)
 {
-    $sale->load([
-        'rooms.items',
-    ]);
+    $sale->load(['rooms.items']);
 
     return view('pages.profits.show', [
         'recordType' => 'sale',
@@ -365,5 +361,58 @@ public function showProfits(Sale $sale)
         'rooms' => $sale->rooms,
     ]);
 }
-	
+
+    public function sendEmail(Request $request, Sale $sale)
+    {
+        $request->validate([
+            'to'      => ['required', 'email'],
+            'subject' => ['required', 'string', 'max:255'],
+            'body'    => ['required', 'string'],
+        ]);
+
+        $user   = auth()->user();
+        $mailer = app(GraphMailService::class);
+
+        $sent = $user->microsoftAccount?->mail_connected
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale')
+            : false;
+
+        if (! $sent) {
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale');
+        }
+
+        if (! $sent) {
+            return back()->with('error', 'Failed to send sale email. Check the mail log for details.');
+        }
+
+        return back()->with('success', 'Sale emailed to ' . $request->input('to') . '.');
+    }
+
+    private function resolveEmailTemplate(Sale $sale): array
+    {
+        $user            = auth()->user();
+        $templateService = app(EmailTemplateService::class);
+        $template        = $templateService->getTemplate($user, 'sale');
+
+        $vars = [
+            'customer_name'    => $sale->sourceEstimate?->homeowner_name ?: $sale->customer_name,
+            'sale_number'      => $sale->sale_number,
+            'grand_total'      => '$' . number_format((float) $sale->grand_total, 2),
+            'job_name'         => $sale->job_name,
+            'job_address'      => $sale->job_address,
+            'pm_name'          => $sale->pm_name,
+            'pm_first_name'    => explode(' ', trim($sale->pm_name ?? ''))[0],
+            'salesperson_name' => $sale->salesperson1Employee?->first_name
+                ? $sale->salesperson1Employee->first_name . ' ' . $sale->salesperson1Employee->last_name
+                : $user->name,
+            'sender_name'      => $user->name,
+            'sender_email'     => $user->email,
+        ];
+
+        return [
+            $templateService->render($template['subject'], $vars),
+            $templateService->render($template['body'], $vars),
+        ];
+    }
+
 }

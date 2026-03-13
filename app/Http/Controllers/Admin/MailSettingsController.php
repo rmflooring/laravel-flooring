@@ -39,6 +39,30 @@ class MailSettingsController extends Controller
         return back()->with('success', 'Mail settings saved.');
     }
 
+    public function testUserSend(Request $request, User $user)
+    {
+        $account = $user->microsoftAccount;
+
+        if (! $account || ! $account->mail_connected) {
+            return back()->with('error', "{$user->name} does not have Track 2 mail connected.");
+        }
+
+        $mailer  = app(GraphMailService::class);
+        $success = $mailer->sendAsUser(
+            user:    $user,
+            to:      $user->email,
+            subject: 'Floor Manager — Track 2 Test Email',
+            body:    "This is a test email sent via Track 2 (per-user delegated OAuth).\n\nSent from: {$user->name} ({$account->email})\n\nIf you received this, Track 2 email is working correctly for this account.",
+            type:    'test',
+        );
+
+        if ($success) {
+            return back()->with('success', "Track 2 test email sent successfully from {$account->email} to {$user->email}.");
+        }
+
+        return back()->with('error', "Track 2 test failed for {$user->name}. The token may have expired — try reconnecting.");
+    }
+
     public function testSend(Request $request)
     {
         $request->validate([

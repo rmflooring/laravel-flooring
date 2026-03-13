@@ -254,7 +254,9 @@ Both fire from `RfmController` after save, best-effort (try/catch), never block 
 
 ## Open Items
 
-1. **Wire Track 2 into estimates** — when sending an estimate email, check `user->microsoftAccount->mail_connected`; if yes use `sendAsUser()`, if no fall back to Track 1 and log fallback
-2. **Wire Track 2 into invoices** — same pattern as estimates
-3. **RFM updated notification** — currently only fires on create (`store`), not on edit (infrastructure is built, just not wired to `update()` for the edit-triggered case already handled — but the `updateStatus` route still sends no notification)
-4. **HTML email bodies** — all current emails are plain text; Track 2 customer-facing emails would benefit from branded HTML templates
+1. ~~**Wire Track 2 into estimates**~~ — **Done ✓** `EstimateController::sendEmail()` — modal on edit page, Track 2 / Track 1 fallback, status → `sent` on success
+2. ~~**Wire Track 2 into sales**~~ — **Done ✓** `SaleController::sendEmail()` — modal on both edit and show pages
+3. **Wire Track 2 into invoices** — invoice module not built yet
+4. **RFM updated notification** — `updateStatus` route still sends no notification
+5. **HTML email bodies** — all current emails are plain text; Track 2 customer-facing emails would benefit from branded HTML templates
+6. **Wire RFM admin templates** — `rfm_created` / `rfm_updated` template types exist in `email_templates` but RFM still uses hardcoded `RfmCreatedMail` / `RfmUpdatedMail` classes

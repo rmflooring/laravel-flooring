@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-13
+Updated: 2026-03-13 (session 2)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -23,6 +23,7 @@ Current core modules:
 - Documents / Media
 - Calendar (MS365 integration)
 - Email system (Track 1 + Track 2) — see `Context/context_graph_mail.md`
+- Email Templates (per-user + admin system) — see `Context/context_email_templates.md`
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 
@@ -38,14 +39,16 @@ Full details in `Context/context_graph_mail.md`.
 - Controlled by `app_settings` table keys: `mail_from_address`, `mail_from_name`, `mail_reply_to`, `mail_notifications_enabled`
 - All sends logged to `mail_log` table with `track=1`
 
-### Track 2 — Infrastructure built, wiring pending
+### Track 2 — Working ✓
 - Per-user delegated OAuth — each staff member's personal `@rmflooring.ca` MS365 account
 - Admin connects each user from `/admin/settings/mail` Track 2 table (Connect button → OAuth flow)
-- Token stored encrypted on `microsoft_accounts` (`mail_connected`, `mail_connected_at` columns added)
-- `GraphMailService::sendAsUser(User $user, ...)` is ready to call
+- Per-user **Send Test** button confirmed working on live server
+- Token stored encrypted on `microsoft_accounts` (`mail_connected`, `mail_connected_at` columns)
+- `GraphMailService::sendAsUser(User $user, ...)` — active and tested
 - Auto token refresh built in; marks `mail_connected=false` if refresh fails
 - All sends logged to `mail_log` with `track=2` and `sent_from=user_email`
-- **Not yet wired into**: estimates, invoices
+- **Wired into**: estimates (edit page), sales (edit + show pages)
+- **Not yet wired into**: invoices (module not built yet)
 
 ### Fallback pattern (for when wiring Track 2 into estimates/invoices)
 ```php
@@ -57,9 +60,15 @@ if (! $sent) {
 }
 ```
 
-### Azure app permissions needed (same app registration for both)
-- `Mail.Send` Application — Track 1 (already granted ✓)
-- `Mail.Send` Delegated — Track 2 (must be added in Azure portal + admin consent before Track 2 sends will work)
+### Azure app permissions (same app registration for both) — both confirmed ✓
+- `Mail.Send` Application — Track 1 ✓
+- `Mail.Send` Delegated — Track 2 ✓ (granted for RM Flooring tenant)
+
+### Azure redirect URIs configured
+- `http://localhost/admin/settings/mail/callback` — local dev
+- `https://fm.rmflooring.ca/admin/settings/mail/callback` — production
+- `http://localhost/pages/settings/integrations/microsoft/callback` — calendar local
+- `https://fm.rmflooring.ca/pages/settings/integrations/microsoft/callback` — calendar production
 
 ---
 
@@ -130,6 +139,10 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 | Pages controllers | `app/Http/Controllers/Pages/` |
 | Mail classes | `app/Mail/` |
 | Mail service | `app/Services/GraphMailService.php` |
+| Email template service | `app/Services/EmailTemplateService.php` |
+| Email template model | `app/Models/EmailTemplate.php` |
+| User email templates page | `resources/views/pages/settings/email-templates.blade.php` |
+| Admin email templates page | `resources/views/admin/settings/email-templates.blade.php` |
 | Calendar service | `app/Services/GraphCalendarService.php` |
 | Main layout | `resources/views/layouts/app.blade.php` |
 | Email portal | `resources/views/admin/settings/mail.blade.php` |
@@ -140,8 +153,8 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 ## Resume prompts for next chat
 
-**To continue Track 2 email wiring (estimates/invoices):**
-> Read CLAUDE.md and Context/context_graph_mail.md. I want to wire Track 2 per-user email into the estimate sending flow. The sendAsUser() method is built and ready. One step at a time.
+**To continue email work (RFM templates, HTML bodies, invoice send flow):**
+> Read CLAUDE.md and Context/context_email_templates.md and Context/context_graph_mail.md. I want to continue the email system. One step at a time.
 
 **To continue RFM module work:**
 > Read CLAUDE.md and Context/context_rfm.md. Next priority: sync MS365 calendar event when an RFM is edited.

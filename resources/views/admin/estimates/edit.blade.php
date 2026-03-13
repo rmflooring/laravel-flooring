@@ -32,6 +32,11 @@
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
   Save Estimate
 </button>
+<button type="button"
+  onclick="window.dispatchEvent(new CustomEvent('open-send-email-modal'))"
+  class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800 focus:outline-none focus:ring-4 focus:ring-purple-300">
+  Send Email
+</button>
 		<a href="{{ route('pages.estimates.profits.show', $estimate->id) }}"
   class="relative z-10 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
   <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -1816,6 +1821,76 @@
 <script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
 <script src="{{ asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
 
+{{-- Send Email Modal (Alpine.js) --}}
+<div x-data="{ open: false }"
+     @open-send-email-modal.window="open = true"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.5)">
 
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl"
+         @click.outside="open = false">
+
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h5 class="text-base font-semibold text-gray-800">Send Estimate Email</h5>
+            <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ route('pages.estimates.send-email', $estimate) }}">
+            @csrf
+            <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                @if (! $estimate->homeowner_email)
+                    <div class="p-3 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        No homeowner email on this estimate. Enter a recipient below or save the estimate with an email address first.
+                    </div>
+                @endif
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                    <input type="email" name="to"
+                           value="{{ $estimate->homeowner_email }}"
+                           placeholder="customer@example.com"
+                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <input type="text" name="subject"
+                           value="{{ $emailSubject }}"
+                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                    <textarea name="body" rows="10"
+                              class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm font-mono">{{ $emailBody }}</textarea>
+                </div>
+
+                <p class="text-xs text-gray-400">
+                    @if (auth()->user()->microsoftAccount?->mail_connected)
+                        Sending from <strong>{{ auth()->user()->microsoftAccount->email }}</strong> via your personal MS365 account (Track 2).
+                    @else
+                        Sending from the shared mailbox via Track 1. Connect your MS365 account in <a href="{{ route('pages.settings.email-templates.index') }}" class="underline">Email Templates</a> settings for personal sending.
+                    @endif
+                </p>
+
+            </div>
+
+            <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+                <button type="button" @click="open = false"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-5 py-2.5 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800">
+                    Send Estimate
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
 
 </x-admin-layout>

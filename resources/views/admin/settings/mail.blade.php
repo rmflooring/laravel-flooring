@@ -290,6 +290,14 @@
                                             </a>
                                             @if ($mailConnected)
                                                 <form method="POST"
+                                                      action="{{ route('admin.settings.mail.test-user', $user->id) }}">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="px-3 py-1.5 text-xs font-medium text-white bg-green-700 rounded-lg hover:bg-green-800 dark:bg-green-600 dark:hover:bg-green-700">
+                                                        Send Test
+                                                    </button>
+                                                </form>
+                                                <form method="POST"
                                                       action="{{ route('admin.settings.mail.disconnect', $user->id) }}"
                                                       onsubmit="return confirm('Disconnect mail for {{ addslashes($user->name) }}? They will fall back to the shared mailbox until reconnected.')">
                                                     @csrf
