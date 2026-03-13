@@ -22,7 +22,8 @@ Current core modules include:
 - Sales
 - Documents / Media
 - Calendar
-- Microsoft 365 integration
+- Microsoft 365 integration (calendar + email)
+- Email notifications via Graph API — see `Context/context_graph_mail.md`
 - Users / Roles / Employees
 - Admin pages including tax groups
 
@@ -286,7 +287,9 @@ Full details in `Context/context_rfm.md`. Summary:
 ## Resume prompts for a future chat
 Use one of these:
 
-1. `Read CLAUDE.md and Context/context_rfm.md, then resume RFM module work. Next priority: sync MS365 calendar event on edit.`
+1. `Read CLAUDE.md and Context/context_graph_mail.md, then resume email work. Next: Track 2 per-user MS365 email, or email log table.`
+
+2. `Read CLAUDE.md and Context/context_rfm.md, then resume RFM module work. Next priority: sync MS365 calendar event on edit.`
 
 2. `Resume from the master dev handoff. We fixed the Sales profits modal direct-save. Continue one step at a time.`
 
