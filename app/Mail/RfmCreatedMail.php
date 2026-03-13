@@ -35,7 +35,13 @@ class RfmCreatedMail
         $success = false;
 
         foreach ($recipients as $address => $name) {
-            $sent = $mailer->send($address, $subject, $body);
+            $sent = $mailer->send(
+                to:          $address,
+                subject:     $subject,
+                body:        $body,
+                fromName:    'RM Flooring Notifications',
+                replyTo:     'noreply@rmflooring.ca',
+            );
             if ($sent) {
                 $success = true;
             }

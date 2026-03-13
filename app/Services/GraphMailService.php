@@ -46,10 +46,18 @@ class GraphMailService
      * @param  string        $subject
      * @param  string        $body         Plain text body
      * @param  string|null   $fromAddress  Overrides the configured shared mailbox address
+     * @param  string|null   $fromName     Display name shown in the From field
+     * @param  string|null   $replyTo      Address replies are directed to
      * @return bool
      */
-    public function send(string|array $to, string $subject, string $body, ?string $fromAddress = null): bool
-    {
+    public function send(
+        string|array $to,
+        string $subject,
+        string $body,
+        ?string $fromAddress = null,
+        ?string $fromName = null,
+        ?string $replyTo = null,
+    ): bool {
         $from = $fromAddress
             ?? Setting::get('mail_from_address')
             ?? config('services.microsoft.mail_from_address', 'team@rmflooring.ca');
@@ -61,15 +69,29 @@ class GraphMailService
         try {
             $token = $this->getAppToken();
 
-            $payload = [
-                'message' => [
-                    'subject' => $subject,
-                    'body'    => [
-                        'contentType' => 'Text',
-                        'content'     => $body,
-                    ],
-                    'toRecipients' => $recipients,
+            $message = [
+                'subject' => $subject,
+                'body'    => [
+                    'contentType' => 'Text',
+                    'content'     => $body,
                 ],
+                'toRecipients' => $recipients,
+                'from' => [
+                    'emailAddress' => array_filter([
+                        'address' => $from,
+                        'name'    => $fromName,
+                    ]),
+                ],
+            ];
+
+            if ($replyTo) {
+                $message['replyTo'] = [
+                    ['emailAddress' => ['address' => $replyTo]],
+                ];
+            }
+
+            $payload = [
+                'message'         => $message,
                 'saveToSentItems' => true,
             ];
 
