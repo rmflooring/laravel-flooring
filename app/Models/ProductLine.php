@@ -17,6 +17,9 @@ class ProductLine extends Model
         'manufacturer',
         'model',
         'collection',
+        'unit_id',
+        'width',
+        'length',
         'status',
         'created_by',
         'updated_by',
@@ -27,6 +30,11 @@ class ProductLine extends Model
     {
         return $this->belongsTo(ProductType::class);
     }
+    public function unit()
+    {
+        return $this->belongsTo(\App\Models\UnitMeasure::class, 'unit_id');
+    }
+
 	public function vendorRelation()
 {
     return $this->belongsTo(Vendor::class, 'vendor_id');

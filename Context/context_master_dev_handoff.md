@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-14 (session 7)
+Updated: 2026-03-14 (session 8)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -286,6 +286,46 @@ Full details in `Context/context_purchase_orders.md`.
 
 ---
 
+## Product Catalog enhancements (session 8, 2026-03-14)
+Full details in `Context/project-context-product-pricing.md`.
+
+### Product Lines — new fields
+- `unit_id` (nullable FK → `unit_measures`) — unit of measure for the line; auto-filled from product type's `sold_by_unit` on create
+- `width` (decimal 8,2) — product width in inches
+- `length` (decimal 8,2) — product length in inches
+- Views widened to `max-w-screen-2xl`; Unit / Width / Length inputs added to create + edit forms
+
+### Product Styles — new fields
+- `units_per` (decimal 8,2) — units per box/pack
+- `thickness` (varchar 50) — free-text, e.g. "3mm", "12mil"
+- `use_box_qty` (boolean, default false) — triggers box quantity prompt in estimates/sales
+- `status` now has three options: `active`, `inactive`, `dropped` — "dropped" = orange badge, used for discontinued styles
+
+### Box Quantity Modal + Prompt (`estimate.js`, `sale.js`)
+Shared modal: `resources/views/components/modals/box-qty-modal.blade.php`
+- Included on estimate create, estimate edit, and sale edit pages
+- Modal uses `style="display:none"` (NOT Tailwind `hidden`) to avoid flash on page load
+- When user enters a qty that doesn't fill complete boxes → modal prompts "round up to X?"
+- Two trigger paths: (1) `focusout` on qty field; (2) immediate check when a style with `use_box_qty` is selected if qty already filled
+- JS stores `window._boxQtyPendingInput` + `window._boxQtyPendingValue`; confirm updates the input and re-dispatches `input` event
+
+### Estimate/Sale edit — dropdown auto-restore fix
+**Problem:** Existing line item rows on edit pages couldn't auto-load product line / style dropdowns because no IDs were stored — only text values.
+
+**Solution:**
+1. Migration `2026_03_14_240000_add_product_ids_to_estimate_and_sale_items.php` — added `product_line_id` and `product_style_id` (nullable FK) to both `estimate_items` and `sale_items`
+2. Edit blades: existing rows now render `data-product-line-id`, `data-product-style-id`, `data-use-box-qty`, `data-units-per` attributes + hidden form inputs (`js-product-line-id-input`, `js-product-style-id-input`)
+3. `estimate.js` / `sale.js` — `selectFromButton` in style dropdown writes to `.js-product-line-id-input`; color dropdown writes to `.js-product-style-id-input`
+4. `EstimateController` `store()` + `update()` and `SaleController` `update()` now save `product_line_id` + `product_style_id`
+5. `EstimateController::edit()` and `SaleController::edit()` now eager-load `rooms.items.productStyle`
+6. `initProductTypeDropdownForRoom()` in both JS files now auto-resolves `data-product-type-id` for existing rows by matching the text value against the loaded product types list (async, runs once on init)
+
+### Bug fixes (session 8)
+- **Tax group 404:** `loadTaxGroupRate` URL was `/pages/estimates/api/tax-groups/` — corrected to `/estimates/api/tax-groups/`
+- **Box qty modal flash on page load:** Modal div had both `hidden` and `flex` Tailwind classes; `flex` overrode `hidden` in generated CSS. Fixed: removed `flex` from static classes, use `style="display:none"` as initial state.
+
+---
+
 ## Resume prompts for next chat
 
 **To continue email work (RFM templates, HTML bodies, invoice send flow):**
@@ -305,6 +345,9 @@ Full details in `Context/context_purchase_orders.md`.
 
 **To continue Work Orders work:**
 > Read CLAUDE.md and Context/context_work_orders.md. I want to continue working on the Work Orders module. One step at a time.
+
+**To continue product catalog / estimates / sales work:**
+> Read CLAUDE.md and Context/context_master_dev_handoff.md and Context/project-context-product-pricing.md. I want to continue working on the product catalog or estimate/sale builder. One step at a time.
 
 **To start a fresh feature:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md, then tell me the current state of the system before we begin.

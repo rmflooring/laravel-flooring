@@ -28,6 +28,8 @@ class EstimateItem extends Model
 
         // Material-specific
         'product_type',
+        'product_line_id',
+        'product_style_id',
         'manufacturer',
         'style',
         'color_item_number',
@@ -59,6 +61,11 @@ class EstimateItem extends Model
             $item->cost_total = round($qty * $cost, 2);
 			$item->line_total = round($qty * $sell, 2);
         });
+    }
+
+    public function productStyle(): BelongsTo
+    {
+        return $this->belongsTo(ProductStyle::class, 'product_style_id');
     }
 
     public function estimate(): BelongsTo

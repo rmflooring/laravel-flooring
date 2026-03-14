@@ -33,7 +33,7 @@ class ProductStyleController extends Controller
     return response()->json(
         $product_line->productStyles()
             ->orderBy('name')
-            ->get(['id', 'name'])
+            ->get(['id', 'name', 'use_box_qty', 'units_per'])
     );
 }
 
@@ -71,10 +71,14 @@ class ProductStyleController extends Controller
             'description' => 'nullable|string',
             'cost_price' => 'nullable|numeric|min:0',
             'sell_price' => 'nullable|numeric|min:0',
-            'status' => 'required|in:active,inactive',
+            'status' => 'required|in:active,inactive,dropped',
+            'units_per' => 'nullable|numeric|min:0',
+            'use_box_qty' => 'boolean',
+            'thickness' => 'nullable|string|max:50',
         ]);
 
         $validated['updated_by'] = auth()->id();
+        $validated['use_box_qty'] = $request->boolean('use_box_qty');
 
         $style->update($validated);
 
@@ -94,10 +98,14 @@ class ProductStyleController extends Controller
             'description' => 'nullable|string',
             'cost_price' => 'nullable|numeric|min:0',
             'sell_price' => 'nullable|numeric|min:0',
-            'status' => 'required|in:active,inactive',
+            'status' => 'required|in:active,inactive,dropped',
+            'units_per' => 'nullable|numeric|min:0',
+            'use_box_qty' => 'boolean',
+            'thickness' => 'nullable|string|max:50',
         ]);
 
         $validated['created_by'] = auth()->id();
+        $validated['use_box_qty'] = $request->boolean('use_box_qty');
 
         $product_line->productStyles()->create($validated);
 
@@ -119,7 +127,10 @@ class ProductStyleController extends Controller
             'description'  => $original->description,
             'cost_price'   => $original->cost_price,
             'sell_price'   => $original->sell_price,
-            'status'       => $original->status,
+            'units_per'    => $original->units_per,
+            'use_box_qty'  => $original->use_box_qty,
+            'thickness'    => $original->thickness,
+            'status'       => $original->status === 'dropped' ? 'active' : $original->status,
             'created_by'   => auth()->id(),
         ]);
 

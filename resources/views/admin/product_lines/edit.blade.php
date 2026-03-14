@@ -31,7 +31,9 @@
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                 <option value="">-- Select Product Type --</option>
                                 @foreach($types as $type)
-                                    <option value="{{ $type->id }}" {{ old('product_type_id', $product_line->product_type_id) == $type->id ? 'selected' : '' }}>
+                                    <option value="{{ $type->id }}"
+                                            data-sold-by-unit="{{ $type->sold_by_unit_id }}"
+                                            {{ old('product_type_id', $product_line->product_type_id) == $type->id ? 'selected' : '' }}>
                                         {{ $type->name }}
                                     </option>
                                 @endforeach
@@ -99,6 +101,54 @@
                             @enderror
                         </div>
 
+                        <!-- Unit -->
+                        <div class="mb-6">
+                            <label for="unit_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Unit</label>
+                            <select name="unit_id" id="unit_id"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                <option value="">-- Select Unit --</option>
+                                @foreach($units as $unit)
+                                    <option value="{{ $unit->id }}" {{ old('unit_id', $product_line->unit_id) == $unit->id ? 'selected' : '' }}>
+                                        {{ $unit->label }} ({{ $unit->code }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Pre-fills from product type; override as needed.</p>
+                            @error('unit_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <!-- Width & Length -->
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="width" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Width</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" step="0.01" min="0" name="width" id="width"
+                                           value="{{ old('width', $product_line->width) }}"
+                                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                           placeholder="e.g. 12">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">inches</span>
+                                </div>
+                                @error('width')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label for="length" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Length</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" step="0.01" min="0" name="length" id="length"
+                                           value="{{ old('length', $product_line->length) }}"
+                                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                           placeholder="e.g. 24">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">inches</span>
+                                </div>
+                                @error('length')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
                         <!-- Status -->
                         <div class="mb-6">
                             <label for="status" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Status</label>
@@ -128,4 +178,19 @@
             </div>
         </div>
     </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const typeSelect = document.getElementById('product_type_id');
+    const unitSelect = document.getElementById('unit_id');
+
+    typeSelect.addEventListener('change', function () {
+        const selected = this.options[this.selectedIndex];
+        const soldByUnitId = selected.dataset.soldByUnit;
+
+        if (soldByUnitId && unitSelect.value === '') {
+            unitSelect.value = soldByUnitId;
+        }
+    });
+});
+</script>
 </x-app-layout>

@@ -404,6 +404,17 @@ function initProductTypeDropdownForRoom(roomCard) {
       });
   }
 
+  // Auto-resolve product type ID for existing rows (edit mode)
+  roomCard._fmProductTypesPromise.then((types) => {
+    roomCard.querySelectorAll('[data-product-type-input]').forEach((input) => {
+      if (input.dataset.productTypeId) return; // already set
+      const text = (input.value || '').trim().toLowerCase();
+      if (!text) return;
+      const match = types.find(t => (t.name || '').toLowerCase() === text);
+      if (match) input.dataset.productTypeId = match.id;
+    });
+  });
+
   inputs.forEach((input) => {
     // Prevent double-binding if rows get re-initialized
     if (input.dataset.ptBound === '1') return;
@@ -891,6 +902,9 @@ function initManufacturerDropdownForRoom(roomCard) {
       styleInput.value = name;
       styleInput.dataset.productLineId = id;
 
+      const lineIdInput = row.querySelector('.js-product-line-id-input');
+      if (lineIdInput) lineIdInput.value = id;
+
       closeDropdown();
       styleInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
@@ -1087,7 +1101,9 @@ function initManufacturerDropdownForRoom(roomCard) {
           <button type="button"
             class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
             data-style-id="${s.id}"
-            data-style-name="${escapeHtml(s.name)}">
+            data-style-name="${escapeHtml(s.name)}"
+            data-use-box-qty="${s.use_box_qty ? '1' : '0'}"
+            data-units-per="${s.units_per ?? ''}">
             <span class="truncate">${escapeHtml(s.name)}</span>
           </button>
         </li>
@@ -1108,12 +1124,23 @@ function initManufacturerDropdownForRoom(roomCard) {
     // Store id for later pricing lookup
 		colorInput.dataset.productStyleId = id;
 
+		const styleIdInput = row.querySelector('.js-product-style-id-input');
+		if (styleIdInput) styleIdInput.value = id;
+
+		// Store box qty data for quantity prompt
+		colorInput.dataset.useBoxQty = btn.getAttribute('data-use-box-qty') || '0';
+		colorInput.dataset.unitsPer = btn.getAttribute('data-units-per') || '';
+
 		// New color selected -> allow autofill again (clear any manual override)
 		const priceInput = row.querySelector('input[name$="[sell_price]"]');
 		if (priceInput) delete priceInput.dataset.userOverridden;
 
 		// Autofill price now (style price, else line default)
 		autofillSellPriceForRow(row);
+
+		// If qty is already filled, check box qty now
+		const qtyInput = row.querySelector('input[name*="[quantity]"]');
+		if (qtyInput) checkBoxQty(qtyInput);
 
 		closeDropdown();
 		colorInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -2061,6 +2088,52 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     if (roomCard) updateRoomTotals(roomCard);
   });
 
+  // ── Box quantity prompt ──────────────────────────────────────────────────
+  function checkBoxQty(qtyInput) {
+    const row = qtyInput.closest('tr');
+    if (!row) return;
+
+    const colorInput = row.querySelector('[data-color-input]');
+    if (!colorInput) return;
+
+    const useBoxQty = colorInput.dataset.useBoxQty === '1';
+    const unitsPer = parseFloat(colorInput.dataset.unitsPer || 0);
+
+    if (!useBoxQty || !unitsPer || unitsPer <= 0) return;
+
+    const qty = parseFloat(qtyInput.value || 0);
+    if (!qty || qty <= 0) return;
+
+    const boxes = Math.ceil(qty / unitsPer);
+    const boxQty = parseFloat((boxes * unitsPer).toFixed(4));
+
+    if (Math.abs(qty - boxQty) < 0.001) return; // already a clean multiple
+
+    showBoxQtyModal(qtyInput, qty, unitsPer, boxes, boxQty, colorInput.value);
+  }
+
+  roomsContainer.addEventListener("focusout", e => {
+    const input = e.target;
+    if (!input.matches('input[name*="[quantity]"]')) return;
+    checkBoxQty(input);
+  });
+
+  function showBoxQtyModal(qtyInput, currentQty, unitsPer, boxes, boxQty, styleName) {
+    const modalEl = document.getElementById('box-qty-modal');
+    if (!modalEl) return;
+
+    window._boxQtyPendingInput = qtyInput;
+    window._boxQtyPendingValue = boxQty;
+
+    modalEl.querySelectorAll('[data-box-style-name]').forEach(el => el.textContent = styleName || 'this style');
+    modalEl.querySelectorAll('[data-box-units-per]').forEach(el => el.textContent = unitsPer);
+    modalEl.querySelectorAll('[data-box-current-qty]').forEach(el => el.textContent = currentQty);
+    modalEl.querySelectorAll('[data-box-count]').forEach(el => el.textContent = boxes + (boxes === 1 ? ' box' : ' boxes'));
+    modalEl.querySelectorAll('[data-box-suggested-qty]').forEach(el => el.textContent = boxQty);
+
+    modalEl.style.display = 'flex';
+  }
+
   // ── Event delegation ────────────────────────────────────────────────────
   roomsContainer.addEventListener("click", e => {
     const t = e.target;
@@ -2072,7 +2145,7 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
   initProductTypeDropdownForRoom(room);
   initManufacturerDropdownForRoom(room);
-  initStyleDropdownForRoom(room); 
+  initStyleDropdownForRoom(room);
   initColorDropdownForRoom(room);
   initManualPriceOverrideForRoom(room);
 

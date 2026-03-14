@@ -352,7 +352,12 @@
           value="{{ old("rooms.$roomIndex.materials.$i.style", $item->style) }}"
           class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
           autocomplete="off"
-          data-style-input>
+          data-style-input
+          data-product-line-id="{{ $item->product_line_id }}">
+        <input type="hidden"
+          name="rooms[{{ $roomIndex }}][materials][{{ $i }}][product_line_id]"
+          value="{{ $item->product_line_id }}"
+          class="js-product-line-id-input">
         <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
           data-style-dropdown>
           <ul class="py-1 text-sm text-gray-700" data-style-options></ul>
@@ -365,7 +370,14 @@
           value="{{ old("rooms.$roomIndex.materials.$i.color_item_number", $item->color_item_number) }}"
           class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
           autocomplete="off"
-          data-color-input>
+          data-color-input
+          data-product-style-id="{{ $item->product_style_id }}"
+          data-use-box-qty="{{ $item->productStyle?->use_box_qty ? '1' : '0' }}"
+          data-units-per="{{ $item->productStyle?->units_per ?? '' }}">
+        <input type="hidden"
+          name="rooms[{{ $roomIndex }}][materials][{{ $i }}][product_style_id]"
+          value="{{ $item->product_style_id }}"
+          class="js-product-style-id-input">
         <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
           data-color-dropdown>
           <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
@@ -490,6 +502,9 @@
           placeholder="Style"
           autocomplete="off"
           data-style-input />
+        <input type="hidden"
+          name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][product_line_id]"
+          class="js-product-line-id-input" />
 
         <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
           data-style-dropdown>
@@ -504,6 +519,9 @@
           placeholder="Color / Item #"
           autocomplete="off"
           data-color-input />
+        <input type="hidden"
+          name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][product_style_id]"
+          class="js-product-style-id-input" />
 
         <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
           data-color-dropdown>
@@ -1911,5 +1929,7 @@
 
     </div>
 </div>
+
+@include('components.modals.box-qty-modal')
 
 </x-admin-layout>

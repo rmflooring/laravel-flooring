@@ -63,6 +63,8 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pattern</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cost</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sell</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Units Per</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Thickness</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                                     </tr>
@@ -98,8 +100,23 @@
                                                 {{ $style->sell_price !== null ? '$' . number_format($style->sell_price, 2) : '—' }}
                                             </td>
 
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                                                {{ $style->units_per !== null ? number_format($style->units_per, 2) : '—' }}
+                                            </td>
+
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                                                {{ $style->thickness ?? '—' }}
+                                            </td>
+
                                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $style->status == 'active' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">
+                                                @php
+                                                    $badgeClass = match($style->status) {
+                                                        'active'   => 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
+                                                        'dropped'  => 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
+                                                        default    => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                                                    };
+                                                @endphp
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $badgeClass }}">
                                                     {{ ucfirst($style->status) }}
                                                 </span>
                                             </td>
@@ -170,7 +187,7 @@
     <!-- Add/Edit Style Modal -->
     <div id="add-style-modal" tabindex="-1" aria-hidden="true"
          class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
-        <div class="relative p-4 w-full max-w-md max-h-full">
+        <div class="relative p-4 w-full max-w-2xl max-h-full">
             <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
                 <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
@@ -226,6 +243,26 @@
                             <input type="number" step="0.0001" name="sell_price" id="sell_price" value="{{ session('editStyle')->sell_price ?? '' }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                         </div>
 
+                        <div class="col-span-2 sm:col-span-1">
+                            <label for="units_per" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Units Per</label>
+                            <input type="number" step="0.01" min="0" name="units_per" id="units_per" value="{{ session('editStyle')->units_per ?? '' }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="e.g. 20">
+                        </div>
+
+                        <div class="col-span-2 sm:col-span-1 flex items-end pb-1">
+                            <label class="inline-flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" name="use_box_qty" id="use_box_qty" value="1"
+                                       {{ (session('editStyle')->use_box_qty ?? false) ? 'checked' : '' }}
+                                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">Use Box Qty</span>
+                            </label>
+                            <p class="ml-7 text-xs text-gray-500 dark:text-gray-400 -mt-1">Prompt estimator to round up to full box quantity</p>
+                        </div>
+
+                        <div class="col-span-2 sm:col-span-1">
+                            <label for="thickness" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Thickness</label>
+                            <input type="text" name="thickness" id="thickness" value="{{ session('editStyle')->thickness ?? '' }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="e.g. 3mm, 12mil">
+                        </div>
+
                         <div class="col-span-2">
                             <label for="pattern" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Pattern</label>
                             <input type="text" name="pattern" id="pattern" value="{{ session('editStyle')->pattern ?? '' }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
@@ -239,6 +276,7 @@
                             <select name="status" id="status" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                 <option value="active" {{ (session('editStyle')->status ?? 'active') == 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ (session('editStyle')->status ?? '') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                <option value="dropped" {{ (session('editStyle')->status ?? '') == 'dropped' ? 'selected' : '' }}>Dropped</option>
                             </select>
                         </div>
                     </div>

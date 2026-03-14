@@ -113,6 +113,7 @@ class SaleController extends Controller
 			'updater',
             'rooms' => function ($q) { $q->orderBy('sort_order'); },
             'rooms.items' => function ($q) { $q->orderBy('sort_order'); },
+            'rooms.items.productStyle',
             'sourceEstimate',
             'salesperson1Employee',
             'purchaseOrders.vendor',
@@ -256,6 +257,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'sort_order'       => (int)$i,
 
                     'product_type'     => $item['product_type'] ?? null,
+                    'product_line_id'  => ($item['product_line_id'] ?? '') !== '' ? (int)$item['product_line_id'] : null,
+                    'product_style_id' => ($item['product_style_id'] ?? '') !== '' ? (int)$item['product_style_id'] : null,
                     'manufacturer'     => $item['manufacturer'] ?? null,
                     'style'            => $item['style'] ?? null,
                     'color_item_number'=> $item['color_item_number'] ?? null,

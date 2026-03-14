@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ProductLine;
 use App\Models\ProductType;
+use App\Models\UnitMeasure;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,14 +74,11 @@ public function index(Request $request)
      */
     public function create()
 {
-    // Load active product types (as you had)
-    $types = ProductType::where('status', 'active')->get();
-
-    // Load all vendors, sorted by name for the dropdown
+    $types   = ProductType::where('status', 'active')->with('soldByUnit')->get();
     $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
+    $units   = UnitMeasure::where('status', 'active')->orderBy('label')->get(['id', 'code', 'label']);
 
-    // Pass both to the view
-    return view('admin.product_lines.create', compact('types', 'vendors'));
+    return view('admin.product_lines.create', compact('types', 'vendors', 'units'));
 }
 
     /**
@@ -92,10 +90,13 @@ public function index(Request $request)
         'product_type_id' => 'required|exists:product_types,id',
         'name' => 'required|string|max:255',
         'status' => 'required|in:active,inactive',
-        'vendor_id' => 'nullable|exists:vendors,id',  // ← NEW: validate as foreign key
+        'vendor_id' => 'nullable|exists:vendors,id',
         'manufacturer' => 'nullable|string|max:255',
         'model' => 'nullable|string|max:255',
         'collection' => 'nullable|string|max:255',
+        'unit_id' => 'nullable|exists:unit_measures,id',
+        'width' => 'nullable|numeric|min:0',
+        'length' => 'nullable|numeric|min:0',
     ]);
 
     ProductLine::create([
@@ -112,10 +113,11 @@ public function index(Request $request)
      */
 public function edit(ProductLine $product_line)
 {
-    $types = ProductType::where('status', 'active')->get();
+    $types   = ProductType::where('status', 'active')->with('soldByUnit')->get();
     $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
+    $units   = UnitMeasure::where('status', 'active')->orderBy('label')->get(['id', 'code', 'label']);
 
-    return view('admin.product_lines.edit', compact('product_line', 'types', 'vendors'));
+    return view('admin.product_lines.edit', compact('product_line', 'types', 'vendors', 'units'));
 }
 
 public function update(Request $request, ProductLine $product_line)
@@ -124,10 +126,13 @@ public function update(Request $request, ProductLine $product_line)
         'product_type_id' => 'required|exists:product_types,id',
         'name' => 'required|string|max:255',
         'status' => 'required|in:active,inactive',
-        'vendor_id' => 'nullable|exists:vendors,id',  // ← NEW
+        'vendor_id' => 'nullable|exists:vendors,id',
         'manufacturer' => 'nullable|string|max:255',
         'model' => 'nullable|string|max:255',
         'collection' => 'nullable|string|max:255',
+        'unit_id' => 'nullable|exists:unit_measures,id',
+        'width' => 'nullable|numeric|min:0',
+        'length' => 'nullable|numeric|min:0',
     ]);
 
     $product_line->update([

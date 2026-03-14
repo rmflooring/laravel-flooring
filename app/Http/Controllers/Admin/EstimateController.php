@@ -224,6 +224,8 @@ $data['tax_rate_percent'] = $groupPercent;
                         'item_type'          => 'material',
                         'sort_order'         => (int) $i,
                         'product_type'       => $item['product_type'] ?? null,
+                        'product_line_id'    => ($item['product_line_id'] ?? '') !== '' ? (int)$item['product_line_id'] : null,
+                        'product_style_id'   => ($item['product_style_id'] ?? '') !== '' ? (int)$item['product_style_id'] : null,
                         'manufacturer'       => $item['manufacturer'] ?? null,
                         'style'              => $item['style'] ?? null,
                         'color_item_number'  => $item['color_item_number'] ?? null,
@@ -348,6 +350,7 @@ $data['tax_rate_percent'] = $groupPercent;
 		$estimate->load([
 			'rooms' => fn($q) => $q->orderBy('sort_order'),
 			'rooms.items' => fn($q) => $q->orderBy('sort_order'),
+			'rooms.items.productStyle',
 			'salesperson1Employee',
 			'salesperson2Employee',
 		]);
@@ -662,6 +665,8 @@ $roomId = $room->id;
                     'item_type'         => 'material',
                     'sort_order'        => (int)$i,
                     'product_type'      => $item['product_type'] ?? null,
+                    'product_line_id'   => ($item['product_line_id'] ?? '') !== '' ? (int)$item['product_line_id'] : null,
+                    'product_style_id'  => ($item['product_style_id'] ?? '') !== '' ? (int)$item['product_style_id'] : null,
                     'manufacturer'      => $item['manufacturer'] ?? null,
                     'style'             => $item['style'] ?? null,
                     'color_item_number' => $item['color_item_number'] ?? null,

@@ -27,6 +27,11 @@ class SaleItem extends Model
         });
     }
 
+    public function productStyle(): BelongsTo
+    {
+        return $this->belongsTo(ProductStyle::class, 'product_style_id');
+    }
+
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);

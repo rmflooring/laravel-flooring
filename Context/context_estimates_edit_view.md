@@ -69,6 +69,25 @@ Confirmed rooms were loading — view was the issue, not controller.
 - Match edit view structure to create view first
 - Then wire data
 
+## Estimate/Sale Edit — Dropdown Auto-Restore Fix (2026-03-14)
+
+### Problem
+Existing line item rows on the edit page couldn't auto-load product line / style dropdowns because `estimate_items` / `sale_items` only stored text values (no IDs). `loadProductLines()` requires `productTypeInput.dataset.productTypeId` — never set for existing rows.
+
+### Fix
+1. **Migration** — added `product_line_id` + `product_style_id` (nullable FK) to both `estimate_items` and `sale_items`
+2. **Edit blades** — existing material rows now output `data-product-line-id`, `data-product-style-id`, `data-use-box-qty`, `data-units-per` data attributes + hidden inputs with classes `js-product-line-id-input` and `js-product-style-id-input`
+3. **JS (`estimate.js` / `sale.js`)** — `selectFromButton` in style dropdown writes selected line ID to `.js-product-line-id-input`; color dropdown writes style ID to `.js-product-style-id-input`
+4. **`initProductTypeDropdownForRoom()`** — after loading product types, auto-sets `dataset.productTypeId` on any existing row that has a text value but no ID
+5. **Controllers** — `EstimateController::store/update` and `SaleController::update` now save `product_line_id` + `product_style_id`; both `edit()` methods eager-load `rooms.items.productStyle`
+
+### Result
+- Clicking the Style (product line) field on an existing row → loads product lines for the row's product type + manufacturer
+- Clicking the Color/Item# field on an existing row → loads product styles for the stored product line
+- Box qty prompt works for existing rows (data attributes carry `use_box_qty` + `units_per` from the eager-loaded `productStyle`)
+
+---
+
 ## UI Fix: Materials Table Overflow + Dropdown Clipping (Feb 2, 2026)
 
 ### Problem

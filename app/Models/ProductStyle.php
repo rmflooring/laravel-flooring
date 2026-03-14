@@ -10,6 +10,13 @@ class ProductStyle extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'use_box_qty' => 'bool',
+        'units_per'   => 'float',
+        'cost_price'  => 'float',
+        'sell_price'  => 'float',
+    ];
+
     protected $fillable = [
         'product_line_id',
         'name',
@@ -20,6 +27,9 @@ class ProductStyle extends Model
         'description',
         'cost_price',
         'sell_price',
+        'units_per',
+        'use_box_qty',
+        'thickness',
         'status',
         'created_by',
         'updated_by',

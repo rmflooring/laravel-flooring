@@ -314,12 +314,15 @@
                         <td class="px-3 py-2 relative">
 						  <input
 							type="text"
-							name="rooms[0][materials][0][style]"
+							name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][style]"
 							class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
 							placeholder="Style"
 							autocomplete="off"
 							data-style-input
 						  />
+						  <input type="hidden"
+							name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_line_id]"
+							class="js-product-line-id-input" />
 
 						  <div
 							class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
@@ -333,10 +336,13 @@
   <input
     type="text"
     name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][color_item_number]"
-    class="..."
+    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
     data-color-input
     autocomplete="off"
   />
+  <input type="hidden"
+    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_style_id]"
+    class="js-product-style-id-input" />
 
   <div
     class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
@@ -756,5 +762,6 @@
 <script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
 <script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>
 
+@include('components.modals.box-qty-modal')
 
 </x-admin-layout>
