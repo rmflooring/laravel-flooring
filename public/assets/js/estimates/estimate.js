@@ -44,19 +44,22 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
 	
-// Default tax group on page load
-const taxGroupInputEl = document.getElementById('tax_group_id_input');
-if (taxGroupInputEl?.value) {
-  const defaultId = String(taxGroupInputEl.value);
+// Default tax group on page load — deferred so it runs after all DOMContentLoaded handlers
+// (including estimate_edit.js) have completed their sync work.
+setTimeout(() => {
+  const taxGroupInputEl = document.getElementById('tax_group_id_input');
+  if (taxGroupInputEl?.value) {
+    const defaultId = String(taxGroupInputEl.value);
 
-  // Grab the label from the modal button list (so we display the real group name)
-  const btn = document.querySelector(`[data-tax-group-id="${defaultId}"]`);
-  if (btn?.dataset?.taxGroupName) {
-    window.FM_CURRENT_TAX_GROUP_LABEL = btn.dataset.taxGroupName;
+    // Grab the label from the modal button list (so we display the real group name)
+    const btn = document.querySelector(`[data-tax-group-id="${defaultId}"]`);
+    if (btn?.dataset?.taxGroupName) {
+      window.FM_CURRENT_TAX_GROUP_LABEL = btn.dataset.taxGroupName;
+    }
+
+    loadTaxGroupRate(defaultId);
   }
-
-  loadTaxGroupRate(defaultId);
-}
+}, 0);
 
 
 function applyWideMode(isWide) {

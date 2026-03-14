@@ -43,19 +43,22 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
 	
-// Default tax group on page load
-const taxGroupInputEl = document.getElementById('tax_group_id_input');
-if (taxGroupInputEl?.value) {
-  const defaultId = String(taxGroupInputEl.value);
+// Default tax group on page load — deferred so it runs after all DOMContentLoaded handlers
+// (including sale_edit.js) have completed their sync work.
+setTimeout(() => {
+  const taxGroupInputEl = document.getElementById('tax_group_id_input');
+  if (taxGroupInputEl?.value) {
+    const defaultId = String(taxGroupInputEl.value);
 
-  // Grab the label from the modal button list (so we display the real group name)
-  const btn = document.querySelector(`[data-tax-group-id="${defaultId}"]`);
-  if (btn?.dataset?.taxGroupName) {
-    window.FM_CURRENT_TAX_GROUP_LABEL = btn.dataset.taxGroupName;
+    // Grab the label from the modal button list (so we display the real group name)
+    const btn = document.querySelector(`[data-tax-group-id="${defaultId}"]`);
+    if (btn?.dataset?.taxGroupName) {
+      window.FM_CURRENT_TAX_GROUP_LABEL = btn.dataset.taxGroupName;
+    }
+
+    loadTaxGroupRate(defaultId);
   }
-
-  loadTaxGroupRate(defaultId);
-}
+}, 0);
 
 
 function applyWideMode(isWide) {
@@ -154,7 +157,7 @@ async function loadTaxGroupRate(groupId) {
   if (!groupId) return;
 
   try {
-    const resp = await fetch(`/pages/estimates/api/tax-groups/${encodeURIComponent(groupId)}/rate`, {
+    const resp = await fetch(`/estimates/api/tax-groups/${encodeURIComponent(groupId)}/rate`, {
       headers: { Accept: 'application/json' }
     });
     if (!resp.ok) throw new Error(`Tax group rate fetch failed (${resp.status})`);

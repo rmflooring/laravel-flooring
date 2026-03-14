@@ -411,30 +411,38 @@ closeCopyModal();
 
     const pretax = mat + frt + lab;
 
+    // Recalculate tax from FM globals (set by loadTaxGroupRate in sale.js)
+    const gstPercent = typeof window.FM_CURRENT_GST_PERCENT === "number" ? window.FM_CURRENT_GST_PERCENT : 0;
+    const pstPercent = typeof window.FM_CURRENT_PST_PERCENT === "number" ? window.FM_CURRENT_PST_PERCENT : 0;
+    const otherTaxes = Array.isArray(window.FM_CURRENT_OTHER_TAXES) ? window.FM_CURRENT_OTHER_TAXES : [];
+    const gst = pretax * (gstPercent / 100);
+    const pst = mat * (pstPercent / 100);
+    let otherTax = 0;
+    otherTaxes.forEach(t => { otherTax += pretax * ((t.rate || 0) / 100); });
+    const tax = gst + pst + otherTax;
+    const grand = pretax + tax;
+
     // Visible estimate summary
     setText(document.querySelector(".estimate-materials-value"), money(mat));
     setText(document.querySelector(".estimate-freight-value"), money(frt));
     setText(document.querySelector(".estimate-labour-value"), money(lab));
     setText(document.querySelector(".estimate-pretax-value"), money(pretax));
+    setText(document.querySelector(".estimate-tax-value"), money(tax));
+    setText(document.querySelector(".estimate-grand-total-value"), money(grand));
 
     // Hidden inputs for save
     const matIn = document.getElementById("subtotal_materials_input");
     const frtIn = document.getElementById("subtotal_freight_input");
     const labIn = document.getElementById("subtotal_labour_input");
     const preIn = document.getElementById("pretax_total_input");
+    const taxIn = document.getElementById("tax_amount_input");
+    const grandIn = document.getElementById("grand_total_input");
 
     if (matIn) matIn.value = mat.toFixed(2);
     if (frtIn) frtIn.value = frt.toFixed(2);
     if (labIn) labIn.value = lab.toFixed(2);
     if (preIn) preIn.value = pretax.toFixed(2);
-
-    // If you have tax logic elsewhere, let it run.
-    // If not, we keep grand total = pretax for now.
-    const taxAmount = toNumber(document.getElementById("tax_amount_input")?.value);
-    const grand = pretax + taxAmount;
-
-    setText(document.querySelector(".estimate-grand-total-value"), money(grand));
-    const grandIn = document.getElementById("grand_total_input");
+    if (taxIn) taxIn.value = tax.toFixed(2);
     if (grandIn) grandIn.value = grand.toFixed(2);
   }
 

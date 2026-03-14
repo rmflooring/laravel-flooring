@@ -1623,7 +1623,12 @@
     aria-expanded="false"
     aria-controls="js-tax-breakdown"
   >
-    <span class="estimate-tax-label text-sm text-gray-700">Tax (G)</span>
+    @php
+        $selectedTaxGroupId = old('tax_group_id', $sale->tax_group_id ?? $defaultTaxGroupId ?? null);
+        $selectedTaxGroup = $taxGroups->firstWhere('id', $selectedTaxGroupId);
+        $taxLabelName = $selectedTaxGroup->name ?? 'G';
+    @endphp
+    <span class="estimate-tax-label text-sm text-gray-700">Tax ({{ $taxLabelName }})</span>
 
     <span class="flex items-center gap-2">
       <span class="estimate-tax-value text-sm font-semibold text-gray-900">$0.00</span>
