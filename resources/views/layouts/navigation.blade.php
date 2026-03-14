@@ -147,7 +147,7 @@
                     <li class="relative">
                         <button id="dropdownVendorsButton" data-dropdown-toggle="dropdownVendors"
                                 class="flex w-full items-center justify-between rounded px-3 py-2 md:w-auto md:p-0
-                                       {{ (request()->routeIs('admin.vendors.*') || request()->routeIs('admin.vendor_reps.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
+                                       {{ (request()->routeIs('admin.vendors.*') || request()->routeIs('admin.vendor_reps.*') || request()->routeIs('admin.installers.*')) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-400' }}"
                                 type="button">
                             Manage Vendors
                             <svg class="ms-2.5 h-2.5 w-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
@@ -158,6 +158,7 @@
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownVendorsButton">
                                 <li><a href="{{ route('admin.vendors.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Vendors List</a></li>
                                 <li><a href="{{ route('admin.vendor_reps.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Vendor Reps</a></li>
+                                <li><a href="{{ route('admin.installers.index') }}" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">Installers</a></li>
                             </ul>
                         </div>
                     </li>

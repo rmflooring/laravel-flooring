@@ -100,7 +100,7 @@ class SaleController extends Controller
 			'rooms.items' => fn($q) => $q->where('is_removed', false)->orderBy('sort_order'),
 			'purchaseOrders.vendor',
 			'purchaseOrders.items',
-			'workOrders.assignedTo',
+			'workOrders.installer',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody'));

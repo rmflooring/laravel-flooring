@@ -212,8 +212,8 @@
                             <thead class="text-xs text-gray-500 bg-gray-50 border-b border-gray-100 uppercase">
                                 <tr>
                                     <th class="px-5 py-3 font-medium">WO Number</th>
-                                    <th class="px-5 py-3 font-medium">Work Type</th>
-                                    <th class="px-5 py-3 font-medium">Assigned To</th>
+                                    <th class="px-5 py-3 font-medium">Installer</th>
+                                    <th class="px-5 py-3 font-medium">Items</th>
                                     <th class="px-5 py-3 font-medium">Scheduled</th>
                                     <th class="px-5 py-3 font-medium">Status</th>
                                     <th class="px-5 py-3 font-medium">Calendar</th>
@@ -229,8 +229,8 @@
                                                 {{ $wo->wo_number }}
                                             </a>
                                         </td>
-                                        <td class="px-5 py-3">{{ $wo->work_type }}</td>
-                                        <td class="px-5 py-3 text-gray-500">{{ $wo->assignedTo?->name ?? '—' }}</td>
+                                        <td class="px-5 py-3 text-gray-500">{{ $wo->installer?->company_name ?? '—' }}</td>
+                                        <td class="px-5 py-3 text-gray-500">{{ $wo->items->count() }} {{ Str::plural('item', $wo->items->count()) }}</td>
                                         <td class="px-5 py-3 text-gray-500">
                                             @if ($wo->scheduled_date)
                                                 {{ $wo->scheduled_date->format('M j, Y') }}

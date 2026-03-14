@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,7 @@ class WorkOrder extends Model
 
     protected $casts = [
         'scheduled_date' => 'date',
+        'sent_at'        => 'datetime',
         'deleted_at'     => 'datetime',
     ];
 
@@ -67,6 +69,8 @@ class WorkOrder extends Model
         });
     }
 
+    // ── Accessors ─────────────────────────────────────────────────
+
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status] ?? ucfirst($this->status);
@@ -77,6 +81,11 @@ class WorkOrder extends Model
         return ! empty($this->calendar_event_id);
     }
 
+    public function getGrandTotalAttribute(): float
+    {
+        return (float) $this->items->sum('cost_total');
+    }
+
     // ── Relationships ─────────────────────────────────────────────
 
     public function sale(): BelongsTo
@@ -84,9 +93,14 @@ class WorkOrder extends Model
         return $this->belongsTo(Sale::class);
     }
 
-    public function assignedTo(): BelongsTo
+    public function installer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to_user_id');
+        return $this->belongsTo(Installer::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(WorkOrderItem::class)->orderBy('sort_order');
     }
 
     public function calendarEvent(): BelongsTo

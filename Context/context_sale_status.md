@@ -41,7 +41,7 @@ $sale->load([
     'rooms.items',
     'purchaseOrders.vendor',
     'purchaseOrders.items',
-    'workOrders.assignedTo',
+    'workOrders.installer',
 ]);
 ```
 SoftDeletes scope on `PurchaseOrder` automatically excludes soft-deleted POs.

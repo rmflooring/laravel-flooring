@@ -1,56 +1,39 @@
 {{-- resources/views/pages/work-orders/edit.blade.php --}}
-<x-admin-layout>
+<x-app-layout>
     <div class="py-6">
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
             {{-- Header --}}
-            <div>
-                <nav class="flex items-center gap-1.5 text-sm text-gray-500 mb-2">
-                    <a href="{{ route('pages.sales.show', $sale) }}"
-                       class="inline-flex items-center gap-1 hover:text-gray-700 font-medium">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-                        </svg>
-                        Sale {{ $sale->sale_number ?? ('#' . $sale->id) }}
+            <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Work Order</h1>
+                    <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ $workOrder->wo_number }}</span>
+                        <span class="text-gray-400">•</span>
+                        <span>Sale: {{ $sale->sale_number }}</span>
+                        @if($sale->customer_name)
+                            <span class="text-gray-400">•</span>
+                            <span>{{ $sale->customer_name }}</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('pages.sales.work-orders.show', [$sale, $workOrder]) }}"
+                       class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                        Cancel
                     </a>
-                    @if ($sale->customer_name)
-                        <span class="text-gray-300">·</span>
-                        <span>{{ $sale->customer_name }}</span>
-                    @endif
-                </nav>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-2xl font-bold text-gray-900">{{ $workOrder->wo_number }}</h1>
-
-                    @php
-                        $statusColors = [
-                            'created'     => 'bg-gray-100 text-gray-700',
-                            'scheduled'   => 'bg-blue-100 text-blue-800',
-                            'in_progress' => 'bg-amber-100 text-amber-800',
-                            'completed'   => 'bg-green-100 text-green-800',
-                            'cancelled'   => 'bg-red-100 text-red-800',
-                        ];
-                    @endphp
-                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusColors[$workOrder->status] ?? 'bg-gray-100 text-gray-700' }}">
-                        {{ $workOrder->status_label }}
-                    </span>
-
-                    @if ($workOrder->calendar_synced)
-                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
-                            On calendar
-                        </span>
-                    @else
-                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block"></span>
-                            Not synced
-                        </span>
-                    @endif
+                    <a href="{{ route('pages.sales.work-orders.pdf', [$sale, $workOrder]) }}" target="_blank"
+                       class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                        Print PDF
+                    </a>
                 </div>
             </div>
 
+            {{-- Errors --}}
             @if ($errors->any())
-                <div class="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg">
-                    <ul class="list-disc list-inside space-y-0.5">
+                <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-gray-800">
+                    <p class="mb-2 text-sm font-semibold text-red-800 dark:text-red-400">Please fix the following errors:</p>
+                    <ul class="list-inside list-disc space-y-1 text-sm text-red-700 dark:text-red-400">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
@@ -58,211 +41,188 @@
                 </div>
             @endif
 
-            {{-- Status transitions --}}
-            @if ($workOrder->status !== 'cancelled')
-                <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Update status</p>
-                    <div class="flex flex-wrap gap-2" x-data="woStatus('{{ $workOrder->status }}')">
-
-                        @php
-                            $transitions = [
-                                'created'     => ['scheduled'],
-                                'scheduled'   => ['in_progress', 'created'],
-                                'in_progress' => ['completed', 'scheduled'],
-                                'completed'   => [],
-                            ];
-                            $available = $transitions[$workOrder->status] ?? [];
-                        @endphp
-
-                        @foreach (WorkOrder::STATUSES as $s)
-                            @if ($s === $workOrder->status)
-                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium border-2 cursor-default
-                                    {{ $statusColors[$s] ?? 'bg-gray-100 text-gray-700' }}"
-                                    style="border-color: currentColor; opacity:0.8">
-                                    {{ WorkOrder::STATUS_LABELS[$s] }} ✓
-                                </span>
-                            @elseif ($s === 'cancelled')
-                                <button type="button"
-                                        @click="confirmCancel()"
-                                        class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
-                                    Cancel WO
-                                </button>
-                            @elseif (in_array($s, $available))
-                                <button type="button"
-                                        @click="setStatus('{{ $s }}')"
-                                        class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
-                                    → {{ WorkOrder::STATUS_LABELS[$s] }}
-                                </button>
-                            @endif
-                        @endforeach
-
-                        {{-- Hidden status input updated by Alpine --}}
-                        <input type="hidden" name="_status_intent" x-bind:value="pendingStatus">
-
-                        {{-- Cancel confirmation --}}
-                        <div x-show="showCancelConfirm" x-cloak
-                             class="w-full mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                            <p class="font-medium mb-2">Cancel this work order?</p>
-                            <p class="text-xs mb-3">The calendar event (if any) will also be removed.</p>
-                            <div class="flex gap-2">
-                                <button type="button"
-                                        @click="showCancelConfirm = false"
-                                        class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-                                    Keep
-                                </button>
-                                <button type="button"
-                                        @click="setStatus('cancelled'); showCancelConfirm = false"
-                                        class="px-3 py-1.5 text-xs font-medium text-white rounded-lg"
-                                        style="background:#dc2626">
-                                    Yes, cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Main form --}}
-            <form method="POST"
-                  action="{{ route('pages.sales.work-orders.update', [$sale, $workOrder]) }}"
-                  x-data="woEdit()"
-                  id="wo-edit-form">
+            <form method="POST" action="{{ route('pages.sales.work-orders.update', [$sale, $workOrder]) }}"
+                  x-data="woEdit()">
                 @csrf
                 @method('PUT')
 
-                {{-- Status is driven by the status panel above, or keeps current if not changed --}}
-                <input type="hidden" name="status" id="status-field" value="{{ $workOrder->status }}">
-
-                <div class="bg-white border border-gray-200 rounded-lg shadow-sm divide-y divide-gray-100">
-
-                    {{-- Work type --}}
-                    <div class="px-6 py-5 space-y-1">
-                        <label for="work_type" class="block text-sm font-medium text-gray-700">
-                            Work type <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="work_type" name="work_type"
-                               value="{{ old('work_type', $workOrder->work_type) }}"
-                               class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500 @error('work_type') border-red-500 @enderror">
-                        @error('work_type')
-                            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
-                        @enderror
+                {{-- Installer --}}
+                <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Installer</h2>
                     </div>
-
-                    {{-- Assigned to --}}
-                    <div class="px-6 py-5 space-y-1">
-                        <label for="assigned_to_user_id" class="block text-sm font-medium text-gray-700">
-                            Assigned to
+                    <div class="p-6">
+                        <label for="installer_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Installer <span class="text-red-500">*</span>
                         </label>
-                        <select id="assigned_to_user_id" name="assigned_to_user_id"
-                                x-model="assigneeId"
-                                class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">— Unassigned —</option>
-                            @foreach ($users as $user)
-                                <option value="{{ $user->id }}"
-                                    {{ old('assigned_to_user_id', $workOrder->assigned_to_user_id) == $user->id ? 'selected' : '' }}>
-                                    {{ $user->name }}
+                        <select id="installer_id" name="installer_id" required
+                                x-model="installerId"
+                                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                            <option value="">— Select an installer —</option>
+                            @foreach($installers as $installer)
+                                <option value="{{ $installer->id }}"
+                                        {{ old('installer_id', $workOrder->installer_id) == $installer->id ? 'selected' : '' }}>
+                                    {{ $installer->company_name }}
+                                    @if($installer->email) ({{ $installer->email }}) @endif
                                 </option>
                             @endforeach
                         </select>
                     </div>
+                </div>
 
-                    {{-- Scheduled date + time --}}
-                    <div class="px-6 py-5">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div class="space-y-1">
-                                <label for="scheduled_date" class="block text-sm font-medium text-gray-700">
-                                    Scheduled date
-                                </label>
-                                <input type="date" id="scheduled_date" name="scheduled_date"
-                                       value="{{ old('scheduled_date', $workOrder->scheduled_date?->format('Y-m-d')) }}"
-                                       x-model="scheduledDate"
-                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div class="space-y-1">
-                                <label for="scheduled_time" class="block text-sm font-medium text-gray-700">
-                                    Scheduled time
-                                </label>
-                                <input type="time" id="scheduled_time" name="scheduled_time"
-                                       value="{{ old('scheduled_time', $workOrder->scheduled_time) }}"
-                                       class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-                            </div>
+                {{-- Status --}}
+                <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Status</h2>
+                    </div>
+                    <div class="p-6">
+                        <select id="status" name="status" required
+                                class="block w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                            @foreach (\App\Models\WorkOrder::STATUS_LABELS as $val => $label)
+                                <option value="{{ $val }}" {{ old('status', $workOrder->status) === $val ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                {{-- Labour Items --}}
+                <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Labour Items</h2>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Items cannot be added or removed after creation. Adjust quantities and costs only.</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Item</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Qty</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Unit Cost</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                                @php $grandTotal = 0; @endphp
+                                @foreach ($workOrder->items as $item)
+                                    @php
+                                        $max = $maxQtys[$item->id] ?? 9999;
+                                        $grandTotal += (float) $item->cost_total;
+                                    @endphp
+                                    <tr x-data="woRow({{ $item->id }}, {{ (float)$item->quantity }}, {{ (float)$item->cost_price }})">
+                                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                            {{ $item->item_name }}
+                                            <div class="text-xs text-gray-400">{{ $item->unit }}</div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <input type="number" name="wo_items[{{ $item->id }}][quantity]"
+                                                   x-model="qty"
+                                                   @input="validateQty({{ $max }})"
+                                                   step="0.01" min="0.01"
+                                                   class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                   :class="qtyError ? 'border-red-400' : ''">
+                                            <div class="mt-1 text-xs text-gray-400">max {{ number_format($max, 2) }}</div>
+                                            <p x-show="qtyError" x-text="qtyError" x-cloak class="mt-1 text-xs text-red-500"></p>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <input type="number" name="wo_items[{{ $item->id }}][cost_price]"
+                                                   x-model="cost"
+                                                   step="0.01" min="0"
+                                                   class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                        </td>
+                                        <td class="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white"
+                                            x-text="'$' + (parseFloat(qty||0) * parseFloat(cost||0)).toFixed(2)">
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                <tr class="bg-gray-50 dark:bg-gray-700">
+                                    <td colspan="3" class="px-6 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">Grand Total</td>
+                                    <td class="px-6 py-3 text-right text-sm font-bold text-gray-900 dark:text-white">
+                                        ${{ number_format($grandTotal, 2) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {{-- Scheduling --}}
+                <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Scheduling</h2>
+                    </div>
+                    <div class="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2">
+                        <div>
+                            <label for="scheduled_date" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Scheduled Date</label>
+                            <input type="date" id="scheduled_date" name="scheduled_date"
+                                   value="{{ old('scheduled_date', $workOrder->scheduled_date?->format('Y-m-d')) }}"
+                                   x-model="scheduledDate"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
-
-                        {{-- Calendar sync hint --}}
-                        <div class="mt-2 text-xs" x-show="calendarHintVisible()" x-cloak>
-                            @if ($workOrder->calendar_synced)
-                                <span style="color:#2563eb">Calendar event will be updated on save.</span>
-                            @else
-                                <span style="color:#2563eb">A calendar event will be created for the assigned user on save.</span>
-                            @endif
+                        <div>
+                            <label for="scheduled_time" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Scheduled Time</label>
+                            <input type="time" id="scheduled_time" name="scheduled_time"
+                                   value="{{ old('scheduled_time', $workOrder->scheduled_time) }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <p x-show="installerId && scheduledDate" x-cloak class="text-xs text-blue-600 dark:text-blue-400">
+                                @if($workOrder->calendar_synced)
+                                    The RM – Installations calendar event will be updated on save.
+                                @else
+                                    A calendar event will be created on RM – Installations on save.
+                                @endif
+                            </p>
                         </div>
                     </div>
+                </div>
 
-                    {{-- Notes --}}
-                    <div class="px-6 py-5 space-y-1">
-                        <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
-                        <textarea id="notes" name="notes" rows="4"
-                                  class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">{{ old('notes', $workOrder->notes) }}</textarea>
+                {{-- Notes --}}
+                <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Notes</h2>
                     </div>
-
+                    <div class="p-6">
+                        <textarea id="notes" name="notes" rows="3"
+                                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">{{ old('notes', $workOrder->notes) }}</textarea>
+                    </div>
                 </div>
 
                 {{-- Actions --}}
-                <div class="flex items-center justify-between pt-4">
-                    <div class="flex items-center gap-2">
-                        <a href="{{ route('pages.sales.show', $sale) }}"
-                           class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-                            Cancel
-                        </a>
-
-                        @can('delete work orders')
-                        <form method="POST"
-                              action="{{ route('pages.sales.work-orders.destroy', [$sale, $workOrder]) }}"
-                              onsubmit="return confirm('Delete this work order? This cannot be undone.')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                                    class="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50">
-                                Delete
-                            </button>
-                        </form>
-                        @endcan
-                    </div>
-
+                <div class="flex gap-3">
                     <button type="submit"
-                            class="px-5 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300">
-                        Save changes
+                            class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700">
+                        Save Changes
                     </button>
+                    <a href="{{ route('pages.sales.work-orders.show', [$sale, $workOrder]) }}"
+                       class="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                        Cancel
+                    </a>
                 </div>
 
             </form>
         </div>
     </div>
 
-<script>
-function woStatus(currentStatus) {
-    return {
-        pendingStatus: currentStatus,
-        showCancelConfirm: false,
-        setStatus(s) {
-            this.pendingStatus = s;
-            document.getElementById('status-field').value = s;
-            document.getElementById('wo-edit-form').submit();
-        },
-        confirmCancel() {
-            this.showCancelConfirm = true;
-        },
-    };
-}
+    <script>
+    function woEdit() {
+        return {
+            installerId:   '{{ old('installer_id', $workOrder->installer_id ?? '') }}',
+            scheduledDate: '{{ old('scheduled_date', $workOrder->scheduled_date?->format('Y-m-d') ?? '') }}',
+        };
+    }
 
-function woEdit() {
-    return {
-        assigneeId: '{{ old('assigned_to_user_id', $workOrder->assigned_to_user_id ?? '') }}',
-        scheduledDate: '{{ old('scheduled_date', $workOrder->scheduled_date?->format('Y-m-d') ?? '') }}',
-        calendarHintVisible() {
-            return this.assigneeId !== '' && this.scheduledDate !== '';
-        },
-    };
-}
-</script>
-</x-admin-layout>
+    function woRow(id, qty, cost) {
+        return {
+            qty:      qty,
+            cost:     cost,
+            qtyError: '',
+            validateQty(max) {
+                const v = parseFloat(this.qty);
+                if (isNaN(v) || v <= 0) this.qtyError = 'Must be > 0';
+                else if (v > max)        this.qtyError = `Max is ${max}`;
+                else                     this.qtyError = '';
+            },
+        };
+    }
+    </script>
+</x-app-layout>

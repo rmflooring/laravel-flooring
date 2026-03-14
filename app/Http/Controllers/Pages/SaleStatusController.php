@@ -14,7 +14,7 @@ class SaleStatusController extends Controller
             'rooms.items',
             'purchaseOrders.vendor',
             'purchaseOrders.items',
-            'workOrders.assignedTo',
+            'workOrders.installer',
         ]);
 
         // ── Material items ─────────────────────────────────────────

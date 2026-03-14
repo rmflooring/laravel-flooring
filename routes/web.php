@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\VendorRepController;
+use App\Http\Controllers\Admin\InstallerController;
 use App\Http\Controllers\Admin\ProjectManagerController;
 use App\Http\Controllers\Admin\LabourTypeController;
 use App\Http\Controllers\Admin\LabourItemController;
@@ -306,6 +307,19 @@ Route::prefix('admin')
                 'destroy' => 'vendor_reps.destroy',
             ]);
 
+        // Installers
+        Route::resource('installers', InstallerController::class)
+            ->middleware('role_or_permission:admin|view installers')
+            ->names([
+                'index'   => 'installers.index',
+                'create'  => 'installers.create',
+                'store'   => 'installers.store',
+                'show'    => 'installers.show',
+                'edit'    => 'installers.edit',
+                'update'  => 'installers.update',
+                'destroy' => 'installers.destroy',
+            ]);
+
         // Labour
         Route::resource('labour-types', LabourTypeController::class)
             ->middleware('role_or_permission:admin|view labour types')
@@ -523,6 +537,14 @@ Route::prefix('pages')
 		Route::delete('sales/{sale}/work-orders/{workOrder}', [\App\Http\Controllers\Pages\WorkOrderController::class, 'destroy'])
 			->name('sales.work-orders.destroy')
 			->middleware('role_or_permission:admin|delete work orders');
+
+		Route::get('sales/{sale}/work-orders/{workOrder}/pdf', [\App\Http\Controllers\Pages\WorkOrderController::class, 'previewPdf'])
+			->name('sales.work-orders.pdf')
+			->middleware('role_or_permission:admin|view work orders');
+
+		Route::post('sales/{sale}/work-orders/{workOrder}/send-email', [\App\Http\Controllers\Pages\WorkOrderController::class, 'sendEmail'])
+			->name('sales.work-orders.send-email')
+			->middleware('role_or_permission:admin|edit work orders');
 
 		// Purchase Orders — create/store scoped to a sale
 		Route::get('sales/{sale}/purchase-orders/create', [PurchaseOrderController::class, 'create'])
