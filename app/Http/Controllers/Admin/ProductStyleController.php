@@ -106,6 +106,28 @@ class ProductStyleController extends Controller
             ->with('success', 'Style created successfully.');
     }
 
+    public function duplicate(ProductLine $product_line, $style)
+    {
+        $original = $product_line->productStyles()->findOrFail($style);
+
+        $copy = $product_line->productStyles()->create([
+            'name'         => 'Copy of ' . $original->name,
+            'sku'          => null,
+            'style_number' => null,
+            'color'        => $original->color,
+            'pattern'      => $original->pattern,
+            'description'  => $original->description,
+            'cost_price'   => $original->cost_price,
+            'sell_price'   => $original->sell_price,
+            'status'       => $original->status,
+            'created_by'   => auth()->id(),
+        ]);
+
+        return redirect()
+            ->route('admin.product_styles.index', $product_line)
+            ->with('editStyle', $copy);
+    }
+
     public function destroy(ProductLine $product_line, $styleId)
     {
         $style = $product_line->productStyles()->findOrFail($styleId);

@@ -382,6 +382,10 @@ Route::prefix('admin')
                 'destroy' => 'product_styles.destroy',
             ])
             ->parameters(['product_line' => 'product_line']);
+
+        Route::post('product-lines/{product_line}/product-styles/{style}/duplicate', [ProductStyleController::class, 'duplicate'])
+            ->middleware('role_or_permission:admin|view product styles')
+            ->name('product_styles.duplicate');
     });
 
 /*

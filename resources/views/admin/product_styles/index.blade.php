@@ -109,6 +109,13 @@
                                                        class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                                                         Edit
                                                     </a>
+                                                    <form action="{{ route('admin.product_styles.duplicate', [$product_line, $style]) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit"
+                                                                class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">
+                                                            Duplicate
+                                                        </button>
+                                                    </form>
                                                     <form action="{{ route('admin.product_styles.destroy', [$product_line, $style]) }}" method="POST">
                                                         @csrf
                                                         @method('DELETE')
