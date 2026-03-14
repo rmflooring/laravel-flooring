@@ -50,6 +50,11 @@ throw new \RuntimeException('Could not generate a unique sale number.');
         return $this->hasMany(PurchaseOrder::class)->orderByDesc('created_at');
     }
 
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class)->orderByDesc('created_at');
+    }
+
     public function rooms(): HasMany
     {
         return $this->hasMany(SaleRoom::class)->orderBy('sort_order');

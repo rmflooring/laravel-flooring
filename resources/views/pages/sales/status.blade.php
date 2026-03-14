@@ -69,7 +69,7 @@
                     </div>
                 </div>
                 <p class="mt-2 text-xs text-gray-400">
-                    Based on material items received · Work orders not yet factored in
+                    Based on material items received and work orders scheduled or completed
                 </p>
             </div>
 
@@ -97,8 +97,8 @@
                 </div>
 
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
-                    <div class="text-2xl font-bold text-gray-300">0</div>
-                    <div class="text-xs text-gray-400 mt-1">Work orders <span class="italic">(coming soon)</span></div>
+                    <div class="text-2xl font-bold text-gray-900">{{ $totalWOs }}</div>
+                    <div class="text-xs text-gray-500 mt-1">Work orders</div>
                 </div>
 
             </div>
@@ -180,15 +180,92 @@
                 @endif
             </div>
 
-            {{-- ── Work Orders (placeholder) ────────────────────────────── --}}
+            {{-- ── Work Orders ───────────────────────────────────────────── --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-200">
-                    <h2 class="text-base font-semibold text-gray-900">Work Orders</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">Installation and labour scheduling.</p>
+                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-900">Work Orders</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Installation and labour tasks.</p>
+                    </div>
+                    @can('create work orders')
+                        <a href="{{ route('pages.sales.work-orders.create', $sale) }}"
+                           class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800">
+                            + Create Work Order
+                        </a>
+                    @endcan
                 </div>
-                <div class="px-5 py-6 text-sm text-gray-400 italic">
-                    Work orders are coming soon.
-                </div>
+
+                @if ($activeWOs->isEmpty())
+                    <div class="px-5 py-6 text-sm text-gray-400">No work orders yet.</div>
+                @else
+                    @php
+                        $woStatusColors = [
+                            'created'     => 'bg-gray-100 text-gray-700',
+                            'scheduled'   => 'bg-blue-100 text-blue-800',
+                            'in_progress' => 'bg-amber-100 text-amber-800',
+                            'completed'   => 'bg-green-100 text-green-800',
+                            'cancelled'   => 'bg-red-100 text-red-800',
+                        ];
+                    @endphp
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-700">
+                            <thead class="text-xs text-gray-500 bg-gray-50 border-b border-gray-100 uppercase">
+                                <tr>
+                                    <th class="px-5 py-3 font-medium">WO Number</th>
+                                    <th class="px-5 py-3 font-medium">Work Type</th>
+                                    <th class="px-5 py-3 font-medium">Assigned To</th>
+                                    <th class="px-5 py-3 font-medium">Scheduled</th>
+                                    <th class="px-5 py-3 font-medium">Status</th>
+                                    <th class="px-5 py-3 font-medium">Calendar</th>
+                                    <th class="px-5 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach ($activeWOs->sortByDesc('created_at') as $wo)
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-5 py-3 font-medium text-gray-900">
+                                            <a href="{{ route('pages.sales.work-orders.show', [$sale, $wo]) }}"
+                                               class="text-blue-600 hover:underline">
+                                                {{ $wo->wo_number }}
+                                            </a>
+                                        </td>
+                                        <td class="px-5 py-3">{{ $wo->work_type }}</td>
+                                        <td class="px-5 py-3 text-gray-500">{{ $wo->assignedTo?->name ?? '—' }}</td>
+                                        <td class="px-5 py-3 text-gray-500">
+                                            @if ($wo->scheduled_date)
+                                                {{ $wo->scheduled_date->format('M j, Y') }}
+                                                @if ($wo->scheduled_time)
+                                                    · {{ \Carbon\Carbon::createFromFormat('H:i', $wo->scheduled_time)->format('g:i A') }}
+                                                @endif
+                                            @else
+                                                —
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $woStatusColors[$wo->status] ?? 'bg-gray-100 text-gray-700' }}">
+                                                {{ $wo->status_label }}
+                                            </span>
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            @if ($wo->calendar_synced)
+                                                <span class="inline-flex items-center gap-1 text-xs text-green-700">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+                                                    On calendar
+                                                </span>
+                                            @else
+                                                <span class="text-xs text-gray-400">Not synced</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <a href="{{ route('pages.sales.work-orders.show', [$sale, $wo]) }}"
+                                               class="text-sm font-medium text-blue-600 hover:underline">View</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </div>
 
             {{-- ── Material Coverage ────────────────────────────────────── --}}

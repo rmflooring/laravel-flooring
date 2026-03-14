@@ -1,5 +1,5 @@
 # Sale Status Page — Dev Context
-Updated: 2026-03-14
+Updated: 2026-03-14 (WOs wired in)
 
 ---
 
@@ -41,6 +41,7 @@ $sale->load([
     'rooms.items',
     'purchaseOrders.vendor',
     'purchaseOrders.items',
+    'workOrders.assignedTo',
 ]);
 ```
 SoftDeletes scope on `PurchaseOrder` automatically excludes soft-deleted POs.
@@ -67,14 +68,17 @@ Map is built as `$poItemsBySaleItemId[sale_item_id][] = ['po' => $po, 'poItem' =
 | `$posPending`      | Count of POs with status = pending (including cancelled ones)            |
 | `$itemsReceived`   | Count of po_item records on POs with status = received                   |
 
+### WO stats
+- `$totalWOs` = count of non-cancelled WOs
+- `$wosScheduledOrProgress` = count of WOs with status `scheduled`, `in_progress`, or `completed`
+
 ### Progress %
 ```php
-$progressPercent = ($totalMaterialItems > 0 && $posCreated > 0)
-    ? (int) round($itemsReceived / $totalMaterialItems * 100)
-    : 0;
+$denominator     = $totalMaterialItems + $totalWOs;
+$numerator       = $itemsReceived + $wosScheduledOrProgress;
+$progressPercent = $denominator > 0 ? round($numerator / $denominator * 100) : 0;
 ```
-Numerator: count of po_item records on received POs. Denominator: total material sale items.
-Shows 0% if no POs exist.
+Numerator: received material items + WOs that are scheduled/in-progress/completed. Denominator: total material items + total non-cancelled WOs.
 
 ### Coverage items
 For each material sale item, the controller looks up `$poItemsBySaleItemId[$item->id]`. If no matches, `dot_status = 'none'`. Otherwise it selects the best-priority match:
@@ -84,13 +88,13 @@ For each material sale item, the controller looks up `$poItemsBySaleItemId[$item
 
 Returns `['item' => $saleItem, 'dot_status' => string, 'po' => PurchaseOrder|null]`
 
-### Overall status badge logic
-| Badge         | Condition                                                           |
-|---------------|---------------------------------------------------------------------|
-| Not started   | No POs exist (`$posCreated === 0`)                                  |
-| Ready         | All material items have `dot_status = 'received'`                   |
-| Needs action  | At least one material item has `dot_status = 'none'`                |
-| In progress   | At least one PO has status `ordered` or `received`                  |
+### Overall status badge logic (updated — WOs now factored in)
+| Badge        | Condition                                                                              |
+|--------------|----------------------------------------------------------------------------------------|
+| Not started  | No POs AND no WOs                                                                      |
+| Needs action | Any material item has no PO, OR any WO has status `created` (unassigned/unscheduled)   |
+| Ready        | All materials received AND all WOs scheduled, in-progress, or completed                |
+| In progress  | Otherwise — at least one PO ordered/received OR one WO scheduled/in-progress/completed |
 
 ---
 
@@ -108,11 +112,12 @@ Inline hex colours are used (not Tailwind dynamic classes) for consistent render
 
 ---
 
-## Placeholder sections (not yet wired to data)
+## Placeholder sections
 
 ### Work Orders
-Section heading and empty-state message only. No model, no data, no routes.
-When the Work Orders module is built: wire stat card count, add a real table here, and factor WO completion into the overall status badge and progress bar.
+Fully wired as of 2026-03-14. See `Context/context_work_orders.md` for full details.
+Stat card shows live `$totalWOs` count. WO table replaces the old empty state.
+Progress bar and overall status badge now factor in WO statuses.
 
 ### From inventory (coverage dots)
 The pink "From inventory" dot colour and badge label exist structurally in the blade but are never set as a `dot_status` value. When inventory tracking is built, a sale item could be marked as fulfilled from stock, and `dot_status = 'inventory'` would activate this badge.
@@ -126,8 +131,8 @@ The pink "From inventory" dot colour and badge label exist structurally in the b
 1. **Status button** — secondary button in the header, `@can('view sale status')` gated, links to `pages.sales.status`.
 
 2. **Slim status strip** — one-liner between the header and the summary cards:
-   `X POs · X received · 0 work orders · View status →`
-   Computed inline from already-eager-loaded `$sale->purchaseOrders`. Work order count is hardcoded 0 until that module is built.
+   `X POs · X received · X work orders · View status →`
+   All counts computed inline from eager-loaded `$sale->purchaseOrders` and `$sale->workOrders`.
 
 ---
 

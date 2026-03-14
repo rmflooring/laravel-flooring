@@ -186,6 +186,23 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 ---
 
+## Work Orders module summary
+Full details in `Context/context_work_orders.md`.
+
+- WOs represent installation/prep tasks assigned to a user for a sale
+- WO number auto-generated: `WO-YYYY-NNNN` sequential per year
+- Statuses: created → scheduled (requires assignee + date) → in_progress → completed; any → cancelled
+- Calendar sync: WO events go on the assigned user's personal primary MS365 calendar (best-effort)
+  - Create event on store/update when assignee + date are set
+  - Update event if date/time/assignee changes
+  - Delete event when cancelled or destroyed
+- `GraphCalendarService` now has `updateEvent()` and `deleteEvent()` methods (closes RFM edit sync gap too)
+- Permissions: view/create/edit/delete work orders → admin, coordinator, estimator, sales (view only: reception)
+- WO section on sale show page (below POs)
+- Sale Status page: WO stat card live, WO table live, progress bar + overall status badge updated
+
+---
+
 ## Sale Status page summary
 Full details in `Context/context_sale_status.md`.
 

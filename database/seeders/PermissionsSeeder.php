@@ -82,6 +82,12 @@ class PermissionsSeeder extends Seeder
 
             // ===== Sale Status =====
             'view sale status',
+
+            // ===== Work Orders =====
+            'view work orders',
+            'create work orders',
+            'edit work orders',
+            'delete work orders',
         ];
 
         foreach ($permissions as $permission) {

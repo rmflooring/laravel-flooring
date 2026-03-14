@@ -109,6 +109,83 @@ class GraphCalendarService
     }
 
     /**
+     * Update an existing event in Microsoft 365 via PATCH.
+     * $eventData accepts the same keys as createEvent().
+     * Throws \Exception on failure.
+     */
+    public function updateEvent(MicrosoftAccount $account, \App\Models\ExternalEventLink $link, array $eventData): void
+    {
+        $accessToken = $this->ensureAccessToken($account);
+
+        $start = $eventData['start'] instanceof \Carbon\Carbon
+            ? $eventData['start']->format('Y-m-d\TH:i:s')
+            : date('Y-m-d\TH:i:s', strtotime($eventData['start']));
+
+        $end = $eventData['end'] instanceof \Carbon\Carbon
+            ? $eventData['end']->format('Y-m-d\TH:i:s')
+            : date('Y-m-d\TH:i:s', strtotime($eventData['end']));
+
+        $payload = [
+            'subject' => $eventData['title'],
+            'body'    => [
+                'contentType' => 'text',
+                'content'     => $eventData['notes'] ?? '',
+            ],
+            'start' => ['dateTime' => $start, 'timeZone' => 'Pacific Standard Time'],
+            'end'   => ['dateTime' => $end,   'timeZone' => 'Pacific Standard Time'],
+        ];
+
+        if (array_key_exists('location', $eventData)) {
+            $payload['location'] = ['displayName' => $eventData['location'] ?? ''];
+        }
+
+        $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+            ->where('calendar_id', $link->external_calendar_id)
+            ->first();
+
+        $url = ($calendar && ! empty($calendar->group_id))
+            ? "https://graph.microsoft.com/v1.0/groups/{$calendar->group_id}/events/{$link->external_event_id}"
+            : "https://graph.microsoft.com/v1.0/me/events/{$link->external_event_id}";
+
+        $response = Http::withToken($accessToken)->acceptJson()->patch($url, $payload);
+
+        if (! $response->successful()) {
+            throw new \Exception(
+                "Graph API update failed (HTTP {$response->status()}): " . $response->body()
+            );
+        }
+
+        $link->update(['last_synced_at' => now()]);
+    }
+
+    /**
+     * Delete an event from Microsoft 365 and remove the ExternalEventLink record.
+     * Throws \Exception on failure.
+     */
+    public function deleteEvent(MicrosoftAccount $account, \App\Models\ExternalEventLink $link): void
+    {
+        $accessToken = $this->ensureAccessToken($account);
+
+        $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+            ->where('calendar_id', $link->external_calendar_id)
+            ->first();
+
+        $url = ($calendar && ! empty($calendar->group_id))
+            ? "https://graph.microsoft.com/v1.0/groups/{$calendar->group_id}/events/{$link->external_event_id}"
+            : "https://graph.microsoft.com/v1.0/me/events/{$link->external_event_id}";
+
+        $response = Http::withToken($accessToken)->delete($url);
+
+        if (! in_array($response->status(), [200, 204], true)) {
+            throw new \Exception(
+                "Graph API delete failed (HTTP {$response->status()}): " . $response->body()
+            );
+        }
+
+        $link->delete();
+    }
+
+    /**
      * Create a local CalendarEvent + ExternalEventLink and return the CalendarEvent.
      */
     public function persistLocalEvent(

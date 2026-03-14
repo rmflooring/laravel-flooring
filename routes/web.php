@@ -44,6 +44,7 @@ use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Api\EstimateLabourTypeController;
 use App\Http\Controllers\Pages\PurchaseOrderController;
 use App\Http\Controllers\Pages\SaleStatusController;
+use App\Http\Controllers\Pages\WorkOrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -497,6 +498,31 @@ Route::prefix('pages')
 
 		Route::post('sales/{sale}/send-email', [\App\Http\Controllers\Pages\SaleController::class, 'sendEmail'])
 			->name('sales.send-email');
+
+		// Work Orders — nested under a sale
+		Route::get('sales/{sale}/work-orders/create', [\App\Http\Controllers\Pages\WorkOrderController::class, 'create'])
+			->name('sales.work-orders.create')
+			->middleware('role_or_permission:admin|create work orders');
+
+		Route::post('sales/{sale}/work-orders', [\App\Http\Controllers\Pages\WorkOrderController::class, 'store'])
+			->name('sales.work-orders.store')
+			->middleware('role_or_permission:admin|create work orders');
+
+		Route::get('sales/{sale}/work-orders/{workOrder}', [\App\Http\Controllers\Pages\WorkOrderController::class, 'show'])
+			->name('sales.work-orders.show')
+			->middleware('role_or_permission:admin|view work orders');
+
+		Route::get('sales/{sale}/work-orders/{workOrder}/edit', [\App\Http\Controllers\Pages\WorkOrderController::class, 'edit'])
+			->name('sales.work-orders.edit')
+			->middleware('role_or_permission:admin|edit work orders');
+
+		Route::put('sales/{sale}/work-orders/{workOrder}', [\App\Http\Controllers\Pages\WorkOrderController::class, 'update'])
+			->name('sales.work-orders.update')
+			->middleware('role_or_permission:admin|edit work orders');
+
+		Route::delete('sales/{sale}/work-orders/{workOrder}', [\App\Http\Controllers\Pages\WorkOrderController::class, 'destroy'])
+			->name('sales.work-orders.destroy')
+			->middleware('role_or_permission:admin|delete work orders');
 
 		// Purchase Orders — create/store scoped to a sale
 		Route::get('sales/{sale}/purchase-orders/create', [PurchaseOrderController::class, 'create'])

@@ -14,21 +14,20 @@ class SaleStatusController extends Controller
             'rooms.items',
             'purchaseOrders.vendor',
             'purchaseOrders.items',
+            'workOrders.assignedTo',
         ]);
 
-        // All material line items across all rooms
-        $materialItems = $sale->rooms
+        // ── Material items ─────────────────────────────────────────
+        $materialItems      = $sale->rooms
             ->flatMap(fn ($room) => $room->items->where('item_type', 'material'))
             ->values();
-
         $totalMaterialItems = $materialItems->count();
 
-        // Non-cancelled POs (soft-deleted already excluded by SoftDeletes scope)
+        // ── PO stats ───────────────────────────────────────────────
         $activePOs  = $sale->purchaseOrders->filter(fn ($po) => $po->status !== 'cancelled');
         $posCreated = $activePOs->count();
         $posPending = $sale->purchaseOrders->where('status', 'pending')->count();
 
-        // Map sale_item_id → all matching [po, poItem] pairs from non-cancelled POs
         $poItemsBySaleItemId = [];
         foreach ($activePOs as $po) {
             foreach ($po->items as $poItem) {
@@ -39,18 +38,28 @@ class SaleStatusController extends Controller
             }
         }
 
-        // Items received = count of po_item records on received POs
         $itemsReceived = $activePOs
             ->where('status', 'received')
             ->flatMap(fn ($po) => $po->items)
             ->count();
 
-        // Progress percentage (0 if no POs)
-        $progressPercent = ($totalMaterialItems > 0 && $posCreated > 0)
-            ? (int) round($itemsReceived / $totalMaterialItems * 100)
+        // ── WO stats ───────────────────────────────────────────────
+        $activeWOs              = $sale->workOrders->filter(fn ($wo) => $wo->status !== 'cancelled');
+        $totalWOs               = $activeWOs->count();
+        $wosScheduledOrProgress = $activeWOs
+            ->filter(fn ($wo) => in_array($wo->status, ['scheduled', 'in_progress', 'completed']))
+            ->count();
+
+        // ── Progress % ─────────────────────────────────────────────
+        // Numerator: received material items + WOs that are scheduled/in-progress/completed
+        // Denominator: total material items + total non-cancelled WOs
+        $denominator     = $totalMaterialItems + $totalWOs;
+        $numerator       = $itemsReceived + $wosScheduledOrProgress;
+        $progressPercent = $denominator > 0
+            ? (int) round($numerator / $denominator * 100)
             : 0;
 
-        // Coverage: one entry per material sale item with derived dot status + PO reference
+        // ── Coverage items ─────────────────────────────────────────
         $statusPriority = ['received' => 3, 'ordered' => 2, 'pending' => 1];
 
         $coverageItems = $materialItems->map(function ($item) use ($poItemsBySaleItemId, $statusPriority) {
@@ -71,11 +80,14 @@ class SaleStatusController extends Controller
             ];
         });
 
+        // ── Overall status badge ───────────────────────────────────
         $overallStatus = $this->deriveOverallStatus(
             $totalMaterialItems,
             $coverageItems,
             $posCreated,
-            $activePOs
+            $activePOs,
+            $totalWOs,
+            $activeWOs
         );
 
         return view('pages.sales.status', compact(
@@ -88,6 +100,8 @@ class SaleStatusController extends Controller
             'overallStatus',
             'coverageItems',
             'activePOs',
+            'totalWOs',
+            'activeWOs',
         ));
     }
 
@@ -95,31 +109,39 @@ class SaleStatusController extends Controller
         int $totalMaterialItems,
         $coverageItems,
         int $posCreated,
-        $activePOs
+        $activePOs,
+        int $totalWOs,
+        $activeWOs
     ): string {
-        if ($posCreated === 0) {
+        // Not started: no POs and no WOs
+        if ($posCreated === 0 && $totalWOs === 0) {
             return 'Not started';
         }
 
-        // All material items covered by a received PO → Ready
-        if ($totalMaterialItems > 0) {
-            $allReceived = $coverageItems->every(fn ($c) => $c['dot_status'] === 'received');
-            if ($allReceived) {
-                return 'Ready';
-            }
-        }
+        // Needs action: any material item has no PO, OR any WO is unassigned (status = created)
+        $hasUnlinkedMaterial = $coverageItems->contains(fn ($c) => $c['dot_status'] === 'none');
+        $hasUnscheduledWO    = $activeWOs->contains(fn ($wo) => $wo->status === 'created');
 
-        // Any item with no PO linked → Needs action
-        $hasUnlinked = $coverageItems->contains(fn ($c) => $c['dot_status'] === 'none');
-        if ($hasUnlinked) {
+        if ($hasUnlinkedMaterial || $hasUnscheduledWO) {
             return 'Needs action';
         }
 
-        // At least one PO ordered or received
-        $hasProgress = $activePOs->contains(
-            fn ($po) => in_array($po->status, ['ordered', 'received'])
-        );
-        if ($hasProgress) {
+        // Ready: all materials received AND all WOs scheduled or completed
+        $allMaterialsReceived = $totalMaterialItems === 0
+            || $coverageItems->every(fn ($c) => $c['dot_status'] === 'received');
+
+        $allWOsDone = $totalWOs === 0
+            || $activeWOs->every(fn ($wo) => in_array($wo->status, ['scheduled', 'in_progress', 'completed']));
+
+        if ($allMaterialsReceived && $allWOsDone) {
+            return 'Ready';
+        }
+
+        // In progress: at least one PO ordered/received OR one WO scheduled/in-progress
+        $hasPoProgress = $activePOs->contains(fn ($po) => in_array($po->status, ['ordered', 'received']));
+        $hasWoProgress = $activeWOs->contains(fn ($wo) => in_array($wo->status, ['scheduled', 'in_progress', 'completed']));
+
+        if ($hasPoProgress || $hasWoProgress) {
             return 'In progress';
         }
 
