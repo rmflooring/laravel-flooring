@@ -193,7 +193,13 @@ $employees = Employee::query()
 				->latest('updated_at')
 				->get();
 
-			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales'));
+			// POs for this opportunity
+			$purchaseOrders = \App\Models\PurchaseOrder::where('opportunity_id', $opportunity->id)
+				->with(['vendor', 'sale'])
+				->orderByDesc('created_at')
+				->get();
+
+			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales', 'purchaseOrders'));
 		}
 
 

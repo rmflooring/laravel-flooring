@@ -73,6 +73,12 @@ class PermissionsSeeder extends Seeder
             'view rfms',
             'create rfms',
             'edit rfms',
+
+            // ===== Purchase Orders =====
+            'view purchase orders',
+            'create purchase orders',
+            'edit purchase orders',
+            'delete purchase orders',
         ];
 
         foreach ($permissions as $permission) {

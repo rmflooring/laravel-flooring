@@ -98,6 +98,8 @@ class SaleController extends Controller
 			'salesperson1Employee',
 			'rooms' => fn($q) => $q->orderBy('sort_order'),
 			'rooms.items' => fn($q) => $q->where('is_removed', false)->orderBy('sort_order'),
+			'purchaseOrders.vendor',
+			'purchaseOrders.items',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody'));
@@ -112,6 +114,8 @@ class SaleController extends Controller
             'rooms.items' => function ($q) { $q->orderBy('sort_order'); },
             'sourceEstimate',
             'salesperson1Employee',
+            'purchaseOrders.vendor',
+            'purchaseOrders.items',
         ]);
 
         $employees = Employee::orderBy('first_name')->orderBy('last_name')->get();

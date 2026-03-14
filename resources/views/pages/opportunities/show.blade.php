@@ -339,7 +339,33 @@
                                     <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>
 
                                     {{-- POs --}}
-                                    <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>
+                                    <td class="px-6 py-4">
+                                        @if($purchaseOrders->isNotEmpty())
+                                            @php
+                                                $poStatusColors = [
+                                                    'pending'   => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200',
+                                                    'ordered'   => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+                                                    'received'  => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+                                                    'cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+                                                ];
+                                            @endphp
+                                            <ul class="list-disc space-y-1 pl-5 text-gray-700 dark:text-gray-200">
+                                                @foreach($purchaseOrders as $po)
+                                                    <li>
+                                                        <a href="{{ route('pages.purchase-orders.show', $po) }}"
+                                                           class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                            {{ $po->po_number }}
+                                                        </a>
+                                                        <span class="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium {{ $poStatusColors[$po->status] ?? 'bg-gray-100 text-gray-800' }}">
+                                                            {{ $po->status_label }}
+                                                        </span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <span class="text-gray-400 dark:text-gray-500">—</span>
+                                        @endif
+                                    </td>
 
                                     {{-- WOs --}}
                                     <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>
@@ -474,6 +500,89 @@
                     @endif
                 </div>
             </div>
+
+            {{-- Purchase Orders --}}
+            @can('view purchase orders')
+            <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex flex-col gap-3 border-b border-gray-200 p-6 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Purchase Orders</h2>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">All POs raised across sales on this opportunity.</p>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    @if($purchaseOrders->isEmpty())
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No purchase orders yet.</p>
+                    @else
+                        @php
+                            $poStatusColors = [
+                                'pending'   => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200',
+                                'ordered'   => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+                                'received'  => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+                                'cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+                            ];
+                        @endphp
+                        <div class="relative overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                                <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                        <th class="px-4 py-3">PO Number</th>
+                                        <th class="px-4 py-3">Vendor</th>
+                                        <th class="px-4 py-3">Sale</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3">Fulfillment</th>
+                                        <th class="px-4 py-3">Expected</th>
+                                        <th class="px-4 py-3">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($purchaseOrders as $po)
+                                        <tr class="border-b bg-white last:border-0 dark:border-gray-700 dark:bg-gray-800">
+                                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                                                {{ $po->po_number }}
+                                            </td>
+                                            <td class="px-4 py-3 text-gray-700 dark:text-gray-200">
+                                                {{ $po->vendor->company_name }}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <a href="{{ route('pages.sales.show', $po->sale) }}"
+                                                   class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                    {{ $po->sale->sale_number }}
+                                                </a>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $poStatusColors[$po->status] ?? 'bg-gray-100 text-gray-800' }}">
+                                                    {{ $po->status_label }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+                                                {{ $po->fulfillment_label }}
+                                            </td>
+                                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                                {{ $po->expected_delivery_date?->format('M j, Y') ?? '—' }}
+                                            </td>
+                                            <td class="px-4 py-3 flex items-center gap-3">
+                                                <a href="{{ route('pages.purchase-orders.show', $po) }}"
+                                                   class="text-sm font-medium text-gray-600 hover:underline dark:text-gray-400">
+                                                    View
+                                                </a>
+                                                @can('edit purchase orders')
+                                                <a href="{{ route('pages.purchase-orders.edit', $po) }}"
+                                                   class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                    Edit
+                                                </a>
+                                                @endcan
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endcan
 
         </div>
     </div>

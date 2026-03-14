@@ -38,6 +38,12 @@
     </svg>
     Print
 </a>
+@can('create purchase orders')
+<a href="{{ route('pages.sales.purchase-orders.create', $sale) }}"
+   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300">
+    + Create PO
+</a>
+@endcan
 				<a href="{{ route('pages.sales.profits.show', $sale->id) }}"
   class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
   <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -1766,6 +1772,81 @@
 </div>
 
 </form>
+
+{{-- Purchase Orders --}}
+@can('view purchase orders')
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900">Purchase Orders</h2>
+                <p class="text-xs text-gray-500 mt-0.5">POs raised against this sale.</p>
+            </div>
+            @can('create purchase orders')
+            <a href="{{ route('pages.sales.purchase-orders.create', $sale) }}"
+               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800">
+                + Create PO
+            </a>
+            @endcan
+        </div>
+
+        @if($sale->purchaseOrders->isEmpty())
+            <div class="px-5 py-6 text-sm text-gray-400">No purchase orders yet.</div>
+        @else
+            @php
+                $poStatusColors = [
+                    'pending'   => 'bg-yellow-100 text-yellow-800',
+                    'ordered'   => 'bg-blue-100 text-blue-800',
+                    'received'  => 'bg-green-100 text-green-800',
+                    'cancelled' => 'bg-red-100 text-red-800',
+                ];
+            @endphp
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-700">
+                    <thead class="text-xs text-gray-500 bg-gray-50 border-b border-gray-100 uppercase">
+                        <tr>
+                            <th class="px-5 py-3">PO Number</th>
+                            <th class="px-5 py-3">Vendor</th>
+                            <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">Fulfillment</th>
+                            <th class="px-5 py-3">Expected</th>
+                            <th class="px-5 py-3">Total Cost</th>
+                            <th class="px-5 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($sale->purchaseOrders as $po)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-5 py-3 font-medium text-gray-900">{{ $po->po_number }}</td>
+                                <td class="px-5 py-3">{{ $po->vendor->company_name }}</td>
+                                <td class="px-5 py-3">
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $poStatusColors[$po->status] ?? 'bg-gray-100 text-gray-800' }}">
+                                        {{ $po->status_label }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-3 text-gray-500">{{ $po->fulfillment_label }}</td>
+                                <td class="px-5 py-3 text-gray-500">
+                                    {{ $po->expected_delivery_date?->format('M j, Y') ?? '—' }}
+                                </td>
+                                <td class="px-5 py-3 font-medium">${{ number_format($po->items->sum('cost_total'), 2) }}</td>
+                                <td class="px-5 py-3">
+                                    <a href="{{ route('pages.purchase-orders.show', $po) }}"
+                                       class="text-sm font-medium text-blue-600 hover:underline">View</a>
+                                    @can('edit purchase orders')
+                                    &nbsp;·&nbsp;
+                                    <a href="{{ route('pages.purchase-orders.edit', $po) }}"
+                                       class="text-sm font-medium text-blue-600 hover:underline">Edit</a>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+</div>
+@endcan
 
 <script>
   // Neutral (shared) endpoints for both Estimates + Sales

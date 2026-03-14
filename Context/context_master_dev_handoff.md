@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-13 (session 3)
+Updated: 2026-03-14 (session 4)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -20,6 +20,7 @@ Current core modules:
 - RFMs (Requests for Measure) — see `Context/context_rfm.md`
 - Estimates
 - Sales
+- Purchase Orders — see `Context/context_purchase_orders.md`
 - Documents / Media
 - Calendar (MS365 integration)
 - Email system (Track 1 + Track 2) — see `Context/context_graph_mail.md`
@@ -185,6 +186,28 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 ---
 
+## Purchase Orders module summary
+Full details in `Context/context_purchase_orders.md`.
+
+- POs are raised against a Sale to order material items from vendors
+- Multiple POs per sale allowed (different vendors); only `material` type items included
+- PO number auto-generated: `PO-YYYY-NNNN` sequential per year
+- Statuses: `pending`, `ordered` (requires vendor order number), `received`, `cancelled`
+- Fulfillment methods: delivery to site, warehouse, custom address, or pickup
+- **Qty tracking**: system tracks total ordered qty per sale item across all non-cancelled POs
+  — fully-ordered items cannot be added to new POs; partial orders show remaining qty
+- Soft delete available to users with `delete purchase orders` permission
+- Force (permanent) delete available to admin role only
+- PDF via DomPDF (`resources/views/pdf/purchase-order.blade.php`)
+- Email to vendor via Track 1 (shared mailbox) with PDF attached
+- PO summary card shown on Sale show + edit pages and Opportunity show page
+
+### Purchase Order open items
+- No invoice/payment tracking against POs yet
+- No "received items" partial-receive workflow yet
+
+---
+
 ## Key file locations
 
 | What | Where |
@@ -205,7 +228,10 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 | Profits page | `resources/views/pages/profits/show.blade.php` |
 | Estimate builder JS | `public/assets/js/estimates/estimate.js` |
 | Sale builder JS | `public/assets/js/sales/sale.js` |
-| PDF templates | `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php` |
+| PDF templates | `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php`, `resources/views/pdf/purchase-order.blade.php` |
+| PO controller | `app/Http/Controllers/Pages/PurchaseOrderController.php` |
+| PO views | `resources/views/pages/purchase-orders/` |
+| PO models | `app/Models/PurchaseOrder.php`, `app/Models/PurchaseOrderItem.php` |
 | Branding controller | `app/Http/Controllers/Admin/BrandingController.php` |
 | Branding settings view | `resources/views/admin/settings/branding.blade.php` |
 
@@ -224,6 +250,9 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 **To continue estimates/sales work:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to continue working on estimates and sales. One step at a time.
+
+**To continue Purchase Orders work:**
+> Read CLAUDE.md and Context/context_purchase_orders.md. I want to continue working on the Purchase Orders module. One step at a time.
 
 **To start a fresh feature:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md, then tell me the current state of the system before we begin.

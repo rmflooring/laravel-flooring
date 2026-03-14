@@ -42,6 +42,7 @@ use App\Http\Controllers\Admin\ProductStyleController;
 use App\Http\Controllers\Admin\EstimateController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Api\EstimateLabourTypeController;
+use App\Http\Controllers\Pages\PurchaseOrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -492,7 +493,45 @@ Route::prefix('pages')
 		Route::post('sales/{sale}/send-email', [\App\Http\Controllers\Pages\SaleController::class, 'sendEmail'])
 			->name('sales.send-email');
 
-		
+		// Purchase Orders — create/store scoped to a sale
+		Route::get('sales/{sale}/purchase-orders/create', [PurchaseOrderController::class, 'create'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('sales.purchase-orders.create');
+
+		Route::post('sales/{sale}/purchase-orders', [PurchaseOrderController::class, 'store'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('sales.purchase-orders.store');
+
+		// Purchase Orders — standalone (view/edit/pdf/send)
+		Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('purchase-orders.show');
+
+		Route::get('purchase-orders/{purchaseOrder}/edit', [PurchaseOrderController::class, 'edit'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.edit');
+
+		Route::put('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.update');
+
+		Route::get('purchase-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'previewPdf'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('purchase-orders.pdf');
+
+		Route::post('purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendEmail'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.send-email');
+
+		Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])
+			->middleware('role_or_permission:admin|delete purchase orders')
+			->name('purchase-orders.destroy');
+
+		Route::delete('purchase-orders/{purchaseOrder}/force', [PurchaseOrderController::class, 'forceDestroy'])
+			->withTrashed()
+			->middleware('role:admin')
+			->name('purchase-orders.force-destroy');
+
         Route::post('job-sites', [JobSiteCustomerController::class, 'store'])
             ->name('job-sites.store');
 
