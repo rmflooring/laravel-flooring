@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-14 (session 4)
+Updated: 2026-03-14 (session 7)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -21,6 +21,7 @@ Current core modules:
 - Estimates
 - Sales
 - Purchase Orders — see `Context/context_purchase_orders.md`
+- Installers — see `Context/context_installers.md`
 - Documents / Media
 - Calendar (MS365 integration)
 - Email system (Track 1 + Track 2) — see `Context/context_graph_mail.md`
@@ -186,20 +187,32 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 ---
 
+## Calendar / Microsoft sync — bugs fixed (session 7, 2026-03-14)
+Full details in `Context/context-calendar.md`.
+
+- **Sync duplicate entry bug:** `syncNow()` `updateOrCreate` was searching by 4 keys; unique constraint is on `(provider, external_event_id)` only → fixed lookup keys.
+- **Group calendar 404 (multi-user):** Users who subscribe to RM group calendars in Outlook but are NOT M365 group members get personal-subscription records with `group_id = null`; sync used the wrong `me/calendars/{id}` endpoint → 404. Fix: `discoverCalendars` cleans up personal-subscription duplicates when the same account already has a group record for that name. For non-member accounts, group records are copied from any account that has `group_id` set so the correct `groups/{group_id}/calendar/events` endpoint is used.
+- **Known RM group IDs:** Team RM `451694e6`, RFM/Measures `b8483c56`, Installations `a6890136`, Warehouse `4bfd495c`.
+- **If a user gets 404 on group calendars:** Ensure their Azure AD account is a member of the relevant M365 groups, then re-run Discover.
+
+---
+
 ## Work Orders module summary
 Full details in `Context/context_work_orders.md`.
 
-- WOs represent installation/prep tasks assigned to a user for a sale
+- WOs represent scheduled installation tasks assigned to an **Installer** (not a user) for a sale
+- WO items = **labour-type sale items** with editable qty and cost; qty tracking prevents over-scheduling
 - WO number auto-generated: `WO-YYYY-NNNN` sequential per year
-- Statuses: created → scheduled (requires assignee + date) → in_progress → completed; any → cancelled
-- Calendar sync: WO events go on the assigned user's personal primary MS365 calendar (best-effort)
-  - Create event on store/update when assignee + date are set
-  - Update event if date/time/assignee changes
-  - Delete event when cancelled or destroyed
-- `GraphCalendarService` now has `updateEvent()` and `deleteEvent()` methods (closes RFM edit sync gap too)
+- New table: `work_order_items` (mirrors PO items pattern but for labour)
+- Statuses: created → scheduled (requires installer + date) → in_progress → completed; any → cancelled
+- Calendar sync: events go to **"RM – Installations" group calendar** (`group_id = a6890136-56b9-42fc-ac2b-8e05c98c0e8c`)
+  - Best-effort, uses logged-in user's MS account to auth
+  - Create on store, update/delete on changes
+- PDF via DomPDF (`resources/views/pdf/work-order.blade.php`)
+- Email to installer via Track 1 (shared mailbox) with PDF attached; `sent_at` stamped
+- `GraphCalendarService` has `updateEvent()` and `deleteEvent()` methods
 - Permissions: view/create/edit/delete work orders → admin, coordinator, estimator, sales (view only: reception)
-- WO section on sale show page (below POs)
-- Sale Status page: WO stat card live, WO table live, progress bar + overall status badge updated
+- WO section on sale show page (below POs); Sale Status page fully wired with WO data
 
 ---
 
@@ -258,10 +271,16 @@ Full details in `Context/context_purchase_orders.md`.
 | Profits page | `resources/views/pages/profits/show.blade.php` |
 | Estimate builder JS | `public/assets/js/estimates/estimate.js` |
 | Sale builder JS | `public/assets/js/sales/sale.js` |
-| PDF templates | `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php`, `resources/views/pdf/purchase-order.blade.php` |
+| PDF templates | `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php`, `resources/views/pdf/purchase-order.blade.php`, `resources/views/pdf/work-order.blade.php` |
 | PO controller | `app/Http/Controllers/Pages/PurchaseOrderController.php` |
 | PO views | `resources/views/pages/purchase-orders/` |
 | PO models | `app/Models/PurchaseOrder.php`, `app/Models/PurchaseOrderItem.php` |
+| WO controller | `app/Http/Controllers/Pages/WorkOrderController.php` |
+| WO views | `resources/views/pages/work-orders/` |
+| WO models | `app/Models/WorkOrder.php`, `app/Models/WorkOrderItem.php` |
+| Installer controller | `app/Http/Controllers/Admin/InstallerController.php` |
+| Installer views | `resources/views/admin/installers/` |
+| Installer model | `app/Models/Installer.php` |
 | Branding controller | `app/Http/Controllers/Admin/BrandingController.php` |
 | Branding settings view | `resources/views/admin/settings/branding.blade.php` |
 
@@ -283,6 +302,9 @@ Full details in `Context/context_purchase_orders.md`.
 
 **To continue Purchase Orders work:**
 > Read CLAUDE.md and Context/context_purchase_orders.md. I want to continue working on the Purchase Orders module. One step at a time.
+
+**To continue Work Orders work:**
+> Read CLAUDE.md and Context/context_work_orders.md. I want to continue working on the Work Orders module. One step at a time.
 
 **To start a fresh feature:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md, then tell me the current state of the system before we begin.

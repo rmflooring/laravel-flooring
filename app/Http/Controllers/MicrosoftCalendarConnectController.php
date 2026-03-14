@@ -252,6 +252,21 @@ $accessToken = $account->access_token;
         }
 
 
+// Remove personal-subscription duplicates: when a user IS a group member,
+// group calendars appear in both me/calendars (personal subscription, no group_id)
+// AND via memberOf discovery (with group_id set). Keep only the group record.
+$ownGroupNames = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+    ->whereNotNull('group_id')
+    ->pluck('name')
+    ->toArray();
+
+if (!empty($ownGroupNames)) {
+    MicrosoftCalendar::where('microsoft_account_id', $account->id)
+        ->whereNull('group_id')
+        ->whereIn('name', $ownGroupNames)
+        ->delete();
+}
+
 $groupCount = isset($groupIds) ? $groupIds->count() : 0;
 
 return back()->with(
@@ -396,14 +411,14 @@ $resp = Http::withToken($accessToken)
 
         \App\Models\ExternalEventLink::updateOrCreate(
             [
-                'provider' => 'microsoft',
-                'microsoft_account_id' => $account->id,
-                'external_calendar_id' => $cal->calendar_id,
-                'external_event_id' => $externalEventId,
+                'provider'           => 'microsoft',
+                'external_event_id'  => $externalEventId,
             ],
             [
-                'calendar_event_id' => $calendarEvent->id,
-                'last_synced_at' => now(),
+                'microsoft_account_id' => $account->id,
+                'external_calendar_id' => $cal->calendar_id,
+                'calendar_event_id'    => $calendarEvent->id,
+                'last_synced_at'       => now(),
             ]
         );
 
