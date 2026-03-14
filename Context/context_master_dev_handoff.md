@@ -186,6 +186,19 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 
 ---
 
+## Sale Status page summary
+Full details in `Context/context_sale_status.md`.
+
+- Read-mostly status page per sale: `GET pages/sales/{sale}/status` → `SaleStatusController@show`
+- Sections: progress bar, 5 stat cards, PO table, Work Orders placeholder, Material Coverage with dot/badge system
+- Coverage dots match PO items to sale items via `purchase_order_items.sale_item_id`
+- Overall status badge: Ready / In progress / Needs action / Not started (derived from PO data only)
+- Work Orders and "From inventory" coverage are structural placeholders — not yet wired
+- Permission: `view sale status` → admin, sales, estimator, coordinator
+- `coordinator` role added to system in this session
+
+---
+
 ## Purchase Orders module summary
 Full details in `Context/context_purchase_orders.md`.
 

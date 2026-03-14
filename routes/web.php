@@ -43,6 +43,7 @@ use App\Http\Controllers\Admin\EstimateController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Api\EstimateLabourTypeController;
 use App\Http\Controllers\Pages\PurchaseOrderController;
+use App\Http\Controllers\Pages\SaleStatusController;
 
 /*
 |--------------------------------------------------------------------------
@@ -486,6 +487,10 @@ Route::prefix('pages')
 
 		Route::get('sales', [\App\Http\Controllers\Pages\SaleController::class, 'index'])
     ->name('sales.index');
+
+		Route::get('sales/{sale}/status', [\App\Http\Controllers\Pages\SaleStatusController::class, 'show'])
+			->name('sales.status')
+			->middleware('role_or_permission:admin|view sale status');
 
 		Route::get('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'show'])
     ->name('sales.show');

@@ -19,6 +19,13 @@
                         Back
                     </a>
 
+                    @can('view sale status')
+                    <a href="{{ route('pages.sales.status', $sale) }}"
+                       class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
+                        Status
+                    </a>
+                    @endcan
+
                     <a href="{{ route('pages.sales.edit', $sale) }}"
                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300">
                         Edit
@@ -44,6 +51,26 @@
                     @endcan
                 </div>
             </div>
+
+            {{-- Slim status strip --}}
+            @can('view sale status')
+            @php
+                $stripPoCount       = $sale->purchaseOrders->where('status', '<>', 'cancelled')->count();
+                $stripReceivedCount = $sale->purchaseOrders->where('status', 'received')->count();
+            @endphp
+            <div class="text-sm text-gray-400">
+                {{ $stripPoCount }} {{ Str::plural('PO', $stripPoCount) }}
+                &nbsp;·&nbsp;
+                {{ $stripReceivedCount }} received
+                &nbsp;·&nbsp;
+                0 work orders
+                &nbsp;·&nbsp;
+                <a href="{{ route('pages.sales.status', $sale) }}"
+                   class="text-blue-500 hover:underline font-medium">
+                    View status →
+                </a>
+            </div>
+            @endcan
 
             {{-- Summary cards --}}
             @php

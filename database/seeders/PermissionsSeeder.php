@@ -79,6 +79,9 @@ class PermissionsSeeder extends Seeder
             'create purchase orders',
             'edit purchase orders',
             'delete purchase orders',
+
+            // ===== Sale Status =====
+            'view sale status',
         ];
 
         foreach ($permissions as $permission) {

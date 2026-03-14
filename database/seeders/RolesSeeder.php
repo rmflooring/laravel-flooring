@@ -23,11 +23,12 @@ class RolesSeeder extends Seeder
         });
 
         // Create roles (use consistent lowercase to avoid casing issues)
-        $admin      = Role::firstOrCreate(['name' => 'admin']);
-        $sales      = Role::firstOrCreate(['name' => 'sales']);
-        $estimator  = Role::firstOrCreate(['name' => 'estimator']);
-        $accounting = Role::firstOrCreate(['name' => 'accounting']);
-        $reception  = Role::firstOrCreate(['name' => 'reception']);
+        $admin       = Role::firstOrCreate(['name' => 'admin']);
+        $sales       = Role::firstOrCreate(['name' => 'sales']);
+        $estimator   = Role::firstOrCreate(['name' => 'estimator']);
+        $accounting  = Role::firstOrCreate(['name' => 'accounting']);
+        $reception   = Role::firstOrCreate(['name' => 'reception']);
+        $coordinator = Role::firstOrCreate(['name' => 'coordinator']);
 
         // Admin gets everything
         $admin->syncPermissions(Permission::all());
@@ -47,7 +48,7 @@ class RolesSeeder extends Seeder
             'view purchase orders',
         ]));
 
-        // Sales: customer + vendor + PM + products + RFMs + POs
+        // Sales: customer + vendor + PM + products + RFMs + POs + sale status
         $sales->syncPermissions($perm([
             'view dashboard',
 
@@ -67,9 +68,11 @@ class RolesSeeder extends Seeder
             'view rfms', 'create rfms',
 
             'view purchase orders', 'create purchase orders', 'edit purchase orders',
+
+            'view sale status',
         ]));
 
-        // Estimator: mostly view reference data + full RFM access + view POs
+        // Estimator: mostly view reference data + full RFM access + view POs + sale status
         $estimator->syncPermissions($perm([
             'view dashboard',
             'view customers',
@@ -84,6 +87,18 @@ class RolesSeeder extends Seeder
             'view rfms', 'create rfms', 'edit rfms',
 
             'view purchase orders',
+
+            'view sale status',
+        ]));
+
+        // Coordinator: ordering + fulfilment tracking
+        $coordinator->syncPermissions($perm([
+            'view dashboard',
+            'view customers',
+
+            'view purchase orders', 'create purchase orders', 'edit purchase orders',
+
+            'view sale status',
         ]));
 
         // Accounting: mostly view + view POs
