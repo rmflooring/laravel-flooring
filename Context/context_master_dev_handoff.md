@@ -230,13 +230,28 @@ Full details in `Context/context_sale_status.md`.
 
 ---
 
-## Sidebar nav update (session 11, 2026-03-15)
+## Sidebar nav update (session 11 → 15, 2026-03-15)
 
-- **Vendors** converted from a plain link to a hover flyout (same pattern as Products/Labour/Tax Management)
-- Vendors label remains clickable → `/admin/vendors`
-- Flyout sub-items: **Vendors** + **Installers** (both route to their existing admin index pages)
-- Standalone **Installers** sidebar entry removed — now nested under Vendors flyout
-- See `Context/context_sidebar.md` and `Context/context_installers.md` for details
+- All expandable groups (Vendors, Products, Labour, People, Chart of Accounts, Tax Management) converted from **hover flyouts** to **Alpine.js click-toggle accordions**
+- Reason: sidebar is now scrollable (`overflow-y: auto` on the nav `<ul>`); hover flyouts using `absolute left-full` were clipped by the overflow container — CSS cannot have `overflow-y: auto` and `overflow-x: visible` on the same element
+- Sidebar inner div is `flex flex-col`; nav `<ul>` has `flex-1 overflow-y-auto min-h-0` so logo stays pinned and nav scrolls
+- Each accordion uses `x-data="{ open: false }"` with `@click="open = !open"` and `x-show="open"` on the sub-list; chevron rotates 90° when open (`:class="open ? 'rotate-90' : ''"`)
+- Tax Management accordion includes "Tax Overview" as first sub-item (links to `admin.tax.index`)
+- **Document Labels** link added to admin section (see Document Labels CRUD below)
+- See `Context/context_installers.md` for Installers details
+
+---
+
+## Document Labels CRUD (session 15, 2026-03-15)
+
+- Model: `app/Models/OpportunityDocumentLabel.php` — fields: `name`, `is_active`, `created_by`, `updated_by`
+- Controller: `app/Http/Controllers/Admin/OpportunityDocumentLabelController.php` — index, store, edit, update, destroy
+- Routes: `admin/opportunity-document-labels` → `admin.opportunity_document_labels.*` (only: index, store, edit, update, destroy); gated by `role_or_permission:admin|manage document labels`
+- Views: `resources/views/admin/opportunity_document_labels/index.blade.php` + `edit.blade.php`
+  - Index: inline create form at top + table with name, active badge, document count, edit/delete actions
+  - Delete blocked if label has assigned documents (shows "In use" instead); deactivate via edit instead
+  - Filter: search by name, toggle show inactive
+- Sidebar: "Document Labels" link in admin section
 
 ---
 

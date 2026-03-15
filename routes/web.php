@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\VendorRepController;
 use App\Http\Controllers\Admin\InstallerController;
+use App\Http\Controllers\Admin\OpportunityDocumentLabelController;
 use App\Http\Controllers\Admin\ProjectManagerController;
 use App\Http\Controllers\Admin\LabourTypeController;
 use App\Http\Controllers\Admin\LabourItemController;
@@ -306,6 +307,18 @@ Route::prefix('admin')
                 'update'  => 'vendor_reps.update',
                 'destroy' => 'vendor_reps.destroy',
             ]);
+
+        // Opportunity Document Labels
+        Route::resource('opportunity-document-labels', OpportunityDocumentLabelController::class)
+            ->middleware('role_or_permission:admin|manage document labels')
+            ->names([
+                'index'   => 'opportunity_document_labels.index',
+                'store'   => 'opportunity_document_labels.store',
+                'edit'    => 'opportunity_document_labels.edit',
+                'update'  => 'opportunity_document_labels.update',
+                'destroy' => 'opportunity_document_labels.destroy',
+            ])
+            ->only(['index', 'store', 'edit', 'update', 'destroy']);
 
         // Installers
         Route::resource('installers', InstallerController::class)
