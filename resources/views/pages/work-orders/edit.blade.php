@@ -196,14 +196,27 @@
                                    value="{{ old('scheduled_time', $workOrder->scheduled_time) }}"
                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
-                        <div class="sm:col-span-2">
-                            <p x-show="installerId && scheduledDate" x-cloak class="text-xs text-blue-600 dark:text-blue-400">
+                        <div class="sm:col-span-2 flex items-start gap-3">
+                            <input type="checkbox" id="sync_calendar" name="sync_calendar" value="1"
+                                   x-model="syncCalendar"
+                                   {{ old('sync_calendar', '1') !== '0' ? 'checked' : '' }}
+                                   class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label for="sync_calendar" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                                 @if($workOrder->calendar_synced)
-                                    The RM – Installations calendar event will be updated on save.
+                                    Sync to RM – Installations calendar
+                                    <p x-show="syncCalendar" x-cloak class="mt-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                        The calendar event will be updated on save.
+                                    </p>
+                                    <p x-show="!syncCalendar" x-cloak class="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                                        The existing calendar event will be removed on save.
+                                    </p>
                                 @else
-                                    A calendar event will be created on RM – Installations on save.
+                                    Add to RM – Installations calendar
+                                    <p x-show="syncCalendar && installerId && scheduledDate" x-cloak class="mt-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                        A calendar event will be created when saved.
+                                    </p>
                                 @endif
-                            </p>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -240,6 +253,7 @@
         return {
             installerId:   '{{ old('installer_id', $workOrder->installer_id ?? '') }}',
             scheduledDate: '{{ old('scheduled_date', $workOrder->scheduled_date?->format('Y-m-d') ?? '') }}',
+            syncCalendar:  {{ old('sync_calendar', '1') }} !== '0',
         };
     }
 

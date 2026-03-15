@@ -214,9 +214,20 @@ All calendar operations are **best-effort** — wrapped in `try/catch`, logged t
 
 ### Calendar trigger logic in `update()`
 - If being cancelled → `cancelCalendarEvent()`
-- Else if `installer_id`, `scheduled_date`, or `scheduled_time` changed:
+- Else if `sync_calendar` unchecked and event exists → `cancelCalendarEvent()`
+- Else if `sync_calendar` checked and calendar fields changed:
   - If existing `calendar_event_id` → `syncCalendarUpdate()`
   - Else → `syncCalendarCreate()`
+
+### Calendar event title format
+`{installer first word} - {sale.homeowner_name}` (falls back to `customer_name` then `job_name`)
+e.g. `John - Smith`
+
+### Opt-in/out checkbox (added 2026-03-15)
+- Create + edit forms have a **"Add/Sync to RM – Installations calendar"** checkbox, default checked
+- Posts `sync_calendar=1`; unchecked posts nothing (falsy)
+- On create: skips `syncCalendarCreate()` if unchecked
+- On edit: if unchecked and event exists → cancels/removes the event; edit form shows amber warning when unchecking an already-synced WO
 
 ---
 

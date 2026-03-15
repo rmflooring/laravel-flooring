@@ -170,7 +170,7 @@
                                 <div>
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Phone</label>
                                     <input type="text" name="homeowner_phone"
-                                            value="{{ old('job_phone', $sale->job_phone ?? '') }}"
+                                            value="{{ old('homeowner_phone', $sale->job_phone ?? '') }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="Phone Number">
                                 </div>
@@ -178,7 +178,7 @@
                                 <div class="md:col-span-2">
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Email</label>
                                     <input type="email" name="homeowner_email"
-                                            value="{{ old('job_email', $sale->job_email ?? '') }}"
+                                            value="{{ old('homeowner_email', $sale->job_email ?? '') }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                         placeholder="email@example.com">
                                 </div>

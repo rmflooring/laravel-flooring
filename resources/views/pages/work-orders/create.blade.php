@@ -214,10 +214,17 @@
                                    value="{{ old('scheduled_time') }}"
                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
-                        <div class="sm:col-span-2">
-                            <p x-show="installerId && scheduledDate" x-cloak class="text-xs text-blue-600 dark:text-blue-400">
-                                A calendar event will be created on the RM – Installations calendar when this work order is saved.
-                            </p>
+                        <div class="sm:col-span-2 flex items-start gap-3">
+                            <input type="checkbox" id="sync_calendar" name="sync_calendar" value="1"
+                                   x-model="syncCalendar"
+                                   checked
+                                   class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label for="sync_calendar" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                Add to RM – Installations calendar
+                                <p x-show="syncCalendar && installerId && scheduledDate" x-cloak class="mt-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                    A calendar event will be created when this work order is saved.
+                                </p>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -255,6 +262,7 @@
         return {
             installerId:   '{{ old('installer_id', '') }}',
             scheduledDate: '{{ old('scheduled_date', '') }}',
+            syncCalendar:  {{ old('sync_calendar', '1') }} !== '0',
             itemError:     '',
             hasQtyErrors:  false,
 

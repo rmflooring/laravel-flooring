@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-15 (session 13)
+Updated: 2026-03-15 (session 14)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -386,6 +386,28 @@ Fixed tax label and totals not displaying correctly on page load in both estimat
 ## Bug fixes (session 13, 2026-03-15)
 - **Estimate create — room names saving as null**: create blade posted `rooms[N][name]` but controller read `rooms[N][room_name]` → fixed input name to `room_name`
 - **PO index vendor column blank**: blade used `vendor->name` (doesn't exist) → fixed to `vendor->company_name`
+
+## Work Order & Estimate/Sale fixes (session 14, 2026-03-15)
+
+### WO calendar opt-out checkbox
+- Create + edit forms: "Add/Sync to RM – Installations calendar" checkbox, default checked
+- Unchecking on edit removes the existing calendar event on save
+- Controller: `store()` and `update()` gate all calendar sync on `$request->boolean('sync_calendar', true)`
+
+### WO calendar event title
+- Changed from `wo_number · job_name` to `{installer first word} - {homeowner_name}`
+- Falls back to `customer_name` then `job_name` if `homeowner_name` is empty
+
+### Sale homeowner fields not saving
+- `homeowner_name`, `job_phone`, `job_email` columns were missing from `sales` table
+- Migration `2026_03_15_214341_add_homeowner_fields_to_sales_table` adds them
+- `SaleController::update()` now validates + saves `homeowner_name`, `homeowner_phone`, `homeowner_email`
+- Fixed `old()` keys in sale edit blade for phone/email fields
+
+### Estimate store() missing homeowner fields
+- `EstimateController::store()` was not validating or saving `homeowner_name`, `homeowner_phone`, `homeowner_email`
+- Fixed: added to validation rules and `Estimate::create()` call
+- `update()` already handled these correctly
 
 ---
 

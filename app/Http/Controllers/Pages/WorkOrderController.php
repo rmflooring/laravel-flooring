@@ -161,7 +161,9 @@ class WorkOrderController extends Controller
             }
         });
 
-        $this->syncCalendarCreate($workOrder);
+        if ($request->boolean('sync_calendar', true)) {
+            $this->syncCalendarCreate($workOrder);
+        }
 
         return redirect()
             ->route('pages.sales.work-orders.show', [$sale, $workOrder])
@@ -276,10 +278,14 @@ class WorkOrderController extends Controller
 
         $workOrder->refresh();
 
+        $syncCalendar = $request->boolean('sync_calendar', true);
+
         if (! $wasCancelled) {
             if ($beingCancelled) {
                 $this->cancelCalendarEvent($workOrder);
-            } elseif ($calendarFieldsChanged) {
+            } elseif (! $syncCalendar && $workOrder->calendar_event_id) {
+                $this->cancelCalendarEvent($workOrder);
+            } elseif ($syncCalendar && $calendarFieldsChanged) {
                 if ($workOrder->calendar_event_id) {
                     $this->syncCalendarUpdate($workOrder);
                 } else {
@@ -422,10 +428,9 @@ class WorkOrderController extends Controller
         $start = Carbon::parse($date . ' ' . $time);
         $end   = $start->copy()->addHours(2);
 
-        $title = $workOrder->wo_number;
-        if ($sale->job_name) {
-            $title = $workOrder->wo_number . ' · ' . $sale->job_name;
-        }
+        $installerFirstName = explode(' ', trim($workOrder->installer?->company_name ?? 'Installer'))[0];
+        $homeownerName      = $sale->homeowner_name ?? $sale->customer_name ?? $sale->job_name ?? 'Customer';
+        $title = $installerFirstName . ' - ' . $homeownerName;
 
         $notesParts = [];
         if ($sale->sale_number) {

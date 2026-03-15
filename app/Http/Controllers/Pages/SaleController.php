@@ -144,6 +144,9 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
 {
     $data = $request->validate([
         'parent_customer_name' => ['nullable', 'string', 'max:255'],
+        'homeowner_name'       => ['nullable', 'string', 'max:255'],
+        'homeowner_phone'      => ['nullable', 'string', 'max:50'],
+        'homeowner_email'      => ['nullable', 'email', 'max:255'],
         'pm_name'              => ['nullable', 'string', 'max:255'],
         'job_number'           => ['nullable', 'string', 'max:255'],
         'job_name'             => ['nullable', 'string', 'max:255'],
@@ -174,6 +177,9 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
         // 1) Header
         $sale->fill([
             'customer_name'      => $data['parent_customer_name'] ?? $sale->customer_name,
+            'homeowner_name'     => $data['homeowner_name'] ?? $sale->homeowner_name,
+            'job_phone'          => $data['homeowner_phone'] ?? $sale->job_phone,
+            'job_email'          => $data['homeowner_email'] ?? $sale->job_email,
             'pm_name'            => $data['pm_name'] ?? $sale->pm_name,
             'job_no'             => $data['job_number'] ?? $sale->job_no,
             'job_name'           => $data['job_name'] ?? $sale->job_name,
