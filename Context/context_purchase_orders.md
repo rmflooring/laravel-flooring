@@ -1,12 +1,13 @@
 # Purchase Orders Module — Dev Context
-Updated: 2026-03-15 (session 12)
+Updated: 2026-03-15 (session 13)
 
 ---
 
 ## Overview
 
-Purchase Orders (POs) are raised against a Sale to order material items from vendors.
-Multiple POs can exist per sale (e.g. different vendors). Each PO tracks which material
+Purchase Orders (POs) can be raised against a Sale (to order material items), or as
+**Stock POs** with no sale attached (for sundry items like adhesives, underpads, etc.).
+Multiple POs per sale allowed (different vendors). Each sale-tied PO tracks which material
 line items are being ordered, at what quantity and cost.
 
 **Key constraints:**
@@ -298,6 +299,30 @@ Force-delete route uses `role:admin` middleware (not permission-based).
 - Full "Purchase Orders" section at bottom: PO number, vendor, sale link, status, fulfillment,
   expected ETA, View/Edit actions
 - Loaded via `OpportunityController::show()` with `->with(['vendor', 'sale'])`
+
+---
+
+## Stock POs (session 13, 2026-03-15)
+
+- `sale_id` and `opportunity_id` are now **nullable** on `purchase_orders`
+- `sale_item_id` is now **nullable** on `purchase_order_items`
+- New routes (all before `{purchaseOrder}` wildcard):
+  - `GET pages/purchase-orders/create` → `createStock`
+  - `POST pages/purchase-orders` → `storeStock`
+  - `GET pages/purchase-orders/catalog-search?q=...&vendor_id=...` → `catalogSearch` (JSON, max 25)
+- Catalog search: queries `product_styles` (active) + `product_lines` (active) + `product_types` + `unit_measures`; filters by `product_lines.vendor_id` when `vendor_id` provided; searches type, manufacturer, line, style, color, SKU
+- New views: `pages/purchase-orders/create-stock.blade.php` + `edit-stock.blade.php`
+  - `create-stock`: per-row typeahead (debounced 300ms), vendor-filtered, auto-fills item_name/cost/unit, free-form fallback, "✓ From catalog" badge with clear button
+  - `edit-stock`: all item fields editable (item_name, unit, qty, cost, po_notes), no qty constraints
+- `edit()` routes to `edit-stock` when `sale_id` is null
+- `update()` skips qty validation and allows item_name/unit updates for stock POs
+- `destroy()` / `forceDestroy()` redirect to PO index (not sale) when `sale_id` is null
+- `resolveDeliveryAddress()` accepts `?Sale` (null-safe, `delivery_site` → null for stock POs)
+- Stock POs: no `delivery_site` fulfillment option (no job address)
+- `+ Create PO` button on PO index (permission-gated `create purchase orders`)
+- Show blade: "Stock PO" label + "Back to POs" button when no sale
+- PDF template: null-safe sale reference, shows "Stock PO" when no sale
+- **Bug fix**: PO index vendor column was using `vendor->name` (wrong) → fixed to `vendor->company_name`
 
 ---
 

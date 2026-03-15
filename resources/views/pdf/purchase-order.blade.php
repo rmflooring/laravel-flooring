@@ -250,6 +250,7 @@
                         <span class="info-value">{{ $purchaseOrder->vendor_order_number }}</span>
                     </div>
                 @endif
+                @if ($purchaseOrder->sale)
                 <div class="info-row" style="margin-top: 4px;">
                     <span class="info-label">Sale Ref: </span>
                     {{ $purchaseOrder->sale->sale_number }}
@@ -259,6 +260,12 @@
                         <span class="info-label">Job: </span>
                         {{ $purchaseOrder->sale->job_name }}
                     </div>
+                @endif
+                @else
+                <div class="info-row" style="margin-top: 4px;">
+                    <span class="info-label">Type: </span>
+                    Stock PO
+                </div>
                 @endif
             </td>
         </tr>

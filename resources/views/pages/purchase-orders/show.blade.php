@@ -25,6 +25,7 @@
                             {{ $purchaseOrder->status_label }}
                         </span>
 
+                        @if($purchaseOrder->sale)
                         <span class="text-gray-400">•</span>
                         <span>Sale:
                             <a href="{{ route('pages.sales.show', $purchaseOrder->sale) }}"
@@ -37,6 +38,10 @@
                             <span class="text-gray-400">•</span>
                             <span>{{ $purchaseOrder->sale->customer_name }}</span>
                         @endif
+                        @else
+                        <span class="text-gray-400">•</span>
+                        <span class="text-gray-500 dark:text-gray-400">Stock PO</span>
+                        @endif
 
                         @if($purchaseOrder->sent_at)
                             <span class="text-gray-400">•</span>
@@ -48,10 +53,17 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
+                    @if($purchaseOrder->sale)
                     <a href="{{ route('pages.sales.show', $purchaseOrder->sale) }}"
                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
                         Back to Sale
                     </a>
+                    @else
+                    <a href="{{ route('pages.purchase-orders.index') }}"
+                       class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
+                        Back to POs
+                    </a>
+                    @endif
 
                     @can('edit purchase orders')
                     <a href="{{ route('pages.purchase-orders.edit', $purchaseOrder) }}"

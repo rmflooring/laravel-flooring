@@ -569,6 +569,19 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|create purchase orders')
 			->name('sales.purchase-orders.store');
 
+		// Purchase Orders — stock (no sale) create/store — must be before {purchaseOrder} wildcard
+		Route::get('purchase-orders/create', [PurchaseOrderController::class, 'createStock'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('purchase-orders.create-stock');
+
+		Route::post('purchase-orders', [PurchaseOrderController::class, 'storeStock'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('purchase-orders.store-stock');
+
+		Route::get('purchase-orders/catalog-search', [PurchaseOrderController::class, 'catalogSearch'])
+			->middleware('role_or_permission:admin|create purchase orders|edit purchase orders')
+			->name('purchase-orders.catalog-search');
+
 		// Purchase Orders — standalone (view/edit/pdf/send)
 		Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])
 			->middleware('role_or_permission:admin|view purchase orders')

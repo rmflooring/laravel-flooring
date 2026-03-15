@@ -9,6 +9,14 @@
                     <h1 class="text-2xl font-bold text-gray-900">Purchase Orders</h1>
                     <p class="text-sm text-gray-600 mt-1">Search and filter all purchase orders.</p>
                 </div>
+                @can('create purchase orders')
+                <div>
+                    <a href="{{ route('pages.purchase-orders.create-stock') }}"
+                       class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        + Create PO
+                    </a>
+                </div>
+                @endcan
             </div>
 
             {{-- Flash --}}
@@ -132,7 +140,7 @@
                                     </td>
 
                                     <td class="px-6 py-4">
-                                        {{ $po->vendor?->name ?? '—' }}
+                                        {{ $po->vendor?->company_name ?? '—' }}
                                     </td>
 
                                     <td class="px-6 py-4">

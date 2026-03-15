@@ -222,7 +222,7 @@
             {{-- Room Name --}}
             <div>
                 <label class="block mb-1 text-sm font-medium text-gray-700">Room Name</label>
-                <input type="text" name="rooms[__ROOM_INDEX__][name]"
+                <input type="text" name="rooms[__ROOM_INDEX__][room_name]"
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     placeholder="e.g. Living Room">
 				<input type="hidden" class="room-delete-flag" name="rooms[__ROOM_INDEX__][_delete]" value="0">

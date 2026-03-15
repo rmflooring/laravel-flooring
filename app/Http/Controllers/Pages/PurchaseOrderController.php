@@ -56,6 +56,167 @@ class PurchaseOrderController extends Controller
     }
 
     // -------------------------------------------------------------------------
+    // Catalog search API — for stock PO item rows
+    // -------------------------------------------------------------------------
+
+    public function catalogSearch(Request $request)
+    {
+        $q        = trim($request->input('q', ''));
+        $vendorId = (int) $request->input('vendor_id', 0);
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $query = \App\Models\ProductStyle::query()
+            ->where('product_styles.status', 'active')
+            ->join('product_lines', 'product_lines.id', '=', 'product_styles.product_line_id')
+            ->where('product_lines.status', 'active')
+            ->join('product_types', 'product_types.id', '=', 'product_lines.product_type_id')
+            ->leftJoin('unit_measures', 'unit_measures.id', '=', 'product_lines.unit_id')
+            ->select([
+                'product_styles.id',
+                'product_styles.name as style_name',
+                'product_styles.color',
+                'product_styles.cost_price',
+                'product_lines.name as line_name',
+                'product_lines.manufacturer',
+                'product_types.name as product_type',
+                'unit_measures.label as unit_label',
+            ])
+            ->where(function ($sub) use ($q) {
+                $sub->where('product_types.name', 'like', "%{$q}%")
+                    ->orWhere('product_lines.manufacturer', 'like', "%{$q}%")
+                    ->orWhere('product_lines.name', 'like', "%{$q}%")
+                    ->orWhere('product_styles.name', 'like', "%{$q}%")
+                    ->orWhere('product_styles.color', 'like', "%{$q}%")
+                    ->orWhere('product_styles.sku', 'like', "%{$q}%");
+            });
+
+        if ($vendorId > 0) {
+            $query->where('product_lines.vendor_id', $vendorId);
+        }
+
+        $results = $query->orderBy('product_types.name')
+            ->orderBy('product_lines.manufacturer')
+            ->orderBy('product_lines.name')
+            ->orderBy('product_styles.name')
+            ->limit(25)
+            ->get()
+            ->map(function ($row) {
+                $parts = array_filter([
+                    $row->product_type,
+                    $row->manufacturer,
+                    $row->line_name,
+                    $row->style_name,
+                    $row->color,
+                ]);
+                $label = implode(' — ', $parts);
+
+                return [
+                    'id'           => $row->id,
+                    'label'        => $label,
+                    'item_name'    => $label,
+                    'cost_price'   => (float) $row->cost_price,
+                    'unit'         => $row->unit_label ?? '',
+                    'manufacturer' => $row->manufacturer,
+                    'product_type' => $row->product_type,
+                ];
+            });
+
+        return response()->json($results);
+    }
+
+    // -------------------------------------------------------------------------
+    // Create form — stock PO (no sale)
+    // -------------------------------------------------------------------------
+
+    public function createStock()
+    {
+        $installerVendorIds = Installer::whereNotNull('vendor_id')->pluck('vendor_id');
+
+        $vendors = Vendor::where('status', 'active')
+            ->whereNotIn('id', $installerVendorIds)
+            ->orderBy('company_name')
+            ->get(['id', 'company_name', 'email', 'address', 'address2', 'city', 'province', 'postal_code']);
+
+        $warehouseAddress = $this->warehouseAddress();
+
+        return view('pages.purchase-orders.create-stock', compact('vendors', 'warehouseAddress'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Store — stock PO (no sale)
+    // -------------------------------------------------------------------------
+
+    public function storeStock(Request $request)
+    {
+        $data = $request->validate([
+            'vendor_id'               => ['required', 'integer', 'exists:vendors,id'],
+            'expected_delivery_date'  => ['nullable', 'date'],
+            'fulfillment_method'      => ['required', 'in:delivery_warehouse,delivery_custom,pickup'],
+            'delivery_address'        => ['nullable', 'string', 'max:500'],
+            'special_instructions'    => ['nullable', 'string'],
+            'pickup_date'             => ['nullable', 'date'],
+            'pickup_time'             => ['nullable', 'date_format:H:i'],
+            'items'                   => ['required', 'array', 'min:1'],
+            'items.*.item_name'       => ['required', 'string', 'max:255'],
+            'items.*.quantity'        => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit'            => ['nullable', 'string', 'max:50'],
+            'items.*.cost_price'      => ['required', 'numeric', 'min:0'],
+            'items.*.po_notes'        => ['nullable', 'string'],
+        ]);
+
+        $resolvedAddress = $this->resolveDeliveryAddress(
+            $data['fulfillment_method'],
+            $data['delivery_address'] ?? null,
+            null,
+        );
+
+        $po = DB::transaction(function () use ($data, $resolvedAddress) {
+            $pickupAt = null;
+            if ($data['fulfillment_method'] === 'pickup' && ! empty($data['pickup_date']) && ! empty($data['pickup_time'])) {
+                $pickupAt = \Carbon\Carbon::parse($data['pickup_date'] . ' ' . $data['pickup_time']);
+            }
+
+            $po = PurchaseOrder::create([
+                'sale_id'                => null,
+                'opportunity_id'         => null,
+                'vendor_id'              => $data['vendor_id'],
+                'status'                 => 'pending',
+                'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
+                'fulfillment_method'     => $data['fulfillment_method'],
+                'delivery_address'       => $resolvedAddress,
+                'special_instructions'   => $data['special_instructions'] ?? null,
+                'pickup_at'              => $pickupAt,
+            ]);
+
+            foreach ($data['items'] as $i => $item) {
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $po->id,
+                    'sale_item_id'      => null,
+                    'item_name'         => $item['item_name'],
+                    'quantity'          => (float) $item['quantity'],
+                    'unit'              => $item['unit'] ?? null,
+                    'cost_price'        => (float) $item['cost_price'],
+                    'po_notes'          => ! empty($item['po_notes']) ? $item['po_notes'] : null,
+                    'sort_order'        => $i,
+                ]);
+            }
+
+            return $po;
+        });
+
+        if ($po->fulfillment_method === 'pickup' && $po->pickup_at) {
+            $this->syncCalendarCreate($po);
+        }
+
+        return redirect()
+            ->route('pages.purchase-orders.show', $po)
+            ->with('success', 'Purchase order created successfully.');
+    }
+
+    // -------------------------------------------------------------------------
     // Create form — scoped to a sale
     // -------------------------------------------------------------------------
 
@@ -236,6 +397,11 @@ class PurchaseOrderController extends Controller
 
         $warehouseAddress = $this->warehouseAddress();
 
+        // Stock PO (no sale) — free-form items, no qty constraints
+        if (! $purchaseOrder->sale_id) {
+            return view('pages.purchase-orders.edit-stock', compact('purchaseOrder', 'vendors', 'warehouseAddress'));
+        }
+
         // Max qty each PO item can be set to (sale item qty minus what other non-cancelled POs have)
         $orderedByOthers = $this->orderedQtys($purchaseOrder->sale_id, $purchaseOrder->id);
         $maxQtys = $purchaseOrder->items->mapWithKeys(function ($poItem) use ($orderedByOthers) {
@@ -253,12 +419,18 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
+        $isStock = ! $purchaseOrder->sale_id;
+
+        $fulfillmentOptions = $isStock
+            ? 'delivery_warehouse,delivery_custom,pickup'
+            : 'delivery_site,delivery_warehouse,delivery_custom,pickup';
+
         $rules = [
             'vendor_id'              => ['required', 'integer', 'exists:vendors,id'],
             'status'                 => ['required', 'in:pending,ordered,received,cancelled'],
             'vendor_order_number'    => ['nullable', 'string', 'max:255'],
             'expected_delivery_date' => ['nullable', 'date'],
-            'fulfillment_method'     => ['required', 'in:delivery_site,delivery_warehouse,delivery_custom,pickup'],
+            'fulfillment_method'     => ['required', 'in:' . $fulfillmentOptions],
             'delivery_address'       => ['nullable', 'string', 'max:500'],
             'special_instructions'   => ['nullable', 'string'],
             'pickup_date'            => ['nullable', 'date'],
@@ -267,6 +439,8 @@ class PurchaseOrderController extends Controller
             'po_items.*.quantity'    => ['nullable', 'numeric', 'min:0'],
             'po_items.*.cost_price'  => ['nullable', 'numeric', 'min:0'],
             'po_items.*.po_notes'    => ['nullable', 'string'],
+            'po_items.*.item_name'   => ['nullable', 'string', 'max:255'],
+            'po_items.*.unit'        => ['nullable', 'string', 'max:50'],
         ];
 
         $data = $request->validate($rules);
@@ -281,7 +455,7 @@ class PurchaseOrderController extends Controller
         $resolvedAddress = $this->resolveDeliveryAddress(
             $data['fulfillment_method'],
             $data['delivery_address'] ?? null,
-            $purchaseOrder->sale,
+            $purchaseOrder->sale ?? null,
         );
 
         $newPickupAt = null;
@@ -320,27 +494,31 @@ class PurchaseOrderController extends Controller
         // Validate and update item qty / cost overrides
         if (! empty($data['po_items'])) {
             $purchaseOrder->loadMissing('items.saleItem');
-            $orderedByOthers = $this->orderedQtys($purchaseOrder->sale_id, $purchaseOrder->id);
 
-            $qtyErrors = [];
-            foreach ($data['po_items'] as $poItemId => $overrides) {
-                $poItem = $purchaseOrder->items->firstWhere('id', (int) $poItemId);
-                if (! $poItem || ! $poItem->saleItem) {
-                    continue;
+            // Only enforce qty limits for sale-tied POs
+            if (! $isStock) {
+                $orderedByOthers = $this->orderedQtys($purchaseOrder->sale_id, $purchaseOrder->id);
+
+                $qtyErrors = [];
+                foreach ($data['po_items'] as $poItemId => $overrides) {
+                    $poItem = $purchaseOrder->items->firstWhere('id', (int) $poItemId);
+                    if (! $poItem || ! $poItem->saleItem) {
+                        continue;
+                    }
+                    $saleQty = (float) $poItem->saleItem->quantity;
+                    $maxQty  = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
+                    $newQty  = isset($overrides['quantity']) && $overrides['quantity'] !== ''
+                        ? (float) $overrides['quantity']
+                        : (float) $poItem->quantity;
+
+                    if ($newQty > $maxQty + 0.001) {
+                        $qtyErrors["po_items.{$poItemId}.quantity"] = '"' . $poItem->item_name . '" — qty ' . $newQty . ' exceeds max available of ' . $maxQty . ' (sale qty: ' . $saleQty . ').';
+                    }
                 }
-                $saleQty  = (float) $poItem->saleItem->quantity;
-                $maxQty   = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
-                $newQty   = isset($overrides['quantity']) && $overrides['quantity'] !== ''
-                    ? (float) $overrides['quantity']
-                    : (float) $poItem->quantity;
 
-                if ($newQty > $maxQty + 0.001) {
-                    $qtyErrors["po_items.{$poItemId}.quantity"] = '"' . $poItem->item_name . '" — qty ' . $newQty . ' exceeds max available of ' . $maxQty . ' (sale qty: ' . $saleQty . ').';
+                if (! empty($qtyErrors)) {
+                    return back()->withErrors($qtyErrors)->withInput();
                 }
-            }
-
-            if (! empty($qtyErrors)) {
-                return back()->withErrors($qtyErrors)->withInput();
             }
 
             foreach ($data['po_items'] as $poItemId => $overrides) {
@@ -348,11 +526,24 @@ class PurchaseOrderController extends Controller
                 if (! $poItem) {
                     continue;
                 }
-                $poItem->update([
+
+                $fields = [
                     'quantity'   => $overrides['quantity']   ?? $poItem->quantity,
                     'cost_price' => $overrides['cost_price'] ?? $poItem->cost_price,
                     'po_notes'   => $overrides['po_notes']   ?? null,
-                ]);
+                ];
+
+                // Stock PO items: also allow editing item_name and unit
+                if ($isStock) {
+                    if (isset($overrides['item_name']) && $overrides['item_name'] !== '') {
+                        $fields['item_name'] = $overrides['item_name'];
+                    }
+                    if (array_key_exists('unit', $overrides)) {
+                        $fields['unit'] = $overrides['unit'] ?: null;
+                    }
+                }
+
+                $poItem->update($fields);
             }
         }
 
@@ -426,11 +617,20 @@ class PurchaseOrderController extends Controller
 
     public function destroy(PurchaseOrder $purchaseOrder)
     {
+        $saleId   = $purchaseOrder->sale_id;
+        $poNumber = $purchaseOrder->po_number;
+
         $purchaseOrder->delete();
 
+        if ($saleId) {
+            return redirect()
+                ->route('pages.sales.show', $saleId)
+                ->with('success', 'Purchase order ' . $poNumber . ' deleted.');
+        }
+
         return redirect()
-            ->route('pages.sales.show', $purchaseOrder->sale_id)
-            ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' deleted.');
+            ->route('pages.purchase-orders.index')
+            ->with('success', 'Purchase order ' . $poNumber . ' deleted.');
     }
 
     // -------------------------------------------------------------------------
@@ -439,13 +639,19 @@ class PurchaseOrderController extends Controller
 
     public function forceDestroy(PurchaseOrder $purchaseOrder)
     {
-        $saleId = $purchaseOrder->sale_id;
+        $saleId   = $purchaseOrder->sale_id;
         $poNumber = $purchaseOrder->po_number;
 
         $purchaseOrder->forceDelete();
 
+        if ($saleId) {
+            return redirect()
+                ->route('pages.sales.show', $saleId)
+                ->with('success', 'Purchase order ' . $poNumber . ' permanently deleted.');
+        }
+
         return redirect()
-            ->route('pages.sales.show', $saleId)
+            ->route('pages.purchase-orders.index')
             ->with('success', 'Purchase order ' . $poNumber . ' permanently deleted.');
     }
 
@@ -489,10 +695,10 @@ class PurchaseOrderController extends Controller
         return implode(' — ', $parts) ?: 'Material Item';
     }
 
-    private function resolveDeliveryAddress(string $method, ?string $custom, Sale $sale): ?string
+    private function resolveDeliveryAddress(string $method, ?string $custom, ?Sale $sale): ?string
     {
         return match ($method) {
-            'delivery_site'      => $sale->job_address,
+            'delivery_site'      => $sale?->job_address,
             'delivery_warehouse' => $this->warehouseAddress(),
             'delivery_custom'    => $custom,
             'pickup'             => null,

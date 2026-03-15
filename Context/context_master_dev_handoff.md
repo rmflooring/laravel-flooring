@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-15 (session 12)
+Updated: 2026-03-15 (session 13)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -271,6 +271,16 @@ Full details in `Context/context_purchase_orders.md`.
 - Email to vendor via Track 1 (shared mailbox) with PDF attached
 - PO summary card shown on Sale show + edit pages and Opportunity show page
 
+### Purchase Orders — Stock POs (session 13, 2026-03-15)
+- `sale_id`, `opportunity_id` nullable on `purchase_orders`; `sale_item_id` nullable on `purchase_order_items`
+- New routes: `GET/POST pages/purchase-orders/create` (stock PO), `GET pages/purchase-orders/catalog-search`
+- New views: `create-stock.blade.php` (per-row catalog typeahead, vendor-filtered) + `edit-stock.blade.php`
+- Catalog search filters by `product_lines.vendor_id`; auto-fills item_name, cost_price, unit
+- `edit()` routes to `edit-stock` for no-sale POs; `update()` skips qty validation for stock POs
+- `destroy()`/`forceDestroy()` redirect to index (not sale) for stock POs
+- PDF, show, index blades all null-safe for missing sale; vendor column bug fixed (`company_name`)
+- `+ Create PO` button on PO index; "Stock PO" label on show/PDF
+
 ### Purchase Order open items
 - No invoice/payment tracking against POs yet
 - No "received items" partial-receive workflow yet
@@ -370,6 +380,12 @@ Fixed tax label and totals not displaying correctly on page load in both estimat
 
 ### Architecture note
 `estimate_edit.js` and `sale_edit.js` each have their own `updateEstimateTotals()` inside an IIFE. These are separate from the versions inside `estimate.js`/`sale.js` DOMContentLoaded callbacks. Both versions now calculate tax identically from FM globals. The FM globals (`FM_CURRENT_GST_PERCENT`, etc.) are authoritative — set by `loadTaxGroupRate()` after the API fetch resolves.
+
+---
+
+## Bug fixes (session 13, 2026-03-15)
+- **Estimate create — room names saving as null**: create blade posted `rooms[N][name]` but controller read `rooms[N][room_name]` → fixed input name to `room_name`
+- **PO index vendor column blank**: blade used `vendor->name` (doesn't exist) → fixed to `vendor->company_name`
 
 ---
 
