@@ -550,6 +550,16 @@ Route::prefix('pages')
 			->name('sales.work-orders.send-email')
 			->middleware('role_or_permission:admin|edit work orders');
 
+		// Purchase Orders — index
+		Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('purchase-orders.index');
+
+		// Work Orders — index
+		Route::get('work-orders', [\App\Http\Controllers\Pages\WorkOrderController::class, 'index'])
+			->middleware('role_or_permission:admin|view work orders')
+			->name('work-orders.index');
+
 		// Purchase Orders — create/store scoped to a sale
 		Route::get('sales/{sale}/purchase-orders/create', [PurchaseOrderController::class, 'create'])
 			->middleware('role_or_permission:admin|create purchase orders')

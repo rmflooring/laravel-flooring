@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-14 (session 8)
+Updated: 2026-03-15 (session 10)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -229,6 +229,17 @@ Full details in `Context/context_sale_status.md`.
 
 ---
 
+## Purchase Orders & Work Orders index pages (session 10, 2026-03-15)
+
+- Added `PurchaseOrderController::index()` and `WorkOrderController::index()` with search + filter support
+- New routes: `GET pages/purchase-orders` → `pages.purchase-orders.index` and `GET pages/work-orders` → `pages.work-orders.index` (both gated by `view` permission)
+- New blades: `pages/purchase-orders/index.blade.php` and `pages/work-orders/index.blade.php`
+  - Filters: search (number, vendor/installer name, sale#), status dropdown, date from/to
+  - WO index View link routes to `pages.sales.work-orders.show` (needs both `{sale}` and `{workOrder}`)
+- Dashboard: Work Orders and Purchase Orders cards now link to their index pages (solid indigo/emerald styling, no longer "Coming soon")
+
+---
+
 ## Purchase Orders module summary
 Full details in `Context/context_purchase_orders.md`.
 
@@ -323,6 +334,27 @@ Shared modal: `resources/views/components/modals/box-qty-modal.blade.php`
 ### Bug fixes (session 8)
 - **Tax group 404:** `loadTaxGroupRate` URL was `/pages/estimates/api/tax-groups/` — corrected to `/estimates/api/tax-groups/`
 - **Box qty modal flash on page load:** Modal div had both `hidden` and `flex` Tailwind classes; `flex` overrode `hidden` in generated CSS. Fixed: removed `flex` from static classes, use `style="display:none"` as initial state.
+
+---
+
+## Tax summary card fixes (session 9, 2026-03-15)
+
+Fixed tax label and totals not displaying correctly on page load in both estimate edit and sale edit pages.
+
+### Root causes found
+1. **Tax label** hardcoded as `"Tax (G)"` in both edit blades — never showed the real group name until the async fetch completed
+2. **`estimate_edit.js` / `sale_edit.js` `updateEstimateTotals()`** read from `tax_amount_input` (= `"0"` at load time) instead of recalculating tax from the FM globals — overwrote grand total without tax
+3. **Race condition** — `loadTaxGroupRate()` was called early in the `DOMContentLoaded` callback, but the `*_edit.js` sync `recalcFromRow` loop ran after it (also in DOMContentLoaded) and reset the display to $0 tax before the async fetch resolved
+4. **`sale.js` fetch URL wrong** — `loadTaxGroupRate` was fetching `/pages/estimates/api/tax-groups/` (404) instead of `/estimates/api/tax-groups/`, causing every tax load to silently fail for sales
+
+### Fixes applied
+- **Both edit blades** — pre-render the tax label server-side: `$taxGroups->firstWhere('id', $sale/estimate->tax_group_id)` → `Tax (GST/HST)` shown immediately
+- **`estimate.js` / `sale.js`** — wrapped `loadTaxGroupRate()` call in `setTimeout(0)` so it fires after all DOMContentLoaded handlers (including `*_edit.js`) complete their sync work
+- **`estimate_edit.js` / `sale_edit.js` `updateEstimateTotals()`** — now recalculates tax from `window.FM_CURRENT_GST_PERCENT` / `FM_CURRENT_PST_PERCENT` / `FM_CURRENT_OTHER_TAXES` globals (same as the `estimate.js`/`sale.js` versions); also updates `.estimate-tax-value` span
+- **`sale.js`** — fixed fetch URL to `/estimates/api/tax-groups/${id}/rate`
+
+### Architecture note
+`estimate_edit.js` and `sale_edit.js` each have their own `updateEstimateTotals()` inside an IIFE. These are separate from the versions inside `estimate.js`/`sale.js` DOMContentLoaded callbacks. Both versions now calculate tax identically from FM globals. The FM globals (`FM_CURRENT_GST_PERCENT`, etc.) are authoritative — set by `loadTaxGroupRate()` after the API fetch resolves.
 
 ---
 

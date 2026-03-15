@@ -181,12 +181,20 @@ Force-delete route uses `role:admin` middleware (not permission-based).
 
 ## Views
 
-| View | Path |
-|------|------|
+| View      | Path |
+|-----------|------|
+| Index PO  | `resources/views/pages/purchase-orders/index.blade.php` |
 | Create PO | `resources/views/pages/purchase-orders/create.blade.php` |
 | Edit PO   | `resources/views/pages/purchase-orders/edit.blade.php` |
 | Show PO   | `resources/views/pages/purchase-orders/show.blade.php` |
 | PDF       | `resources/views/pdf/purchase-order.blade.php` |
+
+### Index view (`x-app-layout`)
+- Route: `GET /pages/purchase-orders` → `pages.purchase-orders.index`
+- Filters: search (PO#, vendor name, sale#), status dropdown, date from/to (created_at)
+- Table columns: PO#, Sale (linked), Vendor, Status badge, Fulfillment, Expected ETA, Total, Created, View/Edit actions
+- Edit action is permission-gated (`can('edit purchase orders')`)
+- Paginated 25/page with `withQueryString()`
 
 ### Create view (`x-app-layout`)
 - Alpine component: `poCreate()`

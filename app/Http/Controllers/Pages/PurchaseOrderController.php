@@ -16,6 +16,39 @@ use Illuminate\Support\Facades\DB;
 class PurchaseOrderController extends Controller
 {
     // -------------------------------------------------------------------------
+    // Index — all purchase orders with search/filters
+    // -------------------------------------------------------------------------
+
+    public function index(Request $request)
+    {
+        $q        = trim($request->input('q', ''));
+        $status   = $request->input('status', '');
+        $dateFrom = $request->input('date_from', '');
+        $dateTo   = $request->input('date_to', '');
+
+        $purchaseOrders = PurchaseOrder::with(['vendor', 'sale', 'items'])
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('po_number', 'like', "%{$q}%")
+                        ->orWhereHas('vendor', fn ($vq) => $vq->where('name', 'like', "%{$q}%"))
+                        ->orWhereHas('sale', fn ($sq) => $sq->where('sale_number', 'like', "%{$q}%"));
+                });
+            })
+            ->when($status, fn ($query) => $query->where('status', $status))
+            ->when($dateFrom, fn ($query) => $query->whereDate('created_at', '>=', $dateFrom))
+            ->when($dateTo,   fn ($query) => $query->whereDate('created_at', '<=', $dateTo))
+            ->orderByDesc('created_at')
+            ->paginate(25)
+            ->withQueryString();
+
+        $statusOptions = ['pending', 'ordered', 'received', 'cancelled'];
+
+        return view('pages.purchase-orders.index', compact(
+            'purchaseOrders', 'statusOptions', 'q', 'status', 'dateFrom', 'dateTo'
+        ));
+    }
+
+    // -------------------------------------------------------------------------
     // Create form — scoped to a sale
     // -------------------------------------------------------------------------
 

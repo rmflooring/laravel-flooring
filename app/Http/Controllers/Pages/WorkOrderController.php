@@ -25,6 +25,37 @@ class WorkOrderController extends Controller
     // ── Installations group calendar ID ───────────────────────────
     const INSTALLATIONS_GROUP_ID = 'a6890136-56b9-42fc-ac2b-8e05c98c0e8c';
 
+    // ── Index — all work orders with search/filters ───────────────
+
+    public function index(Request $request)
+    {
+        $q        = trim($request->input('q', ''));
+        $status   = $request->input('status', '');
+        $dateFrom = $request->input('date_from', '');
+        $dateTo   = $request->input('date_to', '');
+
+        $workOrders = WorkOrder::with(['installer', 'sale', 'items'])
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('wo_number', 'like', "%{$q}%")
+                        ->orWhereHas('installer', fn ($iq) => $iq->where('name', 'like', "%{$q}%"))
+                        ->orWhereHas('sale', fn ($sq) => $sq->where('sale_number', 'like', "%{$q}%"));
+                });
+            })
+            ->when($status, fn ($query) => $query->where('status', $status))
+            ->when($dateFrom, fn ($query) => $query->whereDate('created_at', '>=', $dateFrom))
+            ->when($dateTo,   fn ($query) => $query->whereDate('created_at', '<=', $dateTo))
+            ->orderByDesc('created_at')
+            ->paginate(25)
+            ->withQueryString();
+
+        $statusOptions = WorkOrder::STATUSES;
+
+        return view('pages.work-orders.index', compact(
+            'workOrders', 'statusOptions', 'q', 'status', 'dateFrom', 'dateTo'
+        ));
+    }
+
     // ── CRUD ──────────────────────────────────────────────────────
 
     public function create(Sale $sale)

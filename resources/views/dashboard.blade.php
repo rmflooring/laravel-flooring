@@ -109,16 +109,16 @@
                 $cardsRow3 = [
                     [
                         'title' => 'Work Orders',
-                        'subtitle' => 'Coming soon',
-                        'href' => null,
-                        'accent' => 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800',
+                        'subtitle' => 'View & manage work orders',
+                        'href' => route('pages.work-orders.index'),
+                        'accent' => 'bg-indigo-600 text-white border border-indigo-700 dark:bg-indigo-700 dark:border-indigo-800',
                         'icon' => 'M7 8h10M7 12h10M7 16h6',
                     ],
                     [
                         'title' => 'Purchase Orders',
-                        'subtitle' => 'Coming soon',
-                        'href' => null,
-                        'accent' => 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
+                        'subtitle' => 'View & manage purchase orders',
+                        'href' => route('pages.purchase-orders.index'),
+                        'accent' => 'bg-emerald-600 text-white border border-emerald-700 dark:bg-emerald-700 dark:border-emerald-800',
                         'icon' => 'M7 7h10M7 11h10M7 15h10',
                     ],
                 ];

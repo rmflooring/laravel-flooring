@@ -107,9 +107,10 @@ Rules enforced on update:
 
 ## Routes
 
-All inside the `pages` middleware group, nested under `sales/{sale}`:
+All inside the `pages` middleware group:
 
 ```
+GET    pages/work-orders                                 pages.work-orders.index             role_or_permission:admin|view work orders
 GET    pages/sales/{sale}/work-orders/create             pages.sales.work-orders.create      role_or_permission:admin|create work orders
 POST   pages/sales/{sale}/work-orders                    pages.sales.work-orders.store       role_or_permission:admin|create work orders
 GET    pages/sales/{sale}/work-orders/{workOrder}        pages.sales.work-orders.show        role_or_permission:admin|view work orders
@@ -220,12 +221,20 @@ Role assignments (`RolesSeeder`):
 
 | View       | Path |
 |------------|------|
+| Index WO   | `resources/views/pages/work-orders/index.blade.php` |
 | Create WO  | `resources/views/pages/work-orders/create.blade.php` |
 | Edit WO    | `resources/views/pages/work-orders/edit.blade.php` |
 | Show WO    | `resources/views/pages/work-orders/show.blade.php` |
 | PDF        | `resources/views/pdf/work-order.blade.php` |
 
 All use `x-app-layout`.
+
+### Index view (`x-app-layout`)
+- Route: `GET /pages/work-orders` → `pages.work-orders.index`
+- Filters: search (WO#, installer name, sale#), status dropdown, date from/to (created_at)
+- Table columns: WO#, Sale (linked), Installer, Items count, Scheduled date/time, Status badge, Calendar sync badge, Created, View action
+- View links to `pages.sales.work-orders.show` (requires both `{sale}` and `{workOrder}`)
+- Paginated 25/page with `withQueryString()`
 
 ### Create form features
 - Installer dropdown (active installers)
