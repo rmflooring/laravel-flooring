@@ -1,5 +1,5 @@
 # Work Orders Module — Dev Context
-Updated: 2026-03-14 (session 6 — full redesign)
+Updated: 2026-03-15 (session 12)
 
 ---
 
@@ -18,7 +18,7 @@ Work Orders (WOs) represent scheduled installation tasks assigned to an **Instal
 | `id`                | bigint PK               |                                                               |
 | `sale_id`           | FK → sales              | cascade delete                                                |
 | `installer_id`      | nullable FK → installers | nullOnDelete                                                 |
-| `wo_number`         | string unique           | Auto-generated: `WO-YYYY-NNNN`, sequential per year           |
+| `wo_number`         | string unique           | Auto-generated: `{seq}-{sale_number}` (e.g. `3-8`), plain integers, no year prefix |
 | `status`            | string                  | default `created`; see status lifecycle below                 |
 | `scheduled_date`    | nullable date           |                                                               |
 | `scheduled_time`    | nullable string (HH:MM) | 5-char time string                                            |
@@ -46,7 +46,18 @@ Work Orders (WOs) represent scheduled installation tasks assigned to an **Instal
 | `unit`         | string                  | e.g. `sqft`, `lnft`                                |
 | `cost_price`   | decimal(10,2)           | Per-unit installer cost                            |
 | `cost_total`   | decimal(10,2)           | Auto-calculated: `quantity × cost_price` (saving hook) |
+| `wo_notes`     | text nullable           | Per-item notes visible to installer (added 2026-03-15) |
 | `sort_order`   | integer default 0       |                                                    |
+
+### `work_order_item_materials` table (added 2026-03-15)
+
+Links a WO labour item to one or more sale material items (the products being installed).
+
+| Column              | Type                     | Notes                              |
+|---------------------|--------------------------|------------------------------------|
+| `id`                | bigint PK                |                                    |
+| `work_order_item_id`| FK → work_order_items    | cascade delete                     |
+| `sale_item_id`      | FK → sale_items          | cascade delete                     |
 
 ---
 
@@ -56,7 +67,7 @@ Work Orders (WOs) represent scheduled installation tasks assigned to an **Instal
 
 - `use SoftDeletes`
 - `$guarded = ['id', 'wo_number']`
-- **Auto-generation** in `booted()` creating hook: `WO-YYYY-NNNN`, sequential per year, retries 10x
+- **Auto-generation** in `booted()` creating hook: `{seq}-{sale_number}` format (e.g. `3-8`). Sequence extracted via `CAST(SUBSTRING_INDEX(wo_number, '-', 1) AS UNSIGNED)`. Retries 10x.
 - Auto-sets `created_by` / `updated_by` from `auth()->id()` on create/update
 - **Constants:** `STATUSES`, `STATUS_LABELS`
 - **Accessors:** `getStatusLabelAttribute()`, `getCalendarSyncedAttribute()`, `getGrandTotalAttribute()` (sum of `items.cost_total`)
@@ -66,7 +77,12 @@ Work Orders (WOs) represent scheduled installation tasks assigned to an **Instal
 
 - `$guarded = ['id']`
 - `saving` hook auto-calculates `cost_total = quantity * cost_price`
-- **Relationships:** `workOrder()`, `saleItem()` (→ SaleItem, nullable)
+- **Relationships:** `workOrder()`, `saleItem()` (→ SaleItem, nullable), `relatedMaterials()` (→ WorkOrderItemMaterial, hasMany)
+
+### `App\Models\WorkOrderItemMaterial` (added 2026-03-15)
+
+- `$guarded = ['id']`
+- **Relationships:** `workOrderItem()` (→ WorkOrderItem), `saleItem()` (→ SaleItem)
 
 ### `App\Models\Sale` (modified)
 - `workOrders()` → `HasMany(WorkOrder::class)->orderByDesc('created_at')`
@@ -133,25 +149,31 @@ const INSTALLATIONS_GROUP_ID = 'a6890136-56b9-42fc-ac2b-8e05c98c0e8c';
 ```
 
 ### `create()`
-- Loads `$sale->rooms` with their labour items
+- Loads `$sale->rooms` with their **labour AND material** items (`item_type` IN `['labour', 'material']`)
 - Calculates `scheduledQtys()` to determine remaining qty per item
 - Passes `$installers` (active), `$rooms`, `$scheduledQtys` to view
 
 ### `store()`
-- Validates: at least one item selected, qty > 0 and ≤ remaining
-- DB transaction: create WorkOrder + WorkOrderItem records
+- Validates: at least one item selected, qty > 0 and ≤ remaining; `wo_notes.*` optional text; `materials.*` optional arrays
+- DB transaction: create WorkOrder + WorkOrderItem records + WorkOrderItemMaterial records
 - Auto-advances to `scheduled` if installer + date both set
 - Triggers `syncCalendarCreate()` best-effort
 
 ### `edit()`
-- Eager loads `items.saleItem`
+- Eager loads `items.relatedMaterials`, `items.saleItem.room.items` (material only)
 - Calls `maxQtys($workOrder)` to provide per-item max constraints
 - Passes `$installers`, `$maxQtys` to view
 
+### `show()`
+- Eager loads `items.relatedMaterials.saleItem`, `items.saleItem.room`, `calendarEvent.externalLink`, `creator`
+
 ### `update()`
-- Validates item qtys vs remaining (excluding this WO)
-- DB transaction: update WO header + all items
+- Validates item qtys vs remaining (excluding this WO); `wo_notes.*`; `wo_materials.*`
+- DB transaction: update WO header + all items + resync material associations (delete + recreate)
 - Triggers calendar create/update/cancel based on what changed
+
+### `previewPdf()` / `sendEmail()`
+- Eager loads `items.relatedMaterials.saleItem`, `items.saleItem.room`
 
 ### `previewPdf()`
 - DomPDF inline browser response
@@ -237,11 +259,12 @@ All use `x-app-layout`.
 - Paginated 25/page with `withQueryString()`
 
 ### Create form features
-- Installer dropdown (active installers)
-- Labour items grouped by room, each with checkbox to include
+- Installer dropdown (active installers; installer-vendors excluded)
+- **Room cards** — one card per sale room (house icon header); labour items inside each card
 - Fully-scheduled items shown disabled with "Fully scheduled" badge
 - Partially-scheduled items show remaining qty badge
-- When checked: qty (pre-filled with remaining, editable) + unit cost (editable)
+- When checked: qty (pre-filled with remaining, editable) + unit cost + wo_notes (editable)
+- **Material checkboxes** shown inside each labour item when checked — selects material sale items from the same room to associate (`name="materials[{labour_item_id}][]"`, value = material `sale_item_id`)
 - Scheduling: date + time, calendar hint shows when installer + date are both set
 - Notes textarea
 - Alpine.js components: `woCreate()`, `woItem(itemId, maxQty, defaultCost)`
@@ -249,7 +272,8 @@ All use `x-app-layout`.
 ### Edit form features
 - Installer dropdown
 - Status dropdown
-- Labour items table (editable qty/cost; max hint shown; live total in last column)
+- Labour items table (editable qty/cost/wo_notes; max hint shown; live total in last column)
+- **Related Materials checkboxes** per item row — pre-checked from `$item->relatedMaterials->pluck('sale_item_id')`; input `name="wo_materials[{wo_item_id}][]"`
 - Items cannot be added/removed after creation
 - Scheduling: date + time
 - Notes
@@ -259,9 +283,17 @@ All use `x-app-layout`.
 - Header: WO number, status badge, calendar badge, sent_at timestamp
 - Action buttons: Back, Edit, Print PDF, Send to Installer, Delete (with confirm)
 - Installer details card + Job details card
-- Items table with grand total
+- **Labour Items grouped by room** — one card per sale room (blue house icon header); items table inside each card
+- Grand Total row below all room cards
+- Linked materials shown above each labour item (package icon, product name, qty, unit)
+- WO notes shown below item name
 - Notes section
 - Send email modal (to, subject, body pre-filled)
+
+### Sale edit page integration
+- **WO card** added after PO card, gated by `@can('view work orders')`
+- Shows: WO number, installer, status badge, scheduled date/time, total cost, View/Edit links
+- Loaded via `SaleController::edit()` eager-loading `workOrders.installer` + `workOrders.items`
 
 ### Status badge colours
 | Status      | Tailwind class              |
@@ -280,7 +312,8 @@ Matches PO style (DejaVu Sans, `#1d4ed8` blue):
 - **Header**: branding logo/name (left) + "WORK ORDER" title, WO number, date, status (right)
 - **Info grid**: Installer details (left column), Job details (right column)
 - **Schedule box**: blue-tinted, shows date/time + job address
-- **Items table**: Item, Qty, Unit, Unit Cost, Total; Grand Total footer row
+- **Items grouped by room**: each room gets a blue `⌂ Room Name` header row, then an items table (Item, Qty, Unit, Unit Cost, Total); materials shown above item name with `▸` prefix; WO notes shown below item name
+- **Grand Total** standalone table at the bottom
 - **Notes box**
 - **Footer**: company name + phone + email + website
 

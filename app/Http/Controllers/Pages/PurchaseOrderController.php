@@ -3,18 +3,25 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Models\Installer;
+use App\Models\MicrosoftAccount;
+use App\Models\MicrosoftCalendar;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Sale;
 use App\Models\Setting;
 use App\Models\Vendor;
+use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PurchaseOrderController extends Controller
 {
+    const WAREHOUSE_GROUP_ID = '4bfd495c-4df2-4eaa-9d8c-987c4ef23b02';
+
     // -------------------------------------------------------------------------
     // Index — all purchase orders with search/filters
     // -------------------------------------------------------------------------
@@ -61,7 +68,10 @@ class PurchaseOrderController extends Controller
                                           ->orderBy('sort_order'),
         ]);
 
+        $installerVendorIds = Installer::whereNotNull('vendor_id')->pluck('vendor_id');
+
         $vendors = Vendor::where('status', 'active')
+            ->whereNotIn('id', $installerVendorIds)
             ->orderBy('company_name')
             ->get(['id', 'company_name', 'email', 'address', 'address2', 'city', 'province', 'postal_code']);
 
@@ -91,12 +101,16 @@ class PurchaseOrderController extends Controller
             'fulfillment_method'      => ['required', 'in:delivery_site,delivery_warehouse,delivery_custom,pickup'],
             'delivery_address'        => ['nullable', 'string', 'max:500'],
             'special_instructions'    => ['nullable', 'string'],
+            'pickup_date'             => ['nullable', 'required_with:pickup_time', 'date'],
+            'pickup_time'             => ['nullable', 'required_with:pickup_date', 'date_format:H:i'],
             'items'                   => ['required', 'array', 'min:1'],
             'items.*'                 => ['integer', 'exists:sale_items,id'],
             'qty'                     => ['nullable', 'array'],
             'qty.*'                   => ['nullable', 'numeric', 'min:0'],
             'cost'                    => ['nullable', 'array'],
             'cost.*'                  => ['nullable', 'numeric', 'min:0'],
+            'po_notes'                => ['nullable', 'array'],
+            'po_notes.*'              => ['nullable', 'string'],
         ]);
 
         // Validate qty overrides don't exceed remaining available per item
@@ -137,6 +151,11 @@ class PurchaseOrderController extends Controller
 
         $po = DB::transaction(function () use ($data, $sale, $resolvedAddress) {
 
+            $pickupAt = null;
+            if ($data['fulfillment_method'] === 'pickup' && ! empty($data['pickup_date']) && ! empty($data['pickup_time'])) {
+                $pickupAt = \Carbon\Carbon::parse($data['pickup_date'] . ' ' . $data['pickup_time']);
+            }
+
             $po = PurchaseOrder::create([
                 'sale_id'                => $sale->id,
                 'opportunity_id'         => $sale->opportunity_id,
@@ -146,6 +165,7 @@ class PurchaseOrderController extends Controller
                 'fulfillment_method'     => $data['fulfillment_method'],
                 'delivery_address'       => $resolvedAddress,
                 'special_instructions'   => $data['special_instructions'] ?? null,
+                'pickup_at'              => $pickupAt,
             ]);
 
             $saleItems = $sale->items()
@@ -155,12 +175,14 @@ class PurchaseOrderController extends Controller
                 ->orderBy('sort_order')
                 ->get();
 
-            $qtyOverrides  = $data['qty']  ?? [];
-            $costOverrides = $data['cost'] ?? [];
+            $qtyOverrides   = $data['qty']      ?? [];
+            $costOverrides  = $data['cost']     ?? [];
+            $notesOverrides = $data['po_notes'] ?? [];
 
             foreach ($saleItems as $i => $item) {
-                $qty   = isset($qtyOverrides[$item->id])  && $qtyOverrides[$item->id]  !== '' ? (float) $qtyOverrides[$item->id]  : (float) $item->quantity;
-                $cost  = isset($costOverrides[$item->id]) && $costOverrides[$item->id] !== '' ? (float) $costOverrides[$item->id] : (float) $item->cost_price;
+                $qty   = isset($qtyOverrides[$item->id])   && $qtyOverrides[$item->id]   !== '' ? (float) $qtyOverrides[$item->id]  : (float) $item->quantity;
+                $cost  = isset($costOverrides[$item->id])  && $costOverrides[$item->id]  !== '' ? (float) $costOverrides[$item->id] : (float) $item->cost_price;
+                $notes = isset($notesOverrides[$item->id]) && $notesOverrides[$item->id] !== '' ? $notesOverrides[$item->id] : ($item->po_notes ?: null);
 
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $po->id,
@@ -168,6 +190,7 @@ class PurchaseOrderController extends Controller
                     'item_name'         => $this->buildItemName($item),
                     'quantity'          => $qty,
                     'unit'              => $item->unit,
+                    'po_notes'          => $notes,
                     'cost_price'        => $cost,
                     'sort_order'        => $i,
                 ]);
@@ -175,6 +198,10 @@ class PurchaseOrderController extends Controller
 
             return $po;
         });
+
+        if ($po->fulfillment_method === 'pickup' && $po->pickup_at) {
+            $this->syncCalendarCreate($po);
+        }
 
         return redirect()
             ->route('pages.purchase-orders.show', $po)
@@ -200,7 +227,10 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder->load(['vendor', 'items.saleItem', 'sale']);
 
+        $installerVendorIds = Installer::whereNotNull('vendor_id')->pluck('vendor_id');
+
         $vendors = Vendor::where('status', 'active')
+            ->whereNotIn('id', $installerVendorIds)
             ->orderBy('company_name')
             ->get(['id', 'company_name', 'email', 'address', 'address2', 'city', 'province', 'postal_code']);
 
@@ -231,9 +261,12 @@ class PurchaseOrderController extends Controller
             'fulfillment_method'     => ['required', 'in:delivery_site,delivery_warehouse,delivery_custom,pickup'],
             'delivery_address'       => ['nullable', 'string', 'max:500'],
             'special_instructions'   => ['nullable', 'string'],
+            'pickup_date'            => ['nullable', 'date'],
+            'pickup_time'            => ['nullable', 'date_format:H:i'],
             'po_items'               => ['nullable', 'array'],
             'po_items.*.quantity'    => ['nullable', 'numeric', 'min:0'],
             'po_items.*.cost_price'  => ['nullable', 'numeric', 'min:0'],
+            'po_items.*.po_notes'    => ['nullable', 'string'],
         ];
 
         $data = $request->validate($rules);
@@ -251,6 +284,16 @@ class PurchaseOrderController extends Controller
             $purchaseOrder->sale,
         );
 
+        $newPickupAt = null;
+        if ($data['fulfillment_method'] === 'pickup' && ! empty($data['pickup_date']) && ! empty($data['pickup_time'])) {
+            $newPickupAt = \Carbon\Carbon::parse($data['pickup_date'] . ' ' . $data['pickup_time']);
+        }
+
+        $wasPickup      = $purchaseOrder->fulfillment_method === 'pickup';
+        $isPickup       = $data['fulfillment_method'] === 'pickup';
+        $pickupChanged  = $newPickupAt && (! $purchaseOrder->pickup_at || ! $newPickupAt->eq($purchaseOrder->pickup_at));
+        $switchedAway   = $wasPickup && ! $isPickup;
+
         $purchaseOrder->update([
             'vendor_id'              => $data['vendor_id'],
             'status'                 => $data['status'],
@@ -259,7 +302,20 @@ class PurchaseOrderController extends Controller
             'fulfillment_method'     => $data['fulfillment_method'],
             'delivery_address'       => $resolvedAddress,
             'special_instructions'   => $data['special_instructions'] ?? null,
+            'pickup_at'              => $newPickupAt,
         ]);
+
+        if ($switchedAway) {
+            $this->cancelCalendarEvent($purchaseOrder);
+        } elseif ($isPickup && $newPickupAt) {
+            if ($purchaseOrder->calendar_event_id) {
+                if ($pickupChanged) {
+                    $this->syncCalendarUpdate($purchaseOrder);
+                }
+            } else {
+                $this->syncCalendarCreate($purchaseOrder);
+            }
+        }
 
         // Validate and update item qty / cost overrides
         if (! empty($data['po_items'])) {
@@ -295,6 +351,7 @@ class PurchaseOrderController extends Controller
                 $poItem->update([
                     'quantity'   => $overrides['quantity']   ?? $poItem->quantity,
                     'cost_price' => $overrides['cost_price'] ?? $poItem->cost_price,
+                    'po_notes'   => $overrides['po_notes']   ?? null,
                 ]);
             }
         }
@@ -453,5 +510,130 @@ class PurchaseOrderController extends Controller
         ]);
 
         return implode(', ', $parts) ?: '';
+    }
+
+    // -------------------------------------------------------------------------
+    // Pickup calendar sync helpers (RM – Warehouse group calendar)
+    // -------------------------------------------------------------------------
+
+    private function buildPickupEventData(PurchaseOrder $po): array
+    {
+        $po->loadMissing(['vendor', 'sale']);
+
+        $title = 'Pickup — PO ' . $po->po_number . ' / ' . ($po->vendor->company_name ?? 'Vendor');
+
+        $notes = 'Purchase Order: ' . $po->po_number;
+        if ($po->sale) {
+            $notes .= "\nSale: " . $po->sale->sale_number;
+            if ($po->sale->customer_name) {
+                $notes .= ' — ' . $po->sale->customer_name;
+            }
+        }
+        if ($po->special_instructions) {
+            $notes .= "\n\nInstructions: " . $po->special_instructions;
+        }
+
+        $start = $po->pickup_at;
+        $end   = $po->pickup_at->copy()->addHour();
+
+        return compact('title', 'notes', 'start', 'end');
+    }
+
+    private function syncCalendarCreate(PurchaseOrder $po): void
+    {
+        try {
+            $account = MicrosoftAccount::where('user_id', auth()->id())
+                ->where('is_connected', true)
+                ->first();
+
+            if (! $account) {
+                Log::info('[PO] No connected Microsoft account — skipping pickup calendar', ['po_id' => $po->id]);
+                return;
+            }
+
+            $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                ->where('group_id', self::WAREHOUSE_GROUP_ID)
+                ->first();
+
+            if (! $calendar) {
+                Log::warning('[PO] RM–Warehouse calendar not found for account — skipping', [
+                    'po_id'      => $po->id,
+                    'account_id' => $account->id,
+                ]);
+                return;
+            }
+
+            $eventData  = $this->buildPickupEventData($po);
+            $service    = new GraphCalendarService();
+            $externalId = $service->createEvent($account, $calendar, $eventData);
+            $localEvent = $service->persistLocalEvent($account, $calendar, $externalId, $eventData, PurchaseOrder::class, $po->id);
+
+            $po->update(['calendar_event_id' => $localEvent->id]);
+
+            Log::info('[PO] Pickup calendar event created on RM–Warehouse', ['po_id' => $po->id]);
+        } catch (\Throwable $e) {
+            Log::error('[PO] Pickup calendar event creation failed', ['po_id' => $po->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    private function syncCalendarUpdate(PurchaseOrder $po): void
+    {
+        if (empty($po->calendar_event_id)) {
+            return;
+        }
+
+        try {
+            $po->loadMissing(['calendarEvent.externalLink']);
+
+            $link = $po->calendarEvent?->externalLink;
+            if (! $link) {
+                Log::warning('[PO] No ExternalEventLink found for update — skipping', ['po_id' => $po->id]);
+                return;
+            }
+
+            $account = MicrosoftAccount::find($link->microsoft_account_id);
+            if (! $account) return;
+
+            $eventData = $this->buildPickupEventData($po);
+            $service   = new GraphCalendarService();
+            $service->updateEvent($account, $link, $eventData);
+
+            $po->calendarEvent?->update([
+                'title'       => $eventData['title'],
+                'starts_at'   => $eventData['start'],
+                'ends_at'     => $eventData['end'],
+                'description' => $eventData['notes'],
+            ]);
+
+            Log::info('[PO] Pickup calendar event updated', ['po_id' => $po->id]);
+        } catch (\Throwable $e) {
+            Log::error('[PO] Pickup calendar event update failed', ['po_id' => $po->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    private function cancelCalendarEvent(PurchaseOrder $po): void
+    {
+        if (empty($po->calendar_event_id)) {
+            return;
+        }
+
+        try {
+            $po->loadMissing(['calendarEvent.externalLink']);
+
+            $link = $po->calendarEvent?->externalLink;
+            if ($link) {
+                $account = MicrosoftAccount::find($link->microsoft_account_id);
+                if ($account) {
+                    (new GraphCalendarService())->deleteEvent($account, $link);
+                }
+            }
+
+            $po->calendarEvent?->delete();
+            $po->update(['calendar_event_id' => null]);
+
+            Log::info('[PO] Pickup calendar event deleted', ['po_id' => $po->id]);
+        } catch (\Throwable $e) {
+            Log::error('[PO] Pickup calendar event deletion failed', ['po_id' => $po->id, 'error' => $e->getMessage()]);
+        }
     }
 }

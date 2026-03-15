@@ -143,7 +143,13 @@
                                 @foreach($purchaseOrder->items as $item)
                                     @php $maxInfo = $maxQtys[$item->id] ?? ['max' => $item->quantity, 'sale_qty' => $item->quantity]; @endphp
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                        <td class="px-6 py-3 font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</td>
+                                        <td class="px-6 py-3">
+                                            <div class="font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</div>
+                                            <textarea name="po_items[{{ $item->id }}][po_notes]"
+                                                      rows="2"
+                                                      placeholder="PO notes..."
+                                                      class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('po_items.' . $item->id . '.po_notes', $item->po_notes) }}</textarea>
+                                        </td>
                                         <td class="px-6 py-3 text-right">
                                             <input type="number"
                                                    name="po_items[{{ $item->id }}][quantity]"
@@ -231,9 +237,40 @@
                             <p x-show="fulfillmentMethod === 'delivery_warehouse'" x-cloak class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                 {{ $warehouseAddress ?: 'No warehouse address configured' }}
                             </p>
-                            <p x-show="fulfillmentMethod === 'pickup'" x-cloak class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                No delivery address needed — we will pick up from the vendor.
-                            </p>
+                            <div x-show="fulfillmentMethod === 'pickup'" x-cloak class="mt-3 space-y-3">
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    No delivery address needed — we will pick up from the vendor.
+                                </p>
+                                <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-900/10">
+                                    <p class="mb-3 text-xs font-medium text-blue-700 dark:text-blue-400">
+                                        Schedule Warehouse Pickup — syncs to RM Warehouse calendar
+                                        @if($purchaseOrder->calendar_event_id)
+                                            <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">Synced</span>
+                                        @endif
+                                    </p>
+                                    <div class="flex flex-wrap gap-4">
+                                        <div>
+                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Date</label>
+                                            <input type="date" name="pickup_date"
+                                                   value="{{ old('pickup_date', $purchaseOrder->pickup_at?->format('Y-m-d')) }}"
+                                                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                            @error('pickup_date')
+                                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Time</label>
+                                            <input type="time" name="pickup_time"
+                                                   value="{{ old('pickup_time', $purchaseOrder->pickup_at?->format('H:i') ?? '09:00') }}"
+                                                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                            @error('pickup_time')
+                                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Leave blank to skip scheduling. Event duration is 1 hour.</p>
+                                </div>
+                            </div>
 
                             <div x-show="fulfillmentMethod === 'delivery_custom'" x-cloak class="mt-2">
                                 <textarea name="delivery_address" rows="3"

@@ -110,8 +110,40 @@
                                     @endphp
                                     <tr x-data="woRow({{ $item->id }}, {{ (float)$item->quantity }}, {{ (float)$item->cost_price }})">
                                         <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                            {{ $item->item_name }}
+                                            <div class="font-medium">{{ $item->item_name }}</div>
                                             <div class="text-xs text-gray-400">{{ $item->unit }}</div>
+                                            <textarea name="wo_items[{{ $item->id }}][wo_notes]"
+                                                      rows="2"
+                                                      placeholder="WO notes..."
+                                                      class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('wo_items.' . $item->id . '.wo_notes', $item->wo_notes) }}</textarea>
+                                            {{-- Related Materials --}}
+                                            @php
+                                                $roomMats = $item->saleItem?->room?->items ?? collect();
+                                                $linkedIds = $item->relatedMaterials->pluck('sale_item_id')->toArray();
+                                            @endphp
+                                            @if($roomMats->isNotEmpty())
+                                            <div class="mt-2">
+                                                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Related Materials</p>
+                                                <div class="space-y-1">
+                                                    @foreach($roomMats as $mat)
+                                                        @php
+                                                            $matName = implode(' — ', array_filter([$mat->product_type, $mat->manufacturer, $mat->style, $mat->color_item_number])) ?: 'Material';
+                                                        @endphp
+                                                        <label class="flex items-center gap-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 cursor-pointer hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
+                                                            <input type="checkbox"
+                                                                   name="wo_materials[{{ $item->id }}][]"
+                                                                   value="{{ $mat->id }}"
+                                                                   {{ in_array($mat->id, old('wo_materials.' . $item->id, $linkedIds)) ? 'checked' : '' }}
+                                                                   class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                            <span class="text-xs text-gray-700 dark:text-gray-300">
+                                                                {{ $matName }}
+                                                                <span class="text-gray-400 ml-1">{{ number_format((float)$mat->quantity, 2) }} {{ $mat->unit }}</span>
+                                                            </span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
                                             <input type="number" name="wo_items[{{ $item->id }}][quantity]"

@@ -118,6 +118,8 @@ class SaleController extends Controller
             'salesperson1Employee',
             'purchaseOrders.vendor',
             'purchaseOrders.items',
+            'workOrders.installer',
+            'workOrders.items',
         ]);
 
         $employees = Employee::orderBy('first_name')->orderBy('last_name')->get();

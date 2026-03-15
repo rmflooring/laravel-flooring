@@ -20,28 +20,21 @@ class Sale extends Model
                 return;
             }
 
-         // Generate next sequential number in YYYY-0001 format
-$yearPrefix = now()->format('Y') . '-'; // e.g. "2026-"
-$prefixLen  = strlen($yearPrefix);
+            for ($attempt = 0; $attempt < 10; $attempt++) {
+                $max = DB::table('sales')
+                    ->selectRaw("MAX(CAST(sale_number AS UNSIGNED)) as max_num")
+                    ->value('max_num');
 
-for ($attempt = 0; $attempt < 10; $attempt++) {
+                $nextNum   = ((int) $max) + 1 + $attempt;
+                $candidate = (string) $nextNum;
 
-    $max = DB::table('sales')
-        ->where('sale_number', 'like', $yearPrefix . '%')
-        ->selectRaw("MAX(CAST(SUBSTRING(sale_number, ?) AS UNSIGNED)) as max_num", [$prefixLen + 1])
-        ->value('max_num');
+                if (! DB::table('sales')->where('sale_number', $candidate)->exists()) {
+                    $sale->sale_number = $candidate;
+                    return;
+                }
+            }
 
-    $nextNum = ((int)$max) + 1 + $attempt;
-
-    $candidate = $yearPrefix . str_pad((string)$nextNum, 4, '0', STR_PAD_LEFT);
-
-    if (!DB::table('sales')->where('sale_number', $candidate)->exists()) {
-        $sale->sale_number = $candidate;
-        return;
-    }
-}
-
-throw new \RuntimeException('Could not generate a unique sale number.');
+            throw new \RuntimeException('Could not generate a unique sale number.');
         });
     }
 

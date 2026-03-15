@@ -1,5 +1,5 @@
 # Purchase Orders Module — Dev Context
-Updated: 2026-03-14
+Updated: 2026-03-15 (session 12)
 
 ---
 
@@ -25,7 +25,7 @@ line items are being ordered, at what quantity and cost.
 | Column                  | Type         | Notes                                              |
 |-------------------------|--------------|----------------------------------------------------|
 | `id`                    | bigint PK    |                                                    |
-| `po_number`             | string unique| Auto-generated: `PO-YYYY-NNNN`, sequential per year|
+| `po_number`             | string unique| Auto-generated: `{seq}-{sale_number}` if tied to a sale (e.g. `3-8`), or just `{seq}` for stock POs. Plain integers, no year prefix. |
 | `sale_id`               | FK → sales   |                                                    |
 | `opportunity_id`        | FK → opportunities (nullable) | Copied from sale at creation      |
 | `vendor_id`             | FK → vendors |                                                    |
@@ -36,6 +36,8 @@ line items are being ordered, at what quantity and cost.
 | `delivery_address`      | text nullable| Resolved from fulfillment method at save           |
 | `special_instructions`  | text nullable|                                                    |
 | `ordered_by`            | FK → users   | Auto-set to auth user on create                    |
+| `pickup_at`             | datetime nullable | Assembled from pickup_date + pickup_time; set when fulfillment = `pickup` |
+| `calendar_event_id`     | nullable FK → calendar_events | Local CalendarEvent for pickup scheduling |
 | `sent_at`               | datetime nullable | Stamped when emailed to vendor                |
 | `created_by` / `updated_by` | FK → users |                                                |
 | `deleted_at`            | datetime nullable | Soft deletes                                  |
@@ -55,6 +57,7 @@ line items are being ordered, at what quantity and cost.
 | `unit`              | string     | Copied from sale item                              |
 | `cost_price`        | decimal    | May be overridden from sale item cost at creation  |
 | `cost_total`        | decimal    | Auto-calculated by model: `quantity * cost_price`  |
+| `po_notes`          | text nullable | Per-item notes; pre-filled from sale item's `po_notes`, editable on create and edit |
 | `sort_order`        | integer    |                                                    |
 
 `cost_total` is recalculated automatically via `PurchaseOrderItem::booted()` `saving` hook.
@@ -66,10 +69,11 @@ line items are being ordered, at what quantity and cost.
 ### `App\Models\PurchaseOrder`
 - `use SoftDeletes`
 - `$guarded = ['id', 'po_number']`
-- **Auto-generation** in `booted()` creating hook: `PO-YYYY-NNNN`, sequential, retries 10x
+- **Auto-generation** in `booted()` creating hook: `{seq}-{sale_number}` (or just `{seq}` for stock POs). Sequence extracted via `CAST(SUBSTRING_INDEX(po_number, '-', 1) AS UNSIGNED)`. Retries 10x.
 - Auto-sets `ordered_by`, `created_by`, `updated_by` from `auth()->id()` on create
 - Auto-sets `updated_by` on update
-- **Relationships:** `sale()`, `opportunity()`, `vendor()`, `items()`, `orderedBy()`, `creator()`, `updater()`
+- **Casts:** `pickup_at` → `datetime`
+- **Relationships:** `sale()`, `opportunity()`, `vendor()`, `items()`, `orderedBy()`, `creator()`, `updater()`, `calendarEvent()` (→ CalendarEvent)
 - **Accessors:** `getFulfillmentLabelAttribute()`, `getStatusLabelAttribute()`, `getGrandTotalAttribute()`
 
 ### `App\Models\PurchaseOrderItem`
@@ -109,15 +113,16 @@ DELETE pages/purchase-orders/{purchaseOrder}/force pages.purchase-orders.force-d
 
 **`create(Sale $sale)`**
 - Loads sale rooms + material items (non-removed, ordered by sort_order)
-- Loads active vendors
+- Loads active vendors, **excluding any vendor linked to an Installer** (`Installer::whereNotNull('vendor_id')->pluck('vendor_id')`)
 - Computes `$remainingQtys` — remaining available qty per sale item across all non-cancelled POs
 - Passes `$remainingQtys` to view
 
 **`store(Request $request, Sale $sale)`**
-- Validates fields + `qty[]` and `cost[]` override arrays
+- Validates fields + `qty[]`, `cost[]`, `po_notes[]` override arrays; `pickup_date` / `pickup_time` when fulfillment = `pickup`
 - Validates each submitted item's qty doesn't exceed remaining (via `orderedQtys()`)
-- Creates PO + PO items inside `DB::transaction()`
-- Qty/cost use override values if provided, fall back to sale item values
+- Creates PO + PO items inside `DB::transaction()`; saves `po_notes` per item
+- Assembles `pickup_at` datetime from `pickup_date` + `pickup_time` when fulfillment = `pickup`
+- Triggers `syncCalendarCreate()` best-effort for pickup scheduling
 - Redirects to PO show page
 
 **`edit(PurchaseOrder $purchaseOrder)`**
@@ -125,12 +130,14 @@ DELETE pages/purchase-orders/{purchaseOrder}/force pages.purchase-orders.force-d
 - Computes `$maxQtys` per PO item: `sale_item.quantity - ordered_by_other_pos`
   (excludes current PO from the calculation)
 - Passes `$maxQtys` to view
+- Vendor dropdown also excludes installer-linked vendors
 
 **`update(Request $request, PurchaseOrder $purchaseOrder)`**
 - Gate: status `ordered` requires `vendor_order_number`
-- Validates `po_items[id][quantity]` and `po_items[id][cost_price]` overrides
+- Validates `po_items[id][quantity]`, `po_items[id][cost_price]`, `po_items[id][po_notes]` overrides; `pickup_date` / `pickup_time`
 - Validates each item's new qty against max (excluding current PO)
 - Updates PO header fields + PO items
+- Calendar sync/update/cancel based on fulfillment change
 
 **`destroy(PurchaseOrder $purchaseOrder)`** — soft delete, redirects to sale
 
@@ -157,6 +164,14 @@ DELETE pages/purchase-orders/{purchaseOrder}/force pages.purchase-orders.force-d
 - `pickup` → null
 
 **`warehouseAddress(): string`** — reads `branding_street/city/province/postal` from `app_settings`
+
+**`buildPickupEventData(PurchaseOrder $po): array`** — builds Graph API event payload for a pickup
+
+**`syncCalendarCreate(PurchaseOrder $po)`** — creates event on RM Warehouse group calendar (`group_id = 4bfd495c-4df2-4eaa-9d8c-987c4ef23b02`); best-effort
+
+**`syncCalendarUpdate(PurchaseOrder $po)`** — updates existing event via Graph API; best-effort
+
+**`cancelCalendarEvent(PurchaseOrder $po)`** — deletes event from Graph API, soft-deletes local CalendarEvent, clears `calendar_event_id`
 
 ---
 
@@ -198,29 +213,31 @@ Force-delete route uses `role:admin` middleware (not permission-based).
 
 ### Create view (`x-app-layout`)
 - Alpine component: `poCreate()`
-- **Vendor dropdown** with email shown in option text
+- **Vendor dropdown** with email shown in option text; installer-linked vendors excluded
 - **Material items** grouped by room with checkboxes
   - Items with 0 remaining: greyed out, disabled checkbox, "Fully ordered" badge
   - Items with partial remaining: "X remaining" blue badge, qty pre-filled with remaining
-  - On check: qty and unit cost override inputs slide in (Alpine `x-show`)
+  - On check: qty, unit cost, and **po_notes** textarea slide in (Alpine `x-show`)
   - Qty capped at remaining (`max=""` attribute + Alpine validation)
   - `validateQty(itemId, value, maxQty)` tracks `qtyErrors` object; blocks submit if errors exist
   - Toggle All only selects items with remaining > 0
 - **Fulfillment Method** dropdown (not radios); Alpine `x-show` hints + custom address textarea
+- **Pickup scheduling** — blue box shown when fulfillment = `pickup` (Alpine `x-show`): pickup date + time inputs; syncs to RM Warehouse group calendar
 - **Expected ETA** date input
 - **Special Instructions** textarea
 - Submit disabled until vendor + items + fulfillment all set
 
 ### Edit view (`x-app-layout`)
 - Alpine components: `poEdit()` (form-level) + `poItems()` (items section)
-- **Vendor dropdown**
+- **Vendor dropdown** (installer-linked vendors excluded)
 - **Status dropdown** — vendor order number field shown/required when status = `ordered` or `received`
-- **Items table** — qty and cost_price are editable inputs
+- **Items table** — qty, cost_price, and **po_notes** are editable inputs
   - "max N" hint shown below each qty input
   - `recalcRow(id, event, maxQty)` in `poItems()` live-recalculates row total and grand total
   - Inline error shown if qty exceeds max
   - Items cannot be added or removed post-creation (fixed at create time)
 - **Fulfillment Method** dropdown with same Alpine hints as create
+- **Pickup scheduling** fields pre-filled from `$purchaseOrder->pickup_at`; "Synced" green badge if `calendar_event_id` set
 - **Expected ETA**, **Special Instructions**
 
 ### Show view (`x-app-layout`)
@@ -229,7 +246,8 @@ Force-delete route uses `role:admin` middleware (not permission-based).
   - Delete (soft): visible to users with `delete purchase orders` permission
   - Permanently Delete (hard): visible to admin role only — has destructive confirmation dialog
 - Details card: vendor info, PO number, expected ETA, fulfillment, delivery address, ordered by
-- Items table with grand total footer
+- Pickup datetime shown under Fulfillment with "Synced" badge when `calendar_event_id` set
+- Items table with **po_notes** shown below item name; grand total footer
 - Special instructions
 - Send Email modal: pre-filled vendor email, default subject/body, PDF attachment preview link
 
@@ -238,7 +256,7 @@ Force-delete route uses `role:admin` middleware (not permission-based).
 - Header: branding logo + company info (left), "PURCHASE ORDER" + PO number + dates (right)
 - Info grid: vendor details (left) + PO details (right)
 - Delivery address box (blue-tinted) or "Pickup" notice
-- Items table with alternating rows, grand total footer
+- Items table with alternating rows; **po_notes** shown below item name in small muted text; grand total footer
 - Special instructions section
 - Ordered by, footer
 

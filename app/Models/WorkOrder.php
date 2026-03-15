@@ -33,18 +33,15 @@ class WorkOrder extends Model
     protected static function booted(): void
     {
         static::creating(function (WorkOrder $wo) {
-            // Auto-generate WO-YYYY-NNNN
-            $yearPrefix = now()->format('Y') . '-';
-            $prefixLen  = strlen($yearPrefix);
+            $saleNumber = DB::table('sales')->where('id', $wo->sale_id)->value('sale_number');
 
             for ($attempt = 0; $attempt < 10; $attempt++) {
                 $max = DB::table('work_orders')
-                    ->where('wo_number', 'like', 'WO-' . $yearPrefix . '%')
-                    ->selectRaw("MAX(CAST(SUBSTRING(wo_number, ?) AS UNSIGNED)) as max_num", [strlen('WO-') + $prefixLen + 1])
+                    ->selectRaw("MAX(CAST(SUBSTRING_INDEX(wo_number, '-', 1) AS UNSIGNED)) as max_num")
                     ->value('max_num');
 
                 $nextNum   = ((int) $max) + 1 + $attempt;
-                $candidate = 'WO-' . $yearPrefix . str_pad((string) $nextNum, 4, '0', STR_PAD_LEFT);
+                $candidate = $nextNum . ($saleNumber ? '-' . $saleNumber : '');
 
                 if (! DB::table('work_orders')->where('wo_number', $candidate)->exists()) {
                     $wo->wo_number = $candidate;

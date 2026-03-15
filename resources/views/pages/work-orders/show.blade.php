@@ -184,41 +184,80 @@
                 </div>
             </div>
 
-            {{-- Items Table --}}
-            <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                    <h2 class="text-base font-semibold text-gray-900 dark:text-white">Labour Items</h2>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Item</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Qty</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Unit Cost</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-                            @foreach ($workOrder->items as $item)
-                                <tr>
-                                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                        {{ $item->item_name }}
-                                        @if($item->unit) <span class="text-xs text-gray-400 ml-1">{{ $item->unit }}</span> @endif
-                                    </td>
-                                    <td class="px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">{{ number_format($item->quantity, 2) }}</td>
-                                    <td class="px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">${{ number_format($item->cost_price, 2) }}</td>
-                                    <td class="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white">${{ number_format($item->cost_total, 2) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                        <tfoot class="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                                <td colspan="3" class="px-6 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">Grand Total</td>
-                                <td class="px-6 py-3 text-right text-sm font-bold text-gray-900 dark:text-white">${{ number_format($workOrder->grand_total, 2) }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+            {{-- Labour Items grouped by Room --}}
+            @php
+                $itemsByRoom = $workOrder->items->groupBy(fn($item) => $item->saleItem?->sale_room_id ?? 0);
+            @endphp
+
+            <div class="mt-6 space-y-4">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Labour Items</h2>
+
+                @foreach ($itemsByRoom as $roomId => $roomItems)
+                    @php
+                        $roomName = $roomItems->first()->saleItem?->room?->room_name ?? 'Uncategorized';
+                    @endphp
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        {{-- Room header --}}
+                        <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-700/40">
+                            <svg class="h-4 w-4 flex-shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $roomName }}</h3>
+                        </div>
+                        {{-- Items table --}}
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-700/30">
+                                    <tr>
+                                        <th class="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Item</th>
+                                        <th class="px-6 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Qty</th>
+                                        <th class="px-6 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Unit Cost</th>
+                                        <th class="px-6 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                                    @foreach ($roomItems as $item)
+                                        <tr>
+                                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                                {{-- Linked materials --}}
+                                                @if($item->relatedMaterials->isNotEmpty())
+                                                    <div class="mb-2 space-y-0.5">
+                                                        @foreach($item->relatedMaterials as $mat)
+                                                            @php
+                                                                $si = $mat->saleItem;
+                                                                $matName = $si ? implode(' — ', array_filter([$si->product_type, $si->manufacturer, $si->style, $si->color_item_number])) : 'Material';
+                                                            @endphp
+                                                            <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                                                <svg class="h-3 w-3 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                                                <span>{{ $matName }}</span>
+                                                                @if($si)
+                                                                    <span class="text-gray-400">— {{ number_format((float)$si->quantity, 2) }} {{ $si->unit }}</span>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                                <div class="font-medium">{{ $item->item_name }}</div>
+                                                @if($item->unit) <div class="text-xs text-gray-400">{{ $item->unit }}</div> @endif
+                                                @if($item->wo_notes)
+                                                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $item->wo_notes }}</div>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">{{ number_format($item->quantity, 2) }}</td>
+                                            <td class="px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">${{ number_format($item->cost_price, 2) }}</td>
+                                            <td class="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white">${{ number_format($item->cost_total, 2) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endforeach
+
+                {{-- Grand Total --}}
+                <div class="flex justify-end rounded-lg border border-gray-200 bg-white px-6 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Grand Total:&nbsp;</span>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">${{ number_format($workOrder->grand_total, 2) }}</span>
                 </div>
             </div>
 

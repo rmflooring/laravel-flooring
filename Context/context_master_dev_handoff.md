@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-15 (session 10)
+Updated: 2026-03-15 (session 12)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -201,18 +201,19 @@ Full details in `Context/context-calendar.md`.
 Full details in `Context/context_work_orders.md`.
 
 - WOs represent scheduled installation tasks assigned to an **Installer** (not a user) for a sale
-- WO items = **labour-type sale items** with editable qty and cost; qty tracking prevents over-scheduling
-- WO number auto-generated: `WO-YYYY-NNNN` sequential per year
-- New table: `work_order_items` (mirrors PO items pattern but for labour)
+- WO items = **labour-type sale items** with editable qty, cost, and `wo_notes`; qty tracking prevents over-scheduling
+- WO number auto-generated: `{seq}-{sale_number}` (e.g. `3-8`), plain integers, no year prefix
+- Tables: `work_order_items` + `work_order_item_materials` (links labour items to related material sale items)
+- Create form: **room cards** with material checkboxes so installer sees which products go with each labour task
+- Show page + PDF: items **grouped by room card** with house icon header
 - Statuses: created → scheduled (requires installer + date) → in_progress → completed; any → cancelled
 - Calendar sync: events go to **"RM – Installations" group calendar** (`group_id = a6890136-56b9-42fc-ac2b-8e05c98c0e8c`)
   - Best-effort, uses logged-in user's MS account to auth
   - Create on store, update/delete on changes
 - PDF via DomPDF (`resources/views/pdf/work-order.blade.php`)
 - Email to installer via Track 1 (shared mailbox) with PDF attached; `sent_at` stamped
-- `GraphCalendarService` has `updateEvent()` and `deleteEvent()` methods
 - Permissions: view/create/edit/delete work orders → admin, coordinator, estimator, sales (view only: reception)
-- WO section on sale show page (below POs); Sale Status page fully wired with WO data
+- WO card on sale **edit** page (below PO card); WO section on sale show page; Sale Status page fully wired
 
 ---
 
@@ -255,9 +256,13 @@ Full details in `Context/context_purchase_orders.md`.
 
 - POs are raised against a Sale to order material items from vendors
 - Multiple POs per sale allowed (different vendors); only `material` type items included
-- PO number auto-generated: `PO-YYYY-NNNN` sequential per year
+- PO number auto-generated: `{seq}-{sale_number}` (e.g. `3-8`) or just `{seq}` for stock POs; plain integers, no year prefix
+- Sale number auto-generated as plain integer (e.g. `8`); no year prefix
 - Statuses: `pending`, `ordered` (requires vendor order number), `received`, `cancelled`
 - Fulfillment methods: delivery to site, warehouse, custom address, or pickup
+- **Pickup scheduling**: when fulfillment = `pickup`, a date/time is captured and synced to RM Warehouse group calendar (`group_id = 4bfd495c-4df2-4eaa-9d8c-987c4ef23b02`); best-effort
+- Installer-linked vendors are **excluded** from the vendor dropdown
+- Each PO item has `po_notes` (pre-filled from sale item, editable on create and edit); shown in PDF
 - **Qty tracking**: system tracks total ordered qty per sale item across all non-cancelled POs
   — fully-ordered items cannot be added to new POs; partial orders show remaining qty
 - Soft delete available to users with `delete purchase orders` permission

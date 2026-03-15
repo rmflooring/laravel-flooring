@@ -139,36 +139,47 @@
                                         {{-- Editable overrides — visible when checked --}}
                                         <div x-show="selectedItems.map(String).includes('{{ $item->id }}')"
                                              style="display:none"
-                                             class="mt-3 ml-8 flex flex-wrap items-end gap-4">
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                                    Qty <span class="text-gray-400">(max {{ $remaining }})</span>
-                                                </label>
-                                                <input type="number" name="qty[{{ $item->id }}]"
-                                                       value="{{ old('qty.' . $item->id, $remaining) }}"
-                                                       min="0.01" max="{{ $remaining }}" step="0.01"
-                                                       @input="validateQty('{{ $item->id }}', $event.target.value, {{ $remaining }})"
-                                                       :class="qtyErrors['{{ $item->id }}'] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'"
-                                                       class="w-28 rounded-lg border bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                                                <p x-show="qtyErrors['{{ $item->id }}']"
-                                                   x-text="qtyErrors['{{ $item->id }}']"
-                                                   style="display:none"
-                                                   class="mt-1 text-xs text-red-600 dark:text-red-400"></p>
-                                                @error('qty.' . $item->id)
-                                                    <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                                                @enderror
+                                             class="mt-3 ml-8 space-y-3">
+                                            <div class="flex flex-wrap items-end gap-4">
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                                        Qty <span class="text-gray-400">(max {{ $remaining }})</span>
+                                                    </label>
+                                                    <input type="number" name="qty[{{ $item->id }}]"
+                                                           value="{{ old('qty.' . $item->id, $remaining) }}"
+                                                           min="0.01" max="{{ $remaining }}" step="0.01"
+                                                           @input="validateQty('{{ $item->id }}', $event.target.value, {{ $remaining }})"
+                                                           :class="qtyErrors['{{ $item->id }}'] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'"
+                                                           class="w-28 rounded-lg border bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                    <p x-show="qtyErrors['{{ $item->id }}']"
+                                                       x-text="qtyErrors['{{ $item->id }}']"
+                                                       style="display:none"
+                                                       class="mt-1 text-xs text-red-600 dark:text-red-400"></p>
+                                                    @error('qty.' . $item->id)
+                                                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                                    @enderror
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                                        Unit Cost
+                                                    </label>
+                                                    <div class="relative">
+                                                        <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-sm text-gray-500">$</span>
+                                                        <input type="number" name="cost[{{ $item->id }}]"
+                                                               value="{{ old('cost.' . $item->id, $item->cost_price) }}"
+                                                               min="0" step="0.01"
+                                                               class="w-32 rounded-lg border border-gray-300 bg-white py-1.5 pl-6 pr-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                                    Unit Cost
+                                                    PO Notes
                                                 </label>
-                                                <div class="relative">
-                                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-sm text-gray-500">$</span>
-                                                    <input type="number" name="cost[{{ $item->id }}]"
-                                                           value="{{ old('cost.' . $item->id, $item->cost_price) }}"
-                                                           min="0" step="0.01"
-                                                           class="w-32 rounded-lg border border-gray-300 bg-white py-1.5 pl-6 pr-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                                                </div>
+                                                <textarea name="po_notes[{{ $item->id }}]"
+                                                          rows="2"
+                                                          placeholder="Notes for this item on the PO..."
+                                                          class="block w-full max-w-lg rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('po_notes.' . $item->id, $item->po_notes) }}</textarea>
                                             </div>
                                         </div>
                                         @endif
@@ -228,9 +239,37 @@
                             <p x-show="fulfillmentMethod === 'delivery_warehouse'" x-cloak class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                 {{ $warehouseAddress ?: 'No warehouse address configured in branding settings' }}
                             </p>
-                            <p x-show="fulfillmentMethod === 'pickup'" x-cloak class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                No delivery address needed — we will pick up from the vendor.
-                            </p>
+                            <div x-show="fulfillmentMethod === 'pickup'" x-cloak class="mt-3 space-y-3">
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    No delivery address needed — we will pick up from the vendor.
+                                </p>
+                                <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-900/10">
+                                    <p class="mb-3 text-xs font-medium text-blue-700 dark:text-blue-400">
+                                        Schedule Warehouse Pickup — syncs to RM Warehouse calendar
+                                    </p>
+                                    <div class="flex flex-wrap gap-4">
+                                        <div>
+                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Date</label>
+                                            <input type="date" name="pickup_date"
+                                                   value="{{ old('pickup_date') }}"
+                                                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                            @error('pickup_date')
+                                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Time</label>
+                                            <input type="time" name="pickup_time"
+                                                   value="{{ old('pickup_time', '09:00') }}"
+                                                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                            @error('pickup_time')
+                                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Leave blank to skip scheduling. Event duration is 1 hour.</p>
+                                </div>
+                            </div>
 
                             <div x-show="fulfillmentMethod === 'delivery_custom'" x-cloak class="mt-2">
                                 <textarea name="delivery_address" rows="3"

@@ -291,7 +291,12 @@
         <tbody>
             @foreach ($purchaseOrder->items as $item)
                 <tr>
-                    <td>{{ $item->item_name }}</td>
+                    <td>
+                        {{ $item->item_name }}
+                        @if ($item->po_notes)
+                            <div style="margin-top: 3px; font-size: 10px; color: #555;">{{ $item->po_notes }}</div>
+                        @endif
+                    </td>
                     <td class="right">{{ $item->quantity }}</td>
                     <td>{{ $item->unit ?: '—' }}</td>
                     <td class="right">${{ number_format($item->cost_price, 2) }}</td>

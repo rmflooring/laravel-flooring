@@ -59,30 +59,35 @@
                     </div>
                 </div>
 
-                {{-- Labour Items --}}
-                <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Labour Items</h2>
-                            <button type="button" @click="toggleAll"
-                                    class="text-sm text-blue-600 hover:underline dark:text-blue-400">
-                                Toggle All
-                            </button>
-                        </div>
-                    </div>
-                    <div class="p-6">
-                        @php $hasLabourItems = false; @endphp
-                        @foreach ($rooms as $room)
-                            @php $labourItems = $room->items->where('item_type', 'labour'); @endphp
-                            @if ($labourItems->isEmpty()) @continue @endif
-                            @php $hasLabourItems = true; @endphp
+                {{-- Labour Items — one card per room --}}
+                @php $hasLabourItems = false; @endphp
 
-                            <div class="mb-5">
-                                <h3 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                                    {{ $room->name }}
-                                </h3>
-                                <div class="space-y-3">
-                                    @foreach ($labourItems as $item)
+                <div class="mb-2 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-white">Labour Items</h2>
+                    <button type="button" @click="toggleAll"
+                            class="text-sm text-blue-600 hover:underline dark:text-blue-400">
+                        Toggle All
+                    </button>
+                </div>
+
+                @foreach ($rooms as $room)
+                    @php $labourItems = $room->items->where('item_type', 'labour'); @endphp
+                    @if ($labourItems->isEmpty()) @continue @endif
+                    @php $hasLabourItems = true; @endphp
+
+                    <div class="mb-4 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        {{-- Room header --}}
+                        <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-700/40">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                {{ $room->room_name ?: 'Unnamed Room' }}
+                            </h3>
+                        </div>
+
+                        <div class="space-y-3 p-4">
+                            @foreach ($labourItems as $item)
                                         @php
                                             $scheduled  = (float) ($scheduledQtys[$item->id] ?? 0);
                                             $remaining  = max(0, (float) $item->quantity - $scheduled);
@@ -118,45 +123,77 @@
                                                         @endif
                                                     </div>
 
-                                                    {{-- Qty + Cost override (shown when checked) --}}
-                                                    <div x-show="checked" x-cloak class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                                        <div class="sm:col-span-2">
-                                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
-                                                                Qty <span class="text-gray-400">(max {{ number_format($remaining, 2) }} {{ $item->unit }})</span>
-                                                            </label>
-                                                            <input type="number" name="qty[{{ $item->id }}]"
-                                                                   x-model="qty"
-                                                                   @input="validateQty"
-                                                                   step="0.01" min="0.01" max="{{ $remaining }}"
-                                                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                                   :class="qtyError ? 'border-red-400' : ''">
-                                                            <p x-show="qtyError" x-text="qtyError" x-cloak class="mt-1 text-xs text-red-500"></p>
+                                                    {{-- Qty + Cost + Notes override (shown when checked) --}}
+                                                    <div x-show="checked" x-cloak class="mt-3 space-y-3">
+                                                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                                            <div class="sm:col-span-2">
+                                                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                                                    Qty <span class="text-gray-400">(max {{ number_format($remaining, 2) }} {{ $item->unit }})</span>
+                                                                </label>
+                                                                <input type="number" name="qty[{{ $item->id }}]"
+                                                                       x-model="qty"
+                                                                       @input="validateQty"
+                                                                       step="0.01" min="0.01" max="{{ $remaining }}"
+                                                                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                                       :class="qtyError ? 'border-red-400' : ''">
+                                                                <p x-show="qtyError" x-text="qtyError" x-cloak class="mt-1 text-xs text-red-500"></p>
+                                                            </div>
+                                                            <div class="sm:col-span-2">
+                                                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Unit Cost</label>
+                                                                <input type="number" name="cost[{{ $item->id }}]"
+                                                                       x-model="cost"
+                                                                       step="0.01" min="0"
+                                                                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                            </div>
                                                         </div>
-                                                        <div class="sm:col-span-2">
-                                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Unit Cost</label>
-                                                            <input type="number" name="cost[{{ $item->id }}]"
-                                                                   x-model="cost"
-                                                                   step="0.01" min="0"
-                                                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                        <div>
+                                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">WO Notes</label>
+                                                            <textarea name="wo_notes[{{ $item->id }}]"
+                                                                      rows="2"
+                                                                      placeholder="Notes for this item on the work order..."
+                                                                      class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('wo_notes.' . $item->id) }}</textarea>
                                                         </div>
+                                                        {{-- Related Materials --}}
+                                                        @php $roomMaterials = $room->items->where('item_type', 'material'); @endphp
+                                                        @if($roomMaterials->isNotEmpty())
+                                                        <div>
+                                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Related Materials <span class="text-gray-400">(from this room)</span></label>
+                                                            <div class="space-y-1">
+                                                                @foreach($roomMaterials as $mat)
+                                                                    @php
+                                                                        $matName = implode(' — ', array_filter([$mat->product_type, $mat->manufacturer, $mat->style, $mat->color_item_number])) ?: 'Material';
+                                                                    @endphp
+                                                                    <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 cursor-pointer hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
+                                                                        <input type="checkbox"
+                                                                               name="materials[{{ $item->id }}][]"
+                                                                               value="{{ $mat->id }}"
+                                                                               {{ in_array($mat->id, old('materials.' . $item->id, [])) ? 'checked' : '' }}
+                                                                               class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                        <span class="text-xs text-gray-700 dark:text-gray-300">
+                                                                            {{ $matName }}
+                                                                            <span class="ml-1 text-gray-400">{{ number_format((float)$mat->quantity, 2) }} {{ $mat->unit }}</span>
+                                                                        </span>
+                                                                    </label>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>{{-- /.space-y-3.p-4 --}}
+                    </div>{{-- /.room card --}}
+                @endforeach
 
-                        @if (!$hasLabourItems)
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                No labour items found on this sale. Add labour items to the sale before creating a work order.
-                            </p>
-                        @endif
-
-                        <p x-show="itemError" x-text="itemError" x-cloak class="mt-2 text-sm text-red-500"></p>
+                @if (!$hasLabourItems)
+                    <div class="rounded-lg border border-gray-200 bg-white px-5 py-6 text-sm text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        No labour items found on this sale. Add labour items to the sale before creating a work order.
                     </div>
-                </div>
+                @endif
+
+                <p x-show="itemError" x-text="itemError" x-cloak class="mt-2 text-sm text-red-500"></p>
 
                 {{-- Scheduling --}}
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">

@@ -159,6 +159,14 @@
                         @if($purchaseOrder->delivery_address)
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $purchaseOrder->delivery_address }}</p>
                         @endif
+                        @if($purchaseOrder->pickup_at)
+                            <p class="mt-1 text-xs text-gray-700 dark:text-gray-300">
+                                Pickup: <span class="font-medium">{{ $purchaseOrder->pickup_at->format('M j, Y g:i A') }}</span>
+                                @if($purchaseOrder->calendar_event_id)
+                                    <span class="ml-1 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">Synced</span>
+                                @endif
+                            </p>
+                        @endif
                     </div>
 
                     <div>
@@ -189,7 +197,12 @@
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach($purchaseOrder->items as $item)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</div>
+                                        @if($item->po_notes)
+                                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $item->po_notes }}</div>
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-4 text-right">{{ $item->quantity }}</td>
                                     <td class="px-6 py-4 text-gray-500 dark:text-gray-400">{{ $item->unit }}</td>
                                     <td class="px-6 py-4 text-right">${{ number_format($item->cost_price, 2) }}</td>

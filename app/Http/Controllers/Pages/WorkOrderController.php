@@ -12,6 +12,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
+use App\Models\WorkOrderItemMaterial;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -61,7 +62,7 @@ class WorkOrderController extends Controller
     public function create(Sale $sale)
     {
         $rooms = $sale->rooms()
-            ->with(['items' => fn($q) => $q->where('item_type', 'labour')
+            ->with(['items' => fn($q) => $q->whereIn('item_type', ['labour', 'material'])
                 ->where('is_removed', false)
                 ->orderBy('sort_order')])
             ->orderBy('sort_order')
@@ -83,6 +84,11 @@ class WorkOrderController extends Controller
             'items'          => ['nullable', 'array'],
             'qty'            => ['nullable', 'array'],
             'cost'           => ['nullable', 'array'],
+            'wo_notes'       => ['nullable', 'array'],
+            'wo_notes.*'     => ['nullable', 'string'],
+            'materials'      => ['nullable', 'array'],
+            'materials.*'    => ['nullable', 'array'],
+            'materials.*.*'  => ['nullable', 'integer', 'exists:sale_items,id'],
         ]);
 
         $selectedItems = array_keys($request->input('items', []));
@@ -130,18 +136,28 @@ class WorkOrderController extends Controller
                 $saleItem = $saleItems[$saleItemId] ?? null;
                 if (! $saleItem) continue;
 
-                $qty  = (float) ($request->input("qty.{$saleItemId}") ?? $saleItem->quantity);
-                $cost = (float) ($request->input("cost.{$saleItemId}") ?? $saleItem->cost_price);
+                $qty     = (float) ($request->input("qty.{$saleItemId}") ?? $saleItem->quantity);
+                $cost    = (float) ($request->input("cost.{$saleItemId}") ?? $saleItem->cost_price);
+                $woNotes = $request->input("wo_notes.{$saleItemId}") ?: null;
 
-                WorkOrderItem::create([
+                $woItem = WorkOrderItem::create([
                     'work_order_id' => $workOrder->id,
                     'sale_item_id'  => $saleItem->id,
                     'item_name'     => $this->buildItemName($saleItem),
                     'quantity'      => $qty,
                     'unit'          => $saleItem->unit,
+                    'wo_notes'      => $woNotes,
                     'cost_price'    => $cost,
                     'sort_order'    => $sortOrder++,
                 ]);
+
+                $materialIds = $request->input("materials.{$saleItemId}", []);
+                foreach ($materialIds as $matId) {
+                    WorkOrderItemMaterial::create([
+                        'work_order_item_id' => $woItem->id,
+                        'sale_item_id'       => (int) $matId,
+                    ]);
+                }
             }
         });
 
@@ -155,7 +171,7 @@ class WorkOrderController extends Controller
     public function show(Sale $sale, WorkOrder $workOrder)
     {
         abort_if($workOrder->sale_id !== $sale->id, 404);
-        $workOrder->load(['installer', 'items.saleItem', 'calendarEvent.externalLink', 'creator']);
+        $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'calendarEvent.externalLink', 'creator']);
 
         return view('pages.work-orders.show', compact('sale', 'workOrder'));
     }
@@ -164,7 +180,14 @@ class WorkOrderController extends Controller
     {
         abort_if($workOrder->sale_id !== $sale->id, 404);
 
-        $workOrder->load(['installer', 'items.saleItem', 'calendarEvent.externalLink']);
+        $workOrder->load([
+            'installer',
+            'items.relatedMaterials',
+            'items.saleItem.room.items' => fn($q) => $q->where('item_type', 'material')
+                ->where('is_removed', false)
+                ->orderBy('sort_order'),
+            'calendarEvent.externalLink',
+        ]);
         $installers = Installer::where('status', 'active')->orderBy('company_name')->get(['id', 'company_name', 'email']);
         $maxQtys    = $this->maxQtys($workOrder);
 
@@ -181,9 +204,13 @@ class WorkOrderController extends Controller
             'scheduled_time' => ['nullable', 'date_format:H:i'],
             'notes'          => ['nullable', 'string'],
             'status'         => ['required', 'string', 'in:' . implode(',', WorkOrder::STATUSES)],
-            'wo_items'       => ['nullable', 'array'],
+            'wo_items'              => ['nullable', 'array'],
             'wo_items.*.quantity'   => ['nullable', 'numeric', 'min:0'],
             'wo_items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
+            'wo_items.*.wo_notes'   => ['nullable', 'string'],
+            'wo_materials'          => ['nullable', 'array'],
+            'wo_materials.*'        => ['nullable', 'array'],
+            'wo_materials.*.*'      => ['nullable', 'integer', 'exists:sale_items,id'],
         ]);
 
         // Enforce: scheduled requires installer + date
@@ -224,13 +251,24 @@ class WorkOrderController extends Controller
             ]);
 
             foreach ($workOrder->items as $item) {
-                $newQty  = $request->input("wo_items.{$item->id}.quantity");
-                $newCost = $request->input("wo_items.{$item->id}.cost_price");
+                $newQty    = $request->input("wo_items.{$item->id}.quantity");
+                $newCost   = $request->input("wo_items.{$item->id}.cost_price");
+                $newNotes  = $request->input("wo_items.{$item->id}.wo_notes");
 
-                if ($newQty !== null || $newCost !== null) {
+                if ($newQty !== null || $newCost !== null || $newNotes !== null) {
                     $item->update([
                         'quantity'   => $newQty   ?? $item->quantity,
                         'cost_price' => $newCost  ?? $item->cost_price,
+                        'wo_notes'   => $newNotes ?? null,
+                    ]);
+                }
+
+                $materialIds = $request->input("wo_materials.{$item->id}", []);
+                $item->relatedMaterials()->delete();
+                foreach ($materialIds as $matId) {
+                    WorkOrderItemMaterial::create([
+                        'work_order_item_id' => $item->id,
+                        'sale_item_id'       => (int) $matId,
                     ]);
                 }
             }
@@ -272,7 +310,7 @@ class WorkOrderController extends Controller
     public function previewPdf(Sale $sale, WorkOrder $workOrder)
     {
         abort_if($workOrder->sale_id !== $sale->id, 404);
-        $workOrder->load(['installer', 'items', 'sale', 'creator']);
+        $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'sale', 'creator']);
 
         $pdf      = Pdf::loadView('pdf.work-order', compact('workOrder'));
         $filename = $workOrder->wo_number . '.pdf';
@@ -295,7 +333,7 @@ class WorkOrderController extends Controller
             'body'    => ['required', 'string'],
         ]);
 
-        $workOrder->load(['installer', 'items', 'sale', 'creator']);
+        $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'sale', 'creator']);
 
         $mailer     = app(GraphMailService::class);
         $pdfContent = Pdf::loadView('pdf.work-order', compact('workOrder'))->output();

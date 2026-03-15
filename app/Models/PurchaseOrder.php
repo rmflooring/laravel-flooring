@@ -17,22 +17,27 @@ class PurchaseOrder extends Model
     protected $casts = [
         'expected_delivery_date' => 'date',
         'sent_at'                => 'datetime',
+        'pickup_at'              => 'datetime',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (PurchaseOrder $po) {
-            $yearPrefix = 'PO-' . now()->format('Y') . '-';
-            $prefixLen  = strlen($yearPrefix);
+            $saleSuffix = '';
+            if (! empty($po->sale_id)) {
+                $saleNumber = DB::table('sales')->where('id', $po->sale_id)->value('sale_number');
+                if ($saleNumber) {
+                    $saleSuffix = '-' . $saleNumber;
+                }
+            }
 
             for ($attempt = 0; $attempt < 10; $attempt++) {
                 $max = DB::table('purchase_orders')
-                    ->where('po_number', 'like', $yearPrefix . '%')
-                    ->selectRaw("MAX(CAST(SUBSTRING(po_number, ?) AS UNSIGNED)) as max_num", [$prefixLen + 1])
+                    ->selectRaw("MAX(CAST(SUBSTRING_INDEX(po_number, '-', 1) AS UNSIGNED)) as max_num")
                     ->value('max_num');
 
                 $nextNum   = ((int) $max) + 1 + $attempt;
-                $candidate = $yearPrefix . str_pad((string) $nextNum, 4, '0', STR_PAD_LEFT);
+                $candidate = $nextNum . $saleSuffix;
 
                 if (! DB::table('purchase_orders')->where('po_number', $candidate)->exists()) {
                     $po->po_number = $candidate;
@@ -84,6 +89,11 @@ class PurchaseOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseOrderItem::class)->orderBy('sort_order');
+    }
+
+    public function calendarEvent(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CalendarEvent::class, 'calendar_event_id');
     }
 
     public function orderedBy(): BelongsTo

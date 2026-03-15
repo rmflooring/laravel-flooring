@@ -137,28 +137,61 @@
 </div>
 @endif
 
-{{-- Items Table --}}
-<table>
-    <thead>
-        <tr>
-            <th style="width:50%">Item</th>
-            <th class="right" style="width:15%; text-align:right">Qty</th>
-            <th class="right" style="width:15%; text-align:right">Unit</th>
-            <th class="right" style="width:10%; text-align:right">Unit Cost</th>
-            <th style="width:10%">Total</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach($workOrder->items as $item)
+{{-- Items grouped by Room --}}
+@php
+    $itemsByRoom = $workOrder->items->groupBy(fn($item) => $item->saleItem?->sale_room_id ?? 0);
+@endphp
+
+@foreach($itemsByRoom as $roomId => $roomItems)
+    @php $roomName = $roomItems->first()->saleItem?->room?->room_name ?? 'Uncategorized'; @endphp
+
+    {{-- Room header --}}
+    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px; padding:6px 12px; margin-bottom:4px; font-size:11px; font-weight:bold; color:#1d4ed8;">
+        &#x2302; {{ $roomName }}
+    </div>
+
+    <table style="margin-bottom:16px;">
+        <thead>
             <tr>
-                <td>{{ $item->item_name }}</td>
-                <td class="right">{{ number_format($item->quantity, 2) }}</td>
-                <td class="right">{{ $item->unit }}</td>
-                <td class="right">${{ number_format($item->cost_price, 2) }}</td>
-                <td>${{ number_format($item->cost_total, 2) }}</td>
+                <th style="width:50%">Item</th>
+                <th class="right" style="width:15%; text-align:right">Qty</th>
+                <th class="right" style="width:15%; text-align:right">Unit</th>
+                <th class="right" style="width:10%; text-align:right">Unit Cost</th>
+                <th style="width:10%">Total</th>
             </tr>
-        @endforeach
-    </tbody>
+        </thead>
+        <tbody>
+            @foreach($roomItems as $item)
+                <tr>
+                    <td>
+                        @if($item->relatedMaterials->isNotEmpty())
+                            @foreach($item->relatedMaterials as $mat)
+                                @php
+                                    $si = $mat->saleItem;
+                                    $matName = $si ? implode(' — ', array_filter([$si->product_type, $si->manufacturer, $si->style, $si->color_item_number])) : 'Material';
+                                @endphp
+                                <div style="font-size:9px; color:#555; margin-bottom:2px;">
+                                    &#x25B8; {{ $matName }}@if($si) — {{ number_format((float)$si->quantity, 2) }} {{ $si->unit }}@endif
+                                </div>
+                            @endforeach
+                        @endif
+                        {{ $item->item_name }}
+                        @if ($item->wo_notes)
+                            <div style="margin-top: 3px; font-size: 10px; color: #555;">{{ $item->wo_notes }}</div>
+                        @endif
+                    </td>
+                    <td class="right">{{ number_format($item->quantity, 2) }}</td>
+                    <td class="right">{{ $item->unit }}</td>
+                    <td class="right">${{ number_format($item->cost_price, 2) }}</td>
+                    <td>${{ number_format($item->cost_total, 2) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+@endforeach
+
+{{-- Grand Total --}}
+<table>
     <tfoot>
         <tr>
             <td colspan="4" style="text-align:right; border-top:2px solid #1d4ed8; padding-top:8px">Grand Total</td>
