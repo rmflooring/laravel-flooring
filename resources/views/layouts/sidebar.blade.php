@@ -125,28 +125,42 @@
                     </a>
                 </li>
 
-                {{-- Vendors --}}
-                <li>
-                    <a href="{{ route('admin.vendors.index') }}"
-                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M6 2a2 2 0 0 0-2 2v14h12V4a2 2 0 0 0-2-2H6Z"/>
-                            <path d="M2 6H1a1 1 0 0 0-1 1v11a2 2 0 0 0 2 2h2V6H2Z"/>
-                            <path d="M18 6h1a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2h-2V6h2Z"/>
-                        </svg>
-                        <span class="sidebar-label">Vendors</span>
-                    </a>
-                </li>
+                {{-- Vendors flyout --}}
+                <li class="relative group">
+                    <div class="flex items-center justify-between rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <a href="{{ route('admin.vendors.index') }}"
+                           class="sidebar-link flex flex-1 items-center gap-3 px-3 py-2 text-gray-700 hover:text-gray-900 dark:text-gray-200">
+                            <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M6 2a2 2 0 0 0-2 2v14h12V4a2 2 0 0 0-2-2H6Z"/>
+                                <path d="M2 6H1a1 1 0 0 0-1 1v11a2 2 0 0 0 2 2h2V6H2Z"/>
+                                <path d="M18 6h1a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2h-2V6h2Z"/>
+                            </svg>
+                            <span class="sidebar-label">Vendors</span>
+                        </a>
 
-                {{-- Installers --}}
-                <li>
-                    <a href="{{ route('admin.installers.index') }}"
-                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                            <path fill-rule="evenodd" d="M7 6a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm5 2.5a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2h-6a1 1 0 0 1-1-1ZM7 14a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm5 2.5a1 1 0 0 1 1-1h6a1 1 0 1 1 0 2h-6a1 1 0 0 1-1-1Z" clip-rule="evenodd"/>
+                        <!-- right arrow -->
+                        <svg class="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400 sidebar-label" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
-                        <span class="sidebar-label">Installers</span>
-                    </a>
+                    </div>
+
+                    <!-- Flyout menu -->
+                    <div class="absolute left-full top-0 z-50 hidden w-56 rounded-lg bg-white shadow group-hover:block dark:bg-gray-700">
+                        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+                            <li>
+                                <a href="{{ route('admin.vendors.index') }}"
+                                   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                    Vendors
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.installers.index') }}"
+                                   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                    Installers
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
 
                 {{-- Products flyout (hover) --}}

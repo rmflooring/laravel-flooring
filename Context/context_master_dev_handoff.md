@@ -229,6 +229,16 @@ Full details in `Context/context_sale_status.md`.
 
 ---
 
+## Sidebar nav update (session 11, 2026-03-15)
+
+- **Vendors** converted from a plain link to a hover flyout (same pattern as Products/Labour/Tax Management)
+- Vendors label remains clickable → `/admin/vendors`
+- Flyout sub-items: **Vendors** + **Installers** (both route to their existing admin index pages)
+- Standalone **Installers** sidebar entry removed — now nested under Vendors flyout
+- See `Context/context_sidebar.md` and `Context/context_installers.md` for details
+
+---
+
 ## Purchase Orders & Work Orders index pages (session 10, 2026-03-15)
 
 - Added `PurchaseOrderController::index()` and `WorkOrderController::index()` with search + filter support

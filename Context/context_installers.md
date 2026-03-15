@@ -107,7 +107,7 @@ URL prefix: `/admin/installers`
 
 ## Navigation
 
-- **Sidebar** (`layouts/sidebar.blade.php`) — standalone entry below Vendors
+- **Sidebar** (`layouts/sidebar.blade.php`) — sub-item inside the **Vendors flyout** (hover to reveal); flyout label "Vendors" links directly to `/admin/vendors`, sub-links are Vendors + Installers
 - **Top nav** (`layouts/navigation.blade.php`) — under "Manage Vendors" dropdown; dropdown highlights when on any `admin.installers.*` route
 
 ---

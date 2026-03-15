@@ -98,6 +98,8 @@ Routes used:
 ## Current Status
 - Products flyout working (hover opens right-side menu).
 - Labour flyout added and working.
+- Vendors flyout added: label links directly to `/admin/vendors` (clickable); flyout sub-items: Vendors + Installers. Uses same pattern as Tax Management (clickable label + right-arrow + flyout).
+- Installers standalone sidebar entry removed; now lives under Vendors flyout.
 - User confirmed: “it looks great”.
 
 ## Next Possible Enhancements (Not Implemented)
