@@ -454,6 +454,30 @@
                         A staging pick ticket will be created for the materials linked to this work order.
                         Optionally add notes for the warehouse team.
                     </p>
+
+                    @if ($materialWarnings->isNotEmpty())
+                        <div class="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 dark:border-yellow-700 dark:bg-yellow-900/20">
+                            <div class="flex items-start gap-2">
+                                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                                <div>
+                                    <p class="text-xs font-semibold text-yellow-800 dark:text-yellow-300">Stock not fully allocated for {{ $materialWarnings->count() }} item(s)</p>
+                                    <ul class="mt-1.5 space-y-0.5">
+                                        @foreach ($materialWarnings as $w)
+                                            <li class="text-xs text-yellow-700 dark:text-yellow-400">
+                                                <span class="font-medium">{{ $w['name'] }}</span>
+                                                — need {{ rtrim(rtrim(number_format($w['needed'], 2), '0'), '.') }} {{ $w['unit'] }},
+                                                allocated {{ rtrim(rtrim(number_format($w['allocated'], 2), '0'), '.') }}
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                    <p class="mt-1.5 text-xs text-yellow-600 dark:text-yellow-500">You can still stage, but make sure these materials are physically in the warehouse.</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Warehouse Notes <span class="text-gray-400 font-normal">(optional)</span>

@@ -184,7 +184,42 @@ class WorkOrderController extends Controller
             ->with(['items.saleItem.room', 'creator'])
             ->first();
 
-        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket'));
+        // Compute stock warnings for the stage modal (only when staging is possible)
+        $materialWarnings = collect();
+        if (! $stagingPickTicket) {
+            $materialSaleItems = $workOrder->items
+                ->flatMap(fn ($item) => $item->relatedMaterials)
+                ->map(fn ($mat) => $mat->saleItem)
+                ->filter()
+                ->unique('id')
+                ->values();
+
+            if ($materialSaleItems->isNotEmpty()) {
+                $allocatedQtys = \App\Models\InventoryAllocation::whereIn('sale_item_id', $materialSaleItems->pluck('id'))
+                    ->selectRaw('sale_item_id, SUM(quantity) as total')
+                    ->groupBy('sale_item_id')
+                    ->pluck('total', 'sale_item_id')
+                    ->map(fn ($v) => (float) $v);
+
+                $materialWarnings = $materialSaleItems->filter(function ($saleItem) use ($allocatedQtys) {
+                    return ($allocatedQtys[$saleItem->id] ?? 0.0) < (float) $saleItem->quantity;
+                })->map(function ($saleItem) use ($allocatedQtys) {
+                    $allocated = $allocatedQtys[$saleItem->id] ?? 0.0;
+                    $name = implode(' — ', array_filter([
+                        $saleItem->product_type, $saleItem->manufacturer,
+                        $saleItem->style, $saleItem->color_item_number,
+                    ])) ?: 'Material';
+                    return [
+                        'name'      => $name,
+                        'needed'    => (float) $saleItem->quantity,
+                        'allocated' => $allocated,
+                        'unit'      => $saleItem->unit ?? '',
+                    ];
+                })->values();
+            }
+        }
+
+        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings'));
     }
 
     // ── Stage Work Order — create a staging pick ticket ───────────
