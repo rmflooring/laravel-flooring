@@ -248,11 +248,24 @@ class PurchaseOrderController extends Controller
         // Remaining qty available per sale item (across all non-cancelled POs)
         $orderedQtys   = $this->orderedQtys($sale->id);
         $remainingQtys = [];
-        $itemVendorMap = []; // sale_item_id => vendor_id from product_lines (null if no catalog link)
+        $itemVendorMap = []; // sale_item_id => vendor_id (resolved via product_line or manufacturer name match)
         foreach ($sale->rooms as $room) {
             foreach ($room->items as $item) {
                 $remainingQtys[$item->id] = max(0, (float) $item->quantity - ($orderedQtys[$item->id] ?? 0));
-                $itemVendorMap[$item->id] = $item->productLine?->vendor_id;
+
+                // 1. Hard link via product_line.vendor_id (most reliable)
+                $vendorId = $item->productLine?->vendor_id;
+
+                // 2. Fallback: match item manufacturer name against vendor company_name
+                //    Try exact match first, then "vendor name contains manufacturer" (e.g. "Shaw" in "Shaw Floors")
+                if (! $vendorId && $item->manufacturer) {
+                    $mfr   = trim($item->manufacturer);
+                    $match = $vendors->first(fn ($v) => strcasecmp(trim($v->company_name), $mfr) === 0)
+                          ?? $vendors->first(fn ($v) => stripos(trim($v->company_name), $mfr) !== false);
+                    $vendorId = $match?->id;
+                }
+
+                $itemVendorMap[$item->id] = $vendorId;
             }
         }
 

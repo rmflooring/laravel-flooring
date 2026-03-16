@@ -1797,6 +1797,7 @@ function initLabourDescriptionDropdownForRow(rowEl) {
           data-labour-desc="${escapeHtml(it.description)}"
           data-labour-unit="${escapeHtml(it.unit_code)}"
 		  data-labour-sell="${escapeHtml(it.sell ?? '')}"
+		  data-labour-cost="${escapeHtml(it.cost ?? '')}"
 		  data-labour-notes="${escapeHtml(it.notes ?? '')}"
         >${escapeHtml(it.description)}
 		</button>
@@ -1813,12 +1814,28 @@ function initLabourDescriptionDropdownForRow(rowEl) {
 	closeDropdown();
 const sell = btn.getAttribute('data-labour-sell') || '';
 const notes = btn.getAttribute('data-labour-notes') || '';
+const cost = btn.getAttribute('data-labour-cost');
 
 if (priceInput && sell !== '') {
   const n = Number(sell);
   if (!isNaN(n)) {
     priceInput.value = n.toFixed(2);
     priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+const costPriceInput = rowEl.querySelector('input[name$="[cost_price]"]');
+const costTotalInput = rowEl.querySelector('input[name$="[cost_total]"]');
+const qtyInput = rowEl.querySelector('input[name*="[quantity]"]');
+
+if (costPriceInput && cost !== '' && cost !== null) {
+  const c = Number(cost);
+  if (!isNaN(c)) {
+    costPriceInput.value = c.toFixed(2);
+    const qty = qtyInput ? Number(qtyInput.value || 0) : 0;
+    if (costTotalInput) {
+      costTotalInput.value = (qty * c).toFixed(2);
+    }
   }
 }
 
