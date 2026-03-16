@@ -1,5 +1,5 @@
 # Warehouse / Inventory / Pick Tickets — Dev Context
-Updated: 2026-03-16 (session 15)
+Updated: 2026-03-16 (session 16)
 
 ---
 
@@ -82,6 +82,7 @@ Pick Tickets are created two ways:
 | `unit` | string | |
 | `quantity` | decimal(10,2) | Total quantity to be delivered |
 | `delivered_qty` | decimal(10,2) default 0 | Running total of what has been delivered so far |
+| `returned_qty` | decimal(10,2) default 0 | Running total of what has been returned from site |
 | `sort_order` | integer default 0 | |
 
 ---
@@ -89,9 +90,9 @@ Pick Tickets are created two ways:
 ## Status Lifecycle
 
 ```
-pending → ready → picked → delivered
-                          ↓
-                        returned
+pending → ready → picked → delivered ⇌ partially_delivered
+                                ↓
+                            returned
 
 staged → partially_delivered → delivered
        ↓
@@ -99,6 +100,10 @@ staged → partially_delivered → delivered
 
 any → cancelled
 ```
+
+**Partial return:** "Return Items" on a `delivered` or `partially_delivered` PT subtracts returned_qty per item.
+- If any item's net-at-site (delivered − returned) > 0 → status = `partially_delivered`
+- If all items fully returned → status = `returned`, allocations `released_at` cleared
 
 ### Status Constants (`PickTicket::STATUSES` / `STATUS_LABELS`)
 
@@ -127,7 +132,7 @@ any → cancelled
 
 ### `App\Models\PickTicketItem`
 - `$guarded = ['id']`
-- **Casts:** `quantity`, `delivered_qty` → decimal:2
+- **Casts:** `quantity`, `delivered_qty`, `returned_qty` → decimal:2
 - **Relationships:** `pickTicket()`, `inventoryAllocation()`, `saleItem()`
 
 ### `App\Models\InventoryReceipt`
@@ -175,7 +180,12 @@ any → cancelled
 
 **`cancel(PickTicket $pt)`** → `status = cancelled` (inventory allocations left intact)
 
-**`returnTicket(PickTicket $pt)`** → `status = returned`, stamps `returned_at`, clears `released_at` on allocations
+**`returnTicket(PickTicket $pt, array $itemQtys = [], ?string $returnNotes = null): void`**
+- `$itemQtys` = `[pick_ticket_item_id => qty_returned_this_trip]`
+- Adds submitted qty to each item's `returned_qty` (capped at `delivered_qty`)
+- If net-at-site (delivered − returned) > 0 for any item → status = `partially_delivered`; stamps `returned_at` on first return
+- If all items fully returned → status = `returned`, clears `released_at` on allocations
+- Saves `return_notes` into `notes` field
 
 ### `App\Services\InventoryService`
 
@@ -209,6 +219,10 @@ any → cancelled
 - `items[{pick_ticket_item_id}]` = qty to deliver this trip
 - `received_by` = name of person who received materials (saved to `notes`)
 - `delivery_notes` = free-text notes (saved to `notes`)
+
+**`updateStatus()` return action** accepts:
+- `items[{pick_ticket_item_id}]` = qty being returned this trip
+- `return_notes` = free-text notes (saved to `notes`)
 
 ### `App\Http\Controllers\Pages\InventoryController`
 
@@ -266,15 +280,16 @@ POST   pages/sales/{sale}/work-orders/{workOrder}/stage-pick-ticket    pages.sal
 | Status | Buttons shown |
 |--------|--------------|
 | `staged` | Record Delivery (→ modal), Unstage (→ modal) |
-| `partially_delivered` | Record Delivery (→ modal) |
+| `partially_delivered` | Record Delivery (→ modal), Return Items (→ modal) |
 | `pending` | Mark Ready, Cancel |
 | `ready` | Mark Picked |
 | `picked` | Record Delivery (→ modal) |
-| `delivered` | Mark Returned |
+| `delivered` | Return Items (→ modal) |
 
 ### Items table columns
 - **Item** (with unit), **Room**, **Ordered**, **Delivered**, **Remaining**
-- Fully delivered rows are dimmed; Remaining shows ✓ in green when done
+- When any `returned_qty > 0`: adds **Returned** and **At Site** columns; Remaining reflects net at-site
+- Fully fulfilled rows are dimmed; Remaining shows ✓ in green when done
 
 ### Record Delivery modal
 - Per-item table: Item | Room | Ordered | Delivered | Remaining | **Delivering Now** (input)
@@ -282,6 +297,14 @@ POST   pages/sales/{sale}/work-orders/{workOrder}/stage-pick-ticket    pages.sal
 - Fully delivered items show "Done" (hidden input submits 0)
 - Fields: Received by (text), Delivery notes (text)
 - Submits `items[{id}]` map + received_by + delivery_notes to `updateStatus` PATCH
+
+### Return Items modal
+- Per-item table: Item | Room | Delivered | Prev. Returned | At Site | **Returning Now** (input)
+- "Returning Now" pre-fills with 0; user enters qty coming back (max = At Site)
+- Items with nothing at site show "All returned" (hidden input submits 0)
+- Field: Return notes (text)
+- Submits `items[{id}]` map + return_notes to `updateStatus` PATCH with `action=return`
+- Status result: partial return → `partially_delivered`; full return → `returned`
 
 ### Staging info (orange bar, shown when PT exists)
 - "Staged by: {name} · {date}" + staging notes if present

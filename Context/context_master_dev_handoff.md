@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-16 (session 15)
+Updated: 2026-03-16 (session 16)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -237,7 +237,7 @@ Full details in `Context/context_work_orders.md`.
 - Email to installer via Track 1 (shared mailbox) with PDF attached; `sent_at` stamped
 - Permissions: view/create/edit/delete work orders → admin, coordinator, estimator, sales (view only: reception)
 - WO card on sale **edit** page (below PO card); WO section on sale show page; Sale Status page fully wired
-- **WO Staging / Pick Tickets (session 14, 2026-03-16)**: "Stage Work Order" button on WO show page creates a `staged` PickTicket with all linked material items. Stock check blocks staging if any material doesn't have sufficient inventory allocated. `staged` is a new PickTicket status (orange badge). `PickTicketService::createFromWorkOrder()` handles creation. Warehouse pick ticket show page updated with staged → deliver action and WO details card. `inventory_allocation_id` made nullable on `pick_ticket_items`.
+- **WO Staging / Pick Tickets (session 14–16, 2026-03-16)**: "Stage Work Order" button on WO show page creates a `staged` PickTicket with all linked material items. `staged` is a new PickTicket status (orange badge). `PickTicketService::createFromWorkOrder()` handles creation. `inventory_allocation_id` made nullable on `pick_ticket_items`. **No stock check on staging** — the inventory allocation stock check was removed in session 16; staging does not require formal allocations (receipts only need to be in the warehouse).
 - **Calendar opt-out bug fix (session 14)**: `$request->boolean('sync_calendar', true)` → changed default to `false` in both `store()` and `update()` — unchecked checkbox posts no value, so `true` default was always overriding the user's opt-out.
 
 ---
@@ -507,6 +507,43 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 | `resources/views/pages/warehouse/pick-tickets/_status-badge.blade.php` | `partially_delivered` badge added |
 | `resources/views/pages/work-orders/show.blade.php` | Stage modal, unstage modal, staging meta bar |
 | `resources/views/pdf/pick-ticket.blade.php` | New PDF template |
+
+---
+
+## Pick Ticket enhancements (session 16, 2026-03-16)
+
+Full details in `Context/context_warehouse_pick_tickets.md`.
+
+### Staging stock check removed
+- `WorkOrderController::stagePickTicket()` previously blocked staging if any material's `InventoryAllocation` totals didn't cover `sale_item.quantity`
+- Removed: staged PTs have no allocation requirement; staging just means "preparing this WO"
+- Also removed unused `use App\Models\InventoryAllocation` import from `WorkOrderController`
+
+### Partial returns (per-item qty tracking)
+- New `returned_qty decimal(10,2) default 0` on `pick_ticket_items` (migration `2026_03_16_280000_...`)
+- `PickTicketItem` model: `returned_qty` added to casts
+- `PickTicketService::returnTicket()` rewritten — accepts `$itemQtys` array + `$returnNotes`:
+  - Adds submitted qty to each item's `returned_qty` (capped at `delivered_qty`)
+  - If net-at-site (delivered − returned) > 0 for any item → status = `partially_delivered`
+  - If all items fully returned → status = `returned`, clears `released_at` on allocations
+- `WarehousePickTicketController::updateStatus()` updated: `return_notes` validation added, passes item qtys + return_notes to `returnTicket()`
+
+### "Return Items" modal on PT show page
+- Replaces the old "Mark Returned" direct-form-submit button
+- Available for `delivered` and `partially_delivered` statuses
+- Per-item table: Delivered | Prev. Returned | At Site | **Returning Now** (input, pre-fills 0)
+- Return notes field; "Returned by: {user} · {date}" info bar
+- Items table updated: **Returned** + **At Site** columns appear when any `returned_qty > 0`; Remaining = ordered − at-site
+
+### Key files changed
+| File | Change |
+|------|--------|
+| `app/Models/PickTicketItem.php` | Added `returned_qty` cast |
+| `app/Services/PickTicketService.php` | `returnTicket()` rewritten for partial returns |
+| `app/Http/Controllers/Pages/WarehousePickTicketController.php` | `return_notes` validation; passes item qtys to service |
+| `app/Http/Controllers/Pages/WorkOrderController.php` | Removed staging stock check + unused import |
+| `resources/views/pages/warehouse/pick-tickets/show.blade.php` | "Return Items" modal + updated items table |
+| `database/migrations/2026_03_16_280000_...` | `returned_qty` column on `pick_ticket_items` |
 
 ---
 

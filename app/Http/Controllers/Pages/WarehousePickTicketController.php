@@ -79,6 +79,7 @@ class WarehousePickTicketController extends Controller
             'action'         => ['required', 'string', 'in:mark_ready,mark_picked,deliver,return,cancel'],
             'received_by'    => ['nullable', 'string', 'max:255'],
             'delivery_notes' => ['nullable', 'string', 'max:2000'],
+            'return_notes'   => ['nullable', 'string', 'max:2000'],
             'items'          => ['nullable', 'array'],
             'items.*'        => ['nullable', 'numeric', 'min:0'],
         ]);
@@ -92,7 +93,11 @@ class WarehousePickTicketController extends Controller
                                 $request->input('received_by'),
                                 $request->input('delivery_notes')
                             ),
-            'return'      => $service->returnTicket($pickTicket),
+            'return'      => $service->returnTicket(
+                                $pickTicket,
+                                $request->input('items', []),
+                                $request->input('return_notes')
+                            ),
             'cancel'      => $service->cancel($pickTicket),
         };
 

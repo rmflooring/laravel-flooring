@@ -166,24 +166,67 @@ class PickTicketService
     }
 
     /**
-     * Mark the pick ticket as returned.
-     * Stamps returned_at on the ticket and clears released_at on every linked allocation —
-     * the physical goods are back in warehouse stock.
+     * Record a return (full or partial) against the pick ticket.
+     *
+     * $itemQtys is a map of [pick_ticket_item_id => qty_returned_this_time].
+     * Returned qty is added to each item's returned_qty (capped at delivered_qty).
+     *
+     * If net-at-site (delivered - returned) reaches 0 for all items → status = returned,
+     * allocations released_at cleared. Otherwise → partially_delivered.
      */
-    public function returnTicket(PickTicket $pickTicket): void
+    public function returnTicket(PickTicket $pickTicket, array $itemQtys = [], ?string $returnNotes = null): void
     {
         $pickTicket->loadMissing('items');
 
-        DB::transaction(function () use ($pickTicket) {
-            $allocationIds = $pickTicket->items->pluck('inventory_allocation_id')->all();
+        DB::transaction(function () use ($pickTicket, $itemQtys, $returnNotes) {
+            $now        = now();
+            $anyStillOut = false;
 
-            InventoryAllocation::whereIn('id', $allocationIds)
-                ->update(['released_at' => null]);
+            foreach ($pickTicket->items as $item) {
+                $returning       = max(0, (float) ($itemQtys[$item->id] ?? 0));
+                $alreadyReturned = (float) $item->returned_qty;
+                $totalDelivered  = (float) $item->delivered_qty;
 
-            $pickTicket->update([
-                'status'      => 'returned',
-                'returned_at' => now(),
-            ]);
+                if ($returning > 0) {
+                    $newReturned = min($alreadyReturned + $returning, $totalDelivered);
+                    $item->update(['returned_qty' => $newReturned]);
+                    $alreadyReturned = $newReturned;
+                }
+
+                $netOut = $totalDelivered - $alreadyReturned;
+                if ($netOut > 0) {
+                    $anyStillOut = true;
+                }
+            }
+
+            $noteParts = [];
+            if ($returnNotes) {
+                $noteParts[] = 'Return notes: ' . $returnNotes;
+            }
+
+            if ($anyStillOut) {
+                $pickTicket->update([
+                    'status'      => 'partially_delivered',
+                    'returned_at' => $pickTicket->returned_at ?? $now,
+                    'notes'       => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                ]);
+            } else {
+                // All items fully returned — clear released_at on allocations
+                $allocationIds = $pickTicket->items
+                    ->pluck('inventory_allocation_id')
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                InventoryAllocation::whereIn('id', $allocationIds)
+                    ->update(['released_at' => null]);
+
+                $pickTicket->update([
+                    'status'      => 'returned',
+                    'returned_at' => $pickTicket->returned_at ?? $now,
+                    'notes'       => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                ]);
+            }
         });
     }
 

@@ -12,6 +12,7 @@ class PickTicketItem extends Model
     protected $casts = [
         'quantity'      => 'decimal:2',
         'delivered_qty' => 'decimal:2',
+        'returned_qty'  => 'decimal:2',
     ];
 
     public function pickTicket(): BelongsTo

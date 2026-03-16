@@ -8,7 +8,6 @@ use App\Models\ExternalEventLink;
 use App\Models\Installer;
 use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
-use App\Models\InventoryAllocation;
 use App\Models\PickTicket;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -214,35 +213,6 @@ class WorkOrderController extends Controller
 
         if ($materialSaleItems->isEmpty()) {
             return back()->with('error', 'No materials are linked to this work order. Add material associations before staging.');
-        }
-
-        // Check that every material has sufficient inventory allocated
-        $saleItemIds  = $materialSaleItems->pluck('id')->all();
-        $allocatedQtys = InventoryAllocation::whereIn('sale_item_id', $saleItemIds)
-            ->selectRaw('sale_item_id, SUM(quantity) as total')
-            ->groupBy('sale_item_id')
-            ->pluck('total', 'sale_item_id')
-            ->map(fn ($v) => (float) $v);
-
-        $notInStock = [];
-        foreach ($materialSaleItems as $saleItem) {
-            $allocated = $allocatedQtys[$saleItem->id] ?? 0.0;
-            $required  = (float) $saleItem->quantity;
-            if ($allocated < $required) {
-                $name = implode(' — ', array_filter([
-                    $saleItem->product_type,
-                    $saleItem->manufacturer,
-                    $saleItem->style,
-                    $saleItem->color_item_number,
-                ])) ?: 'Material';
-                $notInStock[] = "{$name} — need {$required} {$saleItem->unit}, have {$allocated}";
-            }
-        }
-
-        if (! empty($notInStock)) {
-            return back()->with('error',
-                'Cannot stage: the following materials are not fully in stock — ' . implode('; ', $notInStock)
-            );
         }
 
         $request->validate([
