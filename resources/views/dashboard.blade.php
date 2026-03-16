@@ -83,10 +83,10 @@
                     ],
                     [
                         'title' => 'Inventory',
-                        'subtitle' => 'Coming soon',
-                        'href' => null,
-                        'accent' => 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 border-l-4 border-l-gray-300 dark:border-l-gray-700',
-                        'icon' => 'M4 7h16M6 11h12M6 15h12',
+                        'subtitle' => 'Stock receipts & availability',
+                        'href' => route('pages.inventory.index'),
+                        'accent' => 'bg-teal-600 text-white border border-teal-700 dark:bg-teal-700 dark:border-teal-800',
+                        'icon' => 'M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
                     ],
                     [
                         'title' => 'Vendors',

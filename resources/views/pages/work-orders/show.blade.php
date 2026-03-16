@@ -273,8 +273,277 @@
             </div>
             @endif
 
+            {{-- ── Material Staging Pick Ticket ──────────────────────────── --}}
+            <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Material Staging</h2>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Stage materials for warehouse pick-up or delivery to site.</p>
+                    </div>
+                    @if (!$stagingPickTicket)
+                        @can('edit work orders')
+                        <button type="button"
+                                onclick="document.getElementById('stage-modal').classList.remove('hidden')"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-300 dark:bg-orange-500 dark:hover:bg-orange-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                            Stage Work Order
+                        </button>
+                        @endcan
+                    @endif
+                </div>
+
+                @if ($stagingPickTicket)
+                    @php
+                        $ptStatusColors = [
+                            'staged'    => 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+                            'delivered' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                            'cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+                        ];
+                        $ptStatusColor = $ptStatusColors[$stagingPickTicket->status] ?? 'bg-gray-100 text-gray-700';
+                        $ptLabel = \App\Models\PickTicket::STATUS_LABELS[$stagingPickTicket->status] ?? ucfirst($stagingPickTicket->status);
+                    @endphp
+
+                    {{-- PT header row --}}
+                    <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
+                        <div class="flex items-center gap-3">
+                            <span class="font-semibold text-sm text-gray-900 dark:text-white">PT #{{ $stagingPickTicket->pt_number }}</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $ptStatusColor }}">
+                                {{ $ptLabel }}
+                            </span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">Created {{ $stagingPickTicket->created_at->format('M j, Y') }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @if (Route::has('pages.warehouse.pick-tickets.show'))
+                                <a href="{{ route('pages.warehouse.pick-tickets.show', $stagingPickTicket) }}"
+                                   class="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400">
+                                    View full ticket →
+                                </a>
+                            @endif
+                            @if (in_array($stagingPickTicket->status, ['staged', 'partially_delivered']))
+                                @can('edit work orders')
+                                <a href="{{ route('pages.warehouse.pick-tickets.show', $stagingPickTicket) }}"
+                                   class="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    Record Delivery
+                                </a>
+                                @if ($stagingPickTicket->status === 'staged')
+                                <button type="button"
+                                        onclick="document.getElementById('wo-unstage-modal').classList.remove('hidden')"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
+                                    Unstage
+                                </button>
+                                @endif
+                                @endcan
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Job info grid --}}
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y divide-gray-100 dark:divide-gray-700 border-b border-gray-100 dark:border-gray-700">
+                        <div class="px-5 py-3">
+                            <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Sale #</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $sale->sale_number }}</p>
+                        </div>
+                        <div class="px-5 py-3">
+                            <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Job</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate" title="{{ $sale->job_name ?? $sale->customer_name }}">
+                                {{ $sale->job_name ?? $sale->customer_name ?? '—' }}
+                            </p>
+                        </div>
+                        <div class="px-5 py-3">
+                            <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Installer</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $workOrder->installer?->company_name ?? '—' }}</p>
+                        </div>
+                        <div class="px-5 py-3">
+                            <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Install date</p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                @if ($workOrder->scheduled_date)
+                                    {{ $workOrder->scheduled_date->format('M j, Y') }}
+                                    @if ($workOrder->scheduled_time)
+                                        · {{ \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_time)->format('g:i A') }}
+                                    @endif
+                                @else
+                                    <span class="text-gray-400">Not scheduled</span>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- Staging meta bar --}}
+                    <div class="flex flex-wrap items-start gap-x-6 gap-y-1 px-6 py-2.5 bg-orange-50 dark:bg-orange-900/10 border-b border-orange-100 dark:border-orange-900/30 text-xs text-gray-600 dark:text-gray-400">
+                        <span>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Staged by:</span>
+                            {{ $stagingPickTicket->creator?->name ?? '—' }}
+                            · {{ $stagingPickTicket->created_at->format('M j, Y g:i a') }}
+                        </span>
+                        @if ($stagingPickTicket->staging_notes)
+                            <span>
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Notes:</span>
+                                {{ $stagingPickTicket->staging_notes }}
+                            </span>
+                        @endif
+                    </div>
+
+                    {{-- Materials table --}}
+                    @if ($stagingPickTicket->items->isNotEmpty())
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                                <thead class="bg-gray-50 dark:bg-gray-700/30">
+                                    <tr>
+                                        <th class="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Material</th>
+                                        <th class="px-6 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Qty</th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Unit</th>
+                                        <th class="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Room</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                                    @foreach ($stagingPickTicket->items as $ptItem)
+                                        <tr>
+                                            <td class="px-6 py-3 font-medium text-gray-900 dark:text-white">{{ $ptItem->item_name }}</td>
+                                            <td class="px-6 py-3 text-right text-gray-700 dark:text-gray-300">
+                                                {{ rtrim(rtrim(number_format((float)$ptItem->quantity, 2), '0'), '.') }}
+                                            </td>
+                                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $ptItem->unit ?: '—' }}</td>
+                                            <td class="px-6 py-3 text-gray-500 dark:text-gray-400">{{ $ptItem->saleItem?->room?->room_name ?? '—' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="px-6 py-5 text-sm text-gray-400 dark:text-gray-500 text-center">
+                            No materials linked to this work order.
+                        </div>
+                    @endif
+
+                @else
+                    <div class="px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                        No staging pick ticket yet.
+                        @can('edit work orders')
+                            Click <strong>Stage Work Order</strong> above to create one.
+                        @endcan
+                    </div>
+                @endif
+
+            </div>
+
         </div>
     </div>
+
+    {{-- Stage Work Order Modal --}}
+    <div id="stage-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Stage Work Order</h3>
+                <button type="button" onclick="document.getElementById('stage-modal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('pages.sales.work-orders.stage-pick-ticket', [$sale, $workOrder]) }}">
+                @csrf
+                <div class="space-y-4 px-6 py-4">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        A staging pick ticket will be created for the materials linked to this work order.
+                        Optionally add notes for the warehouse team.
+                    </p>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Warehouse Notes <span class="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <textarea name="staging_notes" rows="3"
+                                  placeholder="e.g. Deliver to the loading bay. Handle with care."
+                                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400">{{ old('staging_notes') }}</textarea>
+                    </div>
+                    <div class="rounded-md bg-orange-50 px-3 py-2 text-xs text-orange-700 dark:bg-orange-900/20 dark:text-orange-300">
+                        Staged by: <strong>{{ auth()->user()->name }}</strong> · {{ now()->format('M j, Y') }}
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <button type="button"
+                            onclick="document.getElementById('stage-modal').classList.add('hidden')"
+                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                        Stage Work Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Unstage Pick Ticket Modal (from WO page) --}}
+    @if ($stagingPickTicket && $stagingPickTicket->status === 'staged')
+    <div id="wo-unstage-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Unstage Pick Ticket</h3>
+                <button type="button" onclick="document.getElementById('wo-unstage-modal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('pages.warehouse.pick-tickets.unstage', $stagingPickTicket) }}">
+                @csrf
+                <div class="space-y-4 px-6 py-4">
+                    <div class="rounded-md bg-gray-50 px-3 py-2.5 text-xs text-gray-600 dark:bg-gray-700/50 dark:text-gray-400 space-y-1">
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">PT #:</span>
+                            {{ $stagingPickTicket->pt_number }}
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Staged by:</span>
+                            {{ $stagingPickTicket->creator?->name ?? '—' }}
+                            · {{ $stagingPickTicket->created_at->format('M j, Y g:i a') }}
+                        </div>
+                        @if ($stagingPickTicket->staging_notes)
+                            <div>
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Staging notes:</span>
+                                {{ $stagingPickTicket->staging_notes }}
+                            </div>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Reason for unstaging <span class="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <textarea name="unstage_reason" rows="3"
+                                  placeholder="e.g. Materials not yet available. Rescheduling install date."
+                                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:ring-red-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"></textarea>
+                    </div>
+                    <div class="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                        Unstaged by: <strong>{{ auth()->user()->name }}</strong> · {{ now()->format('M j, Y') }}
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <button type="button"
+                            onclick="document.getElementById('wo-unstage-modal').classList.add('hidden')"
+                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                        Unstage
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
 
     {{-- Send Email Modal --}}
     <div id="send-email-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">

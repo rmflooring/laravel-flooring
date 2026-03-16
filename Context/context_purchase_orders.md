@@ -1,5 +1,5 @@
 # Purchase Orders Module — Dev Context
-Updated: 2026-03-15 (session 13)
+Updated: 2026-03-16 (session 14)
 
 ---
 
@@ -332,6 +332,16 @@ Force-delete route uses `role:admin` middleware (not permission-based).
 - PDF auto-attached (base64 via Graph API fileAttachment)
 - `sent_at` stamped on PO record on successful send
 - Send modal on show page: editable To/Subject/Body, pre-filled from vendor email
+
+---
+
+---
+
+## Pickup Scheduling Bug Fix (session 14, 2026-03-16)
+
+- **Bug**: `pickup_time` input had a hardcoded default of `09:00`, so it always submitted a value even when fulfillment = `delivery_warehouse` or `delivery_custom`. This triggered `required_with:pickup_time` on `pickup_date`, blocking PO creation.
+- **Fix 1 (forms)**: Added `:disabled="fulfillmentMethod !== 'pickup'"` to both `pickup_date` and `pickup_time` inputs in `create.blade.php` and `create-stock.blade.php`. Disabled inputs are not submitted by the browser.
+- **Fix 2 (controller)**: Removed `required_with:pickup_time` / `required_with:pickup_date` from validation rules in `store()` (sale-linked PO). The `pickup_at` assembly logic already guards on `fulfillment_method === 'pickup'`, so the validation constraint was redundant and harmful.
 
 ---
 

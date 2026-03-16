@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\EstimateItem;
 
 class SaleItem extends Model
 {
@@ -30,6 +31,16 @@ class SaleItem extends Model
     public function productStyle(): BelongsTo
     {
         return $this->belongsTo(ProductStyle::class, 'product_style_id');
+    }
+
+    public function sourceEstimateItem(): BelongsTo
+    {
+        return $this->belongsTo(EstimateItem::class, 'source_estimate_item_id');
+    }
+
+    public function productLine(): BelongsTo
+    {
+        return $this->belongsTo(ProductLine::class, 'product_line_id');
     }
 
     public function sale(): BelongsTo

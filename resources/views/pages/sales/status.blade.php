@@ -269,7 +269,9 @@
             </div>
 
             {{-- ── Material Coverage ────────────────────────────────────── --}}
-            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+                 x-data="inventoryCoverage()">
+
                 <div class="px-5 py-4 border-b border-gray-200">
                     <h2 class="text-base font-semibold text-gray-900">Material coverage</h2>
                     <p class="text-xs text-gray-500 mt-0.5">Every material line item and its fulfilment source.</p>
@@ -287,6 +289,10 @@
                             Received
                         </span>
                         <span class="flex items-center gap-1.5">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#0d9488"></span>
+                            From inventory
+                        </span>
+                        <span class="flex items-center gap-1.5">
                             <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#2563eb"></span>
                             Ordered
                         </span>
@@ -298,43 +304,45 @@
                             <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#d97706"></span>
                             No PO yet
                         </span>
-                        <span class="flex items-center gap-1.5">
-                            <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#db2777"></span>
-                            From inventory <span class="italic">(coming soon)</span>
-                        </span>
                     </div>
 
                     <div class="divide-y divide-gray-100">
                         @foreach ($coverageItems as $coverage)
                             @php
-                                $item      = $coverage['item'];
-                                $dotStatus = $coverage['dot_status'];
-                                $po        = $coverage['po'];
+                                $item               = $coverage['item'];
+                                $dotStatus          = $coverage['dot_status'];
+                                $po                 = $coverage['po'];
+                                $invQty             = $coverage['inv_qty'];
+                                $availableReceipts  = $coverage['available_receipts'];
+                                $pickTicket         = $coverage['pick_ticket'] ?? null;
 
                                 $dotColors = [
-                                    'received' => '#16a34a',
-                                    'ordered'  => '#2563eb',
-                                    'pending'  => '#7c3aed',
-                                    'none'     => '#d97706',
+                                    'received'  => '#16a34a',
+                                    'inventory' => '#0d9488',
+                                    'ordered'   => '#2563eb',
+                                    'pending'   => '#7c3aed',
+                                    'none'      => '#d97706',
                                 ];
                                 $dotColor = $dotColors[$dotStatus] ?? '#d97706';
 
                                 $badgeColors = [
-                                    'received' => 'bg-green-100 text-green-800',
-                                    'ordered'  => 'bg-blue-100 text-blue-800',
-                                    'pending'  => 'bg-purple-100 text-purple-800',
-                                    'none'     => 'bg-amber-100 text-amber-800',
+                                    'received'  => 'bg-green-100 text-green-800',
+                                    'inventory' => 'bg-teal-100 text-teal-800',
+                                    'ordered'   => 'bg-blue-100 text-blue-800',
+                                    'pending'   => 'bg-purple-100 text-purple-800',
+                                    'none'      => 'bg-amber-100 text-amber-800',
                                 ];
                                 $badgeColor = $badgeColors[$dotStatus] ?? 'bg-gray-100 text-gray-700';
 
-                                $badgeLabels = [
-                                    'received' => 'Received',
-                                    'ordered'  => 'Ordered',
-                                    'pending'  => 'PO created',
-                                    'none'     => 'No PO yet',
-                                ];
-                                $badgeLabel = $badgeLabels[$dotStatus] ?? 'Unknown';
-                                if ($po) {
+                                $badgeLabel = match ($dotStatus) {
+                                    'received'  => 'Received',
+                                    'inventory' => 'From inventory · ' . $invQty . ' ' . $item->unit,
+                                    'ordered'   => 'Ordered',
+                                    'pending'   => 'PO created',
+                                    'none'      => 'No PO yet',
+                                    default     => 'Unknown',
+                                };
+                                if ($po && $dotStatus !== 'inventory') {
                                     $badgeLabel .= ' · ' . $po->po_number;
                                 }
 
@@ -346,9 +354,11 @@
                                     $item->color_item_number,
                                 ]);
                                 $itemName = $nameParts ? implode(' — ', $nameParts) : 'Material item';
+
+                                $canAssignFromStock = $dotStatus === 'none' && ! empty($availableReceipts);
                             @endphp
 
-                            <div class="flex items-center gap-3 px-5 py-3 text-sm text-gray-700">
+                            <div class="flex items-center gap-3 px-5 py-3 text-sm text-gray-700 flex-wrap sm:flex-nowrap">
                                 <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0"
                                       style="background:{{ $dotColor }}"></span>
                                 <span class="flex-1 min-w-0 truncate font-medium text-gray-900"
@@ -361,12 +371,173 @@
                                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap shrink-0 {{ $badgeColor }}">
                                     {{ $badgeLabel }}
                                 </span>
+                                @if ($pickTicket)
+                                    @php
+                                        $ptHref = Route::has('pages.warehouse.pick-tickets.show')
+                                            ? route('pages.warehouse.pick-tickets.show', $pickTicket['id'])
+                                            : '#';
+                                    @endphp
+                                    <a href="{{ $ptHref }}"
+                                       class="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-900 whitespace-nowrap">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                        {{ $pickTicket['pt_number'] }}
+                                    </a>
+                                @endif
+                                @can('view sale status')
+                                    @if ($canAssignFromStock)
+                                        <button type="button"
+                                                @click="openModal(
+                                                    {{ $item->id }},
+                                                    @js($itemName),
+                                                    @js($availableReceipts),
+                                                    @js(route('pages.sales.inventory-allocations.store', [$sale, $item]))
+                                                )"
+                                                class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 whitespace-nowrap">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                            </svg>
+                                            Assign from stock
+                                        </button>
+                                    @elseif ($dotStatus === 'none')
+                                        <span class="shrink-0 text-xs text-gray-400 whitespace-nowrap">No stock available</span>
+                                    @endif
+                                @endcan
                             </div>
                         @endforeach
+                    </div>
+
+                    {{-- ── Assign from stock modal ──────────────────────────── --}}
+                    <div x-show="modalOpen"
+                         style="display:none"
+                         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                         @keydown.escape.window="modalOpen = false">
+
+                        {{-- Backdrop --}}
+                        <div class="absolute inset-0 bg-gray-900/50" @click="modalOpen = false"></div>
+
+                        {{-- Panel --}}
+                        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg z-10" @click.stop>
+
+                            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                                <div>
+                                    <h3 class="text-base font-semibold text-gray-900">Assign from stock</h3>
+                                    <p class="text-xs text-gray-500 mt-0.5 truncate max-w-xs" x-text="modalItemName"></p>
+                                </div>
+                                <button type="button" @click="modalOpen = false"
+                                        class="text-gray-400 hover:text-gray-600 p-1">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <form method="POST" :action="modalAction" class="px-6 py-5 space-y-5">
+                                @csrf
+
+                                {{-- Receipt selector --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Available stock receipts
+                                    </label>
+                                    <div class="space-y-2">
+                                        <template x-for="receipt in modalReceipts" :key="receipt.id">
+                                            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                                                   :class="selectedReceiptId === receipt.id ? 'border-teal-500 bg-teal-50' : ''">
+                                                <input type="radio"
+                                                       name="inventory_receipt_id"
+                                                       :value="receipt.id"
+                                                       x-model.number="selectedReceiptId"
+                                                       @change="maxQty = receipt.available; qty = receipt.available"
+                                                       class="text-teal-600 focus:ring-teal-500">
+                                                <div class="flex-1 min-w-0">
+                                                    <span class="text-sm font-medium text-gray-900 block truncate" x-text="receipt.item_name"></span>
+                                                    <span class="text-xs text-gray-500" x-text="'Received ' + receipt.date"></span>
+                                                </div>
+                                                <span class="shrink-0 text-sm font-semibold text-teal-700"
+                                                      x-text="receipt.available + ' ' + receipt.unit + ' avail.'"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                {{-- Qty input --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Quantity to allocate
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="number"
+                                               name="quantity"
+                                               x-model.number="qty"
+                                               :max="maxQty"
+                                               min="0.01"
+                                               step="0.01"
+                                               :disabled="! selectedReceiptId"
+                                               class="w-36 rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100 disabled:text-gray-400"
+                                               required>
+                                        <span class="text-xs text-gray-500" x-show="maxQty > 0">
+                                            max <span x-text="maxQty"></span>
+                                        </span>
+                                    </div>
+                                    <p x-show="qty > maxQty && maxQty > 0"
+                                       class="mt-1 text-xs text-red-600">
+                                        Cannot exceed available quantity.
+                                    </p>
+                                </div>
+
+                                {{-- Notes --}}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Notes <span class="font-normal text-gray-400">(optional)</span>
+                                    </label>
+                                    <textarea name="notes" rows="2"
+                                              class="w-full rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500"
+                                              placeholder="e.g. Left over from job #12"></textarea>
+                                </div>
+
+                                <div class="flex justify-end gap-3 pt-1">
+                                    <button type="button" @click="modalOpen = false"
+                                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                                        Cancel
+                                    </button>
+                                    <button type="submit"
+                                            :disabled="! selectedReceiptId || qty <= 0 || qty > maxQty"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        Assign stock
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 @endif
             </div>
 
         </div>
     </div>
+
+    <script>
+        function inventoryCoverage() {
+            return {
+                modalOpen: false,
+                modalItemName: '',
+                modalReceipts: [],
+                modalAction: '',
+                selectedReceiptId: null,
+                qty: 0,
+                maxQty: 0,
+
+                openModal(saleItemId, itemName, receipts, action) {
+                    this.modalItemName     = itemName;
+                    this.modalReceipts     = receipts;
+                    this.modalAction       = action;
+                    this.selectedReceiptId = null;
+                    this.qty               = 0;
+                    this.maxQty            = 0;
+                    this.modalOpen         = true;
+                },
+            };
+        }
+    </script>
 </x-admin-layout>

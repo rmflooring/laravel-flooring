@@ -58,6 +58,11 @@ class Estimate extends Model
     return $this->belongsTo(\App\Models\Opportunity::class);
 }
 
+	public function sale()
+{
+    return $this->hasOne(\App\Models\Sale::class, 'source_estimate_id');
+}
+
 	public function salesperson1()
 {
     return $this->belongsTo(\App\Models\User::class, 'salesperson_1_id');

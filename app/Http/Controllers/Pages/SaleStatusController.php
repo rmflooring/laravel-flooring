@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryReceipt;
+use App\Models\PickTicketItem;
 use App\Models\Sale;
+use App\Services\InventoryService;
 use Illuminate\View\View;
 
 class SaleStatusController extends Controller
 {
-    public function show(Sale $sale): View
+    public function show(Sale $sale, InventoryService $inventory): View
     {
         $sale->load([
             'rooms.items',
@@ -59,24 +62,129 @@ class SaleStatusController extends Controller
             ? (int) round($numerator / $denominator * 100)
             : 0;
 
+        // ── Inventory coverage ─────────────────────────────────────
+        // Build a map of sale_item_id → total allocated qty from inventory
+        $saleItemIds = $materialItems->pluck('id')->all();
+
+        // Pick tickets for each sale item: keyed by sale_item_id → first non-cancelled PT
+        $ptBySaleItemId = [];
+        if (! empty($saleItemIds)) {
+            PickTicketItem::query()
+                ->join('pick_tickets', 'pick_tickets.id', '=', 'pick_ticket_items.pick_ticket_id')
+                ->whereIn('pick_ticket_items.sale_item_id', $saleItemIds)
+                ->where('pick_tickets.status', '<>', 'cancelled')
+                ->orderBy('pick_tickets.id')
+                ->select([
+                    'pick_ticket_items.sale_item_id',
+                    'pick_tickets.id as pt_id',
+                    'pick_tickets.pt_number',
+                    'pick_tickets.status as pt_status',
+                ])
+                ->get()
+                ->each(function ($row) use (&$ptBySaleItemId) {
+                    // Keep the first (lowest id) PT per sale item
+                    $ptBySaleItemId[$row->sale_item_id] ??= [
+                        'id'        => $row->pt_id,
+                        'pt_number' => $row->pt_number,
+                        'status'    => $row->pt_status,
+                    ];
+                });
+        }
+
+        $invAllocatedQtys = \App\Models\InventoryAllocation::whereIn('sale_item_id', $saleItemIds)
+            ->selectRaw('sale_item_id, SUM(quantity) as total')
+            ->groupBy('sale_item_id')
+            ->pluck('total', 'sale_item_id')
+            ->map(fn ($v) => (float) $v)
+            ->all();
+
+        // For uncovered items: find available receipts matching the item's product_style_id
+        // Receipts grouped by product_style_id, with available qty pre-computed
+        $styleIds = $materialItems->pluck('product_style_id')->filter()->unique()->all();
+
+        $receiptsByStyleId = [];
+        if (! empty($styleIds)) {
+            $receipts = InventoryReceipt::with('allocations')
+                ->whereIn('product_style_id', $styleIds)
+                ->orderBy('received_date')
+                ->get();
+
+            foreach ($receipts as $receipt) {
+                $available = max(0, (float) $receipt->quantity_received - $receipt->allocations->sum('quantity'));
+                if ($available > 0) {
+                    $receiptsByStyleId[$receipt->product_style_id][] = [
+                        'id'         => $receipt->id,
+                        'item_name'  => $receipt->item_name,
+                        'unit'       => $receipt->unit,
+                        'available'  => $available,
+                        'date'       => $receipt->received_date?->format('M j, Y'),
+                    ];
+                }
+            }
+        }
+
         // ── Coverage items ─────────────────────────────────────────
+        // Priority: received(3) > inventory(2.5) > ordered(2) > pending(1) > none(0)
         $statusPriority = ['received' => 3, 'ordered' => 2, 'pending' => 1];
 
-        $coverageItems = $materialItems->map(function ($item) use ($poItemsBySaleItemId, $statusPriority) {
-            $matches = $poItemsBySaleItemId[$item->id] ?? [];
+        $coverageItems = $materialItems->map(function ($item) use (
+            $poItemsBySaleItemId,
+            $statusPriority,
+            $invAllocatedQtys,
+            $receiptsByStyleId,
+            $ptBySaleItemId
+        ) {
+            $matches        = $poItemsBySaleItemId[$item->id] ?? [];
+            $invQty         = $invAllocatedQtys[$item->id] ?? 0;
+            $hasInvCoverage = $invQty > 0;
+            $pickTicket     = $ptBySaleItemId[$item->id] ?? null;
 
             if (empty($matches)) {
-                return ['item' => $item, 'dot_status' => 'none', 'po' => null];
+                if ($hasInvCoverage) {
+                    return [
+                        'item'               => $item,
+                        'dot_status'         => 'inventory',
+                        'po'                 => null,
+                        'inv_qty'            => $invQty,
+                        'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                        'pick_ticket'        => $pickTicket,
+                    ];
+                }
+
+                return [
+                    'item'               => $item,
+                    'dot_status'         => 'none',
+                    'po'                 => null,
+                    'inv_qty'            => 0,
+                    'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                    'pick_ticket'        => null,
+                ];
             }
 
             $best = collect($matches)
                 ->sortByDesc(fn ($m) => $statusPriority[$m['po']->status] ?? 0)
                 ->first();
 
+            // If best PO is only pending and inventory also covers it, prefer inventory badge
+            $poStatus = $best['po']->status;
+            if ($hasInvCoverage && $poStatus === 'pending') {
+                return [
+                    'item'               => $item,
+                    'dot_status'         => 'inventory',
+                    'po'                 => $best['po'],
+                    'inv_qty'            => $invQty,
+                    'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                    'pick_ticket'        => $pickTicket,
+                ];
+            }
+
             return [
-                'item'       => $item,
-                'dot_status' => $best['po']->status,
-                'po'         => $best['po'],
+                'item'               => $item,
+                'dot_status'         => $poStatus,
+                'po'                 => $best['po'],
+                'inv_qty'            => $invQty,
+                'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                'pick_ticket'        => $pickTicket,
             ];
         });
 
@@ -102,6 +210,7 @@ class SaleStatusController extends Controller
             'activePOs',
             'totalWOs',
             'activeWOs',
+            'ptBySaleItemId',
         ));
     }
 
@@ -126,9 +235,9 @@ class SaleStatusController extends Controller
             return 'Needs action';
         }
 
-        // Ready: all materials received AND all WOs scheduled or completed
+        // Ready: all materials received (or from inventory) AND all WOs scheduled or completed
         $allMaterialsReceived = $totalMaterialItems === 0
-            || $coverageItems->every(fn ($c) => $c['dot_status'] === 'received');
+            || $coverageItems->every(fn ($c) => in_array($c['dot_status'], ['received', 'inventory']));
 
         $allWOsDone = $totalWOs === 0
             || $activeWOs->every(fn ($wo) => in_array($wo->status, ['scheduled', 'in_progress', 'completed']));

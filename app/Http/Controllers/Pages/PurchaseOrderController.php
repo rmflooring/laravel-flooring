@@ -13,6 +13,9 @@ use App\Models\Setting;
 use App\Models\Vendor;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
+use App\Services\InventoryService;
+use App\Services\PickTicketService;
+use App\Models\WorkOrder;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -114,13 +117,14 @@ class PurchaseOrderController extends Controller
                 $label = implode(' — ', $parts);
 
                 return [
-                    'id'           => $row->id,
-                    'label'        => $label,
-                    'item_name'    => $label,
-                    'cost_price'   => (float) $row->cost_price,
-                    'unit'         => $row->unit_label ?? '',
-                    'manufacturer' => $row->manufacturer,
-                    'product_type' => $row->product_type,
+                    'id'               => $row->id,
+                    'product_style_id' => $row->id,
+                    'label'            => $label,
+                    'item_name'        => $label,
+                    'cost_price'       => (float) $row->cost_price,
+                    'unit'             => $row->unit_label ?? '',
+                    'manufacturer'     => $row->manufacturer,
+                    'product_type'     => $row->product_type,
                 ];
             });
 
@@ -160,11 +164,12 @@ class PurchaseOrderController extends Controller
             'pickup_date'             => ['nullable', 'date'],
             'pickup_time'             => ['nullable', 'date_format:H:i'],
             'items'                   => ['required', 'array', 'min:1'],
-            'items.*.item_name'       => ['required', 'string', 'max:255'],
-            'items.*.quantity'        => ['required', 'numeric', 'min:0.01'],
-            'items.*.unit'            => ['nullable', 'string', 'max:50'],
-            'items.*.cost_price'      => ['required', 'numeric', 'min:0'],
-            'items.*.po_notes'        => ['nullable', 'string'],
+            'items.*.product_style_id' => ['nullable', 'integer', 'exists:product_styles,id'],
+            'items.*.item_name'        => ['required', 'string', 'max:255'],
+            'items.*.quantity'         => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit'             => ['nullable', 'string', 'max:50'],
+            'items.*.cost_price'       => ['required', 'numeric', 'min:0'],
+            'items.*.po_notes'         => ['nullable', 'string'],
         ]);
 
         $resolvedAddress = $this->resolveDeliveryAddress(
@@ -195,6 +200,7 @@ class PurchaseOrderController extends Controller
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $po->id,
                     'sale_item_id'      => null,
+                    'product_style_id'  => ! empty($item['product_style_id']) ? (int) $item['product_style_id'] : null,
                     'item_name'         => $item['item_name'],
                     'quantity'          => (float) $item['quantity'],
                     'unit'              => $item['unit'] ?? null,
@@ -227,6 +233,7 @@ class PurchaseOrderController extends Controller
             'rooms.items' => fn ($q) => $q->where('item_type', 'material')
                                           ->where('is_removed', false)
                                           ->orderBy('sort_order'),
+            'rooms.items.productLine',
         ]);
 
         $installerVendorIds = Installer::whereNotNull('vendor_id')->pluck('vendor_id');
@@ -241,13 +248,15 @@ class PurchaseOrderController extends Controller
         // Remaining qty available per sale item (across all non-cancelled POs)
         $orderedQtys   = $this->orderedQtys($sale->id);
         $remainingQtys = [];
+        $itemVendorMap = []; // sale_item_id => vendor_id from product_lines (null if no catalog link)
         foreach ($sale->rooms as $room) {
             foreach ($room->items as $item) {
                 $remainingQtys[$item->id] = max(0, (float) $item->quantity - ($orderedQtys[$item->id] ?? 0));
+                $itemVendorMap[$item->id] = $item->productLine?->vendor_id;
             }
         }
 
-        return view('pages.purchase-orders.create', compact('sale', 'vendors', 'warehouseAddress', 'remainingQtys'));
+        return view('pages.purchase-orders.create', compact('sale', 'vendors', 'warehouseAddress', 'remainingQtys', 'itemVendorMap'));
     }
 
     // -------------------------------------------------------------------------
@@ -262,8 +271,8 @@ class PurchaseOrderController extends Controller
             'fulfillment_method'      => ['required', 'in:delivery_site,delivery_warehouse,delivery_custom,pickup'],
             'delivery_address'        => ['nullable', 'string', 'max:500'],
             'special_instructions'    => ['nullable', 'string'],
-            'pickup_date'             => ['nullable', 'required_with:pickup_time', 'date'],
-            'pickup_time'             => ['nullable', 'required_with:pickup_date', 'date_format:H:i'],
+            'pickup_date'             => ['nullable', 'date'],
+            'pickup_time'             => ['nullable', 'date_format:H:i'],
             'items'                   => ['required', 'array', 'min:1'],
             'items.*'                 => ['integer', 'exists:sale_items,id'],
             'qty'                     => ['nullable', 'array'],
@@ -378,6 +387,77 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy']);
 
         return view('pages.purchase-orders.show', compact('purchaseOrder'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Receive items form
+    // -------------------------------------------------------------------------
+
+    public function receiveForm(PurchaseOrder $purchaseOrder)
+    {
+        abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
+
+        $purchaseOrder->load(['vendor', 'items', 'sale']);
+
+        return view('pages.purchase-orders.receive', compact('purchaseOrder'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Process receipt — creates InventoryReceipts and marks PO received
+    // -------------------------------------------------------------------------
+
+    public function receive(Request $request, PurchaseOrder $purchaseOrder, InventoryService $inventory, PickTicketService $pickTickets)
+    {
+        abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
+
+        $purchaseOrder->load(['items.saleItem']);
+
+        $request->validate([
+            'received_date'   => ['required', 'date', 'before_or_equal:today'],
+            'quantities'      => ['required', 'array'],
+            'quantities.*'    => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $receivedDate = $request->input('received_date');
+        $quantities   = $request->input('quantities', []);
+
+        // At least one item must have qty > 0
+        $anyReceived = collect($quantities)->contains(fn ($qty) => (float) $qty > 0);
+        if (! $anyReceived) {
+            return back()
+                ->withErrors(['quantities' => 'Enter a received quantity for at least one item.'])
+                ->withInput();
+        }
+
+        DB::transaction(function () use ($purchaseOrder, $inventory, $pickTickets, $receivedDate, $quantities) {
+            foreach ($purchaseOrder->items as $poItem) {
+                $qty = (float) ($quantities[$poItem->id] ?? 0);
+
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $receipt = $inventory->receiveFromPOItem($poItem, $qty, $receivedDate);
+
+                // Auto-allocate and create a pick ticket for sale-linked items
+                if ($poItem->sale_item_id && $poItem->saleItem) {
+                    $allocation = $inventory->allocate($receipt, $poItem->saleItem, $qty);
+
+                    $workOrder = WorkOrder::where('sale_id', $purchaseOrder->sale_id)
+                        ->where('status', '<>', 'cancelled')
+                        ->whereHas('items.relatedMaterials', fn ($q) => $q->where('sale_item_id', $poItem->sale_item_id))
+                        ->first();
+
+                    $pickTickets->createFromAllocation($allocation, $workOrder);
+                }
+            }
+
+            $purchaseOrder->update(['status' => 'received']);
+        });
+
+        return redirect()
+            ->route('pages.purchase-orders.show', $purchaseOrder)
+            ->with('success', 'Items received and added to inventory.');
     }
 
     // -------------------------------------------------------------------------

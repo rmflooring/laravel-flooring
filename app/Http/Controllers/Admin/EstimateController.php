@@ -26,6 +26,7 @@ class EstimateController extends Controller
     $dateTo   = $request->query('date_to', '');
 
     $estimates = Estimate::query()
+        ->with(['sale:id,source_estimate_id'])
         ->when($q !== '', function ($query) use ($q) {
             $query->where(function ($sub) use ($q) {
                 $sub->where('estimate_number', 'like', "%{$q}%")
@@ -872,6 +873,17 @@ public function apiStyles(Request $request)
     return response()->json($lines);
 }
 
+	public function destroy(\App\Models\Estimate $estimate)
+{
+    if (\App\Models\Sale::where('source_estimate_id', $estimate->id)->exists()) {
+        return back()->with('error', 'This estimate cannot be deleted because it has an associated sale.');
+    }
+
+    $estimate->delete();
+
+    return redirect()->route('pages.estimates.index')->with('success', 'Estimate deleted.');
+}
+
 	public function convertToSale(\App\Models\Estimate $estimate)
 {
     abort_unless($estimate->status === 'approved', 422, 'Only approved estimates can be converted to a sale.');
@@ -899,6 +911,10 @@ public function apiStyles(Request $request)
             'job_no'                    => $estimate->job_no ?? null,
             'job_address'               => $estimate->job_address ?? null,
             'pm_name'                   => $estimate->pm_name ?? null,
+
+            'homeowner_name'            => $estimate->homeowner_name ?? null,
+            'job_phone'                 => $estimate->homeowner_phone ?? null,
+            'job_email'                 => $estimate->homeowner_email ?? null,
 
             'salesperson_1_employee_id' => $estimate->salesperson_1_employee_id ?? null,
             'salesperson_2_employee_id' => $estimate->salesperson_2_employee_id ?? null,
@@ -976,6 +992,8 @@ public function apiStyles(Request $request)
                 'sort_order'              => (int) ($ei->sort_order ?? 0),
 
                 'product_type'            => $ei->product_type,
+                'product_line_id'         => $ei->product_line_id,
+                'product_style_id'        => $ei->product_style_id,
                 'manufacturer'            => $ei->manufacturer,
                 'style'                   => $ei->style,
                 'color_item_number'       => $ei->color_item_number,
@@ -1000,7 +1018,7 @@ public function apiStyles(Request $request)
 	public function showProfits(Estimate $estimate)
 {
     $estimate->load([
-        'rooms.items',
+        'rooms.items.productStyle',
     ]);
 
     return view('pages.profits.show', [

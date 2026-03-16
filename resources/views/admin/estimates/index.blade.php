@@ -25,6 +25,11 @@
                     {{ session('success') }}
                 </div>
             @endif
+            @if (session('error'))
+                <div class="p-4 text-red-800 bg-red-100 border border-red-200 rounded-lg">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             {{-- Filters / Search --}}
             <form method="GET" action="{{ route('pages.estimates.index') }}" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -154,6 +159,17 @@
                                                class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300">
                                                 Edit
                                             </a>
+                                            @if (! $estimate->sale)
+                                                <form method="POST" action="{{ route('pages.estimates.destroy', $estimate->id) }}"
+                                                      onsubmit="return confirm('Delete estimate {{ $estimate->estimate_number }}? This cannot be undone.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                            class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

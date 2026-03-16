@@ -270,7 +270,7 @@
                         <td class="px-3 py-2 relative">
   <input
     type="text"
-    name="rooms[0][materials][0][product_type]"
+    name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_type]"
     class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
     placeholder="Product Type"
     autocomplete="off"
@@ -285,19 +285,19 @@
   </div>
 </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[0][materials][0][quantity]"
+                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
                         </td>
                         <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][materials][0][unit]"
+                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="Unit">
                         </td>
                         <td class="px-3 py-2 relative">
 						  <input
 							type="text"
-							name="rooms[0][materials][0][manufacturer]"
+							name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][manufacturer]"
 							class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
 							placeholder="Manufacturer"
 							autocomplete="off"
@@ -353,20 +353,20 @@
 </td>
 
                         <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][materials][0][po_notes]"
+                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][po_notes]"
                                 class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="PO Notes">
                         </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[0][materials][0][sell_price]"
+                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][sell_price]"
                                 class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0.00">
-							<input type="hidden" name="rooms[0][materials][0][cost_price]" class="material-cost-price-input" value="0">
-							<input type="hidden" name="rooms[0][materials][0][cost_total]" class="material-cost-total-input" value="0">
+							<input type="hidden" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][cost_price]" class="material-cost-price-input" value="0">
+							<input type="hidden" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][cost_total]" class="material-cost-total-input" value="0">
                         </td>
                         <td class="px-3 py-2">
     <span class="material-line-total inline-block w-28 text-right font-medium">$0.00</span>
-    <input type="hidden" name="rooms[0][materials][0][line_total]" class="material-line-total-input" value="0">
+    <input type="hidden" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][line_total]" class="material-line-total-input" value="0">
 </td>
                         <td class="px-3 py-2">
                             <button type="button" class="delete-material-row text-red-600 hover:underline">
@@ -410,7 +410,7 @@
       <div class="relative">
         <input
           type="text"
-          name="rooms[0][freight][0][freight_description]"
+          name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][freight_description]"
           class="w-80 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="Freight description"
           autocomplete="off"
@@ -427,22 +427,22 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="number" step="0.01" name="rooms[0][freight][0][quantity]"
+      <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]"
         class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="0">
     </td>
 
     <td class="px-3 py-2">
-      <input type="number" step="0.01" name="rooms[0][freight][0][sell_price]"
+      <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][sell_price]"
         class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="0.00">
-		<input type="hidden" name="rooms[0][freight][0][cost_price]" class="freight-cost-price-input" value="0">
-		<input type="hidden" name="rooms[0][freight][0][cost_total]" class="freight-cost-total-input" value="0">
+		<input type="hidden" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][cost_price]" class="freight-cost-price-input" value="0">
+		<input type="hidden" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][cost_total]" class="freight-cost-total-input" value="0">
     </td>
 
     <td class="px-3 py-2">
       <span class="freight-line-total inline-block w-28 text-right font-medium">$0.00</span>
-      <input type="hidden" name="rooms[0][freight][0][line_total]" class="freight-line-total-input" value="0">
+      <input type="hidden" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][line_total]" class="freight-line-total-input" value="0">
     </td>
 
     <td class="px-3 py-2">
@@ -491,7 +491,7 @@
 						  <div class="relative">
 							<input
 							  type="text"
-							  name="rooms[0][labour][0][labour_type]"
+							  name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][labour_type]"
 							  class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
 							  placeholder="Labour Type"
 							  autocomplete="off"
@@ -507,12 +507,12 @@
 						  </div>
 						</td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[0][labour][0][quantity]"
+                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
                         </td>
                         <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][labour][0][unit]"
+                            <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][unit]"
 							  class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
 							  placeholder="Unit"
 							  data-labour-unit-input>
@@ -521,7 +521,7 @@
 						  <div class="relative">
 							<input
 							  type="text"
-							  name="rooms[0][labour][0][description]"
+							  name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][description]"
 							  class="w-64 bg-gray-50 border border-gray-300 rounded-lg p-2"
 							  placeholder="Description"
 							  autocomplete="off"
@@ -537,20 +537,20 @@
 						  </div>
 						</td>
                         <td class="px-3 py-2">
-                            <input type="text" name="rooms[0][labour][0][notes]"
+                            <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][notes]"
                                 class="w-56 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="Notes">
                         </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[0][labour][0][sell_price]"
+                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][sell_price]"
                                 class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0.00">
-							<input type="hidden" name="rooms[0][labour][0][cost_price]" class="labour-cost-price-input" value="0">
-							<input type="hidden" name="rooms[0][labour][0][cost_total]" class="labour-cost-total-input" value="0">
+							<input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][cost_price]" class="labour-cost-price-input" value="0">
+							<input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][cost_total]" class="labour-cost-total-input" value="0">
                         </td>
                         <td class="px-3 py-2">
     <span class="labour-line-total inline-block w-28 text-right font-medium">$0.00</span>
-    <input type="hidden" name="rooms[0][labour][0][line_total]" class="labour-line-total-input" value="0">
+    <input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][line_total]" class="labour-line-total-input" value="0">
 </td>
                         <td class="px-3 py-2">
                             <button type="button" class="delete-labour-row text-red-600 hover:underline">

@@ -74,7 +74,18 @@
     );
 
     $totalCost = $rooms->sum(fn($room) =>
-        $room->items->sum(fn($item) => (float) ($item->cost_total ?? 0))
+        $room->items->sum(function ($item) {
+            $savedCost = (float)($item->cost_price ?? 0);
+            if ($savedCost == 0) {
+                $catalogCost = (float)($item->productStyle?->cost_price ?? 0);
+                if ($catalogCost == 0) {
+                    $catalogCost = (float)($item->sourceEstimateItem?->productStyle?->cost_price ?? 0);
+                }
+                $savedCost = $catalogCost;
+            }
+            $qty = (float)($item->quantity ?? 0);
+            return $qty > 0 ? round($qty * $savedCost, 2) : $savedCost;
+        })
     );
 
     $totalProfit = $totalSell - $totalCost;
@@ -156,7 +167,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($room->items as $item)
+                                            @foreach($room->items->sortBy(fn($i) => ['material' => 0, 'freight' => 1, 'labour' => 2][$i->item_type] ?? 3) as $item)
                                                 <tr
 													class="odd:bg-white even:bg-gray-50"
 													data-profit-row
@@ -202,10 +213,22 @@
 													</td>
 
                                                     <td class="px-3 py-2 text-right border-b">
+@php
+    $displayCost = (float)($item->cost_price ?? 0);
+    if ($displayCost == 0) {
+        // Try direct product style link
+        $catalogCost = (float)($item->productStyle?->cost_price ?? 0);
+        // For sale items, fall back through source estimate item's style
+        if ($catalogCost == 0 && $recordType === 'sale') {
+            $catalogCost = (float)($item->sourceEstimateItem?->productStyle?->cost_price ?? 0);
+        }
+        $displayCost = $catalogCost;
+    }
+@endphp
     <input
     type="number"
     name="items[{{ $item->id }}][cost_price]"
-    value="{{ number_format((float)($item->cost_price ?? 0), 2, '.', '') }}"
+    value="{{ number_format($displayCost, 2, '.', '') }}"
     step="0.01"
     min="0"
     class="w-24 rounded-md border-gray-300 text-sm text-right profit-cost-input"
@@ -217,37 +240,49 @@
     >
 </td>
 
+                                                    @php
+    $lineTotal = (float)($item->line_total ?? 0);
+    $qty = (float)($item->quantity ?? 0);
+    $displayCostTotal = $qty > 0 ? round($qty * $displayCost, 2) : $displayCost;
+    $displayProfit = $lineTotal - $displayCostTotal;
+    $displayMargin = $lineTotal > 0 ? ($displayProfit / $lineTotal) * 100 : 0;
+@endphp
                                                     <td
 														class="px-3 py-2 text-right border-b"
 														data-cost-total
-														data-value="{{ (float)($item->cost_total ?? 0) }}"
+														data-value="{{ $displayCostTotal }}"
 													>
-														${{ number_format((float)($item->cost_total ?? 0), 2) }}
+														${{ number_format($displayCostTotal, 2) }}
 													</td>
 													<td
 														class="px-3 py-2 text-right border-b"
 														data-profit
 													>
-														${{ number_format((float)($item->line_total ?? 0) - (float)($item->cost_total ?? 0), 2) }}
+														${{ number_format($displayProfit, 2) }}
 													</td>
 													<td
 														class="px-3 py-2 text-right border-b"
 														data-margin
 													>
-														@php
-															$lineTotal = (float) ($item->line_total ?? 0);
-															$costTotal = (float) ($item->cost_total ?? 0);
-															$lineProfit = $lineTotal - $costTotal;
-															$lineMargin = $lineTotal > 0 ? ($lineProfit / $lineTotal) * 100 : 0;
-														@endphp
-														{{ number_format($lineMargin, 2) }}%
+														{{ number_format($displayMargin, 2) }}%
 													</td>
                                                 </tr>
                                             @endforeach                                        </tbody>
                                        <tfoot class="bg-gray-100 font-semibold">
     @php
         $roomSellTotal = $room->items->sum(fn($item) => (float) ($item->line_total ?? 0));
-        $roomCostTotal = $room->items->sum(fn($item) => (float) ($item->cost_total ?? 0));
+        $roomCostTotal = $room->items->sum(function ($item) {
+            $savedCost = (float)($item->cost_price ?? 0);
+            if ($savedCost == 0) {
+                $catalogCost = (float)($item->productStyle?->cost_price ?? 0);
+                if ($catalogCost == 0) {
+                    $catalogCost = (float)($item->sourceEstimateItem?->productStyle?->cost_price ?? 0);
+                }
+                $savedCost = $catalogCost;
+            }
+            $qty = (float)($item->quantity ?? 0);
+            return $qty > 0 ? round($qty * $savedCost, 2) : $savedCost;
+        });
         $roomProfitTotal = $roomSellTotal - $roomCostTotal;
         $roomMargin = $roomSellTotal > 0 ? ($roomProfitTotal / $roomSellTotal) * 100 : 0;
     @endphp

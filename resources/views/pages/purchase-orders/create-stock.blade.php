@@ -154,6 +154,11 @@
                                 {{-- Item fields --}}
                                 <div class="grid grid-cols-12 gap-3 items-start">
 
+                                    {{-- Hidden product_style_id --}}
+                                    <input type="hidden"
+                                           :name="`items[${index}][product_style_id]`"
+                                           :value="row.product_style_id ?? ''">
+
                                     {{-- Description --}}
                                     <div class="col-span-12 sm:col-span-5">
                                         <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
@@ -295,11 +300,13 @@
                                         <div>
                                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Date</label>
                                             <input type="date" name="pickup_date" value="{{ old('pickup_date') }}"
+                                                   :disabled="fulfillmentMethod !== 'pickup'"
                                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         </div>
                                         <div>
                                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Time</label>
                                             <input type="time" name="pickup_time" value="{{ old('pickup_time', '09:00') }}"
+                                                   :disabled="fulfillmentMethod !== 'pickup'"
                                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         </div>
                                     </div>
@@ -414,20 +421,22 @@
             },
 
             selectCatalogItem(row, item) {
-                row.item_name    = item.item_name;
-                row.cost_price   = item.cost_price;
-                row.unit         = item.unit;
-                row.catalogLabel = item.label;
-                row.search       = item.label;
-                row.showDropdown = false;
+                row.item_name        = item.item_name;
+                row.cost_price       = item.cost_price;
+                row.unit             = item.unit;
+                row.catalogLabel     = item.label;
+                row.search           = item.label;
+                row.product_style_id = item.product_style_id ?? null;
+                row.showDropdown     = false;
                 this.recalc(row);
             },
 
             clearCatalog(row) {
-                row.catalogLabel = '';
-                row.search       = '';
-                row.results      = [];
-                row.showDropdown = false;
+                row.catalogLabel     = '';
+                row.search           = '';
+                row.results          = [];
+                row.showDropdown     = false;
+                row.product_style_id = null;
             },
 
             submitForm() {
@@ -452,16 +461,17 @@
             return {
                 id:           nextId++,
                 item_name:    '',
-                quantity:     '',
-                unit:         '',
-                cost_price:   '',
-                po_notes:     '',
-                total:        0,
-                search:       '',
-                results:      [],
-                showDropdown: false,
-                searching:    false,
-                catalogLabel: '',
+                quantity:         '',
+                unit:             '',
+                cost_price:       '',
+                po_notes:         '',
+                total:            0,
+                search:           '',
+                results:          [],
+                showDropdown:     false,
+                searching:        false,
+                catalogLabel:     '',
+                product_style_id: null,
             };
         }
     }

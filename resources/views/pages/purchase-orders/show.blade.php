@@ -72,6 +72,18 @@
                     </a>
                     @endcan
 
+                    @can('edit purchase orders')
+                    @if ($purchaseOrder->status === 'ordered')
+                    <a href="{{ route('pages.purchase-orders.receive.form', $purchaseOrder) }}"
+                       class="inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Receive items
+                    </a>
+                    @endif
+                    @endcan
+
                     <a href="{{ route('pages.purchase-orders.pdf', $purchaseOrder) }}" target="_blank"
                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
                         Print PDF

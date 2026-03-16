@@ -48,10 +48,13 @@
                         <label for="vendor_id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Select Vendor <span class="text-red-500">*</span>
                         </label>
-                        <select id="vendor_id" name="vendor_id" required
+                        {{-- Hidden input always submits vendor_id — the select can be disabled without losing the value --}}
+                        <input type="hidden" name="vendor_id" :value="vendorId">
+                        <select id="vendor_id"
                                 x-model="vendorId"
-                                @change="updateVendorEmail"
-                                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                                @change="onVendorChange()"
+                                :disabled="selectedItems.length > 0 && vendorId !== ''"
+                                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                             <option value="">— Select a vendor —</option>
                             @foreach($vendors as $vendor)
                                 <option value="{{ $vendor->id }}"
@@ -65,6 +68,21 @@
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             PO will be emailed to the vendor's stored email address.
                         </p>
+                        <template x-if="selectedItems.length > 0 && vendorId !== ''">
+                            <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                Vendor locked. Uncheck all items to change vendor.
+                            </p>
+                        </template>
+                        <template x-if="selectedItems.length > 0 && vendorId === ''">
+                            <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                                Items selected — now choose the vendor to order from.
+                            </p>
+                        </template>
+                        <template x-if="vendorId !== '' && selectedItems.length === 0">
+                            <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                Only items from this vendor can be added to this PO.
+                            </p>
+                        </template>
                     </div>
                 </div>
 
@@ -103,14 +121,20 @@
                                         $remaining    = $remainingQtys[$item->id] ?? (float) $item->quantity;
                                         $fullyOrdered = $remaining <= 0;
                                     @endphp
-                                    <div class="px-6 py-4 {{ $fullyOrdered ? 'opacity-50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30' }}"
-                                         :class="selectedItems.map(String).includes('{{ $item->id }}') ? 'bg-blue-50 dark:bg-blue-900/10' : ''">
-                                        <label class="flex items-start gap-4 {{ $fullyOrdered ? 'cursor-not-allowed' : 'cursor-pointer' }}">
+                                    <div class="px-6 py-4"
+                                         :class="{
+                                             'opacity-50': {{ $fullyOrdered ? 'true' : 'false' }} || isItemLocked('{{ $item->id }}'),
+                                             'hover:bg-gray-50 dark:hover:bg-gray-700/30': !({{ $fullyOrdered ? 'true' : 'false' }} || isItemLocked('{{ $item->id }}')),
+                                             'bg-blue-50 dark:bg-blue-900/10': selectedItems.map(String).includes('{{ $item->id }}')
+                                         }">
+                                        <label class="flex items-start gap-4"
+                                               :class="({{ $fullyOrdered ? 'true' : 'false' }} || isItemLocked('{{ $item->id }}')) ? 'cursor-not-allowed' : 'cursor-pointer'">
                                             <input type="checkbox"
                                                    name="items[]"
                                                    value="{{ $item->id }}"
                                                    x-model="selectedItems"
-                                                   {{ $fullyOrdered ? 'disabled' : '' }}
+                                                   :disabled="{{ $fullyOrdered ? 'true' : 'false' }} || isItemLocked('{{ $item->id }}')"
+                                                   @change="onItemCheck('{{ $item->id }}', $event.target.checked)"
                                                    class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 disabled:cursor-not-allowed">
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex flex-wrap items-center gap-2">
@@ -124,6 +148,11 @@
                                                             {{ $remaining }} {{ $item->unit }} remaining
                                                         </span>
                                                     @endif
+                                                    <template x-if="isItemLocked('{{ $item->id }}')">
+                                                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                                            Wrong vendor
+                                                        </span>
+                                                    </template>
                                                 </div>
                                                 <div class="mt-1 flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
                                                     <span>Sale Qty: <strong class="text-gray-700 dark:text-gray-300">{{ $item->quantity }} {{ $item->unit }}</strong></span>
@@ -252,6 +281,7 @@
                                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Date</label>
                                             <input type="date" name="pickup_date"
                                                    value="{{ old('pickup_date') }}"
+                                                   :disabled="fulfillmentMethod !== 'pickup'"
                                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                             @error('pickup_date')
                                                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -261,6 +291,7 @@
                                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Pickup Time</label>
                                             <input type="time" name="pickup_time"
                                                    value="{{ old('pickup_time', '09:00') }}"
+                                                   :disabled="fulfillmentMethod !== 'pickup'"
                                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                             @error('pickup_time')
                                                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -322,15 +353,73 @@
             fulfillmentMethod: '{{ old('fulfillment_method', '') }}',
             qtyErrors: {},
 
+            // sale_item_id => vendor_id from product_lines (null if item has no catalog link)
+            itemVendorMap: @json($itemVendorMap),
+
+            // Called when vendor dropdown changes
+            onVendorChange() {
+                if (this.vendorId) {
+                    // Deselect any items locked out by the new vendor selection
+                    this.selectedItems = this.selectedItems.filter(id => !this.isItemLocked(id));
+                }
+            },
+
+            // Called when an item checkbox changes
+            onItemCheck(itemId, checked) {
+                this.$nextTick(() => {
+                    if (this.selectedItems.length === 0) {
+                        // All unchecked — release vendor lock
+                        this.vendorId = '';
+                        return;
+                    }
+
+                    if (checked) {
+                        // Guard: if item is locked, force-uncheck it
+                        if (this.isItemLocked(itemId)) {
+                            this.selectedItems = this.selectedItems.filter(id => String(id) !== String(itemId));
+                            return;
+                        }
+
+                        // Auto-select vendor from this item's product line vendor_id
+                        if (!this.vendorId) {
+                            const itemVendor = this.itemVendorMap[String(itemId)];
+                            if (itemVendor) { this.vendorId = String(itemVendor); }
+                        }
+                    }
+                });
+            },
+
+            // Returns true if this item cannot be added to the current PO.
+            // An item is locked when its product_line.vendor_id differs from the selected vendor.
+            // Items with no vendor_id on their product line are never locked.
+            isItemLocked(itemId) {
+                if (this.vendorId === '') return false;
+                const itemVendor = this.itemVendorMap[String(itemId)];
+                if (!itemVendor) return false; // no catalog vendor link — always allowed
+                return String(itemVendor) !== this.vendorId;
+            },
+
             toggleAll() {
-                // Only toggle items that still have remaining qty (not disabled)
                 const allIds = @json(
                     collect($remainingQtys)->filter(fn($r) => $r > 0)->keys()
                 ).map(String);
-                if (this.selectedItems.length === allIds.length) {
-                    this.selectedItems = [];
+
+                const eligible = allIds.filter(id => !this.isItemLocked(id));
+                const allSelected = eligible.length > 0 && eligible.every(id => this.selectedItems.includes(id));
+
+                if (allSelected) {
+                    this.selectedItems = this.selectedItems.filter(id => !eligible.includes(id));
+                    if (this.selectedItems.length === 0) {
+                        this.vendorId = '';
+                    }
                 } else {
-                    this.selectedItems = allIds;
+                    // Auto-set vendor from first eligible item's product line if not already set
+                    if (this.vendorId === '' && eligible.length > 0) {
+                        const firstVendor = this.itemVendorMap[eligible[0]];
+                        if (firstVendor) { this.vendorId = String(firstVendor); }
+                    }
+                    const toAdd = eligible.filter(id => !this.isItemLocked(id));
+                    this.selectedItems = [...new Set([...this.selectedItems, ...toAdd])];
                 }
             },
 

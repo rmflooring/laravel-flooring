@@ -8,6 +8,8 @@ use App\Models\ExternalEventLink;
 use App\Models\Installer;
 use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
+use App\Models\InventoryAllocation;
+use App\Models\PickTicket;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\WorkOrder;
@@ -15,8 +17,10 @@ use App\Models\WorkOrderItem;
 use App\Models\WorkOrderItemMaterial;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
+use App\Services\PickTicketService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -161,7 +165,7 @@ class WorkOrderController extends Controller
             }
         });
 
-        if ($request->boolean('sync_calendar', true)) {
+        if ($request->boolean('sync_calendar', false)) {
             $this->syncCalendarCreate($workOrder);
         }
 
@@ -175,7 +179,79 @@ class WorkOrderController extends Controller
         abort_if($workOrder->sale_id !== $sale->id, 404);
         $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'calendarEvent.externalLink', 'creator']);
 
-        return view('pages.work-orders.show', compact('sale', 'workOrder'));
+        // Load the active staging pick ticket for this WO (if any)
+        $stagingPickTicket = PickTicket::where('work_order_id', $workOrder->id)
+            ->whereNotIn('status', ['cancelled'])
+            ->with(['items.saleItem.room', 'creator'])
+            ->first();
+
+        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket'));
+    }
+
+    // ── Stage Work Order — create a staging pick ticket ───────────
+    public function stagePickTicket(Request $request, Sale $sale, WorkOrder $workOrder, PickTicketService $service): RedirectResponse
+    {
+        abort_if($workOrder->sale_id !== $sale->id, 404);
+
+        // Only one active staging PT per WO
+        $alreadyExists = PickTicket::where('work_order_id', $workOrder->id)
+            ->whereNotIn('status', ['cancelled'])
+            ->exists();
+
+        if ($alreadyExists) {
+            return back()->with('error', 'This work order already has an active staging pick ticket.');
+        }
+
+        $workOrder->load('items.relatedMaterials.saleItem');
+
+        // Collect unique material sale items linked to this WO
+        $materialSaleItems = $workOrder->items
+            ->flatMap(fn ($item) => $item->relatedMaterials)
+            ->map(fn ($mat) => $mat->saleItem)
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        if ($materialSaleItems->isEmpty()) {
+            return back()->with('error', 'No materials are linked to this work order. Add material associations before staging.');
+        }
+
+        // Check that every material has sufficient inventory allocated
+        $saleItemIds  = $materialSaleItems->pluck('id')->all();
+        $allocatedQtys = InventoryAllocation::whereIn('sale_item_id', $saleItemIds)
+            ->selectRaw('sale_item_id, SUM(quantity) as total')
+            ->groupBy('sale_item_id')
+            ->pluck('total', 'sale_item_id')
+            ->map(fn ($v) => (float) $v);
+
+        $notInStock = [];
+        foreach ($materialSaleItems as $saleItem) {
+            $allocated = $allocatedQtys[$saleItem->id] ?? 0.0;
+            $required  = (float) $saleItem->quantity;
+            if ($allocated < $required) {
+                $name = implode(' — ', array_filter([
+                    $saleItem->product_type,
+                    $saleItem->manufacturer,
+                    $saleItem->style,
+                    $saleItem->color_item_number,
+                ])) ?: 'Material';
+                $notInStock[] = "{$name} — need {$required} {$saleItem->unit}, have {$allocated}";
+            }
+        }
+
+        if (! empty($notInStock)) {
+            return back()->with('error',
+                'Cannot stage: the following materials are not fully in stock — ' . implode('; ', $notInStock)
+            );
+        }
+
+        $request->validate([
+            'staging_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $service->createFromWorkOrder($workOrder, $request->input('staging_notes'));
+
+        return back()->with('success', 'Staging pick ticket created.');
     }
 
     public function edit(Sale $sale, WorkOrder $workOrder)
@@ -278,7 +354,7 @@ class WorkOrderController extends Controller
 
         $workOrder->refresh();
 
-        $syncCalendar = $request->boolean('sync_calendar', true);
+        $syncCalendar = $request->boolean('sync_calendar', false);
 
         if (! $wasCancelled) {
             if ($beingCancelled) {

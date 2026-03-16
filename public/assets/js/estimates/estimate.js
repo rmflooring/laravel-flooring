@@ -303,10 +303,13 @@ document.addEventListener('fm:tax-group-selected', (e) => {
     const roomCards = Array.from(roomsContainer.querySelectorAll(".room-card"));
     const roomIndex = roomCards.indexOf(roomCard);
 
-    // Find next item index based on existing [<index>] within this tbody
+    // Find next item index based on existing item indices within this tbody.
+    // Input names are rooms[R][type][I][field] — we need the 2nd digit bracket (I),
+    // not the first (which is the room index R).
     const used = Array.from(tbody.querySelectorAll('[name]'))
       .map(el => {
-        const match = el.name.match(/\[(\d+)\]/);
+        const allMatches = [...el.name.matchAll(/\[(\d+)\]/g)];
+        const match = allMatches[1]; // 2nd [digit] = item index
         return match ? parseInt(match[1], 10) : -1;
       })
       .filter(v => v >= 0);
@@ -1107,7 +1110,8 @@ function initManufacturerDropdownForRoom(roomCard) {
             data-style-id="${s.id}"
             data-style-name="${escapeHtml(s.name)}"
             data-use-box-qty="${s.use_box_qty ? '1' : '0'}"
-            data-units-per="${s.units_per ?? ''}">
+            data-units-per="${s.units_per ?? ''}"
+            data-cost-price="${parseFloat(s.cost_price ?? 0).toFixed(2)}">
             <span class="truncate">${escapeHtml(s.name)}</span>
           </button>
         </li>
@@ -1178,11 +1182,22 @@ function initManufacturerDropdownForRoom(roomCard) {
 		colorInput.dataset.useBoxQty = btn.getAttribute('data-use-box-qty') || '0';
 		colorInput.dataset.unitsPer = btn.getAttribute('data-units-per') || '';
 
+		// Set cost price synchronously from dropdown data — no async fetch needed
+		const costPriceInput = row.querySelector('input[name$="[cost_price]"]');
+		const costTotalInput = row.querySelector('input[name$="[cost_total]"]');
+		const qtyInputCost = row.querySelector('input[name*="[quantity]"]');
+		const catalogCost = parseFloat(btn.getAttribute('data-cost-price') || 0);
+		if (costPriceInput) costPriceInput.value = catalogCost.toFixed(2);
+		if (costTotalInput) {
+			const qty = parseFloat(qtyInputCost?.value || 0);
+			costTotalInput.value = (qty * catalogCost).toFixed(2);
+		}
+
 		// New color selected -> allow autofill again (clear any manual override)
 const priceInput = row.querySelector('input[name*="[materials]"][name$="[sell_price]"]');
 if (priceInput) delete priceInput.dataset.userOverridden;
 
-		// Autofill price now (style price, else line default)
+		// Autofill sell price now (style price, else line default) — async, but cost is already set above
 		autofillSellPriceForRow(row);
 
 		// If qty is already filled, check box qty now

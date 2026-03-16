@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-15 (session 14)
+Updated: 2026-03-16 (session 15)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -28,6 +28,7 @@ Current core modules:
 - Email Templates (per-user + admin system) — see `Context/context_email_templates.md`
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
+- **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
 
 ---
 
@@ -101,6 +102,28 @@ Confirmed sales routes:
 - `pages.sales.show` → `/pages/sales/{sale}`
 - `pages.sales.edit` → `/pages/sales/{sale}/edit`
 - `pages.sales.profits.save-costs` → `POST /pages/sales/{sale}/profits/save-costs`
+
+### Delete Estimates (session 14, 2026-03-16)
+- `EstimateController::destroy()` — blocks if a linked sale exists (`Sale::where('source_estimate_id', ...)->exists()`); otherwise hard-deletes (rooms + items cascade at DB level)
+- Route: `DELETE pages/estimates/{estimate}` → `pages.estimates.destroy` (middleware: `permission:create estimates`)
+- `Estimate` model: added `sale()` hasOne relationship
+- Index: `with(['sale:id,source_estimate_id'])` eager-loaded; Delete button only shown when `$estimate->sale` is null
+- When a sale is deleted the estimate becomes deletable again
+
+### Delete Sales (session 14, 2026-03-16)
+- `SaleController::destroy()` — blocks if POs exist OR work orders exist; otherwise hard-deletes (sale_rooms + sale_items cascade at DB level)
+- Route: `DELETE pages/sales/{sale}` → `pages.sales.destroy` (middleware: `permission:create estimates`)
+- Index: `withCount(['purchaseOrders', 'workOrders'])`; Delete button only shown when both counts are 0
+- Success redirect to `pages.sales.index` with sale number in message
+
+### Estimate → Sale transfer fix (session 14, 2026-03-16)
+- `convertToSale()` was missing homeowner contact fields on older sales
+- Correct mapping: `'homeowner_name' => $estimate->homeowner_name`, `'job_phone' => $estimate->homeowner_phone`, `'job_email' => $estimate->homeowner_email` (estimate uses `homeowner_*`; sale table uses `job_phone`/`job_email`)
+- Sale model uses `$guarded = ['id', 'sale_number']` — all other fields mass-assignable
+
+### Sale show page — details card (session 14, 2026-03-16)
+- Two-column layout: left = Customer, PM, Job Name, Job# (bold, larger text); right = "Job Site" block with homeowner_name, job_address (`whitespace-pre-line`), job_phone, job_email (mailto)
+- `buildJobAddress()` stores address as street + `\n` + city/province/postal — `whitespace-pre-line` renders it on 2 lines
 
 Financial display logic:
 - Revised Contract Total = `revised_contract_total` → `locked_grand_total` → `grand_total`
@@ -214,6 +237,8 @@ Full details in `Context/context_work_orders.md`.
 - Email to installer via Track 1 (shared mailbox) with PDF attached; `sent_at` stamped
 - Permissions: view/create/edit/delete work orders → admin, coordinator, estimator, sales (view only: reception)
 - WO card on sale **edit** page (below PO card); WO section on sale show page; Sale Status page fully wired
+- **WO Staging / Pick Tickets (session 14, 2026-03-16)**: "Stage Work Order" button on WO show page creates a `staged` PickTicket with all linked material items. Stock check blocks staging if any material doesn't have sufficient inventory allocated. `staged` is a new PickTicket status (orange badge). `PickTicketService::createFromWorkOrder()` handles creation. Warehouse pick ticket show page updated with staged → deliver action and WO details card. `inventory_allocation_id` made nullable on `pick_ticket_items`.
+- **Calendar opt-out bug fix (session 14)**: `$request->boolean('sync_calendar', true)` → changed default to `false` in both `store()` and `update()` — unchecked checkbox posts no value, so `true` default was always overriding the user's opt-out.
 
 ---
 
@@ -296,6 +321,10 @@ Full details in `Context/context_purchase_orders.md`.
 - PDF, show, index blades all null-safe for missing sale; vendor column bug fixed (`company_name`)
 - `+ Create PO` button on PO index; "Stock PO" label on show/PDF
 
+### Purchase Orders — Bug fix (session 14, 2026-03-16)
+- **Pickup scheduling fields** in `create.blade.php` and `create-stock.blade.php` now have `:disabled="fulfillmentMethod !== 'pickup'"` — prevents `pickup_time` (which had default `09:00`) from submitting when fulfillment is not "pickup", fixing a validation error that blocked PO creation.
+- Removed redundant `required_with` rules from sale-PO `store()` validation.
+
 ### Purchase Order open items
 - No invoice/payment tracking against POs yet
 - No "received items" partial-receive workflow yet
@@ -329,6 +358,14 @@ Full details in `Context/context_purchase_orders.md`.
 | WO controller | `app/Http/Controllers/Pages/WorkOrderController.php` |
 | WO views | `resources/views/pages/work-orders/` |
 | WO models | `app/Models/WorkOrder.php`, `app/Models/WorkOrderItem.php` |
+| Pick ticket controller | `app/Http/Controllers/Pages/WarehousePickTicketController.php` |
+| Pick ticket views | `resources/views/pages/warehouse/pick-tickets/` |
+| Pick ticket PDF | `resources/views/pdf/pick-ticket.blade.php` |
+| Pick ticket models | `app/Models/PickTicket.php`, `app/Models/PickTicketItem.php` |
+| Inventory controller | `app/Http/Controllers/Pages/InventoryController.php` |
+| Inventory views | `resources/views/pages/inventory/` |
+| Inventory models | `app/Models/InventoryReceipt.php`, `app/Models/InventoryAllocation.php` |
+| Inventory/PT services | `app/Services/InventoryService.php`, `app/Services/PickTicketService.php` |
 | Installer controller | `app/Http/Controllers/Admin/InstallerController.php` |
 | Installer views | `resources/views/admin/installers/` |
 | Installer model | `app/Models/Installer.php` |
@@ -426,6 +463,53 @@ Fixed tax label and totals not displaying correctly on page load in both estimat
 
 ---
 
+## Pick Ticket enhancements (session 15, 2026-03-16)
+
+Full details in `Context/context_warehouse_pick_tickets.md`.
+
+### Pick Ticket PDF
+- New route: `GET warehouse/pick-tickets/{pickTicket}/pdf` → `pages.warehouse.pick-tickets.pdf`
+- Template: `resources/views/pdf/pick-ticket.blade.php` — matches WO/PO style; items grouped by room
+- "Print PDF" button always visible in PT show page header
+
+### Room column bug fix
+- PT show blade was using `->room->name` (wrong) → fixed to `->room->room_name`
+
+### Staging modal (replaces direct form POST)
+- "Stage Work Order" button → modal with warehouse notes textarea + "Staged by: {you}" info box
+- `staging_notes` saved to `pick_tickets` table (migration `2026_03_16_260000_...`)
+- "Staged by" meta bar shown on WO page when PT is active
+
+### Unstaging
+- New `POST warehouse/pick-tickets/{pickTicket}/unstage` route → `WarehousePickTicketController::unstage()`
+- Unstage modal: shows staged-by info, reason textarea, "Unstaged by: {you}" box
+- Stamps `unstaged_by`, `unstaged_at`, `unstage_reason` on PT; sets status = `cancelled`
+- `PickTicketService::unstage()` added
+- Timeline card on PT show: displays "Unstaged by {name}" entry + reason section
+- `PickTicket::unstagedBy()` relationship added
+
+### Partial delivery (per-item qty tracking)
+- New `delivered_qty decimal(10,2) default 0` on `pick_ticket_items` (migration `2026_03_16_270000_...`)
+- New status `partially_delivered` (yellow badge) between staged and delivered
+- `PickTicketService::deliver()` rewritten — accepts `$itemQtys` array, updates `delivered_qty` per item, determines full vs partial
+- "Record Delivery" modal shows per-item table with "Ordered / Delivered / Remaining / Delivering Now" columns; inputs pre-fill with remaining qty
+- WO show page "Mark Delivered" → changed to "Record Delivery" link to PT show page (full UX there)
+- PT items table: Ordered | Delivered | Remaining columns (replaces single Qty column)
+
+### Key files
+| File | Role |
+|------|------|
+| `app/Models/PickTicket.php` | Added `unstaged_at` cast, `unstagedBy()`, `partially_delivered` status |
+| `app/Models/PickTicketItem.php` | Added `delivered_qty` cast |
+| `app/Services/PickTicketService.php` | `createFromWorkOrder()` + `deliver()` updated; `unstage()` added |
+| `app/Http/Controllers/Pages/WarehousePickTicketController.php` | `pdf()`, `unstage()` added; `updateStatus()` updated |
+| `resources/views/pages/warehouse/pick-tickets/show.blade.php` | Delivery modal, unstage modal, items table, timeline |
+| `resources/views/pages/warehouse/pick-tickets/_status-badge.blade.php` | `partially_delivered` badge added |
+| `resources/views/pages/work-orders/show.blade.php` | Stage modal, unstage modal, staging meta bar |
+| `resources/views/pdf/pick-ticket.blade.php` | New PDF template |
+
+---
+
 ## Resume prompts for next chat
 
 **To continue email work (RFM templates, HTML bodies, invoice send flow):**
@@ -448,6 +532,9 @@ Fixed tax label and totals not displaying correctly on page load in both estimat
 
 **To continue product catalog / estimates / sales work:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md and Context/project-context-product-pricing.md. I want to continue working on the product catalog or estimate/sale builder. One step at a time.
+
+**To continue warehouse / pick ticket work:**
+> Read CLAUDE.md and Context/context_warehouse_pick_tickets.md. I want to continue working on the warehouse/pick ticket module. One step at a time.
 
 **To start a fresh feature:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md, then tell me the current state of the system before we begin.

@@ -117,38 +117,68 @@
             <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-4">
                 <h2 class="text-lg font-semibold text-gray-900">Details</h2>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <div class="text-gray-500">Customer</div>
-                        <div class="font-medium text-gray-900">{{ $sale->customer_name ?? '—' }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+
+                    {{-- Left: job identifiers --}}
+                    <div class="space-y-3">
+                        <div>
+                            <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Customer</div>
+                            <div class="mt-0.5 font-medium text-gray-900">{{ $sale->customer_name ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium uppercase tracking-wide text-gray-400">PM</div>
+                            <div class="mt-0.5 font-medium text-gray-900">{{ $sale->pm_name ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Job Name</div>
+                            <div class="mt-0.5 font-medium text-gray-900">{{ $sale->job_name ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Job #</div>
+                            <div class="mt-0.5 text-base font-bold text-gray-900">{{ $sale->job_no ?? '—' }}</div>
+                        </div>
                     </div>
 
+                    {{-- Right: job site contact & address --}}
                     <div>
-                        <div class="text-gray-500">PM</div>
-                        <div class="font-medium text-gray-900">{{ $sale->pm_name ?? '—' }}</div>
+                        <div class="text-xs font-medium uppercase tracking-wide text-gray-400 mb-1">Job Site</div>
+                        @if ($sale->homeowner_name || $sale->job_address || $sale->job_phone || $sale->job_email)
+                            <div class="space-y-0.5 text-sm">
+                                @if ($sale->homeowner_name)
+                                    <div class="font-medium text-gray-900">{{ $sale->homeowner_name }}</div>
+                                @endif
+                                @if ($sale->job_address)
+                                    <div class="text-gray-700 whitespace-pre-line leading-relaxed">{{ $sale->job_address }}</div>
+                                @endif
+                                @if ($sale->job_phone)
+                                    <div class="text-gray-700">{{ $sale->job_phone }}</div>
+                                @endif
+                                @if ($sale->job_email)
+                                    <div>
+                                        <a href="mailto:{{ $sale->job_email }}"
+                                           class="text-blue-600 hover:underline">{{ $sale->job_email }}</a>
+                                    </div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="text-gray-400">—</div>
+                        @endif
                     </div>
 
-                    <div>
-                        <div class="text-gray-500">Job</div>
-                        <div class="font-medium text-gray-900">{{ $sale->job_name ?? '—' }}</div>
-                        <div class="text-xs text-gray-500">{{ $sale->job_no ?? '' }}</div>
-                    </div>
+                </div>
 
+                {{-- Secondary row: source estimate + notes --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm pt-4 border-t border-gray-100">
                     <div>
-                        <div class="text-gray-500">Job Address</div>
-                        <div class="font-medium text-gray-900">{{ $sale->job_address ?? '—' }}</div>
+                        <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Source Estimate #</div>
+                        <div class="mt-0.5 font-medium text-gray-900">{{ $sale->source_estimate_number ?? '—' }}</div>
                     </div>
-
                     <div>
-                        <div class="text-gray-500">Source Estimate #</div>
-                        <div class="font-medium text-gray-900">{{ $sale->source_estimate_number ?? '—' }}</div>
-                    </div>
-
-                    <div>
-                        <div class="text-gray-500">Notes</div>
-                        <div class="font-medium text-gray-900 whitespace-pre-line">{{ $sale->notes ?? '—' }}</div>
+                        <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Notes</div>
+                        <div class="mt-0.5 font-medium text-gray-900 whitespace-pre-line">{{ $sale->notes ?? '—' }}</div>
                     </div>
                 </div>
+
             </div>
 
             {{-- Rooms --}}

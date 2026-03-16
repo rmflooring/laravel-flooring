@@ -79,7 +79,9 @@ class SaleController extends Controller
 			});
 		}
 
-		$sales = $query->paginate(25)->withQueryString();
+		$sales = $query
+            ->withCount(['purchaseOrders', 'workOrders'])
+            ->paginate(25)->withQueryString();
 
 		return view('pages.sales.index', compact(
 			'sales',
@@ -373,9 +375,27 @@ private function isRowEmpty(array $row, array $keysToCheck): bool
     return true;
 }
 
+public function destroy(Sale $sale)
+{
+    if ($sale->purchaseOrders()->exists()) {
+        return back()->with('error', 'This sale cannot be deleted because it has purchase orders associated with it.');
+    }
+
+    if ($sale->workOrders()->exists()) {
+        return back()->with('error', 'This sale cannot be deleted because it has work orders associated with it.');
+    }
+
+    $sale->delete();
+
+    return redirect()->route('pages.sales.index')->with('success', 'Sale #' . $sale->sale_number . ' deleted.');
+}
+
 public function showProfits(Sale $sale)
 {
-    $sale->load(['rooms.items']);
+    $sale->load([
+        'rooms.items.productStyle',
+        'rooms.items.sourceEstimateItem.productStyle',
+    ]);
 
     return view('pages.profits.show', [
         'recordType' => 'sale',

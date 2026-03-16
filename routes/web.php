@@ -511,17 +511,29 @@ Route::prefix('pages')
 			->middleware('permission:create estimates')
 			->name('estimates.convert-to-sale');
 
+		Route::delete('estimates/{estimate}', [EstimateController::class, 'destroy'])
+			->middleware('permission:create estimates')
+			->name('estimates.destroy');
+
 		Route::get('sales/{sale}/edit', [\App\Http\Controllers\Pages\SaleController::class, 'edit'])
   ->name('sales.edit');
 		
 		Route::put('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'update'])
   ->name('sales.update');
 
+		Route::delete('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'destroy'])
+			->middleware('permission:create estimates')
+			->name('sales.destroy');
+
 		Route::get('sales', [\App\Http\Controllers\Pages\SaleController::class, 'index'])
     ->name('sales.index');
 
 		Route::get('sales/{sale}/status', [\App\Http\Controllers\Pages\SaleStatusController::class, 'show'])
 			->name('sales.status')
+			->middleware('role_or_permission:admin|view sale status');
+
+		Route::post('sales/{sale}/sale-items/{saleItem}/inventory-allocations', [\App\Http\Controllers\Pages\InventoryAllocationController::class, 'store'])
+			->name('sales.inventory-allocations.store')
 			->middleware('role_or_permission:admin|view sale status');
 
 		Route::get('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'show'])
@@ -562,6 +574,42 @@ Route::prefix('pages')
 		Route::post('sales/{sale}/work-orders/{workOrder}/send-email', [\App\Http\Controllers\Pages\WorkOrderController::class, 'sendEmail'])
 			->name('sales.work-orders.send-email')
 			->middleware('role_or_permission:admin|edit work orders');
+
+		Route::post('sales/{sale}/work-orders/{workOrder}/stage-pick-ticket', [\App\Http\Controllers\Pages\WorkOrderController::class, 'stagePickTicket'])
+			->name('sales.work-orders.stage-pick-ticket')
+			->middleware('role_or_permission:admin|edit work orders');
+
+		// Inventory
+		Route::get('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'index'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('inventory.index');
+
+		Route::get('inventory/{inventoryReceipt}', [\App\Http\Controllers\Pages\InventoryController::class, 'show'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('inventory.show');
+
+		// Warehouse — Pick Tickets
+		Route::prefix('warehouse')->name('warehouse.')->group(function () {
+			Route::get('pick-tickets', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'index'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.index');
+
+			Route::get('pick-tickets/{pickTicket}', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'show'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.show');
+
+			Route::get('pick-tickets/{pickTicket}/pdf', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'pdf'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.pdf');
+
+			Route::post('pick-tickets/{pickTicket}/unstage', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'unstage'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.unstage');
+
+			Route::patch('pick-tickets/{pickTicket}/status', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'updateStatus'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.update-status');
+		});
 
 		// Purchase Orders — index
 		Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])
@@ -611,6 +659,14 @@ Route::prefix('pages')
 		Route::get('purchase-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'previewPdf'])
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('purchase-orders.pdf');
+
+		Route::get('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receiveForm'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.receive.form');
+
+		Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.receive');
 
 		Route::post('purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendEmail'])
 			->middleware('role_or_permission:admin|edit purchase orders')

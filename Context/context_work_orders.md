@@ -1,5 +1,5 @@
 # Work Orders Module — Dev Context
-Updated: 2026-03-15 (session 12)
+Updated: 2026-03-16 (session 15)
 
 ---
 
@@ -228,6 +228,7 @@ e.g. `John - Smith`
 - Posts `sync_calendar=1`; unchecked posts nothing (falsy)
 - On create: skips `syncCalendarCreate()` if unchecked
 - On edit: if unchecked and event exists → cancels/removes the event; edit form shows amber warning when unchecking an already-synced WO
+- **Bug fix (2026-03-16)**: `$request->boolean('sync_calendar', true)` defaulted to `true` when checkbox was unchecked (no POST value). Fixed to `false` default in both `store()` and `update()`.
 
 ---
 
@@ -347,6 +348,44 @@ Matches PO style (DejaVu Sans, `#1d4ed8` blue):
 `resources/views/pages/sales/status.blade.php`:
 - WO table columns: WO Number, Installer, Items, Scheduled, Status, Calendar, link
 - Progress bar + overall status badge factor in WO statuses (see `context_sale_status.md`)
+
+---
+
+---
+
+## WO Staging / Pick Tickets (sessions 14–15, 2026-03-16)
+
+Full pick ticket details in `Context/context_warehouse_pick_tickets.md`.
+
+A Work Order can be **staged** — creating a `staged` PickTicket from the WO show page.
+
+### Stage Pick Ticket flow
+- "Stage Work Order" orange button → opens a **modal** (not a direct POST)
+  - Warehouse notes textarea (optional) → saved as `staging_notes` on the PT
+  - "Staged by: {current user}" info box displayed
+- Route: `POST pages/sales/{sale}/work-orders/{workOrder}/stage-pick-ticket` → `WorkOrderController::stagePickTicket(Request $request, ...)`
+- Stock check blocks if: active PT exists, no materials linked, or any material has insufficient `InventoryAllocation`
+
+### Unstage flow
+- "Unstage" red button → opens **unstage modal**
+  - Shows PT#, staged by + date, staging notes
+  - Reason textarea (optional)
+- Route: `POST warehouse/pick-tickets/{pickTicket}/unstage` → `WarehousePickTicketController::unstage()`
+- Sets `status = cancelled`, stamps `unstaged_by`, `unstaged_at`, `unstage_reason`
+- WO can be re-staged after unstaging
+
+### Delivery flow
+- "Record Delivery" green button on WO staging section → **links to the PT show page** (full per-item delivery UX lives there, not inline on WO page)
+- Supports partial delivery: each item has its own `delivered_qty`; status becomes `partially_delivered` until all items are fully delivered → then `delivered`
+
+### Material Staging section on WO show page
+- Shown below WO notes card; gated by `@can('edit work orders')`
+- Orange "Staged by / notes" meta bar (creator name, date, staging notes if any)
+- Job info grid: Sale#, Job, Installer, Install date
+- Materials table: Material | Qty | Unit | Room
+
+### `WorkOrderController::show()`
+- `$stagingPickTicket` loaded via `PickTicket::where('work_order_id', ...)->whereNotIn('status', ['cancelled'])->with(['items.saleItem.room', 'creator'])->first()`
 
 ---
 

@@ -88,6 +88,9 @@ class PermissionsSeeder extends Seeder
             'create work orders',
             'edit work orders',
             'delete work orders',
+
+            // ===== Pick Tickets =====
+            'view pick tickets',
         ];
 
         foreach ($permissions as $permission) {
