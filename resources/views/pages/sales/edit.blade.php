@@ -21,6 +21,10 @@
 
                 <div class="flex items-center gap-2">
 
+<a href="{{ route('pages.sales.show', $sale) }}"
+  class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
+  ← View Sale
+</a>
 
 <button type="submit"
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
