@@ -9,9 +9,25 @@ use App\Models\Vendor;
 
 class ProductStyleController extends Controller
 {
-    public function index(ProductLine $product_line)
+    public function index(Request $request, ProductLine $product_line)
     {
-        $styles = $product_line->productStyles()->latest()->paginate(20);
+        $query = $product_line->productStyles();
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('style_number', 'like', "%{$search}%")
+                  ->orWhere('color', 'like', "%{$search}%")
+                  ->orWhere('pattern', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        $styles = $query->orderBy('name')->paginate(50)->withQueryString();
 
         $allIds = ProductLine::orderBy('id')->pluck('id')->toArray();
         $currentIndex = array_search($product_line->id, $allIds, true); // strict

@@ -44,6 +44,39 @@
             <a href="{{ $prevId ? route('admin.product_styles.index', $prevId) : '#' }}" id="prevLine" class="hidden"></a>
             <a href="{{ $nextId ? route('admin.product_styles.index', $nextId) : '#' }}" id="nextLine" class="hidden"></a>
 
+            {{-- Search / Filter --}}
+            <form method="GET" action="{{ route('admin.product_styles.index', $product_line) }}"
+                  class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-6 bg-white dark:bg-gray-800">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Search</label>
+                        <input type="text" name="search" value="{{ request('search') }}"
+                               placeholder="Name, SKU, style number, colour, pattern..."
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-4 focus:ring-blue-300 focus:border-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Status</label>
+                        <select name="status"
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-4 focus:ring-blue-300 focus:border-blue-500">
+                            <option value="">All</option>
+                            <option value="active"   @selected(request('status') === 'active')>Active</option>
+                            <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
+                            <option value="dropped"  @selected(request('status') === 'dropped')>Dropped</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center gap-3">
+                    <button type="submit"
+                            class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300">
+                        Search
+                    </button>
+                    <a href="{{ route('admin.product_styles.index', $product_line) }}"
+                       class="inline-flex items-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">
+                        Reset
+                    </a>
+                </div>
+            </form>
+
             <!-- Table & Styles -->
             <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
                 <div class="p-6">
@@ -149,6 +182,11 @@
                                 </tbody>
                             </table>
                         </div>
+                    @endif
+
+                    {{-- Pagination --}}
+                    @if($styles->hasPages())
+                        <div class="mt-4">{{ $styles->links() }}</div>
                     @endif
 
                     <!-- Navigation info -->
