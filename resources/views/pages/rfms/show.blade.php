@@ -53,7 +53,12 @@
 
                 {{-- Job Info --}}
                 <div class="p-6">
-                    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4 dark:text-gray-400">Job Info</h2>
+                    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 dark:text-gray-400">Job Info</h2>
+                    @if($opportunity->job_no)
+                        <p class="text-sm font-bold text-gray-900 dark:text-white mb-4">Job #{{ $opportunity->job_no }}</p>
+                    @else
+                        <div class="mb-4"></div>
+                    @endif
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
                         {{-- Parent Customer + PM --}}
@@ -77,27 +82,36 @@
                             @endif
                         </div>
 
-                        {{-- Job Site + Address --}}
-                        <div class="space-y-3">
-                            <div>
-                                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Job Site</p>
-                                <p class="text-sm text-gray-900 dark:text-white">
-                                    {{ $opportunity->jobSiteCustomer?->company_name ?: $opportunity->jobSiteCustomer?->name ?? '—' }}
+                        {{-- Job Site + Address + Contact --}}
+                        <div>
+                            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:bg-gray-700/50 dark:border-gray-600 space-y-1">
+                                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Job Site</p>
+                                <p class="font-medium text-gray-900 dark:text-white">
+                                    {{ $opportunity->jobSiteCustomer?->name ?: ($opportunity->jobSiteCustomer?->company_name ?? '—') }}
                                 </p>
+                                @if($opportunity->jobSiteCustomer?->phone)
+                                    <div><span class="text-gray-500 dark:text-gray-400">Phone:</span> {{ $opportunity->jobSiteCustomer->phone }}</div>
+                                @endif
+                                @if($opportunity->jobSiteCustomer?->mobile)
+                                    <div><span class="text-gray-500 dark:text-gray-400">Mobile:</span> {{ $opportunity->jobSiteCustomer->mobile }}</div>
+                                @endif
+                                @if($opportunity->jobSiteCustomer?->email)
+                                    <div><span class="text-gray-500 dark:text-gray-400">Email:</span> {{ $opportunity->jobSiteCustomer->email }}</div>
+                                @endif
+                                @php
+                                    $hasAddr = $rfm->site_address || $rfm->site_city || $rfm->site_postal_code;
+                                @endphp
+                                @if($hasAddr)
+                                    <div class="pt-1 text-gray-700 dark:text-gray-200">
+                                        @if($rfm->site_address)
+                                            <div>{{ $rfm->site_address }}</div>
+                                        @endif
+                                        @if($rfm->site_city || $rfm->site_postal_code)
+                                            <div>{{ implode(', ', array_filter([$rfm->site_city, $rfm->site_postal_code])) }}</div>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
-                            @php
-                                $addressParts = array_filter([$rfm->site_address, $rfm->site_city, $rfm->site_postal_code]);
-                            @endphp
-                            @if($addressParts)
-                                <div class="text-sm text-gray-900 dark:text-white space-y-0.5">
-                                    @if($rfm->site_address)
-                                        <p>{{ $rfm->site_address }}</p>
-                                    @endif
-                                    @if($rfm->site_city || $rfm->site_postal_code)
-                                        <p>{{ implode(', ', array_filter([$rfm->site_city, $rfm->site_postal_code])) }}</p>
-                                    @endif
-                                </div>
-                            @endif
                         </div>
 
                     </div>

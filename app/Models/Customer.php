@@ -28,6 +28,11 @@ class Customer extends Model
         'customer_type',
         'customer_status',
         'notes',
+        'insurance_company',
+        'adjuster',
+        'policy_number',
+        'claim_number',
+        'dol',
         'created_by',
         'updated_by',
     ];

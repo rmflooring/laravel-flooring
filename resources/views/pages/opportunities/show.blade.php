@@ -114,6 +114,9 @@
                                         @if($opportunity->jobSiteCustomer->phone)
                                             <div><span class="text-gray-500 dark:text-gray-400">Phone:</span> {{ $opportunity->jobSiteCustomer->phone }}</div>
                                         @endif
+                                        @if($opportunity->jobSiteCustomer->mobile)
+                                            <div><span class="text-gray-500 dark:text-gray-400">Mobile:</span> {{ $opportunity->jobSiteCustomer->mobile }}</div>
+                                        @endif
                                         @if($opportunity->jobSiteCustomer->email)
                                             <div><span class="text-gray-500 dark:text-gray-400">Email:</span> {{ $opportunity->jobSiteCustomer->email }}</div>
                                         @endif

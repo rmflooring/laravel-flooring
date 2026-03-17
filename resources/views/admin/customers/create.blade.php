@@ -5,7 +5,7 @@
                 <div class="p-6 text-gray-900">
                     <h1 class="text-3xl font-bold mb-6">Add New Customer</h1>
 
-                    <form method="POST" action="{{ route('admin.customers.store') }}">
+                    <form method="POST" action="{{ route('admin.customers.store') }}" x-data="{ hasParent: {{ old('parent_id') ? 'true' : 'false' }} }">
                         @csrf
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -38,7 +38,7 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Parent Customer</label>
-                                <select name="parent_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <select name="parent_id" @change="hasParent = $event.target.value !== ''" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     <option value="">None (Top Level)</option>
                                     @foreach($parents as $id => $name)
                                         <option value="{{ $id }}" {{ old('parent_id') == $id ? 'selected' : '' }}>{{ $name }}</option>
@@ -97,6 +97,44 @@
                         <div class="mt-6">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
                             <textarea name="notes" rows="4" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('notes') }}</textarea>
+                        </div>
+
+                        {{-- Insurance Details — only shown when a parent customer is selected --}}
+                        <div x-show="hasParent" x-cloak class="mt-8 border-t border-gray-200 pt-6">
+                            <h2 class="text-lg font-semibold text-gray-800 mb-4">Insurance Details</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Insurance Co.</label>
+                                    <input type="text" name="insurance_company" value="{{ old('insurance_company') }}"
+                                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Adjuster</label>
+                                    <input type="text" name="adjuster" value="{{ old('adjuster') }}"
+                                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Policy #</label>
+                                    <input type="text" name="policy_number" value="{{ old('policy_number') }}"
+                                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Claim #</label>
+                                    <input type="text" name="claim_number" value="{{ old('claim_number') }}"
+                                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">DOL (Date of Loss)</label>
+                                    <input type="date" name="dol" value="{{ old('dol') }}"
+                                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+
+                            </div>
                         </div>
 
                         <div class="mt-8 flex gap-4">

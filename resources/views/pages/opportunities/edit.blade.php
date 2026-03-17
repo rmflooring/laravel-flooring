@@ -283,6 +283,44 @@
                                                     <textarea name="notes" rows="3" x-model="form.notes"
                                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm"></textarea>
                                                 </div>
+
+                                                {{-- Insurance Details --}}
+                                                <div class="col-span-1 md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+                                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Insurance Details</p>
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                                        <div>
+                                                            <label class="block text-sm font-medium mb-1">Insurance Co.</label>
+                                                            <input type="text" name="insurance_company" x-model="form.insurance_company"
+                                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-sm font-medium mb-1">Adjuster</label>
+                                                            <input type="text" name="adjuster" x-model="form.adjuster"
+                                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-sm font-medium mb-1">Policy #</label>
+                                                            <input type="text" name="policy_number" x-model="form.policy_number"
+                                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-sm font-medium mb-1">Claim #</label>
+                                                            <input type="text" name="claim_number" x-model="form.claim_number"
+                                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-sm font-medium mb-1">DOL (Date of Loss)</label>
+                                                            <input type="date" name="dol" x-model="form.dol"
+                                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                                        </div>
+
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div class="flex justify-end gap-3 px-6 py-4 border-t">
@@ -434,6 +472,44 @@
                                     <label class="block text-sm font-medium mb-1">Notes</label>
                                     <textarea name="notes" rows="3"
                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm"></textarea>
+                                </div>
+
+                                {{-- Insurance Details --}}
+                                <div class="col-span-1 md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Insurance Details</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Insurance Co.</label>
+                                            <input type="text" name="insurance_company"
+                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Adjuster</label>
+                                            <input type="text" name="adjuster"
+                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Policy #</label>
+                                            <input type="text" name="policy_number"
+                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Claim #</label>
+                                            <input type="text" name="claim_number"
+                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">DOL (Date of Loss)</label>
+                                            <input type="date" name="dol"
+                                                   class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                        </div>
+
+                                    </div>
                                 </div>
                             </div>
 
@@ -650,23 +726,29 @@
                 editAction: '',
                 form: {
                     name: '', company_name: '', email: '', phone: '', mobile: '',
-                    address: '', address2: '', city: '', province: '', postal_code: '', notes: ''
+                    address: '', address2: '', city: '', province: '', postal_code: '', notes: '',
+                    insurance_company: '', adjuster: '', policy_number: '', claim_number: '', dol: ''
                 },
                 openEdit() {
                     const site = jobSiteData[this.selectedId];
                     if (!site) return;
                     this.editAction = '/pages/job-sites/' + site.id;
-                    this.form.name          = site.name || '';
-                    this.form.company_name  = site.company_name || '';
-                    this.form.email         = site.email || '';
-                    this.form.phone         = site.phone || '';
-                    this.form.mobile        = site.mobile || '';
-                    this.form.address       = site.address || '';
-                    this.form.address2      = site.address2 || '';
-                    this.form.city          = site.city || '';
-                    this.form.province      = site.province || '';
-                    this.form.postal_code   = site.postal_code || '';
-                    this.form.notes         = site.notes || '';
+                    this.form.name              = site.name || '';
+                    this.form.company_name      = site.company_name || '';
+                    this.form.email             = site.email || '';
+                    this.form.phone             = site.phone || '';
+                    this.form.mobile            = site.mobile || '';
+                    this.form.address           = site.address || '';
+                    this.form.address2          = site.address2 || '';
+                    this.form.city              = site.city || '';
+                    this.form.province          = site.province || '';
+                    this.form.postal_code       = site.postal_code || '';
+                    this.form.notes             = site.notes || '';
+                    this.form.insurance_company = site.insurance_company || '';
+                    this.form.adjuster          = site.adjuster || '';
+                    this.form.policy_number     = site.policy_number || '';
+                    this.form.claim_number      = site.claim_number || '';
+                    this.form.dol               = site.dol || '';
                     this.editOpen = true;
                 }
             };

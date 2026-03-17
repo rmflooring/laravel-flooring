@@ -130,6 +130,11 @@ public function store(Request $request)
         'parent_id' => 'nullable|exists:customers,id',
         'province' => 'nullable|string|size:2',
         'postal_code' => 'nullable|string',
+        'insurance_company' => 'nullable|string|max:255',
+        'adjuster' => 'nullable|string|max:255',
+        'policy_number' => 'nullable|string|max:255',
+        'claim_number' => 'nullable|string|max:255',
+        'dol' => 'nullable|date',
     ], [
         // Custom message: at least one of name or company_name required
         'required_without_all' => 'Either Name or Company Name must be provided.',
@@ -156,6 +161,11 @@ public function store(Request $request)
         'customer_type',
         'customer_status',
         'notes',
+        'insurance_company',
+        'adjuster',
+        'policy_number',
+        'claim_number',
+        'dol',
     ]));
 
     // If a redirect_to URL was provided (ex: from the Job Site modal),
@@ -240,6 +250,11 @@ public function update(Request $request, Customer $customer)
         'parent_id' => 'nullable|exists:customers,id',
         'province' => 'nullable|string|size:2',
         'postal_code' => 'nullable|string',
+        'insurance_company' => 'nullable|string|max:255',
+        'adjuster' => 'nullable|string|max:255',
+        'policy_number' => 'nullable|string|max:255',
+        'claim_number' => 'nullable|string|max:255',
+        'dol' => 'nullable|date',
     ]);
 
     // At least one of name or company_name

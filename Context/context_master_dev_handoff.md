@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-16 (session 16)
+Updated: 2026-03-17 (session 19)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -544,6 +544,18 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 | `app/Http/Controllers/Pages/WorkOrderController.php` | Removed staging stock check + unused import |
 | `resources/views/pages/warehouse/pick-tickets/show.blade.php` | "Return Items" modal + updated items table |
 | `database/migrations/2026_03_16_280000_...` | `returned_qty` column on `pick_ticket_items` |
+
+---
+
+## Customers — Insurance fields + UI fixes (session 19, 2026-03-17)
+
+- **5 insurance fields** added to `customers` table: `insurance_company`, `adjuster`, `policy_number`, `claim_number`, `dol` (date)
+- Fields are for job site (child) customers only — not top-level parent customers
+- **`customers/create.blade.php`** — "Insurance Details" section shown via Alpine.js `x-show="hasParent"` when a parent is selected
+- **Opportunity create + edit modals** — both the Create Job Site and Edit Job Site modals include the insurance fields; edit modal pre-populates via Alpine.js `openEdit()`
+- **`JobSiteCustomerController::store()`** also now saves full address fields (address2, city, province, postal_code, mobile) that were previously missing
+- **RFM show page** — Job No. now displayed in bold under "Job Info"; Job Site card redesigned to match opportunity show style (name, phone, mobile, email, address)
+- **Opportunity show page** — Mobile added to Job Site Customer card
 
 ---
 

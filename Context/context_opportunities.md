@@ -158,3 +158,38 @@ Sorted in blade using `created_at`
 - `filterJobSites(preselectJobSiteId)`: accepts optional ID to auto-select after filtering
 - `loadProjectManagers(preselectId)`: accepts optional ID to auto-select after async load
 
+---
+
+## Insurance fields on job site customers (2026-03-17)
+
+Added 5 insurance-related fields to the `customers` table, only relevant for job site (child) customers:
+
+| Field | Column | Type |
+|-------|--------|------|
+| Insurance Co. | `insurance_company` | string, nullable |
+| Adjuster | `adjuster` | string, nullable |
+| Policy # | `policy_number` | string, nullable |
+| Claim # | `claim_number` | string, nullable |
+| DOL (Date of Loss) | `dol` | date, nullable |
+
+**Migration:** `2026_03_17_181658_add_insurance_fields_to_customers_table`
+
+**Model:** `app/Models/Customer.php` — all 5 fields added to `$fillable`
+
+**Controllers updated:**
+- `CustomerController::store()` + `update()` — validation + save
+- `JobSiteCustomerController::store()` + `update()` — validation + save (store also now saves full address fields it was previously missing)
+- `OpportunityController::create()` + `edit()` — 5 new fields added to `get([...])` so Alpine.js `jobSiteData` includes them
+
+**Views updated:**
+- `admin/customers/create.blade.php` — "Insurance Details" section added below Notes; uses Alpine.js `x-show="hasParent"` (hidden until a parent customer is selected from the dropdown)
+- `pages/opportunities/create.blade.php` — insurance fields added to the Create Job Site modal
+- `pages/opportunities/edit.blade.php` — insurance fields added to both the Create Job Site modal and the Edit Job Site modal; Alpine.js `form` object and `openEdit()` updated to pre-populate from `jobSiteData`
+
+**RFM show page (2026-03-17):**
+- Job No. added in bold below the "Job Info" section heading
+- Job Site block redesigned to match the opportunity show page style: bordered card with name, phone, mobile, email, then address lines below
+
+**Opportunity show page (2026-03-17):**
+- Mobile number added to the Job Site Customer card (between Phone and Email)
+
