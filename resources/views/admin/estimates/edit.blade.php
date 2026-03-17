@@ -261,7 +261,11 @@
         {{-- Materials --}}
 <div>
   <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-gray-900">Materials</h3>
+    <div class="flex items-center gap-2">
+      <h3 class="text-sm font-semibold text-gray-900">Materials</h3>
+      <button type="button" data-order-qty-toggle
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border transition-colors"></button>
+    </div>
     <button type="button"
       class="add-material-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
       + Add Material Row
@@ -274,6 +278,7 @@
         <tr>
           <th class="px-3 py-3">Product Type</th>
           <th class="px-3 py-3">Qty</th>
+          <th class="px-3 py-3" data-order-qty-header>Order Qty</th>
           <th class="px-3 py-3">Unit</th>
           <th class="px-3 py-3">Manufacturer</th>
           <th class="px-3 py-3">Style</th>
@@ -316,11 +321,20 @@
           class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
+      <td class="px-3 py-2" data-order-qty-cell>
+        <input type="number" step="0.01"
+          name="rooms[{{ $roomIndex }}][materials][{{ $i }}][order_qty]"
+          value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
+          placeholder="—"
+          class="w-24 border rounded-lg p-2"
+          style="background-color:#eef2ff; border-color:#a5b4fc;">
+      </td>
+
       <td class="px-3 py-2">
 		  <input type="text"
 			name="rooms[{{ $roomIndex }}][materials][{{ $i }}][unit]"
 			value="{{ old("rooms.$roomIndex.materials.$i.unit", $item->unit) }}"
-			class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+			class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2">
 
 		  <input type="hidden"
 			name="rooms[{{ $roomIndex }}][materials][{{ $i }}][cost_price]"
@@ -770,7 +784,11 @@
 {{-- Labour --}}
 <div>
   <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
+    <div class="flex items-center gap-2">
+      <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
+      <button type="button" data-order-qty-toggle
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border transition-colors"></button>
+    </div>
     <button type="button"
       class="add-labour-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
       + Add Labour Row
@@ -783,6 +801,7 @@
         <tr>
           <th class="px-3 py-3">Labour Type</th>
 <th class="px-3 py-3">Qty</th>
+<th class="px-3 py-3" data-order-qty-header>Order Qty</th>
 <th class="px-3 py-3">Unit</th>
 <th class="px-3 py-3">Description</th>
 <th class="px-3 py-3">Notes</th>
@@ -832,11 +851,20 @@
           class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
+      <td class="px-3 py-2" data-order-qty-cell>
+        <input type="number" step="0.01"
+          name="rooms[{{ $roomIndex }}][labour][{{ $i }}][order_qty]"
+          value="{{ old("rooms.$roomIndex.labour.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
+          placeholder="—"
+          class="w-24 border rounded-lg p-2"
+          style="background-color:#eef2ff; border-color:#a5b4fc;">
+      </td>
+
       <td class="px-3 py-2">
   <input type="text"
     name="rooms[{{ $roomIndex }}][labour][{{ $i }}][unit]"
     value="{{ old("rooms.$roomIndex.labour.$i.unit", $item->unit ?? '') }}"
-    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+    class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
     data-labour-unit-input>
 
   <input type="hidden"
@@ -1168,10 +1196,18 @@
         placeholder="0">
     </td>
 
+    <td class="px-3 py-2" data-order-qty-cell>
+      <input type="number" step="0.01"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][order_qty]"
+        class="w-24 border rounded-lg p-2"
+        placeholder="—"
+        style="background-color:#eef2ff; border-color:#a5b4fc;">
+    </td>
+
     <td class="px-3 py-2">
   <input type="text"
     name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]"
-    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+    class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
     placeholder="Unit">
 
   <input type="hidden"
@@ -1453,9 +1489,16 @@
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
                         </td>
+                        <td class="px-3 py-2" data-order-qty-cell>
+                            <input type="number" step="0.01"
+                                name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][order_qty]"
+                                class="w-24 border rounded-lg p-2"
+                                placeholder="—"
+                                style="background-color:#eef2ff; border-color:#a5b4fc;">
+                        </td>
                         <td class="px-3 py-2">
     <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][unit]"
-      class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+      class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
       placeholder="Unit"
       data-labour-unit-input>
 
@@ -1850,6 +1893,85 @@
   window.FM_CATALOG_LABOUR_TYPES_URL = "{{ route('pages.estimates.api.labour-types') }}";
   window.FM_TAX_GROUP_RATE_URL_TEMPLATE =
     "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
+</script>
+
+<script>
+// ── Order Qty column toggle ───────────────────────────────────────────────────
+(function () {
+    var STORAGE_KEY = 'fm_order_qty_visible';
+    var visible = localStorage.getItem(STORAGE_KEY) === 'true';
+
+    function applyVisibility() {
+        var display = visible ? '' : 'none';
+        document.querySelectorAll('[data-order-qty-header]').forEach(function (th) { th.style.display = display; });
+        document.querySelectorAll('[data-order-qty-cell]').forEach(function (td) { td.style.display = display; });
+        document.querySelectorAll('[data-order-qty-toggle]').forEach(function (btn) {
+            if (visible) {
+                btn.textContent = 'Hide Order Qty';
+                btn.style.cssText = 'color:#6366f1; border-color:#a5b4fc; background:#eef2ff;';
+            } else {
+                btn.textContent = '+ Order Qty';
+                btn.style.cssText = 'color:#6b7280; border-color:#d1d5db; background:#f9fafb;';
+            }
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-order-qty-toggle]')) return;
+        visible = !visible;
+        localStorage.setItem(STORAGE_KEY, visible ? 'true' : 'false');
+        applyVisibility();
+    });
+
+    var observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (node) {
+                if (node.nodeType !== 1) return;
+                var display = visible ? '' : 'none';
+                node.querySelectorAll('[data-order-qty-cell]').forEach(function (td) { td.style.display = display; });
+            });
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    applyVisibility();
+}());
+
+// ── Order Qty auto-sync ───────────────────────────────────────────────────────
+(function () {
+    function getOrderQtyInput(qtyInput) {
+        var td = qtyInput.closest('td');
+        if (!td) return null;
+        var nextTd = td.nextElementSibling;
+        if (!nextTd) return null;
+        return nextTd.querySelector('input[name*="[order_qty]"]');
+    }
+
+    document.querySelectorAll('input[name*="[quantity]"]').forEach(function (qtyInput) {
+        var orderInput = getOrderQtyInput(qtyInput);
+        if (!orderInput) return;
+        if (orderInput.value === '') {
+            orderInput.value = qtyInput.value;
+            orderInput.dataset.synced = 'true';
+        } else {
+            orderInput.dataset.synced = 'false';
+        }
+    });
+
+    document.addEventListener('input', function (e) {
+        if (!e.target.matches('input[name*="[quantity]"]')) return;
+        var orderInput = getOrderQtyInput(e.target);
+        if (!orderInput) return;
+        if (orderInput.dataset.synced !== 'false') {
+            orderInput.value = e.target.value;
+            orderInput.dataset.synced = 'true';
+        }
+    });
+
+    document.addEventListener('input', function (e) {
+        if (!e.target.matches('input[name*="[order_qty]"]')) return;
+        e.target.dataset.synced = 'false';
+    });
+}());
 </script>
 
 <script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>

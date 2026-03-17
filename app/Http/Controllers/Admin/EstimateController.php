@@ -238,6 +238,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'color_item_number'  => $item['color_item_number'] ?? null,
                         'po_notes'           => $item['po_notes'] ?? null,
                         'quantity'           => (float)($item['quantity'] ?? 0),
+                        'order_qty'          => ($item['order_qty'] ?? '') !== '' ? (float)$item['order_qty'] : null,
                         'unit'               => $item['unit'] ?? null,
 						'cost_price' => (float)($item['cost_price'] ?? 0),
 						'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
@@ -245,7 +246,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
                     ]);
-					
+
 					Log::info('[Estimate store] material item saved', [
     'estimate_id' => $estimate->id,
     'room_id'     => $roomModel->id,
@@ -302,6 +303,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'labour_type'        => $item['labour_type'] ?? null,
                         'description'        => $item['description'] ?? null,
                         'quantity'           => (float)($item['quantity'] ?? 0),
+                        'order_qty'          => ($item['order_qty'] ?? '') !== '' ? (float)$item['order_qty'] : null,
                         'unit'               => $item['unit'] ?? null,
 						'cost_price'       => (float)($item['cost_price'] ?? 0),
 						'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
@@ -989,6 +991,7 @@ public function apiStyles(Request $request)
 
                 'item_type'               => $ei->item_type,
                 'quantity'                => (float) ($ei->quantity ?? 0),
+                'order_qty'               => $ei->order_qty !== null ? (float) $ei->order_qty : null,
                 'unit'                    => $ei->unit,
                 'sell_price'              => (float) ($ei->sell_price ?? 0),
                 'line_total'              => (float) ($ei->line_total ?? 0),

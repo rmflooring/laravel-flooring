@@ -15,6 +15,7 @@ class EstimateItem extends Model
         'item_type',
 
         'quantity',
+        'order_qty',
         'unit',
         'sell_price',
         'line_total',
@@ -45,6 +46,7 @@ class EstimateItem extends Model
 
     protected $casts = [
         'quantity'    => 'decimal:2',
+        'order_qty'   => 'decimal:2',
         'sell_price'  => 'decimal:2',
         'line_total'  => 'decimal:2',
         'cost_price'  => 'decimal:2',
