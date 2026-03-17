@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ProductLine;
+use App\Models\Vendor;
 
 class ProductStyleController extends Controller
 {
@@ -37,6 +38,8 @@ class ProductStyleController extends Controller
     );
 }
 
+        $vendors = Vendor::where('status', 'active')->orderBy('company_name')->get(['id', 'company_name']);
+
         return view('admin.product_styles.index', compact(
             'product_line',
             'styles',
@@ -45,7 +48,8 @@ class ProductStyleController extends Controller
             'nextId',
             'lastId',
             'currentPosition',
-            'totalLines'
+            'totalLines',
+            'vendors',
         ));
     }
 
@@ -75,6 +79,7 @@ class ProductStyleController extends Controller
             'units_per' => 'nullable|numeric|min:0',
             'use_box_qty' => 'boolean',
             'thickness' => 'nullable|string|max:50',
+            'vendor_id' => 'nullable|exists:vendors,id',
         ]);
 
         $validated['updated_by'] = auth()->id();
@@ -102,6 +107,7 @@ class ProductStyleController extends Controller
             'units_per' => 'nullable|numeric|min:0',
             'use_box_qty' => 'boolean',
             'thickness' => 'nullable|string|max:50',
+            'vendor_id' => 'nullable|exists:vendors,id',
         ]);
 
         $validated['created_by'] = auth()->id();
@@ -130,6 +136,7 @@ class ProductStyleController extends Controller
             'units_per'    => $original->units_per,
             'use_box_qty'  => $original->use_box_qty,
             'thickness'    => $original->thickness,
+            'vendor_id'    => $original->vendor_id,
             'status'       => $original->status === 'dropped' ? 'active' : $original->status,
             'created_by'   => auth()->id(),
         ]);

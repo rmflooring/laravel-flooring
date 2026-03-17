@@ -234,6 +234,7 @@ class PurchaseOrderController extends Controller
                                           ->where('is_removed', false)
                                           ->orderBy('sort_order'),
             'rooms.items.productLine',
+            'rooms.items.productStyle',
         ]);
 
         $installerVendorIds = Installer::whereNotNull('vendor_id')->pluck('vendor_id');
@@ -253,10 +254,13 @@ class PurchaseOrderController extends Controller
             foreach ($room->items as $item) {
                 $remainingQtys[$item->id] = max(0, (float) $item->quantity - ($orderedQtys[$item->id] ?? 0));
 
-                // 1. Hard link via product_line.vendor_id (most reliable)
-                $vendorId = $item->productLine?->vendor_id;
+                // 1. Hard link via product_style.vendor_id (most specific)
+                $vendorId = $item->productStyle?->vendor_id;
 
-                // 2. Fallback: match item manufacturer name against vendor company_name
+                // 2. Fallback: product_line.vendor_id
+                if (! $vendorId) $vendorId = $item->productLine?->vendor_id;
+
+                // 3. Fallback: match item manufacturer name against vendor company_name
                 //    Try exact match first, then "vendor name contains manufacturer" (e.g. "Shaw" in "Shaw Floors")
                 if (! $vendorId && $item->manufacturer) {
                     $mfr   = trim($item->manufacturer);

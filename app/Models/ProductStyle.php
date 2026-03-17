@@ -19,6 +19,7 @@ class ProductStyle extends Model
 
     protected $fillable = [
         'product_line_id',
+        'vendor_id',
         'name',
         'sku',
         'style_number',
@@ -38,6 +39,11 @@ class ProductStyle extends Model
     public function productLine()
     {
         return $this->belongsTo(ProductLine::class, 'product_line_id');
+    }
+
+    public function vendor()
+    {
+        return $this->belongsTo(\App\Models\Vendor::class, 'vendor_id');
     }
 
     public function scopeActive($query)

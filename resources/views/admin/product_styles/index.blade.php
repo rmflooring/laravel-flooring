@@ -291,7 +291,20 @@
                             <label for="description" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description</label>
                             <textarea name="description" id="description" rows="3" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">{{ session('editStyle')->description ?? '' }}</textarea>
                         </div>
-                        <div class="col-span-2">
+                        <div class="col-span-2 sm:col-span-1">
+                            <label for="vendor_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Vendor <span class="text-gray-400 font-normal">(for PO auto-select)</span></label>
+                            <select name="vendor_id" id="vendor_id" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                <option value="">— Same as product line —</option>
+                                @foreach($vendors as $v)
+                                    <option value="{{ $v->id }}"
+                                        {{ (session('editStyle')->vendor_id ?? $product_line->vendor_id) == $v->id ? 'selected' : '' }}>
+                                        {{ $v->company_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-span-2 sm:col-span-1">
                             <label for="status" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Status</label>
                             <select name="status" id="status" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                 <option value="active" {{ (session('editStyle')->status ?? 'active') == 'active' ? 'selected' : '' }}>Active</option>
