@@ -203,7 +203,7 @@
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Phone</label>
                                         <input type="text" name="phone"
-                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm phone-input">
                                     </div>
 
                                     <div>
