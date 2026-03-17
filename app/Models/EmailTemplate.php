@@ -33,25 +33,25 @@ class EmailTemplate extends Model
     public const TAGS = [
         'estimate' => [
             '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
-            '{{job_name}}', '{{job_address}}', '{{pm_name}}', '{{pm_first_name}}',
+            '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{pm_name}}', '{{pm_first_name}}',
             '{{salesperson_name}}', '{{sender_name}}', '{{sender_email}}',
         ],
         'sale' => [
             '{{customer_name}}', '{{sale_number}}', '{{grand_total}}',
-            '{{job_name}}', '{{job_address}}', '{{pm_name}}', '{{pm_first_name}}',
+            '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{pm_name}}', '{{pm_first_name}}',
             '{{salesperson_name}}', '{{sender_name}}', '{{sender_email}}',
         ],
         'work_order' => [
-            '{{customer_name}}', '{{wo_number}}', '{{job_name}}', '{{job_address}}',
+            '{{customer_name}}', '{{wo_number}}', '{{job_name}}', '{{job_no}}', '{{job_address}}',
             '{{pm_name}}', '{{pm_first_name}}', '{{sender_name}}', '{{sender_email}}',
         ],
         'purchase_order' => [
-            '{{customer_name}}', '{{po_number}}', '{{job_name}}', '{{job_address}}',
+            '{{customer_name}}', '{{po_number}}', '{{job_name}}', '{{job_no}}', '{{job_address}}',
             '{{pm_name}}', '{{pm_first_name}}', '{{sender_name}}', '{{sender_email}}',
         ],
         'invoice' => [
             '{{customer_name}}', '{{invoice_number}}', '{{grand_total}}',
-            '{{job_name}}', '{{job_address}}', '{{pm_name}}', '{{pm_first_name}}',
+            '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{pm_name}}', '{{pm_first_name}}',
             '{{sender_name}}', '{{sender_email}}',
         ],
         'rfm_created' => [

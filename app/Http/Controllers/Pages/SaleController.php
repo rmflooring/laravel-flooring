@@ -459,6 +459,7 @@ public function showProfits(Sale $sale)
             'sale_number'      => $sale->sale_number,
             'grand_total'      => '$' . number_format((float) $sale->grand_total, 2),
             'job_name'         => $sale->job_name,
+            'job_no'           => $sale->job_no,
             'job_address'      => $sale->job_address,
             'pm_name'          => $sale->pm_name,
             'pm_first_name'    => explode(' ', trim($sale->pm_name ?? ''))[0],
