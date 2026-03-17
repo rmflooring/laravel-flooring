@@ -108,8 +108,9 @@ class WorkOrderController extends Controller
             $saleItem  = $saleItems[$saleItemId] ?? null;
             if (! $saleItem) continue;
 
-            $qty       = (float) ($request->input("qty.{$saleItemId}") ?? $saleItem->quantity);
-            $remaining = (float) $saleItem->quantity - (float) ($scheduledQtys[$saleItemId] ?? 0);
+            $effectiveQty = $saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity;
+            $qty       = (float) ($request->input("qty.{$saleItemId}") ?? $effectiveQty);
+            $remaining = $effectiveQty - (float) ($scheduledQtys[$saleItemId] ?? 0);
 
             if ($qty > $remaining) {
                 return back()->withInput()->withErrors([

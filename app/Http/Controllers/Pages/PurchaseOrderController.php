@@ -252,7 +252,8 @@ class PurchaseOrderController extends Controller
         $itemVendorMap = []; // sale_item_id => vendor_id (resolved via product_line or manufacturer name match)
         foreach ($sale->rooms as $room) {
             foreach ($room->items as $item) {
-                $remainingQtys[$item->id] = max(0, (float) $item->quantity - ($orderedQtys[$item->id] ?? 0));
+                $effectiveQty = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                $remainingQtys[$item->id] = max(0, $effectiveQty - ($orderedQtys[$item->id] ?? 0));
 
                 // 1. Hard link via product_style.vendor_id (most specific)
                 $vendorId = $item->productStyle?->vendor_id;

@@ -89,8 +89,9 @@
                         <div class="space-y-3 p-4">
                             @foreach ($labourItems as $item)
                                         @php
-                                            $scheduled  = (float) ($scheduledQtys[$item->id] ?? 0);
-                                            $remaining  = max(0, (float) $item->quantity - $scheduled);
+                                            $scheduled    = (float) ($scheduledQtys[$item->id] ?? 0);
+                                            $effectiveQty = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                                            $remaining    = max(0, $effectiveQty - $scheduled);
                                             $fullyDone  = $remaining <= 0;
                                             $itemName   = implode(' — ', array_filter([$item->labour_type, $item->description])) ?: 'Labour Item';
                                         @endphp

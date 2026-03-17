@@ -280,6 +280,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'po_notes'         => $item['po_notes'] ?? null,
 
                     'quantity'         => (float)($item['quantity'] ?? 0),
+                    'order_qty'        => ($item['order_qty'] ?? '') !== '' ? (float)$item['order_qty'] : null,
                     'unit'             => $item['unit'] ?? null,
 					'cost_price'        => (float)($item['cost_price'] ?? 0),
 					'cost_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
@@ -325,6 +326,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'labour_type'  => $item['labour_type'] ?? null,
                     'description'  => $item['description'] ?? null,
                     'quantity'     => (float)($item['quantity'] ?? 0),
+                    'order_qty'    => ($item['order_qty'] ?? '') !== '' ? (float)$item['order_qty'] : null,
                     'unit'         => $item['unit'] ?? null,
 					'cost_price'       => (float)($item['cost_price'] ?? 0),
 					'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
@@ -501,11 +503,13 @@ public function showProfits(Sale $sale)
             }
         }
 
-        // Build sale item qty map for comparison
+        // Build sale item effective-qty map (order_qty if set, else quantity)
         $saleItemQtys = [];
         foreach ($sale->rooms as $room) {
             foreach ($room->items as $item) {
-                $saleItemQtys[$item->id] = (float) $item->quantity;
+                $saleItemQtys[$item->id] = $item->order_qty !== null
+                    ? (float) $item->order_qty
+                    : (float) $item->quantity;
             }
         }
 
@@ -549,7 +553,9 @@ public function showProfits(Sale $sale)
         $saleItemQtys = [];
         foreach ($sale->rooms as $room) {
             foreach ($room->items as $item) {
-                $saleItemQtys[$item->id] = (float) $item->quantity;
+                $saleItemQtys[$item->id] = $item->order_qty !== null
+                    ? (float) $item->order_qty
+                    : (float) $item->quantity;
             }
         }
 

@@ -280,6 +280,7 @@
         <tr>
           <th class="px-3 py-3">Product Type</th>
           <th class="px-3 py-3">Qty</th>
+          <th class="px-3 py-3" title="Quantity to order (leave blank to use full Qty)">Order Qty</th>
           <th class="px-3 py-3">Unit</th>
           <th class="px-3 py-3">Manufacturer</th>
           <th class="px-3 py-3">Style</th>
@@ -328,15 +329,24 @@
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
           value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
-          class="w-24 border rounded-lg p-2"
+          class="w-16 border rounded-lg p-2"
           style="{{ $qtyStyle }}">
+      </td>
+
+      <td class="px-3 py-2">
+        <input type="number" step="0.01"
+          name="rooms[{{ $roomIndex }}][materials][{{ $i }}][order_qty]"
+          value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
+          placeholder="—"
+          class="w-16 border rounded-lg p-2"
+          style="background-color:#eef2ff; border-color:#a5b4fc;">
       </td>
 
       <td class="px-3 py-2">
   <input type="text"
     name="rooms[{{ $roomIndex }}][materials][{{ $i }}][unit]"
     value="{{ old("rooms.$roomIndex.materials.$i.unit", $item->unit) }}"
-    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+    class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2">
 
   <input type="hidden"
     name="rooms[{{ $roomIndex }}][materials][{{ $i }}][cost_price]"
@@ -485,14 +495,22 @@
       <td class="px-3 py-2">
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][quantity]"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-16 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="0">
+      </td>
+
+      <td class="px-3 py-2">
+        <input type="number" step="0.01"
+          name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][order_qty]"
+          class="w-16 border rounded-lg p-2"
+          placeholder="—"
+          style="background-color:#eef2ff; border-color:#a5b4fc;">
       </td>
 
       <td class="px-3 py-2">
         <input type="text"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][unit]"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="Unit">
       </td>
 
@@ -792,6 +810,7 @@
         <tr>
           <th class="px-3 py-3">Labour Type</th>
 <th class="px-3 py-3">Qty</th>
+<th class="px-3 py-3" title="Quantity to schedule (leave blank to use full Qty)">Order Qty</th>
 <th class="px-3 py-3">Unit</th>
 <th class="px-3 py-3">Description</th>
 <th class="px-3 py-3">Notes</th>
@@ -847,7 +866,7 @@
     <input type="number" step="0.01"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][quantity]"
       value="{{ old("rooms.$roomIndex.labour.$i.quantity", $qty) }}"
-      class="w-24 border rounded-lg p-2"
+      class="w-16 border rounded-lg p-2"
       style="{{ $woQtyStyle }}">
 
     <input type="hidden"
@@ -862,10 +881,19 @@
   </td>
 
   <td class="px-3 py-2">
+    <input type="number" step="0.01"
+      name="rooms[{{ $roomIndex }}][labour][{{ $i }}][order_qty]"
+      value="{{ old("rooms.$roomIndex.labour.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
+      placeholder="—"
+      class="w-16 border rounded-lg p-2"
+      style="background-color:#eef2ff; border-color:#a5b4fc;">
+  </td>
+
+  <td class="px-3 py-2">
     <input type="text"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][unit]"
       value="{{ old("rooms.$roomIndex.labour.$i.unit", $item->unit ?? '') }}"
-      class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+      class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
       data-labour-unit-input>
   </td>
 
@@ -998,14 +1026,22 @@
       <td class="px-3 py-2">
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][quantity]"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-16 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="0">
+      </td>
+
+      <td class="px-3 py-2">
+        <input type="number" step="0.01"
+          name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][order_qty]"
+          class="w-16 border rounded-lg p-2"
+          placeholder="—"
+          style="background-color:#eef2ff; border-color:#a5b4fc;">
       </td>
 
       <td class="px-3 py-2">
         <input type="text"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][unit]"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="Unit"
           data-labour-unit-input>
       </td>
