@@ -11,7 +11,27 @@
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Edit Estimate</h1>
-                    <p class="text-sm text-gray-600">Status: <span class="font-semibold">Draft</span></p>
+                    @php
+                        $statusColors = [
+                            'draft'    => 'bg-gray-100 text-gray-700',
+                            'sent'     => 'bg-blue-100 text-blue-700',
+                            'revised'  => 'bg-yellow-100 text-yellow-800',
+                            'approved' => 'bg-green-100 text-green-700',
+                            'rejected' => 'bg-red-100 text-red-700',
+                        ];
+                        $statusLabels = [
+                            'draft'    => 'Draft',
+                            'sent'     => 'Sent',
+                            'revised'  => 'Revised',
+                            'approved' => 'Approved',
+                            'rejected' => 'Rejected',
+                        ];
+                        $statusClass = $statusColors[$estimate->status] ?? 'bg-gray-100 text-gray-700';
+                        $statusLabel = $statusLabels[$estimate->status] ?? ucfirst($estimate->status);
+                    @endphp
+                    <p class="text-sm text-gray-600 mt-1">
+                        Status: <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+                    </p>
                 </div>
 @if (session('success'))
     <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded-lg rounded-lg">
