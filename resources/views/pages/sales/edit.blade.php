@@ -267,7 +267,11 @@
         {{-- Materials --}}
 <div>
   <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-gray-900">Materials</h3>
+    <div class="flex items-center gap-2">
+      <h3 class="text-sm font-semibold text-gray-900">Materials</h3>
+      <button type="button" data-order-qty-toggle
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border transition-colors"></button>
+    </div>
     <button type="button"
       class="add-material-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
       + Add Material Row
@@ -280,7 +284,7 @@
         <tr>
           <th class="px-3 py-3">Product Type</th>
           <th class="px-3 py-3">Qty</th>
-          <th class="px-3 py-3 cursor-pointer select-none" data-order-qty-header title="Click to show/hide Order Qty column"></th>
+          <th class="px-3 py-3" data-order-qty-header>Order Qty</th>
           <th class="px-3 py-3">Unit</th>
           <th class="px-3 py-3">Manufacturer</th>
           <th class="px-3 py-3">Style</th>
@@ -797,7 +801,11 @@
 {{-- Labour --}}
 <div>
   <div class="flex items-center justify-between mb-3">
-    <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
+    <div class="flex items-center gap-2">
+      <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
+      <button type="button" data-order-qty-toggle
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border transition-colors"></button>
+    </div>
     <button type="button"
       class="add-labour-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
       + Add Labour Row
@@ -810,7 +818,7 @@
         <tr>
           <th class="px-3 py-3">Labour Type</th>
 <th class="px-3 py-3">Qty</th>
-<th class="px-3 py-3 cursor-pointer select-none" data-order-qty-header title="Click to show/hide Order Qty column"></th>
+<th class="px-3 py-3" data-order-qty-header>Order Qty</th>
 <th class="px-3 py-3">Unit</th>
 <th class="px-3 py-3">Description</th>
 <th class="px-3 py-3">Notes</th>
@@ -2036,42 +2044,44 @@
     var visible = localStorage.getItem(STORAGE_KEY) === 'true'; // hidden by default
 
     function applyVisibility() {
-        // Show/hide all cells (including inside <template> elements)
+        var display = visible ? '' : 'none';
+
+        // Hide/show both <th> headers AND <td> cells together so columns stay aligned
+        document.querySelectorAll('[data-order-qty-header]').forEach(function (th) {
+            th.style.display = display;
+        });
         document.querySelectorAll('[data-order-qty-cell]').forEach(function (td) {
-            td.style.display = visible ? '' : 'none';
+            td.style.display = display;
         });
 
-        // Update every header to reflect state
-        document.querySelectorAll('[data-order-qty-header]').forEach(function (th) {
+        // Update every toggle button label
+        document.querySelectorAll('[data-order-qty-toggle]').forEach(function (btn) {
             if (visible) {
-                th.innerHTML = '<span class="inline-flex items-center gap-1">Order Qty <span class="text-gray-400 text-xs">&#x25B2;</span></span>';
-                th.style.whiteSpace = 'nowrap';
-                th.style.minWidth  = '';
+                btn.textContent = 'Hide Order Qty';
+                btn.style.cssText = 'color:#6366f1; border-color:#a5b4fc; background:#eef2ff;';
             } else {
-                th.innerHTML = '<span class="inline-flex items-center gap-1 text-indigo-500">Order Qty <span class="text-xs">&#x25BC;</span></span>';
-                th.style.whiteSpace = 'nowrap';
-                th.style.minWidth  = '80px';
+                btn.textContent = '+ Order Qty';
+                btn.style.cssText = 'color:#6b7280; border-color:#d1d5db; background:#f9fafb;';
             }
         });
     }
 
-    // Toggle on header click
+    // Toggle on button click
     document.addEventListener('click', function (e) {
-        var th = e.target.closest('[data-order-qty-header]');
-        if (!th) return;
+        if (!e.target.closest('[data-order-qty-toggle]')) return;
         visible = !visible;
         localStorage.setItem(STORAGE_KEY, visible ? 'true' : 'false');
         applyVisibility();
     });
 
-    // Also hide/show cells inside <template> tags so new rows inherit the state.
-    // We hook into the MutationObserver to catch rows added dynamically.
+    // MutationObserver: apply state to newly added rows
     var observer = new MutationObserver(function (mutations) {
         mutations.forEach(function (m) {
             m.addedNodes.forEach(function (node) {
                 if (node.nodeType !== 1) return;
+                var display = visible ? '' : 'none';
                 node.querySelectorAll('[data-order-qty-cell]').forEach(function (td) {
-                    td.style.display = visible ? '' : 'none';
+                    td.style.display = display;
                 });
             });
         });
