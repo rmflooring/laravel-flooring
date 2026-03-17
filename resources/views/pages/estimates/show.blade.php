@@ -106,7 +106,7 @@
                     </div>
                     <div>
                         <div class="text-gray-500">Job Address</div>
-                        <div class="font-medium text-gray-900">{{ $estimate->job_address ?? '—' }}</div>
+                        <div class="font-medium text-gray-900 whitespace-pre-line">{{ $estimate->job_address ?? '—' }}</div>
                     </div>
                     @if ($estimate->salesperson1Employee)
                         <div>
