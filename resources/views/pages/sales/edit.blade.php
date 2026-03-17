@@ -307,7 +307,7 @@
         <input type="text"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][product_type]"
           value="{{ old("rooms.$roomIndex.materials.$i.product_type", $item->product_type) }}"
-          class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-32 bg-gray-50 border border-gray-300 rounded-lg p-2"
           autocomplete="off"
           data-product-type-input>
         <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
@@ -329,7 +329,7 @@
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
           value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
-          class="w-16 border rounded-lg p-2"
+          class="w-20 border rounded-lg p-2"
           style="{{ $qtyStyle }}">
       </td>
 
@@ -338,7 +338,7 @@
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][order_qty]"
           value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
           placeholder="—"
-          class="w-16 border rounded-lg p-2"
+          class="w-20 border rounded-lg p-2"
           style="background-color:#eef2ff; border-color:#a5b4fc;">
       </td>
 
@@ -476,7 +476,7 @@
       <td class="px-3 py-2 relative">
         <input type="text"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][product_type]"
-          class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-32 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="Product Type"
           autocomplete="off"
           data-product-type-input />
@@ -495,14 +495,14 @@
       <td class="px-3 py-2">
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][quantity]"
-          class="w-16 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-20 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="0">
       </td>
 
       <td class="px-3 py-2">
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][order_qty]"
-          class="w-16 border rounded-lg p-2"
+          class="w-20 border rounded-lg p-2"
           placeholder="—"
           style="background-color:#eef2ff; border-color:#a5b4fc;">
       </td>
@@ -866,7 +866,7 @@
     <input type="number" step="0.01"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][quantity]"
       value="{{ old("rooms.$roomIndex.labour.$i.quantity", $qty) }}"
-      class="w-16 border rounded-lg p-2"
+      class="w-20 border rounded-lg p-2"
       style="{{ $woQtyStyle }}">
 
     <input type="hidden"
@@ -885,7 +885,7 @@
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][order_qty]"
       value="{{ old("rooms.$roomIndex.labour.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
       placeholder="—"
-      class="w-16 border rounded-lg p-2"
+      class="w-20 border rounded-lg p-2"
       style="background-color:#eef2ff; border-color:#a5b4fc;">
   </td>
 
@@ -1026,14 +1026,14 @@
       <td class="px-3 py-2">
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][quantity]"
-          class="w-16 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-20 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="0">
       </td>
 
       <td class="px-3 py-2">
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][order_qty]"
-          class="w-16 border rounded-lg p-2"
+          class="w-20 border rounded-lg p-2"
           placeholder="—"
           style="background-color:#eef2ff; border-color:#a5b4fc;">
       </td>
@@ -1196,7 +1196,7 @@
       <input
         type="text"
         name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_type]"
-        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        class="w-32 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="Product Type"
         autocomplete="off"
         data-product-type-input
