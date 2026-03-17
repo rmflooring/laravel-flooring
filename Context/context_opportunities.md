@@ -140,3 +140,21 @@ Sorted in blade using `created_at`
 - Add “Sort Newest/Oldest” toggle for Sales if needed later.
 - Add “Create Sale” button on Opportunity show once the desired create flow/route is confirmed.
 
+---
+
+## Bug Fix: Create Job Site modal loses form state (2026-03-16)
+
+**Problem:** Clicking “+ Create Job Site” on the create opportunity page, filling the modal, and submitting redirected back to a fresh create page — losing all previously entered fields (job no, status, sales persons, parent customer).
+
+**Second bug:** New job site was never being tied to the parent customer because `#job_site_parent_id` hidden input in the modal was never populated by JS, so new customers were saved with `parent_id = null`. This caused them to be hidden in the job site dropdown and prevented auto-selection.
+
+**Fix — `CustomerController::store()`** (`app/Http/Controllers/Admin/CustomerController.php`):
+- On `redirect_to` redirect, appends `?new_js_id={customer->id}` directly to the URL (replaces unreliable session flash approach)
+
+**Fix — create opportunity blade** (`resources/views/pages/opportunities/create.blade.php`):
+- Modal form submit listener: serializes current form state (`_job_no`, `_status`, `_sp1`, `_sp2`, `_parent_id`, `_pm_id`) into the `redirect_to` URL as query params before submitting
+- `restoreFormState()` on page load: reads those URL params and pre-fills all fields; restores parent → triggers `filterJobSites(new_js_id)` and `loadProjectManagers(pm_id)`
+- `syncModalParent()`: keeps `#job_site_parent_id` hidden input (and display field) in sync with the selected parent at all times — fixes the root cause of job sites being created without a parent
+- `filterJobSites(preselectJobSiteId)`: accepts optional ID to auto-select after filtering
+- `loadProjectManagers(preselectId)`: accepts optional ID to auto-select after async load
+

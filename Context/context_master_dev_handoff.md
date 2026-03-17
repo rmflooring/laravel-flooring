@@ -547,6 +547,15 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 
 ---
 
+## Opportunity create — job site modal fix (session 17, 2026-03-16)
+
+- **Problem 1:** Creating a job site from the opportunity create page redirected back to a blank form, losing all entered data.
+- **Problem 2:** New job site customers were saved with `parent_id = null` because `#job_site_parent_id` hidden input was never wired to the parent select — so they were hidden in the job site dropdown and couldn't be auto-selected.
+- **Fix:** `CustomerController::store()` now appends `?new_js_id={id}` to the redirect URL. Blade JS saves all form state as query params before modal submits, restores it on reload, wires `#job_site_parent_id` via `syncModalParent()`, and auto-selects the new job site via `filterJobSites(newJobSiteId)`.
+- **Key files:** `app/Http/Controllers/Admin/CustomerController.php`, `resources/views/pages/opportunities/create.blade.php`
+
+---
+
 ## Resume prompts for next chat
 
 **To continue email work (RFM templates, HTML bodies, invoice send flow):**

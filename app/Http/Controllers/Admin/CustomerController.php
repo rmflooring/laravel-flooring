@@ -158,10 +158,9 @@ public function store(Request $request)
     $redirectTo = $request->input('redirect_to');
 
     if ($redirectTo) {
-        return redirect($redirectTo)
-            ->with('success', 'Customer created successfully.')
-            ->with('new_job_site_id', $customer->id)
-            ->with('new_job_site_parent_id', $customer->parent_id);
+        $sep = str_contains($redirectTo, '?') ? '&' : '?';
+        return redirect($redirectTo . $sep . 'new_js_id=' . $customer->id)
+            ->with('success', 'Customer created successfully.');
     }
 
     return redirect()->route('admin.customers.index')

@@ -174,7 +174,7 @@
                         <form method="POST" action="{{ route('admin.customers.store') }}">
                             @csrf
 
-                            <input type="hidden" name="redirect_to" value="{{ route('pages.opportunities.create') }}">
+                            <input type="hidden" name="redirect_to" id="job-site-redirect-to" value="{{ route('pages.opportunities.create') }}">
                             <input type="hidden" name="parent_id" id="job_site_parent_id">
 
                             <div class="p-6 space-y-4">
@@ -339,19 +339,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!parentSelect) return;
 
+    const urlParams = new URLSearchParams(window.location.search);
+
     // ----------------------------
-    // Job Site filtering (existing)
+    // Job Site filtering
     // ----------------------------
     const allJobSiteOptions = jobSiteSelect
         ? Array.from(jobSiteSelect.querySelectorAll('option')).filter(o => o.value)
         : [];
 
-    function filterJobSites() {
+    function filterJobSites(preselectJobSiteId = null) {
         if (!jobSiteSelect) return;
 
         const parentId = parentSelect.value;
 
-        // Reset selection + hide all job site options first
         jobSiteSelect.value = "";
         allJobSiteOptions.forEach(o => (o.hidden = true));
 
@@ -362,10 +363,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         jobSiteSelect.disabled = false;
 
-        // Unhide only options that match selected parent
         allJobSiteOptions.forEach(o => {
             o.hidden = (o.dataset.parentId !== parentId);
         });
+
+        if (preselectJobSiteId) {
+            jobSiteSelect.value = String(preselectJobSiteId);
+        }
     }
 
     // ----------------------------
@@ -384,12 +388,11 @@ document.addEventListener('DOMContentLoaded', () => {
         pmSelect.disabled = disabled;
     }
 
-    async function loadProjectManagers() {
+    async function loadProjectManagers(preselectId = null) {
         if (!pmSelect) return;
 
         const parentId = parentSelect.value;
 
-        // Reset immediately when parent changes
         resetPmSelect(parentId ? 'Loading PMs…' : '— Select Parent Customer first —', true);
 
         if (!parentId) return;
@@ -402,13 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const pms = await res.json();
 
-            // 0 PMs: friendly message + keep disabled
             if (!Array.isArray(pms) || pms.length === 0) {
                 resetPmSelect('No project managers found for this customer', true);
                 return;
             }
 
-            // Rebuild options
             pmSelect.innerHTML = '';
 
             const placeholder = document.createElement('option');
@@ -425,8 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             pmSelect.disabled = false;
 
-            // Auto-select if only 1 PM
-            if (pms.length === 1) {
+            if (preselectId) {
+                pmSelect.value = String(preselectId);
+            } else if (pms.length === 1) {
                 pmSelect.value = String(pms[0].id);
             } else {
                 pmSelect.value = '';
@@ -437,15 +439,93 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // When parent changes: update both job sites + PMs
+    // ----------------------------
+    // Restore form state from URL params (after job site create redirect)
+    // ----------------------------
+    function restoreFormState() {
+        const jobNoInput   = document.querySelector('input[name="job_no"]');
+        const statusSelect = document.querySelector('select[name="status"]');
+        const sp1          = document.querySelector('select[name="sales_person_1"]');
+        const sp2          = document.querySelector('select[name="sales_person_2"]');
+
+        if (urlParams.get('_job_no') && jobNoInput)   jobNoInput.value   = urlParams.get('_job_no');
+        if (urlParams.get('_status') && statusSelect)  statusSelect.value = urlParams.get('_status');
+        if (urlParams.get('_sp1')    && sp1)           sp1.value          = urlParams.get('_sp1');
+        if (urlParams.get('_sp2')    && sp2)           sp2.value          = urlParams.get('_sp2');
+
+        const savedParentId = urlParams.get('_parent_id');
+        const savedPmId     = urlParams.get('_pm_id');
+
+        const newJobSiteId = urlParams.get('new_js_id') || null;
+
+        if (savedParentId) {
+            parentSelect.value = savedParentId;
+            filterJobSites(newJobSiteId);
+            loadProjectManagers(savedPmId || null);
+        } else {
+            filterJobSites(newJobSiteId);
+            loadProjectManagers();
+        }
+    }
+
+    // ----------------------------
+    // Save form state into redirect_to before modal submits
+    // ----------------------------
+    const modalForm = document.querySelector('#create-job-site-modal form');
+    if (modalForm) {
+        modalForm.addEventListener('submit', () => {
+            const redirectInput = document.getElementById('job-site-redirect-to');
+            if (!redirectInput) return;
+
+            const params = new URLSearchParams();
+
+            const jobNoInput   = document.querySelector('input[name="job_no"]');
+            const statusSelect = document.querySelector('select[name="status"]');
+            const sp1          = document.querySelector('select[name="sales_person_1"]');
+            const sp2          = document.querySelector('select[name="sales_person_2"]');
+
+            if (jobNoInput?.value)   params.set('_job_no',    jobNoInput.value);
+            if (statusSelect?.value) params.set('_status',    statusSelect.value);
+            if (sp1?.value)          params.set('_sp1',       sp1.value);
+            if (sp2?.value)          params.set('_sp2',       sp2.value);
+            if (parentSelect?.value) params.set('_parent_id', parentSelect.value);
+            if (pmSelect?.value)     params.set('_pm_id',     pmSelect.value);
+
+            const qs = params.toString();
+            if (qs) {
+                redirectInput.value = redirectInput.value.split('?')[0] + '?' + qs;
+            }
+        });
+    }
+
+    // ----------------------------
+    // Keep modal parent_id hidden input in sync with parent select
+    // ----------------------------
+    const jobSiteParentIdInput   = document.getElementById('job_site_parent_id');
+    const jobSiteParentDisplay   = document.getElementById('job_site_parent_display');
+
+    function syncModalParent() {
+        const selectedOption = parentSelect.options[parentSelect.selectedIndex];
+        if (jobSiteParentIdInput) {
+            jobSiteParentIdInput.value = parentSelect.value || '';
+        }
+        if (jobSiteParentDisplay) {
+            jobSiteParentDisplay.value = parentSelect.value
+                ? (selectedOption?.text ?? '(Selected parent will apply)')
+                : '(Selected parent will apply)';
+        }
+    }
+
+    // When parent changes manually: update job sites, PMs, and modal hidden input
     parentSelect.addEventListener('change', () => {
         filterJobSites();
         loadProjectManagers();
+        syncModalParent();
     });
 
-    // Run once on load
-    filterJobSites();
-    loadProjectManagers();
+    // Run once on load — restore state if coming back from job site create
+    restoreFormState();
+    syncModalParent();
 });
 </script>
 
