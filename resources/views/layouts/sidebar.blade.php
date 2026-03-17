@@ -159,19 +159,22 @@
 
                 {{-- Products accordion --}}
                 <li x-data="{ open: false }">
-                    <button @click="open = !open"
-                            class="sidebar-link flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                        <div class="flex items-center gap-3">
+                    <div class="flex items-center">
+                        <a href="{{ route('admin.products.index') }}"
+                           class="sidebar-link flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
                             <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M10 0 0 5l10 5 10-5L10 0Z"/>
                                 <path d="M0 7l10 5 10-5v8l-10 5L0 15V7Z"/>
                             </svg>
                             <span class="sidebar-label">Products</span>
-                        </div>
-                        <svg :class="open ? 'rotate-90' : ''" class="sidebar-label h-4 w-4 flex-shrink-0 text-gray-500 transition-transform dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
+                        </a>
+                        <button @click="open = !open"
+                                class="sidebar-label p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+                            <svg :class="open ? 'rotate-90' : ''" class="h-4 w-4 flex-shrink-0 transition-transform" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
                     <ul x-show="open" class="mt-1 space-y-1 pl-10">
                         <li>
                             <a href="{{ route('admin.product_types.index') }}"

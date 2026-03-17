@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\GLAccountController;
 use App\Http\Controllers\Admin\ProductTypeController;
 use App\Http\Controllers\Admin\ProductLineController;
 use App\Http\Controllers\Admin\ProductStyleController;
+use App\Http\Controllers\Admin\ProductCatalogController;
 
 use App\Http\Controllers\Admin\EstimateController;
 use App\Http\Controllers\Admin\EmployeeController;
@@ -363,6 +364,10 @@ Route::prefix('admin')
             ]);
 
         // Products
+        Route::get('products', [ProductCatalogController::class, 'index'])
+            ->middleware('role_or_permission:admin|view product lines')
+            ->name('products.index');
+
         Route::resource('product-types', ProductTypeController::class)
             ->middleware('role_or_permission:admin|view product types')
             ->names([
