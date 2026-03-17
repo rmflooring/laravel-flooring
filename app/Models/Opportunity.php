@@ -12,6 +12,7 @@ class Opportunity extends Model
         'project_manager_id',
         'job_no',
         'status',
+        'is_active',
         'sales_person_1',
         'sales_person_2',
         'initiated_by',
@@ -89,6 +90,11 @@ class Opportunity extends Model
     public function rfms()
     {
         return $this->hasMany(Rfm::class)->orderByDesc('scheduled_at');
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
     }
 
     public function purchaseOrders()

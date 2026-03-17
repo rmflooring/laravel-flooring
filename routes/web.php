@@ -415,7 +415,9 @@ Route::prefix('pages')
     ->name('pages.')
     ->group(function () {
         Route::resource('opportunities', OpportunityController::class);
-		
+        Route::post('opportunities/{opportunity}/deactivate', [OpportunityController::class, 'deactivate'])
+            ->name('opportunities.deactivate');
+
 		// Estimates (moved to pages)
 		Route::get('estimates', [EstimateController::class, 'index'])
 			->middleware('permission:create estimates')

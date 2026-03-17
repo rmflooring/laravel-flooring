@@ -2,6 +2,18 @@
     <div class="py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
+            {{-- Flash Banners --}}
+            @if (session('success'))
+                <div class="mb-4 p-4 text-sm text-green-800 bg-green-100 border border-green-300 rounded-lg">
+                    {{ session('success') }}
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="mb-4 p-4 text-sm text-red-800 bg-red-100 border border-red-300 rounded-lg">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             {{-- Page Header --}}
             <div class="mb-6 flex items-start justify-between">
                 <div>
@@ -182,18 +194,43 @@
                                     </td>
 
                                     <td class="px-4 md:px-6 py-3 text-right whitespace-nowrap">
-    <div class="inline-flex items-center gap-2">
-        <a href="{{ route('pages.opportunities.show', $opp->id) }}"
-           class="inline-flex items-center px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-            View
-        </a>
-
-        <a href="{{ route('pages.opportunities.edit', $opp->id) }}"
-           class="inline-flex items-center px-3 py-2 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
-            Edit
-        </a>
-    </div>
-</td>
+                                        @php
+                                            $hasActivity = $opp->rfms_count > 0
+                                                || $opp->estimates_count > 0
+                                                || $opp->sales_count > 0
+                                                || $opp->purchase_orders_count > 0;
+                                        @endphp
+                                        <div class="inline-flex items-center gap-2">
+                                            <a href="{{ route('pages.opportunities.show', $opp->id) }}"
+                                               class="inline-flex items-center px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                                                View
+                                            </a>
+                                            <a href="{{ route('pages.opportunities.edit', $opp->id) }}"
+                                               class="inline-flex items-center px-3 py-2 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
+                                                Edit
+                                            </a>
+                                            @if ($hasActivity)
+                                                <form method="POST" action="{{ route('pages.opportunities.deactivate', $opp->id) }}"
+                                                      onsubmit="return confirm('Deactivate this opportunity?')">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="inline-flex items-center px-3 py-2 text-xs font-medium text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg hover:bg-yellow-200">
+                                                        Deactivate
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <form method="POST" action="{{ route('pages.opportunities.destroy', $opp->id) }}"
+                                                      onsubmit="return confirm('Delete this opportunity? This cannot be undone.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                            class="inline-flex items-center px-3 py-2 text-xs font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>

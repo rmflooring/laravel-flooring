@@ -26,7 +26,8 @@ class OpportunityController extends Controller
     ];
 
     $query = Opportunity::query()
-    ->with(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
+        ->with(['parentCustomer', 'jobSiteCustomer', 'projectManager'])
+        ->withCount(['rfms', 'estimates', 'sales', 'purchaseOrders']);
 
 // Sorting
 $sort = $request->input('sort', 'updated_desc');
@@ -269,7 +270,29 @@ public function update(Request $request, string $id)
 
     public function destroy(string $id)
     {
-        // (Later)
-        return redirect()->route('pages.opportunities.index');
+        $opportunity = Opportunity::findOrFail($id);
+
+        $hasActivity = $opportunity->rfms()->exists()
+            || $opportunity->estimates()->exists()
+            || $opportunity->sales()->exists()
+            || $opportunity->purchaseOrders()->exists();
+
+        if ($hasActivity) {
+            return redirect()->route('pages.opportunities.index')
+                ->with('error', 'This opportunity has linked activity (RFMs, estimates, sales, or POs) and cannot be deleted. You can deactivate it instead.');
+        }
+
+        $opportunity->delete();
+
+        return redirect()->route('pages.opportunities.index')
+            ->with('success', 'Opportunity deleted successfully.');
+    }
+
+    public function deactivate(Opportunity $opportunity)
+    {
+        $opportunity->update(['is_active' => false]);
+
+        return redirect()->route('pages.opportunities.index')
+            ->with('success', 'Opportunity has been deactivated.');
     }
 }
