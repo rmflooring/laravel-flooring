@@ -48,7 +48,27 @@
                             <!-- Sell -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Sell *</label>
-                                <input type="number" step="0.01" name="sell" value="{{ old('sell', $labourItem->sell) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="number" step="0.01" name="sell" id="sell" value="{{ old('sell', $labourItem->sell) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <div class="mt-2 flex items-center gap-2">
+                                    <span class="text-xs text-gray-500 whitespace-nowrap">Apply GPM:</span>
+                                    <select id="gpm_selector" class="flex-1 text-xs bg-gray-50 border border-gray-300 text-gray-700 rounded-lg p-1.5 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">— select margin —</option>
+                                        <option value="0.05">5%</option>
+                                        <option value="0.10">10%</option>
+                                        <option value="0.15">15%</option>
+                                        <option value="0.20">20%</option>
+                                        <option value="0.25">25%</option>
+                                        <option value="0.30">30%</option>
+                                        <option value="0.35">35%</option>
+                                        <option value="0.40">40%</option>
+                                        <option value="0.45">45%</option>
+                                        <option value="0.50">50%</option>
+                                        <option value="0.55">55%</option>
+                                        <option value="0.60">60%</option>
+                                        <option value="0.65">65%</option>
+                                        <option value="0.70">70%</option>
+                                    </select>
+                                </div>
                                 @error('sell') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                             </div>
 
@@ -91,4 +111,13 @@
             </div>
         </div>
     </div>
+<script>
+document.getElementById('gpm_selector').addEventListener('change', function () {
+    const margin = parseFloat(this.value);
+    const cost = parseFloat(document.querySelector('[name="cost"]').value);
+    if (!margin || isNaN(cost) || cost <= 0) { this.value = ''; return; }
+    document.getElementById('sell').value = (cost / (1 - margin)).toFixed(2);
+    this.value = '';
+});
+</script>
 </x-app-layout>
