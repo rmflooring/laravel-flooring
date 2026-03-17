@@ -479,23 +479,45 @@ public function showProfits(Sale $sale)
     }
 
     /**
-     * Build a map of sale_item_id => highest PO status across all non-cancelled POs.
-     * Priority: received > ordered > pending
+     * Build a map of sale_item_id => color status for qty highlighting.
+     *
+     * green  = all sale item qty is covered by received POs
+     * yellow = some qty ordered or partially received, but not fully received
+     * orange = PO exists but nothing ordered yet (all pending)
      */
     private function buildItemPoStatusMap(\App\Models\Sale $sale): array
     {
-        $priority = ['pending' => 1, 'ordered' => 2, 'received' => 3];
-        $map = [];
+        // Collect qty by status per sale item
+        $qtyByStatus = []; // [sale_item_id][status] => total qty
 
         foreach ($sale->purchaseOrders->where('status', '<>', 'cancelled') as $po) {
             foreach ($po->items as $poItem) {
                 if (! $poItem->sale_item_id) continue;
                 $id = $poItem->sale_item_id;
-                $new = $priority[$po->status] ?? 0;
-                $current = $priority[$map[$id] ?? ''] ?? 0;
-                if ($new > $current) {
-                    $map[$id] = $po->status;
-                }
+                $qtyByStatus[$id][$po->status] = ($qtyByStatus[$id][$po->status] ?? 0) + (float) $poItem->quantity;
+            }
+        }
+
+        // Build sale item qty map for comparison
+        $saleItemQtys = [];
+        foreach ($sale->rooms as $room) {
+            foreach ($room->items as $item) {
+                $saleItemQtys[$item->id] = (float) $item->quantity;
+            }
+        }
+
+        $map = [];
+        foreach ($qtyByStatus as $saleItemId => $statuses) {
+            $receivedQty = $statuses['received'] ?? 0;
+            $orderedQty  = $statuses['ordered']  ?? 0;
+            $saleQty     = $saleItemQtys[$saleItemId] ?? 0;
+
+            if ($saleQty > 0 && $receivedQty >= $saleQty) {
+                $map[$saleItemId] = 'received'; // fully received → green
+            } elseif ($orderedQty > 0 || $receivedQty > 0) {
+                $map[$saleItemId] = 'ordered';  // partially ordered/received → yellow
+            } else {
+                $map[$saleItemId] = 'pending';  // only pending POs → orange
             }
         }
 
