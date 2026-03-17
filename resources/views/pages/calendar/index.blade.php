@@ -9,7 +9,7 @@
                 </p>
             </div>
 
-            <a href="{{ route('pages.settings.integrations.microsoft.index') }}"
+            <a href="{{ route('settings.integrations.microsoft.index') }}"
                class="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800">
                 Microsoft Integration
             </a>
