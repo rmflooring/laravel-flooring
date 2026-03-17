@@ -237,6 +237,10 @@ Route::prefix('admin')
             ->middleware('role_or_permission:admin|delete customers')
             ->name('customers.destroy');
 
+        Route::post('customers/{customer}/deactivate', [CustomerController::class, 'deactivate'])
+            ->middleware('role_or_permission:admin|edit customers')
+            ->name('customers.deactivate');
+
         // Project Managers
         Route::resource('project-managers', ProjectManagerController::class)
             ->middleware('role_or_permission:admin|view project managers')

@@ -10,7 +10,12 @@ class CustomerController extends Controller
 {
 public function index(Request $request)
 {
-    $query = Customer::with(['parent', 'creator']);
+    $query = Customer::with(['parent', 'creator'])
+        ->withCount([
+            'opportunitiesAsParent',
+            'opportunitiesAsJobSite',
+            'children',
+        ]);
 
     // Search
 if ($request->filled('search')) {
@@ -169,6 +174,37 @@ public function store(Request $request)
 //end store method
 
 
+public function show(Customer $customer)
+{
+    // Opportunities where this customer is the main customer
+    $opportunitiesAsParent = $customer->opportunitiesAsParent()
+        ->with(['rfms', 'estimates', 'purchaseOrders'])
+        ->latest()
+        ->get();
+
+    // Opportunities where this customer is the job site
+    $opportunitiesAsJobSite = $customer->opportunitiesAsJobSite()
+        ->with(['rfms', 'estimates', 'purchaseOrders', 'parentCustomer'])
+        ->latest()
+        ->get();
+
+    // Collect all opportunity IDs to load sales
+    $opportunityIds = $opportunitiesAsParent->pluck('id')
+        ->merge($opportunitiesAsJobSite->pluck('id'))
+        ->unique();
+
+    $sales = \App\Models\Sale::whereIn('opportunity_id', $opportunityIds)
+        ->latest()
+        ->get();
+
+    return view('admin.customers.show', compact(
+        'customer',
+        'opportunitiesAsParent',
+        'opportunitiesAsJobSite',
+        'sales'
+    ));
+}
+
 //add edit method
 public function edit(Customer $customer)
 {
@@ -217,5 +253,35 @@ public function update(Request $request, Customer $customer)
     return redirect()->route('admin.customers.index')->with('success', 'Customer updated successfully.');
 }
 //end edit method
+
+public function destroy(Customer $customer)
+{
+    $hasOpportunities = $customer->opportunitiesAsParent()->exists()
+        || $customer->opportunitiesAsJobSite()->exists();
+
+    $hasChildren = $customer->children()->exists();
+
+    if ($hasOpportunities || $hasChildren) {
+        $reason = $hasOpportunities
+            ? 'This customer has opportunities linked to them and cannot be deleted.'
+            : 'This customer has child customers linked to them and cannot be deleted.';
+
+        return redirect()->route('admin.customers.index')
+            ->with('error', $reason . ' You can deactivate them instead.');
+    }
+
+    $customer->delete();
+
+    return redirect()->route('admin.customers.index')
+        ->with('success', 'Customer deleted successfully.');
+}
+
+public function deactivate(Customer $customer)
+{
+    $customer->update(['customer_status' => 'inactive']);
+
+    return redirect()->route('admin.customers.index')
+        ->with('success', 'Customer has been marked as inactive.');
+}
 
 }

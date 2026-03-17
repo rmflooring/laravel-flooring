@@ -1,8 +1,20 @@
 <x-app-layout>
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-screen-2xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
+
+                    {{-- Flash messages --}}
+                    @if(session('success'))
+                        <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 border border-green-300">
+                            {{ session('success') }}
+                        </div>
+                    @endif
+                    @if(session('error'))
+                        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 border border-red-300">
+                            {{ session('error') }}
+                        </div>
+                    @endif
 
                     <!-- Header -->
                     <div class="flex justify-between items-center mb-6">
@@ -95,22 +107,47 @@
                                         </td>
 
                                         <td class="px-6 py-4 whitespace-nowrap">
+                                            <a href="{{ route('admin.customers.show', $customer) }}"
+                                               class="font-medium text-blue-600 hover:underline mr-3">
+                                                View
+                                            </a>
                                             <a href="{{ route('admin.customers.edit', $customer) }}"
-                                               class="font-medium text-blue-600 hover:underline mr-4">
+                                               class="font-medium text-blue-600 hover:underline mr-3">
                                                 Edit
                                             </a>
 
-                                            <form action="{{ route('admin.customers.destroy', $customer) }}"
-                                                  method="POST"
-                                                  class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                        class="font-medium text-red-600 hover:underline"
-                                                        onclick="return confirm('Are you sure?')">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @php
+                                                $hasActivity = $customer->opportunities_as_parent_count > 0
+                                                    || $customer->opportunities_as_job_site_count > 0
+                                                    || $customer->children_count > 0;
+                                            @endphp
+
+                                            @if($hasActivity)
+                                                {{-- Has linked records — offer deactivate only --}}
+                                                <form action="{{ route('admin.customers.deactivate', $customer) }}"
+                                                      method="POST"
+                                                      class="inline">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="font-medium text-yellow-600 hover:underline"
+                                                            onclick="return confirm('Mark this customer as inactive?')">
+                                                        Deactivate
+                                                    </button>
+                                                </form>
+                                            @else
+                                                {{-- No linked records — allow delete --}}
+                                                <form action="{{ route('admin.customers.destroy', $customer) }}"
+                                                      method="POST"
+                                                      class="inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                            class="font-medium text-red-600 hover:underline"
+                                                            onclick="return confirm('Permanently delete this customer?')">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
