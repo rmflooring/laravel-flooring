@@ -547,6 +547,33 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 
 ---
 
+## Customers module (session 18, 2026-03-16)
+
+### Guard rails + deactivate
+- `Customer` model: added `opportunitiesAsParent()` (FK: `parent_customer_id`) and `opportunitiesAsJobSite()` (FK: `job_site_customer_id`) relationships
+- `CustomerController::destroy()` — blocks deletion if customer has any linked opportunities (either role) or child customers; redirects back with error message
+- `CustomerController::deactivate()` — sets `customer_status = 'inactive'`; route: `POST admin/customers/{customer}/deactivate` → `admin.customers.deactivate` (gated by `edit customers`)
+- Index blade: `withCount(['opportunitiesAsParent', 'opportunitiesAsJobSite', 'children'])` passed from controller; actions column shows **Deactivate** (yellow) when `$hasActivity`, **Delete** (red) only when no activity
+- Index blade: widened to `max-w-screen-2xl`; added success/error flash banners
+
+### Customer show page
+- Route: `GET admin/customers/{customer}` → `admin.customers.show` (already existed in routes)
+- Controller: `CustomerController::show()` — loads opportunities as parent (with rfms, estimates, purchaseOrders) + as job site (with parentCustomer) + sales via opportunity_ids
+- View: `resources/views/admin/customers/show.blade.php`
+  - Customer details card (type, status, phone, email, address, parent customer link, notes)
+  - Opportunities table (as main customer) — job#, status, clickable RFM/Estimate/PO links, View button
+  - Opportunities table (as job site) — same + shows main customer link
+  - Sales table — sale#, job name, status, customer name, View button
+  - Sections hidden when empty; count badges per section
+  - "No activities" fallback when customer has nothing linked
+- Index blade: "View" link added to actions column
+
+### Key facts
+- Estimates and Sales have no direct `customer_id` — they link to customers via `opportunity_id` → opportunity → `parent_customer_id` / `job_site_customer_id`
+- `customer_status` field already existed on `customers` table — no migration needed for deactivate
+
+---
+
 ## Opportunity create — job site modal fix (session 17, 2026-03-16)
 
 - **Problem 1:** Creating a job site from the opportunity create page redirected back to a blank form, losing all entered data.
@@ -581,6 +608,9 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 
 **To continue warehouse / pick ticket work:**
 > Read CLAUDE.md and Context/context_warehouse_pick_tickets.md. I want to continue working on the warehouse/pick ticket module. One step at a time.
+
+**To continue customers module work:**
+> Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to continue working on the Customers module. One step at a time.
 
 **To start a fresh feature:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md, then tell me the current state of the system before we begin.

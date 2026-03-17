@@ -17,6 +17,8 @@ class ProductLine extends Model
         'manufacturer',
         'model',
         'collection',
+        'default_cost_price',
+        'default_sell_price',
         'unit_id',
         'width',
         'length',
