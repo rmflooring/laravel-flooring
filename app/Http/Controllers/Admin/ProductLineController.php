@@ -34,6 +34,13 @@ public function index(Request $request)
               })
               ->orWhereHas('vendorRelation', function ($v) use ($search) {
                   $v->where('company_name', 'like', "%{$search}%");
+              })
+              ->orWhereHas('productStyles', function ($s) use ($search) {
+                  $s->where('name', 'like', "%{$search}%")
+                    ->orWhere('color', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('style_number', 'like', "%{$search}%")
+                    ->orWhere('pattern', 'like', "%{$search}%");
               });
         });
     }
