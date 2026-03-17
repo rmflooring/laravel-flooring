@@ -1858,7 +1858,14 @@
 <script src="{{ asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
 
 {{-- Send Email Modal (Alpine.js) --}}
-<div x-data="{ open: false }"
+<div x-data="{
+        open: false,
+        toEmail: '{{ $estimate->homeowner_email }}',
+        customTo: '',
+        selected: '{{ $estimate->homeowner_email ? 'jobsite' : 'custom' }}',
+        get finalTo() { return this.selected === 'custom' ? this.customTo : this.toEmail; },
+        select(val, email) { this.selected = val; this.toEmail = email; }
+     }"
      @open-send-email-modal.window="open = true"
      x-show="open"
      x-cloak
@@ -1877,18 +1884,56 @@
             @csrf
             <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
-                @if (! $estimate->homeowner_email)
-                    <div class="p-3 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        No homeowner email on this estimate. Enter a recipient below or save the estimate with an email address first.
-                    </div>
-                @endif
-
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
-                    <input type="email" name="to"
-                           value="{{ $estimate->homeowner_email }}"
-                           placeholder="customer@example.com"
-                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+
+                    {{-- Recipient quick-select buttons --}}
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        @if ($estimate->homeowner_email)
+                            <button type="button"
+                                    @click="select('jobsite', '{{ $estimate->homeowner_email }}')"
+                                    :class="selected === 'jobsite' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                                Job Site — {{ $estimate->homeowner_email }}
+                            </button>
+                        @endif
+
+                        @if (!empty($pmEmail))
+                            <button type="button"
+                                    @click="select('pm', '{{ $pmEmail }}')"
+                                    :class="selected === 'pm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                PM — {{ $pmEmail }}
+                            </button>
+                        @endif
+
+                        <button type="button"
+                                @click="select('custom', ''); $nextTick(() => $refs.customToInput.focus())"
+                                :class="selected === 'custom' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            Custom
+                        </button>
+                    </div>
+
+                    {{-- Display selected email or custom input --}}
+                    <template x-if="selected !== 'custom'">
+                        <div class="w-full bg-gray-100 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-700" x-text="toEmail"></div>
+                    </template>
+                    <template x-if="selected === 'custom'">
+                        <input type="email" x-ref="customToInput" x-model="customTo"
+                               placeholder="Enter email address"
+                               class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                    </template>
+
+                    {{-- Hidden input that always submits the final value --}}
+                    <input type="hidden" name="to" :value="finalTo">
+
+                    @if (! $estimate->homeowner_email && empty($pmEmail))
+                        <p class="mt-1.5 text-xs text-yellow-700">No job site or PM email on this estimate. Use Custom to enter a recipient.</p>
+                    @endif
                 </div>
 
                 <div>

@@ -360,6 +360,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'rooms.items.productStyle',
 			'salesperson1Employee',
 			'salesperson2Employee',
+			'opportunity.projectManager',
 		]);
 
 		$taxGroups = DB::table('tax_rate_groups')
@@ -393,9 +394,11 @@ $data['tax_rate_percent'] = $groupPercent;
 		$emailSubject = $templateService->render($template['subject'], $templateVars);
 		$emailBody    = $templateService->render($template['body'], $templateVars);
 
+		$pmEmail = $estimate->opportunity?->projectManager?->email;
+
 		return view('admin.estimates.edit', compact(
 			'estimate', 'taxGroups', 'defaultTaxGroupId', 'employees',
-			'emailSubject', 'emailBody',
+			'emailSubject', 'emailBody', 'pmEmail',
 		));
 	}
 
