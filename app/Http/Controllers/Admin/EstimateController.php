@@ -364,6 +364,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'salesperson1Employee',
 			'salesperson2Employee',
 			'opportunity.projectManager',
+			'sale',
 		]);
 
 		$taxGroups = DB::table('tax_rate_groups')
@@ -408,6 +409,10 @@ $data['tax_rate_percent'] = $groupPercent;
 
 public function update(Request $request, Estimate $estimate)
 {
+    if ($estimate->status === 'approved') {
+        return back()->with('error', 'This estimate is approved and locked. Use "Make Revision" to create an editable copy.');
+    }
+
     $data = $request->validate([
         'parent_customer_name' => ['nullable', 'string', 'max:255'],
         'pm_name'              => ['nullable', 'string', 'max:255'],
@@ -1023,6 +1028,95 @@ public function apiStyles(Request $request)
     return redirect()->route('pages.sales.edit', $sale->id)
         ->with('success', 'Sale created from approved estimate.');
 }
+
+public function makeRevision(Estimate $estimate)
+{
+    // Determine the root parent
+    $parentId = $estimate->parent_estimate_id ?? $estimate->id;
+
+    // Next revision number = highest existing revision for this parent + 1
+    $nextRevNo = Estimate::where('parent_estimate_id', $parentId)->max('revision_no') ?? 0;
+    $nextRevNo = max($nextRevNo, $estimate->revision_no) + 1;
+    $revLabel  = 'Rev' . str_pad($nextRevNo, 2, '0', STR_PAD_LEFT);
+
+    $revision = DB::transaction(function () use ($estimate, $parentId, $nextRevNo, $revLabel) {
+
+        // Copy header
+        $revision = Estimate::create([
+            'parent_estimate_id'        => $parentId,
+            'revision_no'               => $nextRevNo,
+            'opportunity_id'            => $estimate->opportunity_id,
+            'status'                    => 'draft',
+            'customer_name'             => $estimate->customer_name,
+            'job_name'                  => $estimate->job_name,
+            'job_no'                    => $estimate->job_no,
+            'job_address'               => $estimate->job_address,
+            'pm_name'                   => $estimate->pm_name,
+            'homeowner_name'            => $estimate->homeowner_name,
+            'homeowner_phone'           => $estimate->homeowner_phone,
+            'homeowner_email'           => $estimate->homeowner_email,
+            'salesperson_1_employee_id' => $estimate->salesperson_1_employee_id,
+            'salesperson_2_employee_id' => $estimate->salesperson_2_employee_id,
+            'notes'                     => $estimate->notes,
+            'subtotal_materials'        => $estimate->subtotal_materials,
+            'subtotal_labour'           => $estimate->subtotal_labour,
+            'subtotal_freight'          => $estimate->subtotal_freight,
+            'pretax_total'              => $estimate->pretax_total,
+            'tax_group_id'              => $estimate->tax_group_id,
+            'tax_rate_percent'          => $estimate->tax_rate_percent,
+            'tax_amount'                => $estimate->tax_amount,
+            'grand_total'               => $estimate->grand_total,
+            'created_by'                => auth()->id(),
+            'updated_by'                => auth()->id(),
+        ]);
+
+        // Copy rooms and items
+        foreach ($estimate->rooms()->with('items')->orderBy('sort_order')->get() as $room) {
+            $newRoom = EstimateRoom::create([
+                'estimate_id'        => $revision->id,
+                'room_name'          => $room->room_name,
+                'sort_order'         => $room->sort_order,
+                'subtotal_materials' => $room->subtotal_materials,
+                'subtotal_labour'    => $room->subtotal_labour,
+                'subtotal_freight'   => $room->subtotal_freight,
+                'room_total'         => $room->room_total,
+            ]);
+
+            foreach ($room->items as $item) {
+                EstimateItem::create([
+                    'estimate_id'        => $revision->id,
+                    'estimate_room_id'   => $newRoom->id,
+                    'item_type'          => $item->item_type,
+                    'sort_order'         => $item->sort_order,
+                    'quantity'           => $item->quantity,
+                    'order_qty'          => $item->order_qty,
+                    'unit'               => $item->unit,
+                    'sell_price'         => $item->sell_price,
+                    'line_total'         => $item->line_total,
+                    'cost_price'         => $item->cost_price,
+                    'cost_total'         => $item->cost_total,
+                    'notes'              => $item->notes,
+                    'product_type'       => $item->product_type,
+                    'product_line_id'    => $item->product_line_id,
+                    'product_style_id'   => $item->product_style_id,
+                    'manufacturer'       => $item->manufacturer,
+                    'style'              => $item->style,
+                    'color_item_number'  => $item->color_item_number,
+                    'po_notes'           => $item->po_notes,
+                    'labour_type'        => $item->labour_type,
+                    'description'        => $item->description,
+                    'freight_description'=> $item->freight_description,
+                ]);
+            }
+        }
+
+        return $revision;
+    });
+
+    return redirect()->route('pages.estimates.edit', $revision->id)
+        ->with('success', "Revision {$revLabel} created from estimate #{$estimate->estimate_number}.");
+}
+
 	public function showProfits(Estimate $estimate)
 {
     $estimate->load([

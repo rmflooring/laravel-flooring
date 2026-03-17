@@ -463,6 +463,10 @@ Route::prefix('pages')
 			->middleware('permission:create estimates')
 			->name('estimates.update');
 		
+		Route::post('estimates/{estimate}/make-revision', [EstimateController::class, 'makeRevision'])
+			->middleware('permission:create estimates')
+			->name('estimates.make-revision');
+
 		Route::post('estimates/{estimate}/profits/save-costs', [EstimateController::class, 'saveProfitCosts'])
 			->name('estimates.profits.save-costs');
 

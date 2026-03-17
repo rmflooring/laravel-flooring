@@ -10,6 +10,7 @@ class Estimate extends Model
 {
     protected $fillable = [
 		'opportunity_id',
+        'parent_estimate_id',
         'estimate_number',
         'revision_no',
         'status',
@@ -42,6 +43,22 @@ class Estimate extends Model
         'created_by',
         'updated_by',
     ];
+
+    public function getRevisionLabelAttribute(): ?string
+    {
+        if (!$this->revision_no) return null;
+        return 'Rev' . str_pad($this->revision_no, 2, '0', STR_PAD_LEFT);
+    }
+
+    public function parentEstimate(): BelongsTo
+    {
+        return $this->belongsTo(Estimate::class, 'parent_estimate_id');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(Estimate::class, 'parent_estimate_id');
+    }
 
     public function rooms(): HasMany
     {

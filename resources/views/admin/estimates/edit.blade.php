@@ -10,7 +10,12 @@
             {{-- Page Header --}}
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Edit Estimate</h1>
+                    <h1 class="text-2xl font-bold text-gray-900">
+                        Edit Estimate
+                        @if($estimate->revision_label)
+                            <span class="ml-2 text-lg font-semibold text-amber-600">{{ $estimate->revision_label }}</span>
+                        @endif
+                    </h1>
                     @php
                         $statusColors = [
                             'draft'    => 'bg-gray-100 text-gray-700',
@@ -39,19 +44,37 @@
     </div>
 @endif
 
+                @php $isLocked = $estimate->status === 'approved'; @endphp
                 <div class="flex items-center gap-2">
-                    @if(($estimate->status ?? '') === 'approved')
-  <button type="button"
-    class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 mr-2"
-    onclick="if(confirm('Convert this approved estimate to a Sale? This will create a new Sale and copy rooms/items.')) document.getElementById('convert-to-sale-form').submit();">
-    Convert to Sale
-  </button>
-@endif
 
-<button type="submit"
-  class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
-  Save Estimate
-</button>
+                    {{-- Convert to Sale: only if approved AND not already converted --}}
+                    @if($isLocked && !$estimate->sale)
+                        <button type="button"
+                            class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300"
+                            onclick="if(confirm('Convert this approved estimate to a Sale? This will create a new Sale and copy rooms/items.')) document.getElementById('convert-to-sale-form').submit();">
+                            Convert to Sale
+                        </button>
+                    @endif
+
+                    {{-- Make Revision: only if approved --}}
+                    @if($isLocked)
+                        <form method="POST" action="{{ route('pages.estimates.make-revision', $estimate) }}">
+                            @csrf
+                            <button type="button"
+                                class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-300"
+                                onclick="if(confirm('Create a new editable revision of this estimate?')) this.closest('form').submit();">
+                                Make Revision
+                            </button>
+                        </form>
+                    @endif
+
+                    {{-- Save: hidden when locked --}}
+                    @if(!$isLocked)
+                        <button type="submit"
+                            class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                            Save Estimate
+                        </button>
+                    @endif
 <button type="button"
   onclick="window.dispatchEvent(new CustomEvent('open-send-email-modal'))"
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800 focus:outline-none focus:ring-4 focus:ring-purple-300">
@@ -80,6 +103,18 @@
 
                 </div>
             </div>
+
+            {{-- Lock banner --}}
+            @if($isLocked)
+                <div class="mb-4 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                    </svg>
+                    <span>This estimate is <strong>approved and locked</strong>. No changes can be saved. Use <strong>Make Revision</strong> to create an editable copy.</span>
+                </div>
+            @endif
+
+            <fieldset {{ $isLocked ? 'disabled' : '' }} class="{{ $isLocked ? 'opacity-60 pointer-events-none' : '' }}">
 
             {{-- Estimate Header Card --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
@@ -1894,6 +1929,7 @@
   </div>
 </div>
 
+</fieldset>
 </form>
 
 {{-- Convert to Sale hidden form --}}
