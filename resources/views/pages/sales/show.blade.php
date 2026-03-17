@@ -223,12 +223,22 @@
                                                 </thead>
                                                 <tbody class="divide-y divide-gray-50">
                                                     @foreach ($materials as $item)
+                                                        @php
+                                                            $poStatus = $itemPoStatusMap[$item->id] ?? null;
+                                                            $qtyBg = match($poStatus) {
+                                                                'received' => '#dcfce7',
+                                                                'ordered'  => '#fef9c3',
+                                                                'pending'  => '#ffedd5',
+                                                                default    => '',
+                                                            };
+                                                        @endphp
                                                         <tr>
                                                             <td class="py-1.5 pr-4">{{ $item->product_type ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->manufacturer ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->style ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->color_item_number ?: '—' }}</td>
-                                                            <td class="py-1.5 pr-4 text-right">{{ $item->quantity }}</td>
+                                                            <td class="py-1.5 pr-4 text-right rounded"
+                                                                @if($qtyBg) style="background-color:{{ $qtyBg }}" @endif>{{ $item->quantity }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->unit ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4 text-right">${{ number_format($item->sell_price, 2) }}</td>
                                                             <td class="py-1.5 text-right font-medium">${{ number_format($item->line_total, 2) }}</td>

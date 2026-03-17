@@ -316,10 +316,20 @@
       </td>
 
       <td class="px-3 py-2">
+        @php
+          $poStatus = $itemPoStatusMap[$item->id] ?? null;
+          $qtyStyle = match($poStatus) {
+              'received' => 'background-color:#dcfce7; border-color:#86efac;',
+              'ordered'  => 'background-color:#fef9c3; border-color:#fde047;',
+              'pending'  => 'background-color:#ffedd5; border-color:#fdba74;',
+              default    => '',
+          };
+        @endphp
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
           value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
-          class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+          class="w-24 border rounded-lg p-2"
+          style="{{ $qtyStyle }}">
       </td>
 
       <td class="px-3 py-2">

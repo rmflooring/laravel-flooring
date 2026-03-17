@@ -105,7 +105,8 @@ class SaleController extends Controller
 			'workOrders.installer',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
-		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody'));
+		$itemPoStatusMap = $this->buildItemPoStatusMap($sale);
+		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody', 'itemPoStatusMap'));
 	}
 
     public function edit(Sale $sale)
@@ -135,10 +136,11 @@ class SaleController extends Controller
         $defaultTaxGroupId = DB::table('default_tax')->where('id', 1)->value('tax_rate_group_id');
 
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
+        $itemPoStatusMap = $this->buildItemPoStatusMap($sale);
 
         return view('pages.sales.edit', compact(
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
-            'emailSubject', 'emailBody',
+            'emailSubject', 'emailBody', 'itemPoStatusMap',
         ));
     }
 	
@@ -474,6 +476,30 @@ public function showProfits(Sale $sale)
             $templateService->render($template['subject'], $vars),
             $templateService->render($template['body'], $vars),
         ];
+    }
+
+    /**
+     * Build a map of sale_item_id => highest PO status across all non-cancelled POs.
+     * Priority: received > ordered > pending
+     */
+    private function buildItemPoStatusMap(\App\Models\Sale $sale): array
+    {
+        $priority = ['pending' => 1, 'ordered' => 2, 'received' => 3];
+        $map = [];
+
+        foreach ($sale->purchaseOrders->where('status', '<>', 'cancelled') as $po) {
+            foreach ($po->items as $poItem) {
+                if (! $poItem->sale_item_id) continue;
+                $id = $poItem->sale_item_id;
+                $new = $priority[$po->status] ?? 0;
+                $current = $priority[$map[$id] ?? ''] ?? 0;
+                if ($new > $current) {
+                    $map[$id] = $po->status;
+                }
+            }
+        }
+
+        return $map;
     }
 
 }
