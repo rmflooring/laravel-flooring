@@ -1,8 +1,8 @@
 <x-app-layout>
     <div class="py-12">
-        <div class="max-w-screen-2xl mx-auto sm:px-6 lg:px-8">
+        <div class="w-full mx-auto px-4 sm:px-6 lg:px-8" style="max-width: 1800px;">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
+                <div class="p-4 text-gray-900">
 
                     {{-- Flash messages --}}
                     @if(session('success'))
@@ -55,58 +55,58 @@
                         <table class="w-full text-sm text-left text-gray-500">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3">
+                                    <th scope="col" class="px-4 py-3">
 									    @include('admin.partials.sort-link', ['label' => 'Name', 'field' => 'name'])
 									</th>
-									<th scope="col" class="px-6 py-3">
+									<th scope="col" class="px-4 py-3">
 									    @include('admin.partials.sort-link', ['label' => 'Company', 'field' => 'company_name'])
 									</th>
-                                    <th scope="col" class="px-6 py-3">Parent Customer</th>
-                                    <th scope="col" class="px-6 py-3">Phone / Mobile</th>
-                                    <th scope="col" class="px-6 py-3">Email</th>
-                                    <th scope="col" class="px-6 py-3">City / Province</th>
-                                    <th scope="col" class="px-6 py-3">Type / Status</th>
-                                    <th scope="col" class="px-6 py-3">Created By</th>
-                                    <th scope="col" class="px-6 py-3">Actions</th>
+                                    <th scope="col" class="px-4 py-3">Parent Customer</th>
+                                    <th scope="col" class="px-4 py-3">Phone / Mobile</th>
+                                    <th scope="col" class="px-4 py-3">Email</th>
+                                    <th scope="col" class="px-4 py-3">City / Province</th>
+                                    <th scope="col" class="px-4 py-3">Type / Status</th>
+                                    <th scope="col" class="px-4 py-3">Created By</th>
+                                    <th scope="col" class="px-4 py-3">Actions</th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 @forelse($customers as $customer)
                                     <tr class="bg-white border-b hover:bg-gray-50">
-                                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                                        <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                                             {{ $customer->name ?? '-' }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->company_name ?? '-' }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->parent?->name ?? '-' }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->phone ?? $customer->mobile ?? '-' }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->email ?? '-' }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->city ?? '-' }} {{ $customer->province ?? '' }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             {{ ucfirst($customer->customer_type ?? '') }} / {{ ucfirst($customer->customer_status ?? '') }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->creator?->name ?? '-' }}
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-3 whitespace-nowrap">
                                             <a href="{{ route('admin.customers.show', $customer) }}"
                                                class="font-medium text-blue-600 hover:underline mr-3">
                                                 View
