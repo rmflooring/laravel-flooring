@@ -761,6 +761,7 @@
 
 <script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
 <script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>
+<script src="{{ asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
 
 @include('components.modals.box-qty-modal')
 
