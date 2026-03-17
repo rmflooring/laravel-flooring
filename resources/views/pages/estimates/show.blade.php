@@ -58,6 +58,14 @@
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div class="text-xs text-gray-500">Status</div>
                     <div class="mt-1 font-semibold text-gray-900 capitalize">{{ $estimate->status ?? '—' }}</div>
+                    @if($estimate->sale)
+                        <div class="mt-1">
+                            <a href="{{ route('pages.sales.show', $estimate->sale) }}"
+                               class="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                Converted → Sale #{{ $estimate->sale->sale_number }}
+                            </a>
+                        </div>
+                    @endif
                 </div>
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div class="text-xs text-gray-500">Estimate #</div>

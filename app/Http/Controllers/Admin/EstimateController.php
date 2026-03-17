@@ -329,6 +329,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'rooms.items' => fn($q) => $q->orderBy('sort_order'),
 			'salesperson1Employee',
 			'salesperson2Employee',
+			'sale',
 		]);
 
 		$user            = auth()->user();
