@@ -280,7 +280,7 @@
         <tr>
           <th class="px-3 py-3">Product Type</th>
           <th class="px-3 py-3">Qty</th>
-          <th class="px-3 py-3" title="Quantity to order (leave blank to use full Qty)">Order Qty</th>
+          <th class="px-3 py-3 cursor-pointer select-none" data-order-qty-header title="Click to show/hide Order Qty column"></th>
           <th class="px-3 py-3">Unit</th>
           <th class="px-3 py-3">Manufacturer</th>
           <th class="px-3 py-3">Style</th>
@@ -333,7 +333,7 @@
           style="{{ $qtyStyle }}">
       </td>
 
-      <td class="px-3 py-2">
+      <td class="px-3 py-2" data-order-qty-cell>
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][order_qty]"
           value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
@@ -499,7 +499,7 @@
           placeholder="0">
       </td>
 
-      <td class="px-3 py-2">
+      <td class="px-3 py-2" data-order-qty-cell>
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][order_qty]"
           class="w-20 border rounded-lg p-2"
@@ -810,7 +810,7 @@
         <tr>
           <th class="px-3 py-3">Labour Type</th>
 <th class="px-3 py-3">Qty</th>
-<th class="px-3 py-3" title="Quantity to schedule (leave blank to use full Qty)">Order Qty</th>
+<th class="px-3 py-3 cursor-pointer select-none" data-order-qty-header title="Click to show/hide Order Qty column"></th>
 <th class="px-3 py-3">Unit</th>
 <th class="px-3 py-3">Description</th>
 <th class="px-3 py-3">Notes</th>
@@ -880,7 +880,7 @@
       class="labour-cost-total-input">
   </td>
 
-  <td class="px-3 py-2">
+  <td class="px-3 py-2" data-order-qty-cell>
     <input type="number" step="0.01"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][order_qty]"
       value="{{ old("rooms.$roomIndex.labour.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
@@ -1030,7 +1030,7 @@
           placeholder="0">
       </td>
 
-      <td class="px-3 py-2">
+      <td class="px-3 py-2" data-order-qty-cell>
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][order_qty]"
           class="w-20 border rounded-lg p-2"
@@ -2030,11 +2030,60 @@
 </script>
 
 <script>
-// Order Qty auto-sync: mirrors Qty unless the user has manually edited Order Qty.
-// Works for both existing rows (on load) and dynamically added rows (event delegation).
+// ── Order Qty column toggle ───────────────────────────────────────────────────
+(function () {
+    var STORAGE_KEY = 'fm_order_qty_visible';
+    var visible = localStorage.getItem(STORAGE_KEY) === 'true'; // hidden by default
+
+    function applyVisibility() {
+        // Show/hide all cells (including inside <template> elements)
+        document.querySelectorAll('[data-order-qty-cell]').forEach(function (td) {
+            td.style.display = visible ? '' : 'none';
+        });
+
+        // Update every header to reflect state
+        document.querySelectorAll('[data-order-qty-header]').forEach(function (th) {
+            if (visible) {
+                th.innerHTML = '<span class="inline-flex items-center gap-1">Order Qty <span class="text-gray-400 text-xs">&#x25B2;</span></span>';
+                th.style.whiteSpace = 'nowrap';
+                th.style.minWidth  = '';
+            } else {
+                th.innerHTML = '<span class="inline-flex items-center gap-1 text-indigo-500">Order Qty <span class="text-xs">&#x25BC;</span></span>';
+                th.style.whiteSpace = 'nowrap';
+                th.style.minWidth  = '80px';
+            }
+        });
+    }
+
+    // Toggle on header click
+    document.addEventListener('click', function (e) {
+        var th = e.target.closest('[data-order-qty-header]');
+        if (!th) return;
+        visible = !visible;
+        localStorage.setItem(STORAGE_KEY, visible ? 'true' : 'false');
+        applyVisibility();
+    });
+
+    // Also hide/show cells inside <template> tags so new rows inherit the state.
+    // We hook into the MutationObserver to catch rows added dynamically.
+    var observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (node) {
+                if (node.nodeType !== 1) return;
+                node.querySelectorAll('[data-order-qty-cell]').forEach(function (td) {
+                    td.style.display = visible ? '' : 'none';
+                });
+            });
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    applyVisibility();
+}());
+
+// ── Order Qty auto-sync: mirrors Qty unless manually edited ───────────────────
 (function () {
     function getOrderQtyInput(qtyInput) {
-        // Order Qty is the next <td>'s input after the Qty <td>
         var td = qtyInput.closest('td');
         if (!td) return null;
         var nextTd = td.nextElementSibling;
