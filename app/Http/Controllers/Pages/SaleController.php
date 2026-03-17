@@ -103,10 +103,12 @@ class SaleController extends Controller
 			'purchaseOrders.vendor',
 			'purchaseOrders.items',
 			'workOrders.installer',
+			'workOrders.items',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		$itemPoStatusMap = $this->buildItemPoStatusMap($sale);
-		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody', 'itemPoStatusMap'));
+		$itemWoStatusMap = $this->buildItemWoStatusMap($sale);
+		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap'));
 	}
 
     public function edit(Sale $sale)
@@ -137,10 +139,11 @@ class SaleController extends Controller
 
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
         $itemPoStatusMap = $this->buildItemPoStatusMap($sale);
+        $itemWoStatusMap = $this->buildItemWoStatusMap($sale);
 
         return view('pages.sales.edit', compact(
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
-            'emailSubject', 'emailBody', 'itemPoStatusMap',
+            'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap',
         ));
     }
 	
@@ -518,6 +521,51 @@ public function showProfits(Sale $sale)
                 $map[$saleItemId] = 'ordered';  // partially ordered/received → yellow
             } else {
                 $map[$saleItemId] = 'pending';  // only pending POs → orange
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Build a map of sale_item_id => color status for labour WO qty highlighting.
+     *
+     * green  = all sale item qty is covered by completed WOs
+     * yellow = WO is scheduled or in_progress (or partially completed)
+     * orange = WO created but not yet scheduled
+     */
+    private function buildItemWoStatusMap(\App\Models\Sale $sale): array
+    {
+        $qtyByStatus = []; // [sale_item_id][status] => total qty
+
+        foreach ($sale->workOrders->where('status', '<>', 'cancelled') as $wo) {
+            foreach ($wo->items as $woItem) {
+                if (! $woItem->sale_item_id) continue;
+                $id = $woItem->sale_item_id;
+                $qtyByStatus[$id][$wo->status] = ($qtyByStatus[$id][$wo->status] ?? 0) + (float) $woItem->quantity;
+            }
+        }
+
+        $saleItemQtys = [];
+        foreach ($sale->rooms as $room) {
+            foreach ($room->items as $item) {
+                $saleItemQtys[$item->id] = (float) $item->quantity;
+            }
+        }
+
+        $map = [];
+        foreach ($qtyByStatus as $saleItemId => $statuses) {
+            $completedQty  = $statuses['completed']   ?? 0;
+            $inProgressQty = $statuses['in_progress'] ?? 0;
+            $scheduledQty  = $statuses['scheduled']   ?? 0;
+            $saleQty       = $saleItemQtys[$saleItemId] ?? 0;
+
+            if ($saleQty > 0 && $completedQty >= $saleQty) {
+                $map[$saleItemId] = 'completed';  // fully completed → green
+            } elseif ($inProgressQty > 0 || $scheduledQty > 0 || $completedQty > 0) {
+                $map[$saleItemId] = 'scheduled';  // scheduled/in_progress/partially done → yellow
+            } else {
+                $map[$saleItemId] = 'created';    // only created WOs → orange
             }
         }
 

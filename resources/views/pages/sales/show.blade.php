@@ -273,10 +273,20 @@
                                                 </thead>
                                                 <tbody class="divide-y divide-gray-50">
                                                     @foreach ($labour as $item)
+                                                        @php
+                                                            $woStatus = $itemWoStatusMap[$item->id] ?? null;
+                                                            $woQtyBg = match($woStatus) {
+                                                                'completed' => '#dcfce7',
+                                                                'scheduled' => '#fef9c3',
+                                                                'created'   => '#ffedd5',
+                                                                default     => '',
+                                                            };
+                                                        @endphp
                                                         <tr>
                                                             <td class="py-1.5 pr-4">{{ $item->labour_type ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->description ?: '—' }}</td>
-                                                            <td class="py-1.5 pr-4 text-right">{{ $item->quantity }}</td>
+                                                            <td class="py-1.5 pr-4 text-right rounded"
+                                                                @if($woQtyBg) style="background-color:{{ $woQtyBg }}" @endif>{{ $item->quantity }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->unit ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4 text-right">${{ number_format($item->sell_price, 2) }}</td>
                                                             <td class="py-1.5 text-right font-medium">${{ number_format($item->line_total, 2) }}</td>

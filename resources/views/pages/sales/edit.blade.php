@@ -835,10 +835,20 @@
   </td>
 
   <td class="px-3 py-2">
+    @php
+      $woStatus = $itemWoStatusMap[$item->id] ?? null;
+      $woQtyStyle = match($woStatus) {
+          'completed' => 'background-color:#dcfce7; border-color:#86efac;',
+          'scheduled' => 'background-color:#fef9c3; border-color:#fde047;',
+          'created'   => 'background-color:#ffedd5; border-color:#fdba74;',
+          default     => '',
+      };
+    @endphp
     <input type="number" step="0.01"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][quantity]"
       value="{{ old("rooms.$roomIndex.labour.$i.quantity", $qty) }}"
-      class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+      class="w-24 border rounded-lg p-2"
+      style="{{ $woQtyStyle }}">
 
     <input type="hidden"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][cost_price]"
