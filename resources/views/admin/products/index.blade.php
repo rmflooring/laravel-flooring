@@ -323,24 +323,23 @@
 </div>
 
 <script>
+var ACTIVE_BTN   = 'px-5 py-2 rounded-full text-sm font-medium border transition-all bg-blue-700 text-white border-blue-700';
+var INACTIVE_BTN = 'px-5 py-2 rounded-full text-sm font-medium border transition-all bg-white text-gray-600 border-gray-300 hover:border-blue-400';
+
 function setMode(mode) {
     document.getElementById('mode-input').value = mode;
 
-    const btnStyles = document.getElementById('btn-styles');
-    const btnLines  = document.getElementById('btn-lines');
-    const searchInput = document.getElementById('search-input');
+    var btnStyles   = document.getElementById('btn-styles');
+    var btnLines    = document.getElementById('btn-lines');
+    var searchInput = document.getElementById('search-input');
 
     if (mode === 'styles') {
-        btnStyles.className = btnStyles.className.replace(/bg-white.*?(?=\s*px)/, '').replace('text-gray-600', 'text-white').replace('border-gray-300', 'border-blue-700');
-        btnStyles.classList.add('bg-blue-700', 'text-white', 'border-blue-700');
-        btnLines.classList.remove('bg-blue-700', 'text-white', 'border-blue-700');
-        btnLines.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
+        btnStyles.className = ACTIVE_BTN;
+        btnLines.className  = INACTIVE_BTN;
         searchInput.placeholder = 'Search by style name, colour, SKU, style number, pattern...';
     } else {
-        btnLines.classList.add('bg-blue-700', 'text-white', 'border-blue-700');
-        btnLines.classList.remove('bg-white', 'text-gray-600', 'border-gray-300');
-        btnStyles.classList.remove('bg-blue-700', 'text-white', 'border-blue-700');
-        btnStyles.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
+        btnLines.className  = ACTIVE_BTN;
+        btnStyles.className = INACTIVE_BTN;
         searchInput.placeholder = 'Search by name, manufacturer, model, collection...';
     }
 }
