@@ -2029,6 +2029,50 @@
     "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
 </script>
 
+<script>
+// Order Qty auto-sync: mirrors Qty unless the user has manually edited Order Qty.
+// Works for both existing rows (on load) and dynamically added rows (event delegation).
+(function () {
+    function getOrderQtyInput(qtyInput) {
+        // Order Qty is the next <td>'s input after the Qty <td>
+        var td = qtyInput.closest('td');
+        if (!td) return null;
+        var nextTd = td.nextElementSibling;
+        if (!nextTd) return null;
+        return nextTd.querySelector('input[name*="[order_qty]"]');
+    }
+
+    // On page load: seed order_qty from qty wherever order_qty is blank
+    document.querySelectorAll('input[name*="[quantity]"]').forEach(function (qtyInput) {
+        var orderInput = getOrderQtyInput(qtyInput);
+        if (!orderInput) return;
+        if (orderInput.value === '' || orderInput.value === null) {
+            orderInput.value = qtyInput.value;
+            orderInput.dataset.synced = 'true';
+        } else {
+            orderInput.dataset.synced = 'false';
+        }
+    });
+
+    // When qty changes: sync to order_qty if still synced
+    document.addEventListener('input', function (e) {
+        if (!e.target.matches('input[name*="[quantity]"]')) return;
+        var orderInput = getOrderQtyInput(e.target);
+        if (!orderInput) return;
+        if (orderInput.dataset.synced !== 'false') {
+            orderInput.value = e.target.value;
+            orderInput.dataset.synced = 'true';
+        }
+    });
+
+    // When order_qty is manually edited: stop syncing
+    document.addEventListener('input', function (e) {
+        if (!e.target.matches('input[name*="[order_qty]"]')) return;
+        e.target.dataset.synced = 'false';
+    });
+}());
+</script>
+
 <script src="{{ asset('assets/js/sales/sale.js') }}" defer></script>
 <script src="{{ asset('assets/js/sales/sale_edit.js') }}" defer></script>
 <script src="{{ asset('assets/js/sales/dropdown_pin.js') }}" defer></script>
