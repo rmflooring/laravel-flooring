@@ -149,6 +149,7 @@ $data['tax_rate_percent'] = $groupPercent;
             if ($incomingEstimateNo === '') {
                 $year = now()->format('Y');
                 $last = Estimate::where('estimate_number', 'like', $year . '-%')
+                    ->whereNull('parent_estimate_id')
                     ->lockForUpdate()
                     ->orderBy('estimate_number', 'desc')
                     ->value('estimate_number');
