@@ -632,6 +632,24 @@ Route::prefix('pages')
 				->middleware('role_or_permission:admin|create rfcs')->name('destroy');
 		});
 
+		// RTV — Return to Vendor
+		Route::prefix('inventory/rtv')->name('inventory.rtv.')->middleware('role_or_permission:admin|view rtvs')->group(function () {
+			Route::get('/', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'index'])->name('index');
+			Route::get('/create', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'create'])->name('create');
+			Route::post('/', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'store'])->name('store');
+			Route::get('/{rtv}', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'show'])->name('show');
+			Route::get('/{rtv}/edit', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'edit'])
+				->middleware('role_or_permission:admin|edit rtvs')->name('edit');
+			Route::put('/{rtv}', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'update'])
+				->middleware('role_or_permission:admin|edit rtvs')->name('update');
+			Route::post('/{rtv}/ship', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'ship'])
+				->middleware('role_or_permission:admin|create rtvs')->name('ship');
+			Route::post('/{rtv}/resolve', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'resolve'])
+				->middleware('role_or_permission:admin|create rtvs')->name('resolve');
+			Route::delete('/{rtv}', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'destroy'])
+				->middleware('role_or_permission:admin|create rtvs')->name('destroy');
+		});
+
 		// Warehouse — Pick Tickets
 		Route::prefix('warehouse')->name('warehouse.')->group(function () {
 			Route::get('pick-tickets', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'index'])

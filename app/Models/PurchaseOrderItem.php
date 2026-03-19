@@ -10,9 +10,10 @@ class PurchaseOrderItem extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'quantity'   => 'decimal:2',
-        'cost_price' => 'decimal:2',
-        'cost_total' => 'decimal:2',
+        'quantity'          => 'decimal:2',
+        'returned_quantity' => 'decimal:2',
+        'cost_price'        => 'decimal:2',
+        'cost_total'        => 'decimal:2',
     ];
 
     protected static function booted(): void

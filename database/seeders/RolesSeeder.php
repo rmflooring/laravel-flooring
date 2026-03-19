@@ -50,6 +50,8 @@ class RolesSeeder extends Seeder
             'view work orders',
 
             'view rfcs',
+
+            'view rtvs',
         ]));
 
         // Sales: customer + vendor + PM + products + RFMs + POs + sale status
@@ -78,6 +80,8 @@ class RolesSeeder extends Seeder
             'view work orders', 'create work orders', 'edit work orders',
 
             'view rfcs', 'create rfcs', 'edit rfcs',
+
+            'view rtvs', 'create rtvs', 'edit rtvs',
         ]));
 
         // Estimator: mostly view reference data + full RFM access + view POs + sale status + WOs
@@ -113,6 +117,8 @@ class RolesSeeder extends Seeder
             'view work orders', 'create work orders', 'edit work orders',
 
             'view rfcs', 'create rfcs', 'edit rfcs',
+
+            'view rtvs', 'create rtvs', 'edit rtvs',
         ]));
 
         // Accounting: mostly view + view POs

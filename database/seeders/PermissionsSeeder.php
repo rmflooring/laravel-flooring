@@ -96,6 +96,11 @@ class PermissionsSeeder extends Seeder
             'view rfcs',
             'create rfcs',
             'edit rfcs',
+
+            // ===== RTV — Return to Vendor =====
+            'view rtvs',
+            'create rtvs',
+            'edit rtvs',
         ];
 
         foreach ($permissions as $permission) {

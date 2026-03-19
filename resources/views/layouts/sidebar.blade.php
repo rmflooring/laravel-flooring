@@ -267,6 +267,14 @@
                             </a>
                         </li>
                         @endcan
+                        @can('view rtvs')
+                        <li>
+                            <a href="{{ route('pages.inventory.rtv.index') }}"
+                               class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.inventory.rtv.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                                RTV
+                            </a>
+                        </li>
+                        @endcan
                     </ul>
                 </li>
 
