@@ -225,11 +225,11 @@
                                                     @foreach ($materials as $item)
                                                         @php
                                                             $poStatus = $itemPoStatusMap[$item->id] ?? null;
-                                                            $qtyBg = match($poStatus) {
-                                                                'delivered' => '#ccfbf1',
-                                                                'received'  => '#dcfce7',
-                                                                'ordered'   => '#fef9c3',
-                                                                'pending'   => '#ffedd5',
+                                                            $qtyStyle = match($poStatus) {
+                                                                'delivered' => 'background-color:#bbf7d0; color:#166534;',
+                                                                'received'  => 'background-color:#bbf7d0; color:#166534;',
+                                                                'ordered'   => 'background-color:#fef9c3; color:#854d0e;',
+                                                                'pending'   => 'background-color:#ffedd5; color:#9a3412;',
                                                                 default     => '',
                                                             };
                                                         @endphp
@@ -238,8 +238,8 @@
                                                             <td class="py-1.5 pr-4">{{ $item->manufacturer ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->style ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->color_item_number ?: '—' }}</td>
-                                                            <td class="py-1.5 pr-4 text-right rounded"
-                                                                @if($qtyBg) style="background-color:{{ $qtyBg }}" @endif>{{ $item->quantity }}</td>
+                                                            <td class="py-1.5 pr-4 text-right rounded font-medium"
+                                                                @if($qtyStyle) style="{{ $qtyStyle }}" @endif>{{ $item->quantity }}</td>
                                                             <td class="py-1.5 pr-4">{{ $item->unit ?: '—' }}</td>
                                                             <td class="py-1.5 pr-4 text-right">${{ number_format($item->sell_price, 2) }}</td>
                                                             <td class="py-1.5 text-right font-medium">${{ number_format($item->line_total, 2) }}</td>

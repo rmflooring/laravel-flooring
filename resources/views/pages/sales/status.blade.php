@@ -322,7 +322,7 @@
                                 $pickTicket         = $coverage['pick_ticket'] ?? null;
 
                                 $dotColors = [
-                                    'delivered' => '#0f766e',
+                                    'delivered' => '#16a34a',
                                     'received'  => '#16a34a',
                                     'inventory' => '#0d9488',
                                     'ordered'   => '#2563eb',
@@ -332,7 +332,7 @@
                                 $dotColor = $dotColors[$dotStatus] ?? '#d97706';
 
                                 $badgeColors = [
-                                    'delivered' => 'bg-teal-700 text-white',
+                                    'delivered' => 'bg-green-100 text-green-800',
                                     'received'  => 'bg-green-100 text-green-800',
                                     'inventory' => 'bg-teal-100 text-teal-800',
                                     'ordered'   => 'bg-blue-100 text-blue-800',
