@@ -11,15 +11,46 @@
                     <p class="text-sm text-gray-600 mt-1">Read-only view of the estimate record.</p>
                 </div>
 
+                @php $isConverted = (bool) $estimate->sale; @endphp
                 <div class="flex items-center gap-2">
                     <a href="{{ route('pages.estimates.index') }}"
                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                         Back
                     </a>
-                    <a href="{{ route('pages.estimates.edit', $estimate) }}"
-                       class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800">
-                        Edit
-                    </a>
+
+                    @if ($isConverted)
+                        {{-- Locked: show disabled Edit + Make Revision --}}
+                        <span class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed select-none">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                            </svg>
+                            Edit
+                        </span>
+                        <form method="POST" action="{{ route('pages.estimates.make-revision', $estimate) }}">
+                            @csrf
+                            <button type="submit"
+                                    onclick="return confirm('Create a new editable revision of this estimate?')"
+                                    class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600">
+                                Make Revision
+                            </button>
+                        </form>
+                    @else
+                        <a href="{{ route('pages.estimates.edit', $estimate) }}"
+                           class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800">
+                            Edit
+                        </a>
+                        @if ($estimate->status === 'approved')
+                            <form method="POST" action="{{ route('pages.estimates.convert-to-sale', $estimate) }}"
+                                  onsubmit="return confirm('Convert this approved estimate to a Sale?')">
+                                @csrf
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
+                                    Convert to Sale
+                                </button>
+                            </form>
+                        @endif
+                    @endif
+
                     <button type="button"
                             onclick="window.dispatchEvent(new CustomEvent('open-send-email-modal'))"
                             class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800">
@@ -32,16 +63,6 @@
                         </svg>
                         Print
                     </a>
-                    @if ($estimate->status === 'approved')
-                        <form method="POST" action="{{ route('pages.estimates.convert-to-sale', $estimate) }}"
-                              onsubmit="return confirm('Convert this approved estimate to a Sale?')">
-                            @csrf
-                            <button type="submit"
-                                    class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
-                                Convert to Sale
-                            </button>
-                        </form>
-                    @endif
                 </div>
             </div>
 
@@ -51,6 +72,16 @@
             @endif
             @if (session('error'))
                 <div class="p-4 text-red-800 bg-red-100 border border-red-200 rounded-lg">{{ session('error') }}</div>
+            @endif
+
+            {{-- Converted-to-sale lock banner --}}
+            @if ($isConverted)
+                <div class="flex items-center gap-3 p-4 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                    </svg>
+                    <span>This estimate has been <strong>converted to <a href="{{ route('pages.sales.show', $estimate->sale) }}" class="underline hover:text-amber-900">Sale #{{ $estimate->sale->sale_number }}</a></strong> and is locked. Use <strong>Make Revision</strong> to create a new editable copy.</span>
+                </div>
             @endif
 
             {{-- Summary cards --}}
