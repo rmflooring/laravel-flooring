@@ -525,7 +525,7 @@ class PurchaseOrderController extends Controller
 
         $rules = [
             'vendor_id'              => ['required', 'integer', 'exists:vendors,id'],
-            'status'                 => ['required', 'in:pending,ordered,received,cancelled'],
+            'status'                 => ['required', 'in:pending,ordered,received,delivered,cancelled'],
             'vendor_order_number'    => ['nullable', 'string', 'max:255'],
             'expected_delivery_date' => ['nullable', 'date'],
             'fulfillment_method'     => ['required', 'in:' . $fulfillmentOptions],

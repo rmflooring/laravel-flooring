@@ -128,6 +128,7 @@ class PurchaseOrder extends Model
             'pending'   => 'Pending',
             'ordered'   => 'Ordered',
             'received'  => 'Received',
+            'delivered' => 'Delivered',
             'cancelled' => 'Cancelled',
             default     => ucfirst($this->status),
         };

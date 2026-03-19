@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\InventoryAllocation;
 use App\Models\PickTicket;
 use App\Models\PickTicketItem;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\SaleItem;
 use App\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
@@ -162,6 +164,10 @@ class PickTicketService
                     'notes'        => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
                 ]);
             }
+
+            if ($allFullyDelivered) {
+                $this->transitionPOsToDelivered($pickTicket);
+            }
         });
     }
 
@@ -257,6 +263,72 @@ class PickTicketService
     }
 
     /**
+     * After a pick ticket is fully delivered, transition any linked POs from
+     * 'received' → 'delivered' if every sale item on the PO now has a fully
+     * delivered pick ticket item.
+     */
+    private function transitionPOsToDelivered(PickTicket $pickTicket): void
+    {
+        $saleItemIds = $pickTicket->items->pluck('sale_item_id')->filter()->unique()->values()->all();
+        if (empty($saleItemIds)) {
+            return;
+        }
+
+        $poIds = PurchaseOrderItem::whereIn('sale_item_id', $saleItemIds)
+            ->join('purchase_orders', 'purchase_orders.id', '=', 'purchase_order_items.purchase_order_id')
+            ->where('purchase_orders.status', 'received')
+            ->pluck('purchase_orders.id')
+            ->unique()
+            ->all();
+
+        foreach ($poIds as $poId) {
+            $po = PurchaseOrder::with('items')->find($poId);
+            if (! $po) {
+                continue;
+            }
+
+            $allDelivered = $po->items->every(function ($poItem) {
+                if (! $poItem->sale_item_id) {
+                    return true; // items without a sale link don't block
+                }
+
+                return PickTicketItem::where('sale_item_id', $poItem->sale_item_id)
+                    ->join('pick_tickets', 'pick_tickets.id', '=', 'pick_ticket_items.pick_ticket_id')
+                    ->where('pick_tickets.status', 'delivered')
+                    ->whereColumn('pick_ticket_items.delivered_qty', '>=', 'pick_ticket_items.quantity')
+                    ->exists();
+            });
+
+            if ($allDelivered) {
+                $po->update(['status' => 'delivered']);
+            }
+        }
+    }
+
+    /**
+     * When a pick ticket delivery is reverted, move any 'delivered' POs that
+     * have sale items on this ticket back to 'received'.
+     */
+    private function revertPOsFromDelivered(PickTicket $pickTicket): void
+    {
+        $saleItemIds = $pickTicket->items->pluck('sale_item_id')->filter()->unique()->values()->all();
+        if (empty($saleItemIds)) {
+            return;
+        }
+
+        $poIds = PurchaseOrderItem::whereIn('sale_item_id', $saleItemIds)
+            ->join('purchase_orders', 'purchase_orders.id', '=', 'purchase_order_items.purchase_order_id')
+            ->where('purchase_orders.status', 'delivered')
+            ->pluck('purchase_orders.id')
+            ->unique()
+            ->all();
+
+        if (! empty($poIds)) {
+            PurchaseOrder::whereIn('id', $poIds)->update(['status' => 'received']);
+        }
+    }
+
+    /**
      * Unstage a staged pick ticket.
      * Records who unstaged it, when, and the reason. Sets status to cancelled
      * so the work order can be re-staged if needed.
@@ -317,6 +389,9 @@ class PickTicketService
 
                     $previousStatus = $pickTicket->picked_at ? 'picked' : 'staged';
                     $pickTicket->update(['status' => $previousStatus, 'delivered_at' => null]);
+
+                    // Revert any POs that were auto-transitioned to delivered
+                    $this->revertPOsFromDelivered($pickTicket);
                     break;
 
                 case 'returned':

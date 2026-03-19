@@ -42,7 +42,7 @@ class SaleStatusController extends Controller
         }
 
         $itemsReceived = $activePOs
-            ->where('status', 'received')
+            ->whereIn('status', ['received', 'delivered'])
             ->flatMap(fn ($po) => $po->items)
             ->count();
 
@@ -124,7 +124,7 @@ class SaleStatusController extends Controller
         }
 
         // ── Coverage items ─────────────────────────────────────────
-        // Priority: received(3) > inventory(2.5) > ordered(2) > pending(1) > none(0)
+        // Priority: delivered(4) > received(3) > inventory(2.5) > ordered(2) > pending(1) > none(0)
         $statusPriority = ['received' => 3, 'ordered' => 2, 'pending' => 1];
 
         $coverageItems = $materialItems->map(function ($item) use (
@@ -141,9 +141,10 @@ class SaleStatusController extends Controller
 
             if (empty($matches)) {
                 if ($hasInvCoverage) {
+                    $invDotStatus = ($pickTicket && $pickTicket['status'] === 'delivered') ? 'delivered' : 'inventory';
                     return [
                         'item'               => $item,
-                        'dot_status'         => 'inventory',
+                        'dot_status'         => $invDotStatus,
                         'po'                 => null,
                         'inv_qty'            => $invQty,
                         'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
@@ -178,9 +179,16 @@ class SaleStatusController extends Controller
                 ];
             }
 
+            $finalStatus = $poStatus;
+
+            // Upgrade to 'delivered' if the linked PT has been fully delivered
+            if ($pickTicket && $pickTicket['status'] === 'delivered') {
+                $finalStatus = 'delivered';
+            }
+
             return [
                 'item'               => $item,
-                'dot_status'         => $poStatus,
+                'dot_status'         => $finalStatus,
                 'po'                 => $best['po'],
                 'inv_qty'            => $invQty,
                 'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
@@ -237,7 +245,7 @@ class SaleStatusController extends Controller
 
         // Ready: all materials received (or from inventory) AND all WOs scheduled or completed
         $allMaterialsReceived = $totalMaterialItems === 0
-            || $coverageItems->every(fn ($c) => in_array($c['dot_status'], ['received', 'inventory']));
+            || $coverageItems->every(fn ($c) => in_array($c['dot_status'], ['received', 'delivered', 'inventory']));
 
         $allWOsDone = $totalWOs === 0
             || $activeWOs->every(fn ($wo) => in_array($wo->status, ['scheduled', 'in_progress', 'completed']));
@@ -247,7 +255,7 @@ class SaleStatusController extends Controller
         }
 
         // In progress: at least one PO ordered/received OR one WO scheduled/in-progress
-        $hasPoProgress = $activePOs->contains(fn ($po) => in_array($po->status, ['ordered', 'received']));
+        $hasPoProgress = $activePOs->contains(fn ($po) => in_array($po->status, ['ordered', 'received', 'delivered']));
         $hasWoProgress = $activeWOs->contains(fn ($wo) => in_array($wo->status, ['scheduled', 'in_progress', 'completed']));
 
         if ($hasPoProgress || $hasWoProgress) {

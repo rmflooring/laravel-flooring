@@ -128,6 +128,7 @@
                             'pending'   => 'bg-yellow-100 text-yellow-800',
                             'ordered'   => 'bg-blue-100 text-blue-800',
                             'received'  => 'bg-green-100 text-green-800',
+                            'delivered' => 'bg-teal-700 text-white',
                             'cancelled' => 'bg-red-100 text-red-800',
                         ];
                     @endphp
@@ -285,6 +286,10 @@
                     {{-- Colour legend --}}
                     <div class="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
                         <span class="flex items-center gap-1.5">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#0f766e"></span>
+                            Delivered
+                        </span>
+                        <span class="flex items-center gap-1.5">
                             <span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:#16a34a"></span>
                             Received
                         </span>
@@ -317,6 +322,7 @@
                                 $pickTicket         = $coverage['pick_ticket'] ?? null;
 
                                 $dotColors = [
+                                    'delivered' => '#0f766e',
                                     'received'  => '#16a34a',
                                     'inventory' => '#0d9488',
                                     'ordered'   => '#2563eb',
@@ -326,6 +332,7 @@
                                 $dotColor = $dotColors[$dotStatus] ?? '#d97706';
 
                                 $badgeColors = [
+                                    'delivered' => 'bg-teal-700 text-white',
                                     'received'  => 'bg-green-100 text-green-800',
                                     'inventory' => 'bg-teal-100 text-teal-800',
                                     'ordered'   => 'bg-blue-100 text-blue-800',
@@ -335,6 +342,7 @@
                                 $badgeColor = $badgeColors[$dotStatus] ?? 'bg-gray-100 text-gray-700';
 
                                 $badgeLabel = match ($dotStatus) {
+                                    'delivered' => 'Delivered',
                                     'received'  => 'Received',
                                     'inventory' => 'From inventory · ' . $invQty . ' ' . $item->unit,
                                     'ordered'   => 'Ordered',
