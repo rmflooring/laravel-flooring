@@ -139,7 +139,7 @@
                             <input type="email" name="email"
                                    value="{{ old('email', $email) }}"
                                    placeholder="e.g. info@rmflooring.ca"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm email-input">
                         </div>
 
                         <div class="sm:col-span-2">

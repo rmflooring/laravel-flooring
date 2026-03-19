@@ -197,7 +197,7 @@
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Email</label>
                                         <input type="email" name="email"
-                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm email-input">
                                     </div>
 
                                     <div>
