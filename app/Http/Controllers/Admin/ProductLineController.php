@@ -67,6 +67,7 @@ public function index(Request $request)
     }
 
     $lines = $query
+        ->withCount(['estimateItems', 'saleItems'])
         ->orderBy('id', 'desc')
         ->paginate($perPage)
         ->withQueryString(); // critical: keeps filters while paging
@@ -156,6 +157,19 @@ public function update(Request $request, ProductLine $product_line)
     return redirect()->route('admin.product_lines.index')
         ->with('success', 'Product line updated successfully.');
 }
+
+    public function destroy(ProductLine $product_line)
+    {
+        if ($product_line->hasActivity()) {
+            return redirect()->route('admin.product_lines.index')
+                ->with('error', 'This product line cannot be deleted — it has been used in estimates or sales.');
+        }
+
+        $product_line->delete();
+
+        return redirect()->route('admin.product_lines.index')
+            ->with('success', 'Product line permanently deleted.');
+    }
 
     public function archive(ProductLine $product_line)
     {

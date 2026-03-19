@@ -41,11 +41,25 @@ class ProductLine extends Model
 {
     return $this->belongsTo(Vendor::class, 'vendor_id');
 }
-		public function productStyles()
-{
-    return $this->hasMany(ProductStyle::class, 'product_line_id');
-}
-	
+	    public function productStyles()
+    {
+        return $this->hasMany(ProductStyle::class, 'product_line_id');
+    }
+
+    public function estimateItems()
+    {
+        return $this->hasMany(\App\Models\EstimateItem::class, 'product_line_id');
+    }
+
+    public function saleItems()
+    {
+        return $this->hasMany(\App\Models\SaleItem::class, 'product_line_id');
+    }
+
+    public function hasActivity(): bool
+    {
+        return $this->estimateItems()->exists() || $this->saleItems()->exists();
+    }
 }
 
 

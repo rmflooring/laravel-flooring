@@ -13,6 +13,11 @@
                     {{ session('success') }}
                 </div>
             @endif
+            @if(session('error'))
+                <div class="mb-6 p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             <!-- Add New Button -->
             <div class="flex justify-end mb-6">
@@ -175,6 +180,22 @@
                                                         Restore
                                                     </button>
                                                 </form>
+                                                @role('admin')
+                                                    @php $canDelete = ($line->estimate_items_count + $line->sale_items_count) === 0; @endphp
+                                                    @if($canDelete)
+                                                        <form action="{{ route('admin.product_lines.destroy', $line->id) }}" method="POST" class="inline">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit"
+                                                                    onclick="return confirm('Permanently delete this product line? This cannot be undone.')"
+                                                                    class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 ml-4">
+                                                                Delete
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        <span class="text-gray-400 dark:text-gray-500 cursor-not-allowed ml-4" title="Used in estimates or sales — cannot delete">In use</span>
+                                                    @endif
+                                                @endrole
                                             @else
                                                 <form action="{{ route('admin.product_lines.archive', $line->id) }}" method="POST" class="inline">
                                                     @csrf
