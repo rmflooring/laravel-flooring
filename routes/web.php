@@ -612,10 +612,6 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('inventory.index');
 
-		Route::get('inventory/{inventoryReceipt}', [\App\Http\Controllers\Pages\InventoryController::class, 'show'])
-			->middleware('role_or_permission:admin|view purchase orders')
-			->name('inventory.show');
-
 		// RFC — Return From Customer
 		Route::prefix('inventory/rfc')->name('inventory.rfc.')->middleware('role_or_permission:admin|view rfcs')->group(function () {
 			Route::get('/', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'index'])->name('index');
@@ -649,6 +645,11 @@ Route::prefix('pages')
 			Route::delete('/{rtv}', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'destroy'])
 				->middleware('role_or_permission:admin|create rtvs')->name('destroy');
 		});
+
+		// Inventory Record show (wildcard — must come AFTER rfc/rtv groups)
+		Route::get('inventory/{inventoryReceipt}', [\App\Http\Controllers\Pages\InventoryController::class, 'show'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('inventory.show');
 
 		// Warehouse — Pick Tickets
 		Route::prefix('warehouse')->name('warehouse.')->group(function () {
