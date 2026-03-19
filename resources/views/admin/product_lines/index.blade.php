@@ -50,6 +50,7 @@
                 <option value="">All (excl. archived)</option>
                 <option value="active"   @selected(request('status') === 'active')>Active</option>
                 <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
+                <option value="dropped"  @selected(request('status') === 'dropped')>Dropped</option>
                 <option value="archived" @selected(request('status') === 'archived')>Archived</option>
             </select>
         </div>
@@ -150,13 +151,16 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->model }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->collection }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            @if($line->status === 'active')
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Active</span>
-                                            @elseif($line->status === 'inactive')
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Inactive</span>
-                                            @elseif($line->status === 'archived')
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">Archived</span>
-                                            @endif
+                                            @php
+                                                $lineBadge = match($line->status) {
+                                                    'active'   => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                                                    'inactive' => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                                                    'dropped'  => 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+                                                    'archived' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+                                                    default    => 'bg-gray-100 text-gray-700',
+                                                };
+                                            @endphp
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full {{ $lineBadge }}">{{ ucfirst($line->status) }}</span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <a href="{{ route('admin.product_lines.edit', $line->id) }}"

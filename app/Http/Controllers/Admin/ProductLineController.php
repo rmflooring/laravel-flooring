@@ -98,7 +98,7 @@ public function index(Request $request)
     $validated = $request->validate([
         'product_type_id' => 'required|exists:product_types,id',
         'name' => 'required|string|max:255',
-        'status' => 'required|in:active,inactive',
+        'status' => 'required|in:active,inactive,dropped',
         'vendor_id' => 'nullable|exists:vendors,id',
         'manufacturer' => 'nullable|string|max:255',
         'model' => 'nullable|string|max:255',
@@ -136,7 +136,7 @@ public function update(Request $request, ProductLine $product_line)
     $validated = $request->validate([
         'product_type_id' => 'required|exists:product_types,id',
         'name' => 'required|string|max:255',
-        'status' => 'required|in:active,inactive',
+        'status' => 'required|in:active,inactive,dropped',
         'vendor_id' => 'nullable|exists:vendors,id',
         'manufacturer' => 'nullable|string|max:255',
         'model' => 'nullable|string|max:255',

@@ -206,6 +206,7 @@
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                 <option value="active" {{ old('status', $product_line->status) == 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status', $product_line->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                <option value="dropped" {{ old('status', $product_line->status) == 'dropped' ? 'selected' : '' }}>Dropped</option>
                             </select>
                             @error('status')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
