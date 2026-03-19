@@ -1,5 +1,16 @@
 {{-- resources/views/pages/inventory/show.blade.php --}}
 <x-app-layout>
+
+@php
+    // Collect all linked sale numbers for the tag
+    $tagSaleNumbers = collect();
+    if ($inventoryReceipt->purchaseOrder?->sale)
+        $tagSaleNumbers->push($inventoryReceipt->purchaseOrder->sale->sale_number);
+    foreach ($inventoryReceipt->allocations as $alloc)
+        if ($alloc->saleItem?->sale && ! $tagSaleNumbers->contains($alloc->saleItem->sale->sale_number))
+            $tagSaleNumbers->push($alloc->saleItem->sale->sale_number);
+@endphp
+
     <div class="py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
@@ -29,7 +40,7 @@
                             <div>
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                        Receipt #{{ $inventoryReceipt->id }}
+                                        Record #{{ $inventoryReceipt->id }}
                                     </span>
                                     @if ($available <= 0)
                                         <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -46,8 +57,17 @@
                                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Unit: {{ $inventoryReceipt->unit }}</p>
                                 @endif
                             </div>
-                            <div class="text-right text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                                <div>Received {{ $inventoryReceipt->received_date?->format('M j, Y') }}</div>
+                            <div class="flex flex-col items-end gap-2 shrink-0">
+                                <div class="text-right text-sm text-gray-500 dark:text-gray-400">
+                                    Received {{ $inventoryReceipt->received_date?->format('M j, Y') }}
+                                </div>
+                                <button type="button" onclick="document.getElementById('print-tag-modal').classList.remove('hidden')"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                                    </svg>
+                                    Print Tag
+                                </button>
                             </div>
                         </div>
 
@@ -185,13 +205,13 @@
                 {{-- Sidebar --}}
                 <div class="space-y-4">
 
-                    {{-- Receipt details --}}
+                    {{-- Record details --}}
                     <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Receipt details</h3>
+                        <h3 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Record details</h3>
                         <dl class="space-y-3 text-sm">
 
                             <div class="flex justify-between gap-4">
-                                <dt class="text-gray-500 shrink-0">Receipt #</dt>
+                                <dt class="text-gray-500 shrink-0">Record #</dt>
                                 <dd class="font-mono font-medium text-gray-900 dark:text-white">{{ $inventoryReceipt->id }}</dd>
                             </div>
 
@@ -268,7 +288,7 @@
 
                             </dl>
                         @else
-                            <p class="text-sm text-gray-500">Manual receipt — not linked to a PO.</p>
+                            <p class="text-sm text-gray-500">Manual record — not linked to a PO.</p>
                         @endif
                     </div>
 
@@ -305,4 +325,226 @@
 
         </div>
     </div>
+
+{{-- ============================================================
+     PRINT TAG MODAL
+     ============================================================ --}}
+<div id="print-tag-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+     onclick="if(event.target===this) this.classList.add('hidden')">
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
+
+        {{-- Modal header --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+                Print Inventory Tag
+            </h2>
+            <button onclick="document.getElementById('print-tag-modal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Tag preview --}}
+        <div class="px-6 pt-5 pb-2">
+            <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium mb-3">Tag preview — 4" × 6"</p>
+
+            <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white text-gray-900 font-sans text-sm" style="aspect-ratio:4/6; max-height:360px; display:flex; flex-direction:column; overflow:hidden;">
+
+                {{-- Header bar --}}
+                <div style="background:#1d4ed8; color:#fff; padding:6px 10px; border-radius:4px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase;">Inventory Record</div>
+                    <div style="font-size:14px; font-weight:700; font-family:monospace;">#{{ $inventoryReceipt->id }}</div>
+                </div>
+
+                {{-- Item name --}}
+                <div style="font-size:14px; font-weight:700; color:#111; line-height:1.25; margin-bottom:5px;">
+                    {{ $inventoryReceipt->item_name }}
+                </div>
+
+                {{-- Qty + Date --}}
+                <div style="font-size:11px; color:#555; margin-bottom:3px;">
+                    <strong>Qty:</strong>
+                    {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }}
+                    {{ $inventoryReceipt->unit }}
+                </div>
+                <div style="font-size:11px; color:#777; margin-bottom:8px;">
+                    Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}
+                </div>
+
+                {{-- PO source --}}
+                @if ($inventoryReceipt->purchaseOrder)
+                    <div style="font-size:11px; color:#555; margin-bottom:6px;">
+                        <strong>PO:</strong> {{ $inventoryReceipt->purchaseOrder->po_number }}
+                        @if ($inventoryReceipt->purchaseOrder->vendor)
+                            — {{ $inventoryReceipt->purchaseOrder->vendor->company_name }}
+                        @endif
+                    </div>
+                @endif
+
+                {{-- Job # --}}
+                @if ($tagSaleNumbers->isNotEmpty())
+                    <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:4px; padding:5px 8px; margin-bottom:8px;">
+                        <div style="font-size:9px; color:#166534; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Job #</div>
+                        <div style="font-size:16px; font-weight:700; color:#15803d; font-family:monospace;">
+                            {{ $tagSaleNumbers->implode(' · ') }}
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Notes preview card --}}
+                <div id="modal-note-card" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:5px 8px; margin-bottom:8px; display:none;">
+                    <div style="font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:2px;">Notes</div>
+                    <div id="modal-note-preview" style="font-size:11px; color:#374151; white-space:pre-wrap;"></div>
+                </div>
+
+                {{-- Spacer --}}
+                <div style="flex:1;"></div>
+
+                {{-- Footer --}}
+                <div style="margin-top:6px; padding-top:5px; border-top:1px solid #e5e7eb; font-size:8px; color:#9ca3af; display:flex; justify-content:space-between;">
+                    <span>RM Flooring</span>
+                    <span>{{ now()->format('M j, Y') }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Note field --}}
+        <div class="px-6 pt-3 pb-5">
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                Tag note <span class="text-gray-400 font-normal">(optional — printed on tag)</span>
+            </label>
+            <textarea id="tag-note-input" rows="3" maxlength="200"
+                      placeholder="e.g. Hold for installer, Room 2 only…"
+                      oninput="syncTagNote(this.value)"
+                      class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white resize-none"></textarea>
+        </div>
+
+        {{-- Actions --}}
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 rounded-b-xl">
+            <button type="button" onclick="document.getElementById('print-tag-modal').classList.add('hidden')"
+                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                Cancel
+            </button>
+            <button type="button" onclick="printTag()"
+                    class="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-700 dark:hover:bg-blue-800">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+                Print Tag
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function syncTagNote(value) {
+    document.getElementById('modal-note-preview').textContent = value;
+    document.getElementById('modal-note-card').style.display  = value.trim() ? 'block' : 'none';
+}
+
+function printTag() {
+    const note     = document.getElementById('tag-note-input').value;
+    const noteHtml = note
+        ? `<div class="tag-notes">
+               <div class="tag-notes-label">Notes</div>
+               <div class="tag-notes-text">${note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+           </div>`
+        : '';
+
+    const jobHtml = @json($tagSaleNumbers->isNotEmpty())
+        ? `<div class="tag-job">
+               <div class="tag-job-label">Job #</div>
+               <div class="tag-job-number">{{ $tagSaleNumbers->implode(' · ') }}</div>
+           </div>`
+        : '';
+
+    const poHtml = @json((bool) $inventoryReceipt->purchaseOrder)
+        ? `<div class="tag-detail"><strong>PO:</strong> {{ $inventoryReceipt->purchaseOrder?->po_number }}{{ $inventoryReceipt->purchaseOrder?->vendor ? ' — ' . $inventoryReceipt->purchaseOrder->vendor->company_name : '' }}</div>`
+        : '';
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+    @page {
+        size: 4in 6in;
+        margin: 0;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        width: 4in;
+        height: 6in;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    .tag {
+        width: 4in;
+        height: 6in;
+        padding: 0.2in;
+        font-family: Arial, Helvetica, sans-serif;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .tag-header {
+        background: #1d4ed8;
+        color: #fff;
+        padding: 7px 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    .tag-header-label { font-size: 10pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .tag-header-id    { font-size: 14pt; font-weight: 700; font-family: monospace; }
+    .tag-item-name    { font-size: 16pt; font-weight: 700; color: #111; line-height: 1.2; margin-bottom: 6px; flex-shrink: 0; }
+    .tag-detail       { font-size: 10pt; color: #555; margin-bottom: 4px; flex-shrink: 0; }
+    .tag-date         { font-size: 9pt;  color: #777; margin-bottom: 10px; flex-shrink: 0; }
+    .tag-job          { background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; flex-shrink: 0; }
+    .tag-job-label    { font-size: 8pt; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .tag-job-number   { font-size: 18pt; font-weight: 700; color: #15803d; font-family: monospace; }
+    .tag-spacer       { flex: 1; min-height: 0; }
+    .tag-notes        { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; flex-shrink: 0; }
+    .tag-notes-label  { font-size: 8pt; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .tag-notes-text   { font-size: 10pt; color: #374151; white-space: pre-wrap; word-break: break-word; }
+    .tag-footer       { margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 7pt; color: #9ca3af; display: flex; justify-content: space-between; flex-shrink: 0; }
+</style>
+</head><body>
+<div class="tag">
+    <div class="tag-header">
+        <span class="tag-header-label">Inventory Record</span>
+        <span class="tag-header-id">#{{ $inventoryReceipt->id }}</span>
+    </div>
+    <div class="tag-item-name">{{ addslashes($inventoryReceipt->item_name) }}</div>
+    <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
+    <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
+    ${poHtml}
+    ${jobHtml}
+    ${noteHtml}
+    <div class="tag-spacer"></div>
+    <div class="tag-footer">
+        <span>RM Flooring</span>
+        <span>{{ now()->format('M j, Y') }}</span>
+    </div>
+</div>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=384,height=576');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.onload = () => { win.print(); win.close(); };
+
+    document.getElementById('print-tag-modal').classList.add('hidden');
+}
+</script>
+
 </x-app-layout>

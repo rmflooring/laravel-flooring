@@ -8,7 +8,7 @@
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
                     <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                        Stock receipts and available quantities.
+                        Stock records and available quantities.
                     </p>
                 </div>
             </div>
@@ -24,11 +24,11 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm text-center">
                     <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $totalReceipts }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total receipts</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total records</div>
                 </div>
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm text-center">
                     <div class="text-2xl font-bold text-teal-600 dark:text-teal-400">{{ $totalInStock }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Receipts with stock available</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Records with stock available</div>
                 </div>
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm text-center">
                     <div class="text-2xl font-bold text-gray-400 dark:text-gray-500">{{ $totalDepleted }}</div>
@@ -39,6 +39,13 @@
             {{-- Filters --}}
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
                 <form method="GET" action="{{ route('pages.inventory.index') }}" class="flex flex-wrap items-end gap-3">
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Record #</label>
+                        <input type="number" name="record_id" value="{{ $recordId }}"
+                               placeholder="ID…" min="1"
+                               class="w-24 rounded-lg border-gray-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    </div>
 
                     <div class="flex-1 min-w-48">
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search item</label>
@@ -71,7 +78,7 @@
                         Filter
                     </button>
 
-                    @if ($q || $dateFrom || $dateTo || $showDepleted)
+                    @if ($recordId || $q || $dateFrom || $dateTo || $showDepleted)
                         <a href="{{ route('pages.inventory.index') }}"
                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
                             Clear
@@ -86,12 +93,12 @@
 
                 @if ($receipts->isEmpty())
                     <div class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-                        @if ($q || $dateFrom || $dateTo)
-                            No receipts match your filters.
+                        @if ($recordId || $q || $dateFrom || $dateTo)
+                            No records match your filters.
                         @elseif (! $showDepleted)
-                            No stock available. <a href="{{ route('pages.inventory.index', ['show_depleted' => 1]) }}" class="text-teal-600 hover:underline">Show depleted receipts</a>.
+                            No stock available. <a href="{{ route('pages.inventory.index', ['show_depleted' => 1]) }}" class="text-teal-600 hover:underline">Show depleted records</a>.
                         @else
-                            No inventory receipts yet. Receive items from a
+                            No inventory records yet. Receive items from a
                             <a href="{{ route('pages.purchase-orders.index') }}" class="text-teal-600 hover:underline">Purchase Order</a>.
                         @endif
                     </div>

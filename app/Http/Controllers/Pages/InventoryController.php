@@ -31,6 +31,7 @@ class InventoryController extends Controller
     public function index(Request $request): View
     {
         $q            = trim($request->input('q', ''));
+        $recordId     = $request->input('record_id', '');
         $dateFrom     = $request->input('date_from', '');
         $dateTo       = $request->input('date_to', '');
         $showDepleted = $request->boolean('show_depleted', false);
@@ -38,6 +39,7 @@ class InventoryController extends Controller
         $receipts = InventoryReceipt::query()
             ->withSum('allocations', 'quantity')
             ->with(['purchaseOrder', 'creator'])
+            ->when($recordId, fn ($query) => $query->where('id', (int) $recordId))
             ->when($q, fn ($query) => $query->where('item_name', 'like', "%{$q}%"))
             ->when($dateFrom, fn ($query) => $query->whereDate('received_date', '>=', $dateFrom))
             ->when($dateTo,   fn ($query) => $query->whereDate('received_date', '<=', $dateTo))
@@ -58,7 +60,7 @@ class InventoryController extends Controller
 
         return view('pages.inventory.index', compact(
             'receipts',
-            'q', 'dateFrom', 'dateTo', 'showDepleted',
+            'q', 'recordId', 'dateFrom', 'dateTo', 'showDepleted',
             'totalReceipts', 'totalInStock', 'totalDepleted',
         ));
     }
