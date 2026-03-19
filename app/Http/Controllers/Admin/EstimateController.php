@@ -330,6 +330,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'salesperson1Employee',
 			'salesperson2Employee',
 			'sale',
+			'revisions' => fn($q) => $q->orderBy('revision_no'),
 		]);
 
 		$user            = auth()->user();

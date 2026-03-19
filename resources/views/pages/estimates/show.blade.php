@@ -76,11 +76,24 @@
 
             {{-- Converted-to-sale lock banner --}}
             @if ($isConverted)
-                <div class="flex items-center gap-3 p-4 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <div class="flex items-start gap-3 p-4 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg">
+                    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
                     </svg>
-                    <span>This estimate has been <strong>converted to <a href="{{ route('pages.sales.show', $estimate->sale) }}" class="underline hover:text-amber-900">Sale #{{ $estimate->sale->sale_number }}</a></strong> and is locked. Use <strong>Make Revision</strong> to create a new editable copy.</span>
+                    <div class="space-y-1.5">
+                        <p>This estimate has been <strong>converted to <a href="{{ route('pages.sales.show', $estimate->sale) }}" class="underline hover:text-amber-900">Sale #{{ $estimate->sale->sale_number }}</a></strong> and is locked. Use <strong>Make Revision</strong> to create a new editable copy.</p>
+                        @if ($estimate->revisions->isNotEmpty())
+                            <p class="text-sm">
+                                <span class="font-medium">Revisions:</span>
+                                @foreach ($estimate->revisions as $rev)
+                                    <a href="{{ route('pages.estimates.show', $rev) }}"
+                                       class="inline-flex items-center gap-1 underline hover:text-amber-900">
+                                        {{ $rev->estimate_number ?? ('Rev' . str_pad($rev->revision_no, 2, '0', STR_PAD_LEFT)) }}
+                                    </a>@unless($loop->last),&nbsp;@endunless
+                                @endforeach
+                            </p>
+                        @endif
+                    </div>
                 </div>
             @endif
 
