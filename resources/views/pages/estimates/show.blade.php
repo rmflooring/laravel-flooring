@@ -148,6 +148,15 @@
                         <div class="font-medium text-gray-900">{{ $estimate->job_name ?? '—' }}</div>
                         <div class="text-xs text-gray-500">{{ $estimate->job_no ?? '' }}</div>
                     </div>
+                    @if ($estimate->opportunity)
+                        <div>
+                            <div class="text-gray-500">Opportunity</div>
+                            <a href="{{ route('pages.opportunities.show', $estimate->opportunity) }}"
+                               class="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                #{{ $estimate->opportunity->job_no ?? $estimate->opportunity->id }}
+                            </a>
+                        </div>
+                    @endif
                     <div>
                         <div class="text-gray-500">Job Address</div>
                         <div class="font-medium text-gray-900 whitespace-pre-line">{{ $estimate->job_address ?? '—' }}</div>
