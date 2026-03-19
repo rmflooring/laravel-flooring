@@ -83,7 +83,7 @@
                             <input type="text" id="phone" name="phone"
                                    x-model="form.phone"
                                    value="{{ old('phone') }}"
-                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500 phone-input">
                         </div>
 
                         <div>
@@ -91,7 +91,7 @@
                             <input type="text" id="mobile" name="mobile"
                                    x-model="form.mobile"
                                    value="{{ old('mobile') }}"
-                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500 phone-input">
                         </div>
 
                         <div class="sm:col-span-2">

@@ -79,14 +79,14 @@
                             <label for="phone" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
                             <input type="text" id="phone" name="phone"
                                    value="{{ old('phone', $installer->phone) }}"
-                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500 phone-input">
                         </div>
 
                         <div>
                             <label for="mobile" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Mobile</label>
                             <input type="text" id="mobile" name="mobile"
                                    value="{{ old('mobile', $installer->mobile) }}"
-                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500 phone-input">
                         </div>
 
                         <div class="sm:col-span-2">
