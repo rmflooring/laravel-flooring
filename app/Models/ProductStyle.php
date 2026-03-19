@@ -50,4 +50,19 @@ class ProductStyle extends Model
     {
         return $query->where('status', 'active');
     }
+
+    public function estimateItems()
+    {
+        return $this->hasMany(\App\Models\EstimateItem::class, 'product_style_id');
+    }
+
+    public function saleItems()
+    {
+        return $this->hasMany(\App\Models\SaleItem::class, 'product_style_id');
+    }
+
+    public function hasActivity(): bool
+    {
+        return $this->estimateItems()->exists() || $this->saleItems()->exists();
+    }
 }

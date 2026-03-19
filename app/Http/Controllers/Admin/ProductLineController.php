@@ -45,9 +45,11 @@ public function index(Request $request)
         });
     }
 
-    // Filters
+    // Filters — hide archived by default unless explicitly requested
     if ($request->filled('status')) {
         $query->where('status', $request->status);
+    } else {
+        $query->where('status', '<>', 'archived');
     }
 
     if ($request->filled('product_type_id')) {
@@ -155,15 +157,19 @@ public function update(Request $request, ProductLine $product_line)
         ->with('success', 'Product line updated successfully.');
 }
 
-    /**
-     * Remove the specified product line from storage.
-     */
-    public function destroy($id)
+    public function archive(ProductLine $product_line)
     {
-        $line = ProductLine::findOrFail($id);
-        $line->delete();
+        $product_line->update(['status' => 'archived', 'updated_by' => Auth::id()]);
 
         return redirect()->route('admin.product_lines.index')
-            ->with('success', 'Product line deleted successfully.');
+            ->with('success', 'Product line archived.');
+    }
+
+    public function unarchive(ProductLine $product_line)
+    {
+        $product_line->update(['status' => 'inactive', 'updated_by' => Auth::id()]);
+
+        return redirect()->route('admin.product_lines.index')
+            ->with('success', 'Product line restored to inactive.');
     }
 }

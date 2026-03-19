@@ -47,7 +47,7 @@
             <select name="status"
                     class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
                            focus:ring-4 focus:ring-blue-300 focus:border-blue-500">
-                <option value="">All</option>
+                <option value="">All (excl. archived)</option>
                 <option value="active"   @selected(request('status') === 'active')>Active</option>
                 <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
                 <option value="archived" @selected(request('status') === 'archived')>Archived</option>
@@ -149,23 +149,38 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->manufacturer }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->model }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{{ $line->collection }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                            {{ ucfirst($line->status) }}
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                            @if($line->status === 'active')
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Active</span>
+                                            @elseif($line->status === 'inactive')
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Inactive</span>
+                                            @elseif($line->status === 'archived')
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">Archived</span>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <a href="{{ route('admin.product_lines.edit', $line->id) }}"
                                                class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4">
                                                 Edit
                                             </a>
-                                            <form action="{{ route('admin.product_lines.destroy', $line->id) }}" method="POST" class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                        onclick="return confirm('Delete this product line?')"
-                                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if($line->status === 'archived')
+                                                <form action="{{ route('admin.product_lines.unarchive', $line->id) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                                        Restore
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <form action="{{ route('admin.product_lines.archive', $line->id) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            onclick="return confirm('Archive this product line?')"
+                                                            class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
+                                                        Archive
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty

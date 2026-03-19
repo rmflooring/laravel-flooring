@@ -11,7 +11,7 @@ class ProductStyleController extends Controller
 {
     public function index(Request $request, ProductLine $product_line)
     {
-        $query = $product_line->productStyles();
+        $query = $product_line->productStyles()->withCount(['estimateItems', 'saleItems']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -25,6 +25,8 @@ class ProductStyleController extends Controller
 
         if ($status = $request->input('status')) {
             $query->where('status', $status);
+        } else {
+            $query->where('status', '<>', 'archived');
         }
 
         $styles = $query->orderBy('name')->paginate(50)->withQueryString();
@@ -162,13 +164,40 @@ class ProductStyleController extends Controller
             ->with('editStyle', $copy);
     }
 
+    public function archive(ProductLine $product_line, $style)
+    {
+        $styleModel = $product_line->productStyles()->findOrFail($style);
+        $styleModel->update(['status' => 'archived', 'updated_by' => auth()->id()]);
+
+        return redirect()
+            ->route('admin.product_styles.index', $product_line)
+            ->with('success', 'Style archived.');
+    }
+
+    public function unarchive(ProductLine $product_line, $style)
+    {
+        $styleModel = $product_line->productStyles()->findOrFail($style);
+        $styleModel->update(['status' => 'inactive', 'updated_by' => auth()->id()]);
+
+        return redirect()
+            ->route('admin.product_styles.index', $product_line)
+            ->with('success', 'Style restored to inactive.');
+    }
+
     public function destroy(ProductLine $product_line, $styleId)
     {
         $style = $product_line->productStyles()->findOrFail($styleId);
+
+        if ($style->hasActivity()) {
+            return redirect()
+                ->route('admin.product_styles.index', $product_line)
+                ->with('error', 'This style cannot be deleted — it has been used in estimates or sales.');
+        }
+
         $style->delete();
 
         return redirect()
             ->route('admin.product_styles.index', $product_line)
-            ->with('success', 'Style deleted successfully.');
+            ->with('success', 'Style permanently deleted.');
     }
 }

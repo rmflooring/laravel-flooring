@@ -391,6 +391,12 @@ Route::prefix('admin')
                 'update'  => 'product_lines.update',
                 'destroy' => 'product_lines.destroy',
             ]);
+        Route::post('product-lines/{product_line}/archive', [ProductLineController::class, 'archive'])
+            ->middleware('role_or_permission:admin|view product lines')
+            ->name('product_lines.archive');
+        Route::post('product-lines/{product_line}/unarchive', [ProductLineController::class, 'unarchive'])
+            ->middleware('role_or_permission:admin|view product lines')
+            ->name('product_lines.unarchive');
 
         Route::resource('product-lines/{product_line}/product-styles', ProductStyleController::class)
             ->middleware('role_or_permission:admin|view product styles')
@@ -404,6 +410,13 @@ Route::prefix('admin')
                 'destroy' => 'product_styles.destroy',
             ])
             ->parameters(['product_line' => 'product_line']);
+
+        Route::post('product-lines/{product_line}/product-styles/{style}/archive', [ProductStyleController::class, 'archive'])
+            ->middleware('role_or_permission:admin|view product styles')
+            ->name('product_styles.archive');
+        Route::post('product-lines/{product_line}/product-styles/{style}/unarchive', [ProductStyleController::class, 'unarchive'])
+            ->middleware('role_or_permission:admin|view product styles')
+            ->name('product_styles.unarchive');
 
         Route::post('product-lines/{product_line}/product-styles/{style}/duplicate', [ProductStyleController::class, 'duplicate'])
             ->middleware('role_or_permission:admin|view product styles')

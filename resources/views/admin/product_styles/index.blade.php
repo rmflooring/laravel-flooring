@@ -39,6 +39,11 @@
                     {{ session('success') }}
                 </div>
             @endif
+            @if (session('error'))
+                <div class="mb-6 p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             <!-- Hidden links for keyboard navigation (always present) -->
             <a href="{{ $prevId ? route('admin.product_styles.index', $prevId) : '#' }}" id="prevLine" class="hidden"></a>
@@ -133,10 +138,11 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Status</label>
                         <select name="status"
                                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-4 focus:ring-blue-300 focus:border-blue-500">
-                            <option value="">All</option>
+                            <option value="">All (excl. archived)</option>
                             <option value="active"   @selected(request('status') === 'active')>Active</option>
                             <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
                             <option value="dropped"  @selected(request('status') === 'dropped')>Dropped</option>
+                            <option value="archived" @selected(request('status') === 'archived')>Archived</option>
                         </select>
                     </div>
                 </div>
@@ -221,6 +227,7 @@
                                                     $badgeClass = match($style->status) {
                                                         'active'   => 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
                                                         'dropped'  => 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
+                                                        'archived' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
                                                         default    => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
                                                     };
                                                 @endphp
@@ -230,26 +237,54 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div class="flex items-center justify-end space-x-4">
-                                                    <a href="{{ route('admin.product_styles.edit', [$product_line, $style]) }}"
-                                                       class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                                        Edit
-                                                    </a>
-                                                    <form action="{{ route('admin.product_styles.duplicate', [$product_line, $style]) }}" method="POST">
-                                                        @csrf
-                                                        <button type="submit"
-                                                                class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">
-                                                            Duplicate
-                                                        </button>
-                                                    </form>
-                                                    <form action="{{ route('admin.product_styles.destroy', [$product_line, $style]) }}" method="POST">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit"
-                                                                onclick="return confirm('Delete this style? This cannot be undone.')"
-                                                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                                                            Delete
-                                                        </button>
-                                                    </form>
+                                                    @if($style->status !== 'archived')
+                                                        <a href="{{ route('admin.product_styles.edit', [$product_line, $style]) }}"
+                                                           class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                                                            Edit
+                                                        </a>
+                                                        <form action="{{ route('admin.product_styles.duplicate', [$product_line, $style]) }}" method="POST">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                    class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">
+                                                                Duplicate
+                                                            </button>
+                                                        </form>
+                                                        <form action="{{ route('admin.product_styles.archive', [$product_line, $style]) }}" method="POST">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                    onclick="return confirm('Archive this style?')"
+                                                                    class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
+                                                                Archive
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        {{-- Archived: Restore + Delete (admin only, no activity) --}}
+                                                        <form action="{{ route('admin.product_styles.unarchive', [$product_line, $style]) }}" method="POST">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                    class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                                                Restore
+                                                            </button>
+                                                        </form>
+                                                        @role('admin')
+                                                            @php $canDelete = ($style->estimate_items_count + $style->sale_items_count) === 0; @endphp
+                                                            @if($canDelete)
+                                                                <form action="{{ route('admin.product_styles.destroy', [$product_line, $style]) }}" method="POST">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit"
+                                                                            onclick="return confirm('Permanently delete this style? This cannot be undone.')"
+                                                                            class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                                                        Delete
+                                                                    </button>
+                                                                </form>
+                                                            @else
+                                                                <span class="text-gray-400 dark:text-gray-500 cursor-not-allowed" title="Used in estimates or sales — cannot delete">
+                                                                    In use
+                                                                </span>
+                                                            @endif
+                                                        @endrole
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
