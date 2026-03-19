@@ -1040,12 +1040,17 @@ public function makeRevision(Estimate $estimate)
     $nextRevNo = max($nextRevNo, $estimate->revision_no) + 1;
     $revLabel  = 'Rev' . str_pad($nextRevNo, 2, '0', STR_PAD_LEFT);
 
-    $revision = DB::transaction(function () use ($estimate, $parentId, $nextRevNo, $revLabel) {
+    // Build the revision estimate number from the root parent's number
+    $parentNumber    = Estimate::where('id', $parentId)->value('estimate_number');
+    $revisionNumber  = $parentNumber ? "{$parentNumber}-{$revLabel}" : null;
+
+    $revision = DB::transaction(function () use ($estimate, $parentId, $nextRevNo, $revLabel, $revisionNumber) {
 
         // Copy header
         $revision = Estimate::create([
             'parent_estimate_id'        => $parentId,
             'revision_no'               => $nextRevNo,
+            'estimate_number'           => $revisionNumber,
             'opportunity_id'            => $estimate->opportunity_id,
             'status'                    => 'draft',
             'customer_name'             => $estimate->customer_name,
