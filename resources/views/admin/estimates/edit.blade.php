@@ -37,6 +37,15 @@
                     <p class="text-sm text-gray-600 mt-1">
                         Status: <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
                     </p>
+                    @if ($estimate->parentEstimate)
+                        <p class="text-sm text-gray-500 mt-1">
+                            Original estimate:
+                            <a href="{{ route('pages.estimates.show', $estimate->parentEstimate) }}"
+                               class="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                {{ $estimate->parentEstimate->estimate_number ?? ('#' . $estimate->parentEstimate->id) }}
+                            </a>
+                        </p>
+                    @endif
                 </div>
 @if (session('success'))
     <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded-lg rounded-lg">

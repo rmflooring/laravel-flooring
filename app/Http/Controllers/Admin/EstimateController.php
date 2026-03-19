@@ -332,6 +332,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'sale',
 			'revisions' => fn($q) => $q->orderBy('revision_no'),
 			'opportunity',
+			'parentEstimate',
 		]);
 
 		$user            = auth()->user();
@@ -368,6 +369,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'salesperson2Employee',
 			'opportunity.projectManager',
 			'sale',
+			'parentEstimate',
 		]);
 
 		$taxGroups = DB::table('tax_rate_groups')

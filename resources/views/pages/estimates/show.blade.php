@@ -114,6 +114,15 @@
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div class="text-xs text-gray-500">Estimate #</div>
                     <div class="mt-1 font-semibold text-gray-900">{{ $estimate->estimate_number ?? '—' }}</div>
+                    @if ($estimate->parentEstimate)
+                        <div class="mt-1 text-xs text-gray-500">
+                            Original:
+                            <a href="{{ route('pages.estimates.show', $estimate->parentEstimate) }}"
+                               class="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                                {{ $estimate->parentEstimate->estimate_number ?? ('#' . $estimate->parentEstimate->id) }}
+                            </a>
+                        </div>
+                    @endif
                 </div>
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div class="text-xs text-gray-500">Grand Total</div>
