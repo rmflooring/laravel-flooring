@@ -44,6 +44,81 @@
             <a href="{{ $prevId ? route('admin.product_styles.index', $prevId) : '#' }}" id="prevLine" class="hidden"></a>
             <a href="{{ $nextId ? route('admin.product_styles.index', $nextId) : '#' }}" id="nextLine" class="hidden"></a>
 
+            {{-- Product Line Info Card --}}
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-6 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div class="md:col-span-2">
+                            <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Product Line</div>
+                            <div class="text-lg font-bold text-gray-900 dark:text-white">{{ $product_line->name }}</div>
+                            @if($product_line->productType)
+                                <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                                    {{ $product_line->productType->name }}
+                                </span>
+                            @endif
+                        </div>
+                        @if($product_line->manufacturer)
+                            <div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Manufacturer</div>
+                                <div class="font-medium text-gray-800 dark:text-gray-200">{{ $product_line->manufacturer }}</div>
+                            </div>
+                        @endif
+                        @if($product_line->model)
+                            <div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Model</div>
+                                <div class="font-medium text-gray-800 dark:text-gray-200">{{ $product_line->model }}</div>
+                            </div>
+                        @endif
+                        @if($product_line->collection)
+                            <div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Collection</div>
+                                <div class="font-medium text-gray-800 dark:text-gray-200">{{ $product_line->collection }}</div>
+                            </div>
+                        @endif
+                        @if($product_line->vendorRelation)
+                            <div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Vendor</div>
+                                <div class="font-medium text-gray-800 dark:text-gray-200">{{ $product_line->vendorRelation->company_name }}</div>
+                            </div>
+                        @endif
+                        @if($product_line->default_sell_price)
+                            <div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Default Sell</div>
+                                <div class="font-medium text-gray-800 dark:text-gray-200">${{ number_format($product_line->default_sell_price, 2) }}</div>
+                            </div>
+                        @endif
+                        @if($product_line->default_cost_price)
+                            <div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Default Cost</div>
+                                <div class="font-medium text-gray-800 dark:text-gray-200">${{ number_format($product_line->default_cost_price, 2) }}</div>
+                            </div>
+                        @endif
+                        <div>
+                            <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Status</div>
+                            @php
+                                $lineBadge = match($product_line->status) {
+                                    'active'   => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+                                    'inactive' => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                                    'archived' => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                                    default    => 'bg-gray-100 text-gray-700',
+                                };
+                            @endphp
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $lineBadge }}">
+                                {{ ucfirst($product_line->status) }}
+                            </span>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Styles</div>
+                            <div class="font-medium text-gray-800 dark:text-gray-200">{{ $styles->total() }}</div>
+                        </div>
+                    </div>
+                    <a href="{{ route('admin.product_lines.edit', $product_line) }}"
+                       class="flex-shrink-0 inline-flex items-center px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700">
+                        Edit Line
+                    </a>
+                </div>
+            </div>
+
             {{-- Search / Filter --}}
             <form method="GET" action="{{ route('admin.product_styles.index', $product_line) }}"
                   class="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-6 bg-white dark:bg-gray-800">
