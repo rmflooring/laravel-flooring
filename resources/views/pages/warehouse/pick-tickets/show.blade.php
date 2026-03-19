@@ -39,6 +39,15 @@
                             </div>
 
                             {{-- Action buttons --}}
+                            @php
+                                $revertLabel = match($pickTicket->status) {
+                                    'ready'               => 'Revert to Pending',
+                                    'picked'              => 'Revert to Ready',
+                                    'partially_delivered' => $pickTicket->picked_at ? 'Revert to Picked' : 'Revert to Staged',
+                                    'returned'            => 'Revert to Ready',
+                                    default               => null,
+                                };
+                            @endphp
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('pages.warehouse.pick-tickets.pdf', $pickTicket) }}"
                                    target="_blank"
@@ -104,6 +113,22 @@
                                             class="inline-flex items-center rounded-md border border-amber-400 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-900/20">
                                         Return Items
                                     </button>
+                                @endif
+
+                                {{-- Revert status --}}
+                                @if ($revertLabel)
+                                    <form method="POST" action="{{ route('pages.warehouse.pick-tickets.update-status', $pickTicket) }}"
+                                          onsubmit="return confirm('{{ $revertLabel }}? This will undo the current status and reset any related data.')">
+                                        @csrf @method('PATCH')
+                                        <input type="hidden" name="action" value="revert_status">
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                            </svg>
+                                            {{ $revertLabel }}
+                                        </button>
+                                    </form>
                                 @endif
                             </div>
                         </div>

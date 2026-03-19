@@ -76,7 +76,7 @@ class WarehousePickTicketController extends Controller
     public function updateStatus(Request $request, PickTicket $pickTicket, PickTicketService $service): RedirectResponse
     {
         $request->validate([
-            'action'         => ['required', 'string', 'in:mark_ready,mark_picked,deliver,return,cancel'],
+            'action'         => ['required', 'string', 'in:mark_ready,mark_picked,deliver,return,cancel,revert_status'],
             'received_by'    => ['nullable', 'string', 'max:255'],
             'delivery_notes' => ['nullable', 'string', 'max:2000'],
             'return_notes'   => ['nullable', 'string', 'max:2000'],
@@ -98,7 +98,8 @@ class WarehousePickTicketController extends Controller
                                 $request->input('items', []),
                                 $request->input('return_notes')
                             ),
-            'cancel'      => $service->cancel($pickTicket),
+            'cancel'         => $service->cancel($pickTicket),
+            'revert_status'  => $service->revertStatus($pickTicket),
         };
 
         return back()->with('success', 'Pick ticket updated.');

@@ -241,14 +241,33 @@
                 </li>
 
                 {{-- Inventory --}}
-                <li>
-                    <a href="{{ route('pages.inventory.index') }}"
-                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                <li x-data="{ open: {{ request()->routeIs('pages.inventory.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open"
+                            class="sidebar-link flex w-full items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 text-left">
                         <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                         </svg>
-                        <span class="sidebar-label">Inventory</span>
-                    </a>
+                        <span class="sidebar-label flex-1">Inventory</span>
+                        <svg class="h-4 w-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <ul x-show="open" x-cloak class="mt-1 ml-8 space-y-1">
+                        <li>
+                            <a href="{{ route('pages.inventory.index') }}"
+                               class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.inventory.index') || request()->routeIs('pages.inventory.show') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                                Records
+                            </a>
+                        </li>
+                        @can('view rfcs')
+                        <li>
+                            <a href="{{ route('pages.inventory.rfc.index') }}"
+                               class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.inventory.rfc.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                                RFC
+                            </a>
+                        </li>
+                        @endcan
+                    </ul>
                 </li>
 
                 {{-- Warehouse --}}

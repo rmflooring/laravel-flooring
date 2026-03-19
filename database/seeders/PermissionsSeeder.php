@@ -91,6 +91,11 @@ class PermissionsSeeder extends Seeder
 
             // ===== Pick Tickets =====
             'view pick tickets',
+
+            // ===== RFC — Return From Customer =====
+            'view rfcs',
+            'create rfcs',
+            'edit rfcs',
         ];
 
         foreach ($permissions as $permission) {

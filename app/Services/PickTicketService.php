@@ -270,4 +270,79 @@ class PickTicketService
             'unstage_reason' => $reason ?: null,
         ]);
     }
+
+    /**
+     * Revert the pick ticket one step backwards in the status flow.
+     *
+     * ready             → pending  (clears ready_at)
+     * picked            → ready    (clears picked_at)
+     * delivered         → picked | staged  (resets delivered_qty, clears delivered_at, un-releases allocations)
+     * partially_delivered → picked | staged  (resets delivered_qty, clears delivered_at)
+     * returned          → delivered (resets returned_qty, clears returned_at, re-releases allocations)
+     *
+     * For delivered / partially_delivered, the previous status is determined by
+     * whether the ticket ever passed through the picked state (picked_at is set).
+     * If not, it was staged — revert to staged.
+     */
+    public function revertStatus(PickTicket $pickTicket): void
+    {
+        DB::transaction(function () use ($pickTicket) {
+            switch ($pickTicket->status) {
+
+                case 'ready':
+                    $pickTicket->update(['status' => 'pending', 'ready_at' => null]);
+                    break;
+
+                case 'picked':
+                    $pickTicket->update(['status' => 'ready', 'picked_at' => null]);
+                    break;
+
+                case 'delivered':
+                case 'partially_delivered':
+                    $pickTicket->loadMissing('items');
+
+                    foreach ($pickTicket->items as $item) {
+                        $item->update(['delivered_qty' => 0]);
+                    }
+
+                    // Un-release allocations so stock is reserved again
+                    $allocationIds = $pickTicket->items
+                        ->pluck('inventory_allocation_id')
+                        ->filter()->values()->all();
+
+                    if ($allocationIds) {
+                        InventoryAllocation::whereIn('id', $allocationIds)
+                            ->update(['released_at' => null]);
+                    }
+
+                    $previousStatus = $pickTicket->picked_at ? 'picked' : 'staged';
+                    $pickTicket->update(['status' => $previousStatus, 'delivered_at' => null]);
+                    break;
+
+                case 'returned':
+                    $pickTicket->loadMissing('items');
+
+                    foreach ($pickTicket->items as $item) {
+                        $item->update(['delivered_qty' => 0, 'returned_qty' => 0]);
+                    }
+
+                    // Un-release allocations — stock is back in warehouse
+                    $allocationIds = $pickTicket->items
+                        ->pluck('inventory_allocation_id')
+                        ->filter()->values()->all();
+
+                    if ($allocationIds) {
+                        InventoryAllocation::whereIn('id', $allocationIds)
+                            ->update(['released_at' => null]);
+                    }
+
+                    $pickTicket->update([
+                        'status'       => 'ready',
+                        'delivered_at' => null,
+                        'returned_at'  => null,
+                    ]);
+                    break;
+            }
+        });
+    }
 }

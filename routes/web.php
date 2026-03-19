@@ -607,7 +607,7 @@ Route::prefix('pages')
 			->name('sales.work-orders.stage-pick-ticket')
 			->middleware('role_or_permission:admin|edit work orders');
 
-		// Inventory
+		// Inventory Records
 		Route::get('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'index'])
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('inventory.index');
@@ -615,6 +615,22 @@ Route::prefix('pages')
 		Route::get('inventory/{inventoryReceipt}', [\App\Http\Controllers\Pages\InventoryController::class, 'show'])
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('inventory.show');
+
+		// RFC — Return From Customer
+		Route::prefix('inventory/rfc')->name('inventory.rfc.')->middleware('role_or_permission:admin|view rfcs')->group(function () {
+			Route::get('/', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'index'])->name('index');
+			Route::get('/create', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'create'])->name('create');
+			Route::post('/', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'store'])->name('store');
+			Route::get('/{rfc}', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'show'])->name('show');
+			Route::get('/{rfc}/edit', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'edit'])
+				->middleware('role_or_permission:admin|create rfcs')->name('edit');
+			Route::put('/{rfc}', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'update'])
+				->middleware('role_or_permission:admin|create rfcs')->name('update');
+			Route::post('/{rfc}/receive', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'receive'])
+				->middleware('role_or_permission:admin|create rfcs')->name('receive');
+			Route::delete('/{rfc}', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'destroy'])
+				->middleware('role_or_permission:admin|create rfcs')->name('destroy');
+		});
 
 		// Warehouse — Pick Tickets
 		Route::prefix('warehouse')->name('warehouse.')->group(function () {

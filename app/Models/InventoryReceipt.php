@@ -53,6 +53,11 @@ class InventoryReceipt extends Model
         return $this->hasMany(InventoryAllocation::class);
     }
 
+    public function customerReturnItem(): BelongsTo
+    {
+        return $this->belongsTo(CustomerReturnItem::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
