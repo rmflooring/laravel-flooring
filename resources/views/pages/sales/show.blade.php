@@ -226,10 +226,11 @@
                                                         @php
                                                             $poStatus = $itemPoStatusMap[$item->id] ?? null;
                                                             $qtyBg = match($poStatus) {
-                                                                'received' => '#dcfce7',
-                                                                'ordered'  => '#fef9c3',
-                                                                'pending'  => '#ffedd5',
-                                                                default    => '',
+                                                                'delivered' => '#ccfbf1',
+                                                                'received'  => '#dcfce7',
+                                                                'ordered'   => '#fef9c3',
+                                                                'pending'   => '#ffedd5',
+                                                                default     => '',
                                                             };
                                                         @endphp
                                                         <tr>
@@ -403,6 +404,7 @@
                             'pending'   => 'bg-yellow-100 text-yellow-800',
                             'ordered'   => 'bg-blue-100 text-blue-800',
                             'received'  => 'bg-green-100 text-green-800',
+                            'delivered' => 'bg-teal-700 text-white',
                             'cancelled' => 'bg-red-100 text-red-800',
                         ];
                     @endphp

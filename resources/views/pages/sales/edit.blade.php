@@ -328,10 +328,11 @@
         @php
           $poStatus = $itemPoStatusMap[$item->id] ?? null;
           $qtyStyle = match($poStatus) {
-              'received' => 'background-color:#dcfce7; border-color:#86efac;',
-              'ordered'  => 'background-color:#fef9c3; border-color:#fde047;',
-              'pending'  => 'background-color:#ffedd5; border-color:#fdba74;',
-              default    => '',
+              'delivered' => 'background-color:#ccfbf1; border-color:#5eead4;',
+              'received'  => 'background-color:#dcfce7; border-color:#86efac;',
+              'ordered'   => 'background-color:#fef9c3; border-color:#fde047;',
+              'pending'   => 'background-color:#ffedd5; border-color:#fdba74;',
+              default     => '',
           };
         @endphp
         <input type="number" step="0.01"
@@ -1903,6 +1904,7 @@
                     'pending'   => 'bg-yellow-100 text-yellow-800',
                     'ordered'   => 'bg-blue-100 text-blue-800',
                     'received'  => 'bg-green-100 text-green-800',
+                    'delivered' => 'bg-teal-700 text-white',
                     'cancelled' => 'bg-red-100 text-red-800',
                 ];
             @endphp
