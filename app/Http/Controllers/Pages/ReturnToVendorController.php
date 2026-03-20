@@ -102,12 +102,18 @@ class ReturnToVendorController extends Controller
             'items.*.unit_cost'              => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $receipt = InventoryReceipt::with(['purchaseOrder.vendor', 'purchaseOrder.items'])
-            ->findOrFail($request->inventory_receipt_id);
+        $receipt = InventoryReceipt::with([
+            'purchaseOrder.vendor',
+            'purchaseOrder.items',
+            'customerReturnItem',
+        ])->findOrFail($request->inventory_receipt_id);
 
         // Vendor: from PO if PO-linked, otherwise from form input
         $vendorId = $receipt->purchaseOrder?->vendor_id ?? $request->vendor_id;
         abort_unless($vendorId, 422, 'A vendor is required. Select one or link this receipt to a PO.');
+
+        // sale_item_id from RFC chain (used as fallback for non-PO receipts)
+        $rfcSaleItemId = $receipt->customerReturnItem?->sale_item_id;
 
         $rtv = InventoryReturn::create([
             'purchase_order_id' => $receipt->purchase_order_id,
@@ -119,16 +125,20 @@ class ReturnToVendorController extends Controller
         ]);
 
         foreach ($request->items as $itemData) {
-            $poItemId  = $itemData['purchase_order_item_id'] ?? null;
-            $poItem    = $poItemId ? \App\Models\PurchaseOrderItem::find($poItemId) : null;
-            $qty       = (float) $itemData['quantity_returned'];
-            $unitCost  = $poItem ? (float) $poItem->cost_price : (float) ($itemData['unit_cost'] ?? 0);
-            $itemName  = $poItem ? $poItem->item_name : ($itemData['item_name'] ?? $receipt->item_name);
-            $unit      = $poItem ? $poItem->unit : ($itemData['unit'] ?? $receipt->unit);
+            $poItemId    = $itemData['purchase_order_item_id'] ?? null;
+            $poItem      = $poItemId ? \App\Models\PurchaseOrderItem::find($poItemId) : null;
+            $qty         = (float) $itemData['quantity_returned'];
+            $unitCost    = $poItem ? (float) $poItem->cost_price : (float) ($itemData['unit_cost'] ?? 0);
+            $itemName    = $poItem ? $poItem->item_name : ($itemData['item_name'] ?? $receipt->item_name);
+            $unit        = $poItem ? $poItem->unit : ($itemData['unit'] ?? $receipt->unit);
+
+            // sale_item_id: from PO item if PO-linked, otherwise from the RFC chain
+            $saleItemId  = $poItem?->sale_item_id ?? $rfcSaleItemId;
 
             $rtv->items()->create([
                 'inventory_receipt_id'   => $receipt->id,
                 'purchase_order_item_id' => $poItem?->id,
+                'sale_item_id'           => $saleItemId,
                 'item_name'              => $itemName,
                 'unit'                   => $unit,
                 'quantity_returned'      => $qty,
