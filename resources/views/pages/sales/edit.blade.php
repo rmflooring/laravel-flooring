@@ -315,10 +315,10 @@
         <input type="text"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][product_type]"
           value="{{ old("rooms.$roomIndex.materials.$i.product_type", $item->product_type) }}"
-          class="w-32 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
           autocomplete="off"
           data-product-type-input>
-        <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+        <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
           data-product-type-dropdown>
           <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
         </div>
@@ -485,7 +485,7 @@
       <td class="px-3 py-2 relative">
         <input type="text"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][product_type]"
-          class="w-32 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="Product Type"
           autocomplete="off"
           data-product-type-input />
@@ -495,7 +495,7 @@
   value="0">
 
 
-        <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+        <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
           data-product-type-dropdown>
           <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
         </div>
@@ -1209,7 +1209,7 @@
       <input
         type="text"
         name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_type]"
-        class="w-32 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="Product Type"
         autocomplete="off"
         data-product-type-input
@@ -1222,7 +1222,7 @@
         value="0" />
 
       <div
-        class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+        class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
         data-product-type-dropdown
       >
         <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>

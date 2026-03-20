@@ -499,7 +499,7 @@ function initProductTypeDropdownForRoom(roomCard) {
               data-pt-unit="${escapeHtml(unitCode)}">
               <div class="flex justify-between items-center gap-3">
                 <span class="truncate">${escapeHtml(pt.name)}</span>
-                <span class="text-gray-500 text-xs whitespace-nowrap">${escapeHtml(unitLabel)}</span>
+                <span class="text-gray-500 text-xs whitespace-nowrap">${escapeHtml(unitCode.toUpperCase())}</span>
               </div>
             </button>
           </li>

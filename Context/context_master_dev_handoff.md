@@ -176,6 +176,12 @@ Shared profits modal: `resources/views/components/modals/profits-modal.blade.php
 - Previously `applyFilter()` was called on open — this filtered to the selected value, showing only 1 option
 - Fixed to call `render(allItems)` on open; `applyFilter()` still fires on text input
 
+### Product type dropdown — width + unit display (session 20, 2026-03-20)
+- Sale edit blade product type input was `w-32` (128px) — names truncated to "C...", "H..." etc.
+- Fixed to `w-44` (176px) in all 3 locations (existing rows, existing-room row template, new-room room template); dropdown div changed from `w-full` → `w-44` to match
+- Estimate edit blade was already `w-44` — no change needed
+- Product type dropdown in both `estimate.js` and `sale.js` now shows abbreviated unit code (`SF`, `SY`, `EA`) instead of full label ("Square Feet", "Square Yard") — uses `unitCode.toUpperCase()`
+
 ### PDF attachments on emails
 - `barryvdh/laravel-dompdf` installed and wired
 - `EstimateController::previewPdf()` and `SaleController::previewPdf()` — inline browser preview
