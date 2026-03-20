@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CustomerReturn;
 use App\Models\InventoryReceipt;
 use App\Models\PickTicket;
-use App\Models\SaleItem;
 use Illuminate\Support\Facades\DB;
 
 class CustomerReturnService
@@ -52,24 +51,7 @@ class CustomerReturnService
                 // 2. Stamp the receipt back onto the RFC item
                 $rfcItem->update(['inventory_receipt_id' => $receipt->id]);
 
-                // 3. Reduce SaleItem quantity — lowers cost_total, increases profit
-                if ($rfcItem->sale_item_id) {
-                    $saleItem = SaleItem::find($rfcItem->sale_item_id);
-                    if ($saleItem) {
-                        $returnedQty = (float) $rfcItem->quantity_returned;
-                        $newQty      = max(0, (float) $saleItem->quantity - $returnedQty);
-
-                        $updates = ['quantity' => $newQty];
-
-                        if ($saleItem->order_qty !== null) {
-                            $updates['order_qty'] = max(0, (float) $saleItem->order_qty - $returnedQty);
-                        }
-
-                        $saleItem->update($updates); // booted() recalculates cost_total
-                    }
-                }
-
-                // 4. Update PT item returned_qty if linked
+                // 3. Update PT item returned_qty if linked
                 if ($rfcItem->pickTicketItem) {
                     $ptItem       = $rfcItem->pickTicketItem;
                     $newReturned  = min(
@@ -80,12 +62,12 @@ class CustomerReturnService
                 }
             }
 
-            // 5. Recalculate linked PT status
+            // 4. Recalculate linked PT status
             if ($rfc->pickTicket) {
                 $this->recalculatePickTicketStatus($rfc->pickTicket);
             }
 
-            // 6. Mark RFC as received
+            // 5. Mark RFC as received
             $rfc->update([
                 'status'        => 'received',
                 'received_date' => $date,

@@ -108,11 +108,10 @@
                                             Record Delivery
                                         </button>
                                     @endif
-                                    <button type="button"
-                                            onclick="document.getElementById('pt-return-modal').classList.remove('hidden')"
-                                            class="inline-flex items-center rounded-md border border-amber-400 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-900/20">
-                                        Return Items
-                                    </button>
+                                    <a href="{{ route('pages.inventory.rfc.create', ['pt_id' => $pickTicket->id]) }}"
+                                       class="inline-flex items-center rounded-md border border-amber-400 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-900/20">
+                                        Create RFC
+                                    </a>
                                 @endif
 
                                 {{-- Revert status --}}
@@ -459,121 +458,6 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                         </svg>
                         Confirm Delivery
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    @endif
-
-    {{-- Return Items Modal --}}
-    @if (in_array($pickTicket->status, ['delivered', 'partially_delivered']))
-    @php $returnableItems = $pickTicket->items->filter(fn($i) => ((float)$i->delivered_qty - (float)$i->returned_qty) > 0); @endphp
-    <div id="pt-return-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-        <div class="w-full max-w-2xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">Return Items</h3>
-                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Enter the quantity being returned for each item. Leave at 0 for items staying on site.</p>
-                </div>
-                <button type="button" onclick="document.getElementById('pt-return-modal').classList.add('hidden')"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <form method="POST" action="{{ route('pages.warehouse.pick-tickets.update-status', $pickTicket) }}">
-                @csrf @method('PATCH')
-                <input type="hidden" name="action" value="return">
-
-                {{-- Per-item qty table --}}
-                <div class="overflow-x-auto border-b border-gray-100 dark:border-gray-700">
-                    <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-700/50">
-                            <tr>
-                                <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Item</th>
-                                <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Room</th>
-                                <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Delivered</th>
-                                <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Prev. Returned</th>
-                                <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">At Site</th>
-                                <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-32">Returning Now</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                            @foreach ($pickTicket->items as $ptItem)
-                                @php
-                                    $delivered  = (float) $ptItem->delivered_qty;
-                                    $returned   = (float) $ptItem->returned_qty;
-                                    $atSite     = max(0, $delivered - $returned);
-                                    $hasNothing = $atSite <= 0;
-                                @endphp
-                                <tr class="{{ $hasNothing ? 'opacity-50' : '' }}">
-                                    <td class="px-4 py-2.5 text-gray-900 dark:text-white font-medium">
-                                        {{ $ptItem->item_name }}
-                                        @if ($ptItem->unit)
-                                            <span class="text-xs text-gray-400 ml-1">{{ $ptItem->unit }}</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">
-                                        {{ $ptItem->saleItem?->room?->room_name ?? '—' }}
-                                    </td>
-                                    <td class="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">
-                                        {{ rtrim(rtrim(number_format($delivered, 2), '0'), '.') }}
-                                    </td>
-                                    <td class="px-4 py-2.5 text-right {{ $returned > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400' }}">
-                                        {{ $returned > 0 ? rtrim(rtrim(number_format($returned, 2), '0'), '.') : '—' }}
-                                    </td>
-                                    <td class="px-4 py-2.5 text-right font-medium {{ $atSite > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400' }}">
-                                        {{ $atSite > 0 ? rtrim(rtrim(number_format($atSite, 2), '0'), '.') : '—' }}
-                                    </td>
-                                    <td class="px-4 py-2.5 text-right">
-                                        @if ($atSite > 0)
-                                            <input type="number"
-                                                   name="items[{{ $ptItem->id }}]"
-                                                   value="0"
-                                                   min="0"
-                                                   max="{{ $atSite }}"
-                                                   step="0.01"
-                                                   class="w-24 rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                                        @else
-                                            <span class="text-xs text-gray-400">All returned</span>
-                                            <input type="hidden" name="items[{{ $ptItem->id }}]" value="0">
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                {{-- Return notes --}}
-                <div class="space-y-3 px-6 py-4">
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Return notes <span class="text-gray-400 font-normal">(optional)</span>
-                        </label>
-                        <input type="text" name="return_notes"
-                               placeholder="e.g. Leftover material from install"
-                               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:ring-amber-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400">
-                    </div>
-                    <div class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-                        Returned by: <strong>{{ auth()->user()->name }}</strong> · {{ now()->format('M j, Y') }}
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
-                    <button type="button"
-                            onclick="document.getElementById('pt-return-modal').classList.add('hidden')"
-                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                        </svg>
-                        Confirm Return
                     </button>
                 </div>
             </form>

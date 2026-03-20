@@ -184,6 +184,10 @@
 
                     {{-- Outcome (shown once shipped) --}}
                     @if ($rtv->status !== 'draft')
+                        @php
+                            $creditAppliedItems = $rtv->items->where('apply_to_sale_cost', true)->where('cost_applied_at', '!=', null);
+                            $totalCreditApplied = $creditAppliedItems->sum('credit_received');
+                        @endphp
                         <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                             <h3 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Resolution</h3>
                             <dl class="space-y-3 text-sm">
@@ -195,6 +199,12 @@
                                     <div class="flex justify-between gap-4">
                                         <dt class="text-gray-500 shrink-0">Vendor ref</dt>
                                         <dd class="font-mono text-gray-900 dark:text-white">{{ $rtv->vendor_reference }}</dd>
+                                    </div>
+                                @endif
+                                @if ($totalCreditApplied > 0)
+                                    <div class="flex justify-between gap-4">
+                                        <dt class="text-gray-500 shrink-0">Credit applied to sale</dt>
+                                        <dd class="font-semibold text-green-700 dark:text-green-400">${{ number_format($totalCreditApplied, 2) }}</dd>
                                     </div>
                                 @endif
                             </dl>
@@ -280,7 +290,7 @@
     <div id="resolve-modal"
          class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
          onclick="if(event.target===this) this.classList.add('hidden')">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl" onclick="event.stopPropagation()">
 
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h2 class="text-base font-semibold text-gray-900 dark:text-white">Resolve RTV</h2>
@@ -295,9 +305,10 @@
             <form method="POST" action="{{ route('pages.inventory.rtv.resolve', $rtv) }}">
                 @csrf
                 <div class="px-6 py-5 space-y-4">
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Outcome <span class="text-red-500">*</span></label>
-                        <select name="outcome" required
+                        <select name="outcome" id="resolve-outcome" required
                                 class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                             @foreach (\App\Models\InventoryReturn::OUTCOME_LABELS as $value => $label)
                                 @if ($value !== 'pending')
@@ -320,6 +331,60 @@
                                   placeholder="Any resolution notes…"
                                   class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">{{ old('notes') }}</textarea>
                     </div>
+
+                    {{-- Credit note section — shown only when outcome = credit_note --}}
+                    <div id="credit-note-section" style="display:none">
+                        <div class="rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20 p-4 space-y-3">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-300">Credit Note Details</p>
+                            <p class="text-xs text-green-700 dark:text-green-400">Enter the credit amount received per item. Check "Apply to sale" to reduce the cost on the linked sale item, improving its profit margin.</p>
+
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-green-200 dark:border-green-700">
+                                        <th class="pb-2 text-left text-xs font-semibold text-green-700 dark:text-green-400">Item</th>
+                                        <th class="pb-2 text-right text-xs font-semibold text-green-700 dark:text-green-400">Expected credit</th>
+                                        <th class="pb-2 text-right text-xs font-semibold text-green-700 dark:text-green-400 w-32">Credit received</th>
+                                        <th class="pb-2 text-center text-xs font-semibold text-green-700 dark:text-green-400 w-28">Apply to sale</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-green-100 dark:divide-green-800">
+                                    @foreach ($rtv->items as $rtvItem)
+                                    <tr>
+                                        <td class="py-2 pr-3 text-gray-900 dark:text-white font-medium">
+                                            {{ $rtvItem->purchaseOrderItem?->item_name ?? '—' }}
+                                            @if ($rtvItem->saleItem)
+                                                <div class="text-xs text-gray-400 font-normal">Linked to sale item</div>
+                                            @endif
+                                        </td>
+                                        <td class="py-2 text-right text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                            ${{ number_format((float) $rtvItem->line_total, 2) }}
+                                        </td>
+                                        <td class="py-2 pl-3 text-right">
+                                            <input type="number"
+                                                   name="items[{{ $rtvItem->id }}][credit_received]"
+                                                   value="0"
+                                                   min="0"
+                                                   step="0.01"
+                                                   placeholder="0.00"
+                                                   class="w-28 rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            @if ($rtvItem->saleItem)
+                                                <input type="checkbox"
+                                                       name="items[{{ $rtvItem->id }}][apply_to_sale_cost]"
+                                                       value="1"
+                                                       class="rounded border-gray-300 text-green-600 focus:ring-green-500">
+                                            @else
+                                                <span class="text-xs text-gray-400">No sale link</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 rounded-b-xl">
@@ -335,6 +400,20 @@
             </form>
         </div>
     </div>
+
+    <script>
+    document.getElementById('resolve-outcome').addEventListener('change', function () {
+        const section = document.getElementById('credit-note-section');
+        section.style.display = this.value === 'credit_note' ? 'block' : 'none';
+    });
+    // Run on load in case old() restores credit_note
+    (function () {
+        const sel = document.getElementById('resolve-outcome');
+        if (sel && sel.value === 'credit_note') {
+            document.getElementById('credit-note-section').style.display = 'block';
+        }
+    })();
+    </script>
     @endif
 
 </x-app-layout>

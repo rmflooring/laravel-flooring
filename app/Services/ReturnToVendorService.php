@@ -74,16 +74,56 @@ class ReturnToVendorService
 
     /**
      * Resolve the RTV — record the vendor's response (outcome + reference number).
+     *
+     * When outcome = credit_note, per-item credit_received amounts can be passed
+     * and optionally applied to the linked sale item's cost_total.
+     *
+     * @param array $itemCredits  [inventory_return_item_id => ['credit_received' => float, 'apply_to_sale_cost' => bool]]
      */
-    public function resolve(InventoryReturn $rtv, string $outcome, ?string $vendorReference, ?string $notes): void
-    {
+    public function resolve(
+        InventoryReturn $rtv,
+        string $outcome,
+        ?string $vendorReference,
+        ?string $notes,
+        array $itemCredits = []
+    ): void {
         abort_unless($rtv->status === 'shipped', 422, 'Only shipped RTVs can be resolved.');
 
-        $rtv->update([
-            'status'           => 'resolved',
-            'outcome'          => $outcome,
-            'vendor_reference' => $vendorReference ?: null,
-            'notes'            => $notes ?: $rtv->notes,
-        ]);
+        DB::transaction(function () use ($rtv, $outcome, $vendorReference, $notes, $itemCredits) {
+            // Apply per-item credits if outcome is credit_note
+            if ($outcome === 'credit_note' && ! empty($itemCredits)) {
+                $rtv->loadMissing('items.saleItem');
+
+                foreach ($rtv->items as $rtvItem) {
+                    $creditData = $itemCredits[$rtvItem->id] ?? null;
+                    if (! $creditData) continue;
+
+                    $creditReceived   = (float) ($creditData['credit_received'] ?? 0);
+                    $applyToSaleCost  = ! empty($creditData['apply_to_sale_cost']);
+
+                    $itemUpdates = [
+                        'credit_received'    => $creditReceived > 0 ? $creditReceived : null,
+                        'apply_to_sale_cost' => $applyToSaleCost,
+                    ];
+
+                    // Reduce sale item cost_total by the credit amount
+                    if ($applyToSaleCost && $creditReceived > 0 && $rtvItem->saleItem) {
+                        $saleItem       = $rtvItem->saleItem;
+                        $newCostTotal   = max(0, (float) $saleItem->cost_total - $creditReceived);
+                        $saleItem->update(['cost_total' => $newCostTotal]);
+                        $itemUpdates['cost_applied_at'] = now();
+                    }
+
+                    $rtvItem->update($itemUpdates);
+                }
+            }
+
+            $rtv->update([
+                'status'           => 'resolved',
+                'outcome'          => $outcome,
+                'vendor_reference' => $vendorReference ?: null,
+                'notes'            => $notes ?: $rtv->notes,
+            ]);
+        });
     }
 }

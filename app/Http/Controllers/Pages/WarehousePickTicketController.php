@@ -76,28 +76,22 @@ class WarehousePickTicketController extends Controller
     public function updateStatus(Request $request, PickTicket $pickTicket, PickTicketService $service): RedirectResponse
     {
         $request->validate([
-            'action'         => ['required', 'string', 'in:mark_ready,mark_picked,deliver,return,cancel,revert_status'],
+            'action'         => ['required', 'string', 'in:mark_ready,mark_picked,deliver,cancel,revert_status'],
             'received_by'    => ['nullable', 'string', 'max:255'],
             'delivery_notes' => ['nullable', 'string', 'max:2000'],
-            'return_notes'   => ['nullable', 'string', 'max:2000'],
             'items'          => ['nullable', 'array'],
             'items.*'        => ['nullable', 'numeric', 'min:0'],
         ]);
 
         match ($request->action) {
-            'mark_ready'  => $service->markReady($pickTicket),
-            'mark_picked' => $service->markPicked($pickTicket),
-            'deliver'     => $service->deliver(
-                                $pickTicket,
-                                $request->input('items', []),
-                                $request->input('received_by'),
-                                $request->input('delivery_notes')
-                            ),
-            'return'      => $service->returnTicket(
-                                $pickTicket,
-                                $request->input('items', []),
-                                $request->input('return_notes')
-                            ),
+            'mark_ready'     => $service->markReady($pickTicket),
+            'mark_picked'    => $service->markPicked($pickTicket),
+            'deliver'        => $service->deliver(
+                                    $pickTicket,
+                                    $request->input('items', []),
+                                    $request->input('received_by'),
+                                    $request->input('delivery_notes')
+                                ),
             'cancel'         => $service->cancel($pickTicket),
             'revert_status'  => $service->revertStatus($pickTicket),
         };

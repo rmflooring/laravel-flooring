@@ -102,6 +102,7 @@ class ReturnToVendorController extends Controller
             'purchaseOrder.vendor',
             'items.inventoryReceipt',
             'items.purchaseOrderItem',
+            'items.saleItem',
             'returnedBy',
         ]);
 
@@ -167,12 +168,24 @@ class ReturnToVendorController extends Controller
     public function resolve(Request $request, InventoryReturn $rtv, ReturnToVendorService $service): RedirectResponse
     {
         $request->validate([
-            'outcome'          => ['required', 'string', 'in:pending,credit_note,replacement,refund'],
-            'vendor_reference' => ['nullable', 'string', 'max:255'],
-            'notes'            => ['nullable', 'string', 'max:2000'],
+            'outcome'                              => ['required', 'string', 'in:pending,credit_note,replacement,refund'],
+            'vendor_reference'                     => ['nullable', 'string', 'max:255'],
+            'notes'                                => ['nullable', 'string', 'max:2000'],
+            'items'                                => ['nullable', 'array'],
+            'items.*.credit_received'              => ['nullable', 'numeric', 'min:0'],
+            'items.*.apply_to_sale_cost'           => ['nullable', 'boolean'],
         ]);
 
-        $service->resolve($rtv, $request->outcome, $request->vendor_reference, $request->notes);
+        // Build per-item credit map keyed by inventory_return_item_id
+        $itemCredits = [];
+        foreach ($request->input('items', []) as $itemId => $data) {
+            $itemCredits[(int) $itemId] = [
+                'credit_received'   => $data['credit_received'] ?? 0,
+                'apply_to_sale_cost' => ! empty($data['apply_to_sale_cost']),
+            ];
+        }
+
+        $service->resolve($rtv, $request->outcome, $request->vendor_reference, $request->notes, $itemCredits);
 
         return redirect()->route('pages.inventory.rtv.show', $rtv)
             ->with('success', "RTV {$rtv->return_number} resolved.");
