@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-20 (session 21)
+Updated: 2026-03-20 (session 22)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -330,6 +330,13 @@ Full details in `Context/context_purchase_orders.md`.
 ### Purchase Orders — Bug fix (session 14, 2026-03-16)
 - **Pickup scheduling fields** in `create.blade.php` and `create-stock.blade.php` now have `:disabled="fulfillmentMethod !== 'pickup'"` — prevents `pickup_time` (which had default `09:00`) from submitting when fulfillment is not "pickup", fixing a validation error that blocked PO creation.
 - Removed redundant `required_with` rules from sale-PO `store()` validation.
+
+### Sale status — approved + PO gate (session 22, 2026-03-20)
+- Added `approved` to `sales.status` enum (migration `2026_03_20_180051_add_approved_status_to_sales_table`)
+- `SaleController::update()` now validates and saves `status`; `statusOptions` in index updated to include `approved`
+- Sale edit blade status dropdown fixed — was using wrong estimate-style statuses (`draft/sent/revised/approved/rejected`) that never saved; replaced with correct sale statuses with proper color badges
+- `PurchaseOrderController::create()` and `store()` both gate on `$sale->status === 'approved'` — redirects to sale show with error if not approved
+- All "+ Create PO" buttons (show ×2, edit ×2, status page ×1) show greyed-out disabled state with tooltip when status is not `approved`
 
 ### Purchase Orders — Vendor locking bug fix (session 21, 2026-03-20)
 - Items with no `product_line_id` (typed manually or added pre-session-8) were not auto-selecting vendor or shading as "Wrong vendor" on PO create page

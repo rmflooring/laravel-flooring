@@ -24,6 +24,7 @@ class SaleController extends Controller
 
 		$statusOptions = [
 			'open',
+			'approved',
 			'scheduled',
 			'in_progress',
 			'on_hold',
@@ -170,6 +171,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
         'tax_amount'         => ['nullable', 'numeric'],
         'grand_total'        => ['nullable', 'numeric'],
 
+        'status'             => ['nullable', 'in:open,approved,scheduled,in_progress,on_hold,completed,partially_invoiced,invoiced,cancelled'],
+
         'rooms'              => ['nullable', 'array'],
         'rooms.*.id'         => ['nullable', 'integer'],
         'rooms.*.room_name'  => ['nullable', 'string', 'max:255'],
@@ -187,6 +190,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
             'homeowner_name'     => $data['homeowner_name'] ?? $sale->homeowner_name,
             'job_phone'          => $data['homeowner_phone'] ?? $sale->job_phone,
             'job_email'          => $data['homeowner_email'] ?? $sale->job_email,
+            'status'             => $data['status'] ?? $sale->status,
             'pm_name'            => $data['pm_name'] ?? $sale->pm_name,
             'job_no'             => $data['job_number'] ?? $sale->job_no,
             'job_name'           => $data['job_name'] ?? $sale->job_name,

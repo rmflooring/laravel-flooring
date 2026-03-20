@@ -228,6 +228,12 @@ class PurchaseOrderController extends Controller
 
     public function create(Sale $sale)
     {
+        if ($sale->status !== 'approved') {
+            return redirect()
+                ->route('pages.sales.show', $sale)
+                ->with('error', 'The sale must be approved before a purchase order can be created.');
+        }
+
         $sale->load([
             'rooms' => fn ($q) => $q->orderBy('sort_order'),
             'rooms.items' => fn ($q) => $q->where('item_type', 'material')
@@ -293,6 +299,12 @@ class PurchaseOrderController extends Controller
 
     public function store(Request $request, Sale $sale)
     {
+        if ($sale->status !== 'approved') {
+            return redirect()
+                ->route('pages.sales.show', $sale)
+                ->with('error', 'The sale must be approved before a purchase order can be created.');
+        }
+
         $data = $request->validate([
             'vendor_id'               => ['required', 'integer', 'exists:vendors,id'],
             'expected_delivery_date'  => ['nullable', 'date'],

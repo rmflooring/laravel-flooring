@@ -111,10 +111,17 @@
                         <p class="text-xs text-gray-500 mt-0.5">All non-cancelled POs on this sale.</p>
                     </div>
                     @can('create purchase orders')
+                    @if($sale->status === 'approved')
                         <a href="{{ route('pages.sales.purchase-orders.create', $sale) }}"
                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800">
                             + Create PO
                         </a>
+                    @else
+                        <span title="Sale must be approved before creating a PO"
+                              class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed border border-gray-200">
+                            + Create PO
+                        </span>
+                    @endif
                     @endcan
                 </div>
 

@@ -355,6 +355,16 @@ Force-delete route uses `role:admin` middleware (not permission-based).
 
 ---
 
+## Sale Approval Gate (session 22, 2026-03-20)
+
+- PO creation from a sale now requires `sale.status = 'approved'`
+- `PurchaseOrderController::create()` and `store()` both check status and redirect with error if not approved
+- All "+ Create PO" buttons in sale show, edit, and status pages show greyed-out with tooltip when not approved
+- `approved` added to `sales.status` enum via migration `2026_03_20_180051_add_approved_status_to_sales_table`
+- `SaleController::update()` now saves `status`; sale edit blade status dropdown fixed to use correct sale statuses
+
+---
+
 ## Resume Prompt
 
 > Read CLAUDE.md and Context/context_purchase_orders.md. I want to continue working on the Purchase Orders module. One step at a time.

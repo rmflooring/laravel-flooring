@@ -43,10 +43,17 @@
     Print
 </a>
 @can('create purchase orders')
+@if($sale->status === 'approved')
 <a href="{{ route('pages.sales.purchase-orders.create', $sale) }}"
    class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300">
     + Create PO
 </a>
+@else
+<span title="Sale must be approved before creating a PO"
+      class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed border border-gray-200">
+    + Create PO
+</span>
+@endif
 @endcan
 				<a href="{{ route('pages.sales.profits.show', $sale->id) }}"
   class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
@@ -1772,27 +1779,43 @@
         $currentStatus = old('status', $sale->status);
 
         $statusColors = [
-            'draft'    => 'bg-gray-200 text-gray-800',
-            'sent'     => 'bg-blue-200 text-blue-800',
-            'revised'  => 'bg-yellow-200 text-yellow-800',
-            'approved' => 'bg-green-200 text-green-800',
-            'rejected' => 'bg-red-200 text-red-800',
+            'open'                => 'bg-gray-200 text-gray-800',
+            'approved'            => 'bg-green-200 text-green-800',
+            'scheduled'           => 'bg-blue-200 text-blue-800',
+            'in_progress'         => 'bg-indigo-200 text-indigo-800',
+            'on_hold'             => 'bg-yellow-200 text-yellow-800',
+            'completed'           => 'bg-emerald-200 text-emerald-800',
+            'partially_invoiced'  => 'bg-orange-200 text-orange-800',
+            'invoiced'            => 'bg-purple-200 text-purple-800',
+            'cancelled'           => 'bg-red-200 text-red-800',
+        ];
+
+        $statusLabels = [
+            'open'                => 'Open',
+            'approved'            => 'Approved',
+            'scheduled'           => 'Scheduled',
+            'in_progress'         => 'In Progress',
+            'on_hold'             => 'On Hold',
+            'completed'           => 'Completed',
+            'partially_invoiced'  => 'Partially Invoiced',
+            'invoiced'            => 'Invoiced',
+            'cancelled'           => 'Cancelled',
         ];
     @endphp
 
     <div class="flex items-center gap-2">
         <select name="status"
           class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5">
-            @foreach(array_keys($statusColors) as $s)
-                <option value="{{ $s }}" @selected($currentStatus === $s)>
-                    {{ ucfirst($s) }}
+            @foreach($statusLabels as $value => $label)
+                <option value="{{ $value }}" @selected($currentStatus === $value)>
+                    {{ $label }}
                 </option>
             @endforeach
         </select>
 
         <span id="status-badge"
           class="px-3 py-1 rounded-full text-xs font-semibold {{ $statusColors[$currentStatus] ?? 'bg-gray-200 text-gray-800' }}">
-            {{ ucfirst($currentStatus) }}
+            {{ $statusLabels[$currentStatus] ?? ucfirst($currentStatus) }}
         </span>
     </div>
 </div>
@@ -1889,10 +1912,17 @@
                 <p class="text-xs text-gray-500 mt-0.5">POs raised against this sale.</p>
             </div>
             @can('create purchase orders')
+            @if($sale->status === 'approved')
             <a href="{{ route('pages.sales.purchase-orders.create', $sale) }}"
                class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800">
                 + Create PO
             </a>
+            @else
+            <span title="Sale must be approved before creating a PO"
+                  class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed border border-gray-200">
+                + Create PO
+            </span>
+            @endif
             @endcan
         </div>
 
