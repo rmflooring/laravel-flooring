@@ -27,38 +27,43 @@
                             <option value="">— Select a record —</option>
                             @foreach ($receipts as $r)
                                 @php
-                                    $isPo      = (bool) $r->purchase_order_id;
-                                    $isRfc     = ! $isPo && $r->customerReturnItem;
-                                    $availQty  = (float) $r->available_qty;
+                                    $isPo       = (bool) $r->purchase_order_id;
+                                    $availQty   = (float) $r->available_qty;
 
                                     if ($isPo) {
-                                        // PO receipt: items come from PO items
                                         $items = $r->purchaseOrder->items->map(fn($i) => [
-                                            'po_item_id'  => $i->id,
-                                            'item_name'   => $i->item_name,
-                                            'unit'        => $i->unit,
-                                            'available'   => max(0, (float)$i->quantity - (float)$i->returned_quantity),
-                                            'unit_cost'   => (float) $i->cost_price,
+                                            'po_item_id' => $i->id,
+                                            'item_name'  => $i->item_name,
+                                            'unit'       => $i->unit,
+                                            'available'  => max(0, (float)$i->quantity - (float)$i->returned_quantity),
+                                            'unit_cost'  => (float) $i->cost_price,
                                         ])->filter(fn($i) => $i['available'] > 0)->values();
 
-                                        $sourceLabel = 'PO #' . $r->purchaseOrder->po_number . ' — ' . ($r->purchaseOrder->vendor->company_name ?? 'Unknown vendor');
+                                        $sourceLabel      = 'PO #' . $r->purchaseOrder->po_number . ' — ' . ($r->purchaseOrder->vendor->company_name ?? 'Unknown vendor');
+                                        $inferredVendorId = $r->purchaseOrder->vendor_id;
+                                        $inferredVendorName = $r->purchaseOrder->vendor->company_name ?? '';
                                     } else {
-                                        // RFC or manual receipt: one row from the receipt itself
-                                        $rfcNumber = $r->customerReturnItem?->customerReturn?->rfc_number ?? null;
+                                        $rfcNumber  = $r->customerReturnItem?->customerReturn?->rfc_number ?? null;
+                                        $saleItemId = $r->customerReturnItem?->sale_item_id;
+                                        $inferred   = $saleItemId ? ($saleItemVendorMap[$saleItemId] ?? null) : null;
+
                                         $items = collect([[
-                                            'po_item_id'  => null,
-                                            'item_name'   => $r->item_name,
-                                            'unit'        => $r->unit,
-                                            'available'   => $availQty,
-                                            'unit_cost'   => 0,
+                                            'po_item_id' => null,
+                                            'item_name'  => $r->item_name,
+                                            'unit'       => $r->unit,
+                                            'available'  => $availQty,
+                                            'unit_cost'  => 0,
                                         ]]);
-                                        $sourceLabel = $rfcNumber ? 'RFC ' . $rfcNumber : 'Manual receipt #' . $r->id;
+                                        $sourceLabel        = $rfcNumber ? 'RFC ' . $rfcNumber : 'Manual receipt #' . $r->id;
+                                        $inferredVendorId   = $inferred['vendor_id'] ?? null;
+                                        $inferredVendorName = $inferred['vendor_name'] ?? '';
                                     }
                                 @endphp
                                 <option value="{{ $r->id }}"
                                         data-source="{{ $isPo ? 'po' : 'rfc' }}"
-                                        data-vendor-name="{{ $isPo ? ($r->purchaseOrder->vendor->company_name ?? '') : '' }}"
                                         data-source-label="{{ $sourceLabel }}"
+                                        data-vendor-id="{{ $inferredVendorId ?? '' }}"
+                                        data-vendor-name="{{ $inferredVendorName }}"
                                         data-items="{{ json_encode($items) }}"
                                         {{ old('inventory_receipt_id') == $r->id || (isset($receipt) && $receipt->id == $r->id) ? 'selected' : '' }}>
                                     {{ $sourceLabel }} — {{ $r->item_name }} ({{ rtrim(rtrim(number_format($availQty, 2), '0'), '.') }} {{ $r->unit }} available)
@@ -75,12 +80,20 @@
                          class="text-sm text-gray-600 dark:text-gray-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-3">
                     </div>
 
-                    {{-- Vendor selector — shown only for non-PO (RFC/manual) receipts --}}
+                    {{-- Vendor selector — shown for non-PO (RFC/manual) receipts --}}
                     <div id="vendor-selector" style="display:none">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Vendor to return to <span class="text-red-500">*</span>
                         </label>
-                        <select name="vendor_id"
+                        {{-- Auto-detected notice --}}
+                        <div id="vendor-auto-note" style="display:none"
+                             class="mb-2 flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-3 py-2 text-xs text-green-700 dark:text-green-400">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span id="vendor-auto-text">Vendor auto-detected from the original purchase order.</span>
+                        </div>
+                        <select name="vendor_id" id="vendor-select"
                                 class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                             <option value="">— Select vendor —</option>
                             @foreach ($vendors as $v)
@@ -188,6 +201,9 @@
     const template     = document.getElementById('item-row-template');
     const sourceInfo   = document.getElementById('source-info');
     const vendorSel    = document.getElementById('vendor-selector');
+    const vendorSelect = document.getElementById('vendor-select');
+    const vendorNote   = document.getElementById('vendor-auto-note');
+    const vendorNoteText = document.getElementById('vendor-auto-text');
 
     function syncNoItemsMsg() {
         noItemsMsg.style.display = container.querySelectorAll('.item-row').length > 0 ? 'none' : 'block';
@@ -229,17 +245,21 @@
     }
 
     document.getElementById('receipt-select').addEventListener('change', function () {
-        container.innerHTML = '';
+        container.innerHTML      = '';
         sourceInfo.style.display = 'none';
         sourceInfo.textContent   = '';
         vendorSel.style.display  = 'none';
+        vendorNote.style.display = 'none';
+        vendorSelect.value       = '';
 
         const selected = this.options[this.selectedIndex];
         if (!selected.value) { syncNoItemsMsg(); return; }
 
-        const source  = selected.dataset.source;   // 'po' or 'rfc'
-        const isPo    = source === 'po';
-        const items   = selected.dataset.items ? JSON.parse(selected.dataset.items) : [];
+        const source     = selected.dataset.source;   // 'po' or 'rfc'
+        const isPo       = source === 'po';
+        const items      = selected.dataset.items ? JSON.parse(selected.dataset.items) : [];
+        const vendorId   = selected.dataset.vendorId   || '';
+        const vendorName = selected.dataset.vendorName || '';
 
         items.forEach(function (item) {
             if (item.available <= 0) return;
@@ -247,11 +267,22 @@
         });
 
         sourceInfo.style.display = 'block';
+
         if (isPo) {
             sourceInfo.innerHTML = '<span class="font-medium">' + selected.dataset.sourceLabel + '</span> — vendor auto-detected from PO.';
         } else {
-            sourceInfo.innerHTML = '<span class="font-medium">' + selected.dataset.sourceLabel + '</span> — RFC stock. Select the vendor to return to below.';
+            // RFC/manual receipt — always show vendor selector
             vendorSel.style.display = 'block';
+
+            if (vendorId) {
+                // Auto-select vendor inferred from original PO
+                vendorSelect.value = vendorId;
+                vendorNote.style.display  = 'flex';
+                vendorNoteText.textContent = 'Vendor auto-detected from the original purchase order (' + vendorName + '). Change if needed.';
+                sourceInfo.innerHTML = '<span class="font-medium">' + selected.dataset.sourceLabel + '</span> — RFC stock.';
+            } else {
+                sourceInfo.innerHTML = '<span class="font-medium">' + selected.dataset.sourceLabel + '</span> — RFC stock. Select the vendor to return to below.';
+            }
         }
 
         syncNoItemsMsg();

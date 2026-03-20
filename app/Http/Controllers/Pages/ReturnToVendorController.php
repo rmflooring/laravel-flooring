@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pages;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryReceipt;
 use App\Models\InventoryReturn;
+use App\Models\PurchaseOrderItem;
 use App\Models\Vendor;
 use App\Services\ReturnToVendorService;
 use Illuminate\Http\RedirectResponse;
@@ -58,9 +59,32 @@ class ReturnToVendorController extends Controller
             ->get()
             ->filter(fn ($r) => $r->available_qty > 0);
 
+        // Batch-infer vendor for RFC receipts via: sale_item → PO item → PO → vendor
+        $rfcSaleItemIds = $receipts
+            ->filter(fn ($r) => ! $r->purchase_order_id && $r->customerReturnItem?->sale_item_id)
+            ->map(fn ($r) => $r->customerReturnItem->sale_item_id)
+            ->filter()
+            ->unique();
+
+        $saleItemVendorMap = [];
+        if ($rfcSaleItemIds->isNotEmpty()) {
+            PurchaseOrderItem::whereIn('sale_item_id', $rfcSaleItemIds)
+                ->with('purchaseOrder.vendor')
+                ->get()
+                ->each(function ($poItem) use (&$saleItemVendorMap) {
+                    $sid = $poItem->sale_item_id;
+                    if ($sid && $poItem->purchaseOrder?->vendor_id && ! isset($saleItemVendorMap[$sid])) {
+                        $saleItemVendorMap[$sid] = [
+                            'vendor_id'   => $poItem->purchaseOrder->vendor_id,
+                            'vendor_name' => $poItem->purchaseOrder->vendor->company_name ?? '',
+                        ];
+                    }
+                });
+        }
+
         $vendors = Vendor::where('status', 'active')->orderBy('company_name')->get();
 
-        return view('pages.inventory.rtv.create', compact('receipt', 'receipts', 'vendors'));
+        return view('pages.inventory.rtv.create', compact('receipt', 'receipts', 'vendors', 'saleItemVendorMap'));
     }
 
     public function store(Request $request): RedirectResponse
