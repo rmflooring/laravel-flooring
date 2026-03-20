@@ -102,7 +102,7 @@
                                     <tr>
                                         <td class="px-6 py-3">
                                             <div class="font-medium text-gray-900 dark:text-white text-sm">
-                                                {{ $item->purchaseOrderItem?->item_name ?? '—' }}
+                                                {{ $item->item_name_resolved }}
                                             </div>
                                             @if ($item->inventoryReceipt)
                                                 <div class="text-xs text-gray-400 mt-0.5">
@@ -115,7 +115,7 @@
                                         </td>
                                         <td class="px-6 py-3 text-right text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
                                             {{ rtrim(rtrim(number_format((float) $item->quantity_returned, 2), '0'), '.') }}
-                                            <span class="text-xs text-gray-400 font-normal">{{ $item->purchaseOrderItem?->unit }}</span>
+                                            <span class="text-xs text-gray-400 font-normal">{{ $item->unit_resolved }}</span>
                                         </td>
                                         <td class="px-6 py-3 text-right text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                             ${{ number_format((float) $item->unit_cost, 2) }}
@@ -351,7 +351,7 @@
                                     @foreach ($rtv->items as $rtvItem)
                                     <tr>
                                         <td class="py-2 pr-3 text-gray-900 dark:text-white font-medium">
-                                            {{ $rtvItem->purchaseOrderItem?->item_name ?? '—' }}
+                                            {{ $rtvItem->item_name_resolved }}
                                             @if ($rtvItem->saleItem)
                                                 <div class="text-xs text-gray-400 font-normal">Linked to sale item</div>
                                             @endif

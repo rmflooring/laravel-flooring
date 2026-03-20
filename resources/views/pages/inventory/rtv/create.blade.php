@@ -16,7 +16,9 @@
                 {{-- Receipt selector --}}
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 space-y-4">
                     <h2 class="text-base font-semibold text-gray-900 dark:text-white">Source Inventory Record</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Select the inventory record to return. Items from the linked purchase order will load automatically.</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Select the inventory record to return. This can be stock received from a PO <strong>or</strong> stock that came back from a customer via an RFC.
+                    </p>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inventory Record</label>
@@ -24,20 +26,42 @@
                                 class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                             <option value="">— Select a record —</option>
                             @foreach ($receipts as $r)
+                                @php
+                                    $isPo      = (bool) $r->purchase_order_id;
+                                    $isRfc     = ! $isPo && $r->customerReturnItem;
+                                    $availQty  = (float) $r->available_qty;
+
+                                    if ($isPo) {
+                                        // PO receipt: items come from PO items
+                                        $items = $r->purchaseOrder->items->map(fn($i) => [
+                                            'po_item_id'  => $i->id,
+                                            'item_name'   => $i->item_name,
+                                            'unit'        => $i->unit,
+                                            'available'   => max(0, (float)$i->quantity - (float)$i->returned_quantity),
+                                            'unit_cost'   => (float) $i->cost_price,
+                                        ])->filter(fn($i) => $i['available'] > 0)->values();
+
+                                        $sourceLabel = 'PO #' . $r->purchaseOrder->po_number . ' — ' . ($r->purchaseOrder->vendor->company_name ?? 'Unknown vendor');
+                                    } else {
+                                        // RFC or manual receipt: one row from the receipt itself
+                                        $rfcNumber = $r->customerReturnItem?->customerReturn?->rfc_number ?? null;
+                                        $items = collect([[
+                                            'po_item_id'  => null,
+                                            'item_name'   => $r->item_name,
+                                            'unit'        => $r->unit,
+                                            'available'   => $availQty,
+                                            'unit_cost'   => 0,
+                                        ]]);
+                                        $sourceLabel = $rfcNumber ? 'RFC ' . $rfcNumber : 'Manual receipt #' . $r->id;
+                                    }
+                                @endphp
                                 <option value="{{ $r->id }}"
-                                        data-receipt-id="{{ $r->id }}"
-                                        data-items="{{ json_encode($r->purchaseOrder->items->map(fn($i) => [
-                                            'id'                => $i->id,
-                                            'item_name'         => $i->item_name,
-                                            'unit'              => $i->unit,
-                                            'quantity'          => (float) $i->quantity,
-                                            'returned_quantity' => (float) $i->returned_quantity,
-                                            'cost_price'        => (float) $i->cost_price,
-                                        ])) }}"
+                                        data-source="{{ $isPo ? 'po' : 'rfc' }}"
+                                        data-vendor-name="{{ $isPo ? ($r->purchaseOrder->vendor->company_name ?? '') : '' }}"
+                                        data-source-label="{{ $sourceLabel }}"
+                                        data-items="{{ json_encode($items) }}"
                                         {{ old('inventory_receipt_id') == $r->id || (isset($receipt) && $receipt->id == $r->id) ? 'selected' : '' }}>
-                                    Record #{{ $r->id }}
-                                    — {{ $r->purchaseOrder->vendor->name ?? 'Unknown vendor' }}
-                                    (PO #{{ $r->purchaseOrder->po_number }})
+                                    {{ $sourceLabel }} — {{ $r->item_name }} ({{ rtrim(rtrim(number_format($availQty, 2), '0'), '.') }} {{ $r->unit }} available)
                                 </option>
                             @endforeach
                         </select>
@@ -46,7 +70,28 @@
                         @enderror
                     </div>
 
-                    <div id="vendor-info" class="hidden text-sm text-gray-600 dark:text-gray-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-3">
+                    {{-- Source info bar --}}
+                    <div id="source-info" style="display:none"
+                         class="text-sm text-gray-600 dark:text-gray-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-3">
+                    </div>
+
+                    {{-- Vendor selector — shown only for non-PO (RFC/manual) receipts --}}
+                    <div id="vendor-selector" style="display:none">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Vendor to return to <span class="text-red-500">*</span>
+                        </label>
+                        <select name="vendor_id"
+                                class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="">— Select vendor —</option>
+                            @foreach ($vendors as $v)
+                                <option value="{{ $v->id }}" {{ old('vendor_id') == $v->id ? 'selected' : '' }}>
+                                    {{ $v->company_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('vendor_id')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
 
@@ -56,7 +101,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason <span class="text-red-500">*</span></label>
-                        <select name="reason"
+                        <select name="reason" required
                                 class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                             <option value="">— Select a reason —</option>
                             @foreach (\App\Models\InventoryReturn::REASON_LABELS as $value => $label)
@@ -82,11 +127,10 @@
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Items to Return</h2>
                     </div>
 
-                    <div id="items-container" class="divide-y divide-gray-100 dark:divide-gray-700">
-                    </div>
+                    <div id="items-container" class="divide-y divide-gray-100 dark:divide-gray-700"></div>
 
                     <div id="no-items-msg" class="px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-                        Select an inventory record above to load PO items.
+                        Select an inventory record above to load items.
                     </div>
                 </div>
 
@@ -108,26 +152,31 @@
 
 {{-- Item row template --}}
 <template id="item-row-template">
-    <div class="item-row px-6 py-4" data-index="__IDX__">
+    <div class="item-row px-6 py-4 space-y-3" data-index="__IDX__">
         <div class="flex items-start gap-4">
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-white item-name-display"></p>
                 <p class="text-xs text-gray-400 mt-0.5 item-unit-display"></p>
             </div>
             <div class="flex items-center gap-4 shrink-0">
-                <div class="text-right text-xs text-gray-500">
-                    <div>Ordered: <span class="item-qty-ordered font-medium text-gray-700 dark:text-gray-300"></span></div>
-                    <div>Already returned: <span class="item-qty-returned text-orange-600 font-medium"></span></div>
-                    <div>Remaining: <span class="item-qty-remaining font-semibold text-gray-900 dark:text-white"></span></div>
+                <div class="text-right text-xs text-gray-500 dark:text-gray-400">
+                    <div>Available: <span class="item-qty-available font-semibold text-gray-900 dark:text-white"></span></div>
                 </div>
                 <div class="w-28">
                     <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Qty returning</label>
                     <input type="number" name="items[__IDX__][quantity_returned]" required min="0.01" step="0.01"
                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                 </div>
+                <div class="w-28 unit-cost-field">
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unit cost ($)</label>
+                    <input type="number" name="items[__IDX__][unit_cost]" min="0" step="0.0001"
+                           class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                </div>
             </div>
         </div>
         <input type="hidden" name="items[__IDX__][purchase_order_item_id]" class="po-item-id-input">
+        <input type="hidden" name="items[__IDX__][item_name]" class="item-name-input">
+        <input type="hidden" name="items[__IDX__][unit]" class="item-unit-input">
     </div>
 </template>
 
@@ -137,32 +186,43 @@
     const container    = document.getElementById('items-container');
     const noItemsMsg   = document.getElementById('no-items-msg');
     const template     = document.getElementById('item-row-template');
-    const vendorInfo   = document.getElementById('vendor-info');
+    const sourceInfo   = document.getElementById('source-info');
+    const vendorSel    = document.getElementById('vendor-selector');
 
     function syncNoItemsMsg() {
-        const hasRows = container.querySelectorAll('.item-row').length > 0;
-        noItemsMsg.style.display = hasRows ? 'none' : 'block';
+        noItemsMsg.style.display = container.querySelectorAll('.item-row').length > 0 ? 'none' : 'block';
     }
 
-    function addRow(item) {
-        const remaining = Math.max(0, item.quantity - item.returned_quantity);
+    function addRow(item, isPo) {
         const idx  = itemIndex++;
         const html = template.innerHTML.replaceAll('__IDX__', idx);
         const div  = document.createElement('div');
         div.innerHTML = html;
         const row = div.firstElementChild;
 
-        row.querySelector('.item-name-display').textContent = item.item_name;
-        row.querySelector('.item-unit-display').textContent = item.unit || '';
-        row.querySelector('.item-qty-ordered').textContent  = item.quantity;
-        row.querySelector('.item-qty-returned').textContent = item.returned_quantity;
-        row.querySelector('.item-qty-remaining').textContent = remaining;
+        row.querySelector('.item-name-display').textContent  = item.item_name;
+        row.querySelector('.item-unit-display').textContent  = item.unit || '';
+        row.querySelector('.item-qty-available').textContent = item.available;
 
-        const qtyInput = row.querySelector('[name$="[quantity_returned]"]');
-        qtyInput.value = remaining;
-        qtyInput.max   = remaining;
+        const qtyInput  = row.querySelector('[name$="[quantity_returned]"]');
+        qtyInput.value  = item.available;
+        qtyInput.max    = item.available;
 
-        row.querySelector('.po-item-id-input').value = item.id;
+        const costInput = row.querySelector('[name$="[unit_cost]"]');
+        if (isPo && item.unit_cost > 0) {
+            // PO receipt: pre-fill cost, make it readonly (comes from PO item)
+            costInput.value    = item.unit_cost;
+            costInput.readOnly = true;
+            costInput.classList.add('bg-gray-50', 'dark:bg-gray-700/50', 'text-gray-500');
+        } else {
+            // RFC/manual receipt: user must enter cost
+            costInput.value       = '';
+            costInput.placeholder = 'Enter cost…';
+        }
+
+        row.querySelector('.po-item-id-input').value  = item.po_item_id || '';
+        row.querySelector('.item-name-input').value   = item.item_name || '';
+        row.querySelector('.item-unit-input').value   = item.unit || '';
 
         container.appendChild(row);
         syncNoItemsMsg();
@@ -170,25 +230,28 @@
 
     document.getElementById('receipt-select').addEventListener('change', function () {
         container.innerHTML = '';
-        vendorInfo.classList.add('hidden');
-        vendorInfo.textContent = '';
+        sourceInfo.style.display = 'none';
+        sourceInfo.textContent   = '';
+        vendorSel.style.display  = 'none';
 
         const selected = this.options[this.selectedIndex];
-        if (!selected.value) {
-            syncNoItemsMsg();
-            return;
-        }
+        if (!selected.value) { syncNoItemsMsg(); return; }
 
-        const items = selected.dataset.items ? JSON.parse(selected.dataset.items) : [];
+        const source  = selected.dataset.source;   // 'po' or 'rfc'
+        const isPo    = source === 'po';
+        const items   = selected.dataset.items ? JSON.parse(selected.dataset.items) : [];
+
         items.forEach(function (item) {
-            const remaining = item.quantity - item.returned_quantity;
-            if (remaining <= 0) return;
-            addRow(item);
+            if (item.available <= 0) return;
+            addRow(item, isPo);
         });
 
-        if (items.length) {
-            vendorInfo.classList.remove('hidden');
-            vendorInfo.innerHTML = '<span class="font-medium">Record #' + selected.dataset.receiptId + '</span> — ' + selected.text.split('—').slice(1).join('—').trim();
+        sourceInfo.style.display = 'block';
+        if (isPo) {
+            sourceInfo.innerHTML = '<span class="font-medium">' + selected.dataset.sourceLabel + '</span> — vendor auto-detected from PO.';
+        } else {
+            sourceInfo.innerHTML = '<span class="font-medium">' + selected.dataset.sourceLabel + '</span> — RFC stock. Select the vendor to return to below.';
+            vendorSel.style.display = 'block';
         }
 
         syncNoItemsMsg();
@@ -196,9 +259,7 @@
 
     // Auto-load if pre-selected
     const sel = document.getElementById('receipt-select');
-    if (sel.value) {
-        sel.dispatchEvent(new Event('change'));
-    }
+    if (sel.value) sel.dispatchEvent(new Event('change'));
 
     syncNoItemsMsg();
 })();

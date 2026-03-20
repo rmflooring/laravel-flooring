@@ -11,12 +11,32 @@ class InventoryReturnItem extends Model
 
     protected $casts = [
         'quantity_returned'  => 'decimal:2',
-        'unit_cost'          => 'decimal:2',
+        'unit_cost'          => 'decimal:4',
         'line_total'         => 'decimal:2',
         'apply_to_sale_cost' => 'boolean',
         'credit_received'    => 'decimal:2',
         'cost_applied_at'    => 'datetime',
     ];
+
+    /**
+     * Resolved item name — from snapshot, or falls back to PO item name.
+     */
+    public function getItemNameResolvedAttribute(): string
+    {
+        return $this->item_name
+            ?? $this->purchaseOrderItem?->item_name
+            ?? '—';
+    }
+
+    /**
+     * Resolved unit — from snapshot, or falls back to PO item unit.
+     */
+    public function getUnitResolvedAttribute(): string
+    {
+        return $this->unit
+            ?? $this->purchaseOrderItem?->unit
+            ?? '';
+    }
 
     public function inventoryReturn(): BelongsTo
     {

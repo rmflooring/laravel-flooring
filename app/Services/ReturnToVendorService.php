@@ -63,8 +63,8 @@ class ReturnToVendorService
                     }
                 }
 
-                // 2. Update PO item returned_quantity
-                $rtvItem->purchaseOrderItem->increment('returned_quantity', $qty);
+                // 2. Update PO item returned_quantity (only if linked — RFC-sourced items have no PO item)
+                $rtvItem->purchaseOrderItem?->increment('returned_quantity', $qty);
             }
 
             // Mark as shipped

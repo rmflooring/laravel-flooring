@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pages;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryReceipt;
 use App\Models\InventoryReturn;
+use App\Models\Vendor;
 use App\Services\ReturnToVendorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,62 +34,82 @@ class ReturnToVendorController extends Controller
 
     public function create(Request $request): View
     {
-        // Optional: pre-select an inventory receipt to return
+        // Optional: pre-select an inventory receipt
         $receipt = null;
         if ($request->filled('receipt_id')) {
             $receipt = InventoryReceipt::with([
                 'purchaseOrder.vendor',
                 'purchaseOrder.items',
+                'customerReturnItem.customerReturn',
                 'allocations',
             ])->findOrFail($request->receipt_id);
         }
 
-        // Receipts that have something left to potentially return
-        // (received from a PO, not fully returned yet)
+        // ALL receipts with available qty > 0 — both PO-linked and RFC-sourced
         $receipts = InventoryReceipt::query()
-            ->whereNotNull('purchase_order_id')
-            ->with(['purchaseOrder.vendor', 'purchaseOrder.items', 'returnItems'])
+            ->with([
+                'purchaseOrder.vendor',
+                'purchaseOrder.items',
+                'customerReturnItem.customerReturn',
+                'allocations',
+                'transactions',
+            ])
             ->orderByDesc('received_date')
             ->get()
-            ->filter(fn ($r) => (float) $r->quantity_received > $r->returnItems->sum('quantity_returned'));
+            ->filter(fn ($r) => $r->available_qty > 0);
 
-        return view('pages.inventory.rtv.create', compact('receipt', 'receipts'));
+        $vendors = Vendor::where('status', 'active')->orderBy('company_name')->get();
+
+        return view('pages.inventory.rtv.create', compact('receipt', 'receipts', 'vendors'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'inventory_receipt_id'      => ['required', 'exists:inventory_receipts,id'],
-            'reason'                    => ['required', 'string', 'in:wrong_item,damaged,overstock,cancelled_job'],
-            'notes'                     => ['nullable', 'string', 'max:2000'],
-            'items'                     => ['required', 'array', 'min:1'],
-            'items.*.purchase_order_item_id' => ['required', 'exists:purchase_order_items,id'],
-            'items.*.quantity_returned' => ['required', 'numeric', 'min:0.01'],
+            'inventory_receipt_id'           => ['required', 'exists:inventory_receipts,id'],
+            'vendor_id'                      => ['nullable', 'exists:vendors,id'],
+            'reason'                         => ['required', 'string', 'in:wrong_item,damaged,overstock,cancelled_job'],
+            'notes'                          => ['nullable', 'string', 'max:2000'],
+            'items'                          => ['required', 'array', 'min:1'],
+            'items.*.purchase_order_item_id' => ['nullable', 'exists:purchase_order_items,id'],
+            'items.*.item_name'              => ['nullable', 'string', 'max:500'],
+            'items.*.unit'                   => ['nullable', 'string', 'max:50'],
+            'items.*.quantity_returned'      => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit_cost'              => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $receipt = InventoryReceipt::with('purchaseOrder.vendor')->findOrFail($request->inventory_receipt_id);
+        $receipt = InventoryReceipt::with(['purchaseOrder.vendor', 'purchaseOrder.items'])
+            ->findOrFail($request->inventory_receipt_id);
 
-        abort_unless($receipt->purchase_order_id, 422, 'Selected receipt is not linked to a PO.');
+        // Vendor: from PO if PO-linked, otherwise from form input
+        $vendorId = $receipt->purchaseOrder?->vendor_id ?? $request->vendor_id;
+        abort_unless($vendorId, 422, 'A vendor is required. Select one or link this receipt to a PO.');
 
         $rtv = InventoryReturn::create([
-            'purchase_order_id'    => $receipt->purchase_order_id,
-            'vendor_id'            => $receipt->purchaseOrder->vendor_id,
-            'reason'               => $request->reason,
-            'notes'                => $request->notes ?: null,
-            'status'               => 'draft',
-            'outcome'              => 'pending',
+            'purchase_order_id' => $receipt->purchase_order_id,
+            'vendor_id'         => $vendorId,
+            'reason'            => $request->reason,
+            'notes'             => $request->notes ?: null,
+            'status'            => 'draft',
+            'outcome'           => 'pending',
         ]);
 
         foreach ($request->items as $itemData) {
-            $poItem = \App\Models\PurchaseOrderItem::findOrFail($itemData['purchase_order_item_id']);
-            $qty    = (float) $itemData['quantity_returned'];
+            $poItemId  = $itemData['purchase_order_item_id'] ?? null;
+            $poItem    = $poItemId ? \App\Models\PurchaseOrderItem::find($poItemId) : null;
+            $qty       = (float) $itemData['quantity_returned'];
+            $unitCost  = $poItem ? (float) $poItem->cost_price : (float) ($itemData['unit_cost'] ?? 0);
+            $itemName  = $poItem ? $poItem->item_name : ($itemData['item_name'] ?? $receipt->item_name);
+            $unit      = $poItem ? $poItem->unit : ($itemData['unit'] ?? $receipt->unit);
 
             $rtv->items()->create([
-                'inventory_receipt_id'    => $receipt->id,
-                'purchase_order_item_id'  => $poItem->id,
-                'quantity_returned'       => $qty,
-                'unit_cost'               => $poItem->cost_price,
-                'line_total'              => round($qty * (float) $poItem->cost_price, 2),
+                'inventory_receipt_id'   => $receipt->id,
+                'purchase_order_item_id' => $poItem?->id,
+                'item_name'              => $itemName,
+                'unit'                   => $unit,
+                'quantity_returned'      => $qty,
+                'unit_cost'              => $unitCost,
+                'line_total'             => round($qty * $unitCost, 2),
             ]);
         }
 
