@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-17 (session 19)
+Updated: 2026-03-20 (session 21)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -330,6 +330,12 @@ Full details in `Context/context_purchase_orders.md`.
 ### Purchase Orders — Bug fix (session 14, 2026-03-16)
 - **Pickup scheduling fields** in `create.blade.php` and `create-stock.blade.php` now have `:disabled="fulfillmentMethod !== 'pickup'"` — prevents `pickup_time` (which had default `09:00`) from submitting when fulfillment is not "pickup", fixing a validation error that blocked PO creation.
 - Removed redundant `required_with` rules from sale-PO `store()` validation.
+
+### Purchase Orders — Vendor locking bug fix (session 21, 2026-03-20)
+- Items with no `product_line_id` (typed manually or added pre-session-8) were not auto-selecting vendor or shading as "Wrong vendor" on PO create page
+- Added 3rd fallback in `itemVendorMap` building: look up `ProductLine` by manufacturer + style name text (with `whereNotNull('vendor_id')`)
+- Full fallback order: (1) productStyle.vendor_id, (2) productLine.vendor_id, (3) ProductLine text lookup, (4) vendor company_name fuzzy match
+- File: `app/Http/Controllers/Pages/PurchaseOrderController.php` → `create()`
 
 ### Purchase Order open items
 - No invoice/payment tracking against POs yet

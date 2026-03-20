@@ -261,7 +261,17 @@ class PurchaseOrderController extends Controller
                 // 2. Fallback: product_line.vendor_id
                 if (! $vendorId) $vendorId = $item->productLine?->vendor_id;
 
-                // 3. Fallback: match item manufacturer name against vendor company_name
+                // 3. Fallback: look up product line by manufacturer + style name text
+                //    Handles items where product_line_id wasn't saved (typed manually or pre-migration)
+                if (! $vendorId && $item->manufacturer && $item->style) {
+                    $productLine = \App\Models\ProductLine::where('manufacturer', trim($item->manufacturer))
+                        ->where('name', trim($item->style))
+                        ->whereNotNull('vendor_id')
+                        ->first();
+                    $vendorId = $productLine?->vendor_id;
+                }
+
+                // 4. Fallback: match item manufacturer name against vendor company_name
                 //    Try exact match first, then "vendor name contains manufacturer" (e.g. "Shaw" in "Shaw Floors")
                 if (! $vendorId && $item->manufacturer) {
                     $mfr   = trim($item->manufacturer);

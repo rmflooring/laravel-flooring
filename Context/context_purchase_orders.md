@@ -345,6 +345,16 @@ Force-delete route uses `role:admin` middleware (not permission-based).
 
 ---
 
+## Vendor Locking Bug Fix (session 21, 2026-03-20)
+
+- **Bug**: Items added to a sale manually (or before `product_line_id` column existed in session 8) had no `product_line_id` on `sale_items`. All three vendor resolution fallbacks in `PurchaseOrderController::create()` returned null, so those items were treated as "no vendor restriction" — no auto-select, no wrong-vendor shading.
+- **Root cause**: `product_line_id` is only written to the hidden input when the user clicks an option from the style dropdown (`selectFromButton`). Typing directly into the field bypasses this. Items added pre-session-8 never had the column.
+- **Fix**: Added a 3rd fallback (before the vendor name match) in `itemVendorMap` building: look up `ProductLine` by `manufacturer` + `style` name text with `whereNotNull('vendor_id')`. This resolves vendor for any item that has matching text even without a stored ID.
+- **Fallback order** (in `create()`): (1) `productStyle.vendor_id`, (2) `productLine.vendor_id`, (3) ProductLine lookup by manufacturer+style text, (4) vendor `company_name` fuzzy match against `manufacturer` text.
+- **Note**: New items added via the catalog dropdowns will have `product_line_id` saved correctly. Manually typed items rely on fallback 3/4.
+
+---
+
 ## Resume Prompt
 
 > Read CLAUDE.md and Context/context_purchase_orders.md. I want to continue working on the Purchase Orders module. One step at a time.
