@@ -47,6 +47,13 @@
                                class="w-24 rounded-lg border-gray-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     </div>
 
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Product ID</label>
+                        <input type="number" name="product_style_id" value="{{ $productStyleId }}"
+                               placeholder="Style ID…" min="1"
+                               class="w-28 rounded-lg border-gray-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    </div>
+
                     <div class="flex-1 min-w-48">
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search item</label>
                         <input type="text" name="q" value="{{ $q }}"
@@ -78,7 +85,7 @@
                         Filter
                     </button>
 
-                    @if ($recordId || $q || $dateFrom || $dateTo || $showDepleted)
+                    @if ($recordId || $productStyleId || $q || $dateFrom || $dateTo || $showDepleted)
                         <a href="{{ route('pages.inventory.index') }}"
                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
                             Clear
@@ -93,7 +100,7 @@
 
                 @if ($receipts->isEmpty())
                     <div class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-                        @if ($recordId || $q || $dateFrom || $dateTo)
+                        @if ($recordId || $productStyleId || $q || $dateFrom || $dateTo)
                             No records match your filters.
                         @elseif (! $showDepleted)
                             No stock available. <a href="{{ route('pages.inventory.index', ['show_depleted' => 1]) }}" class="text-teal-600 hover:underline">Show depleted records</a>.
@@ -133,6 +140,9 @@
                                             </div>
                                             @if ($receipt->unit)
                                                 <div class="text-xs text-gray-400 dark:text-gray-500">{{ $receipt->unit }}</div>
+                                            @endif
+                                            @if ($receipt->product_style_id)
+                                                <div class="text-xs text-gray-400 dark:text-gray-500">Product ID: {{ $receipt->product_style_id }}</div>
                                             @endif
                                             @if ($receipt->notes)
                                                 <div class="mt-0.5 text-xs text-gray-400 dark:text-gray-500 truncate max-w-xs" title="{{ $receipt->notes }}">

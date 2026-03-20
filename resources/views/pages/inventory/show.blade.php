@@ -215,6 +215,13 @@
                                 <dd class="font-mono font-medium text-gray-900 dark:text-white">{{ $inventoryReceipt->id }}</dd>
                             </div>
 
+                            @if ($inventoryReceipt->product_style_id)
+                                <div class="flex justify-between gap-4">
+                                    <dt class="text-gray-500 shrink-0">Product ID</dt>
+                                    <dd class="font-mono font-medium text-gray-900 dark:text-white">{{ $inventoryReceipt->product_style_id }}</dd>
+                                </div>
+                            @endif
+
                             <div class="flex justify-between gap-4">
                                 <dt class="text-gray-500 shrink-0">Date received</dt>
                                 <dd class="text-gray-900 dark:text-white">

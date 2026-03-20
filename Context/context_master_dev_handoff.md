@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-20 (session 22)
+Updated: 2026-03-20 (session 23)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -347,6 +347,18 @@ Full details in `Context/context_purchase_orders.md`.
 ### Purchase Order open items
 - No invoice/payment tracking against POs yet
 - No "received items" partial-receive workflow yet
+
+---
+
+## Inventory enhancements (session 23, 2026-03-20)
+
+### Product ID visibility + search
+- **Inventory show page** (`resources/views/pages/inventory/show.blade.php`): Added "Product ID" row to the Record details sidebar card — shown only when `product_style_id` is set on the receipt
+- **Inventory index page** (`resources/views/pages/inventory/index.blade.php`):
+  - Added "Product ID" filter input (`product_style_id`) in the filter bar
+  - Added `Product ID: {id}` sub-line under each item name in the table (only when set)
+  - Updated clear button and empty-state conditions to include the new filter
+- **`InventoryController::index()`**: added `$productStyleId` from request, `->when($productStyleId, ...)` filter on `product_style_id`, passed to view
 
 ---
 
