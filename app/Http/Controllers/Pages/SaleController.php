@@ -539,16 +539,19 @@ public function showProfits(Sale $sale)
 
         $map = [];
         foreach ($qtyByStatus as $saleItemId => $statuses) {
-            $receivedQty = ($statuses['received'] ?? 0) + ($statuses['delivered'] ?? 0);
-            $orderedQty  = $statuses['ordered']  ?? 0;
-            $saleQty     = $saleItemQtys[$saleItemId] ?? 0;
+            $deliveredQty = $statuses['delivered'] ?? 0;
+            $receivedQty  = $statuses['received']  ?? 0;
+            $orderedQty   = $statuses['ordered']   ?? 0;
+            $saleQty      = $saleItemQtys[$saleItemId] ?? 0;
 
-            if ($saleQty > 0 && $receivedQty >= $saleQty) {
-                $map[$saleItemId] = 'received'; // fully received/delivered → green
-            } elseif ($orderedQty > 0 || $receivedQty > 0) {
-                $map[$saleItemId] = 'ordered';  // partially ordered/received → yellow
+            if ($saleQty > 0 && $deliveredQty >= $saleQty) {
+                $map[$saleItemId] = 'delivered'; // fully delivered to site → dark teal
+            } elseif ($saleQty > 0 && $receivedQty >= $saleQty) {
+                $map[$saleItemId] = 'received';  // fully received at warehouse → light green
+            } elseif ($orderedQty > 0 || $receivedQty > 0 || $deliveredQty > 0) {
+                $map[$saleItemId] = 'ordered';   // partially ordered/received → yellow
             } else {
-                $map[$saleItemId] = 'pending';  // only pending POs → orange
+                $map[$saleItemId] = 'pending';   // only pending POs → orange
             }
         }
 
