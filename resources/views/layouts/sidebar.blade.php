@@ -154,6 +154,12 @@
                                 Installers
                             </a>
                         </li>
+						<li>
+                            <a href="{{ route('pages.purchase-orders.index') }}"
+                               class="block rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+                                Purchase Orders
+                            </a>
+                        </li>
                     </ul>
                 </li>
 
