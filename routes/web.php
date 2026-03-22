@@ -739,6 +739,14 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|edit purchase orders')
 			->name('purchase-orders.receive');
 
+		Route::get('purchase-orders/{purchaseOrder}/tags', [\App\Http\Controllers\Pages\InventoryTagController::class, 'poTags'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('purchase-orders.tags');
+
+		Route::get('inventory/receipts/{receipt}/tag', [\App\Http\Controllers\Pages\InventoryTagController::class, 'tag'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('inventory.receipts.tag');
+
 		Route::post('purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendEmail'])
 			->middleware('role_or_permission:admin|edit purchase orders')
 			->name('purchase-orders.send-email');
@@ -1011,6 +1019,10 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
     Route::get('po/{purchaseOrder}/receive', [\App\Http\Controllers\Mobile\PurchaseOrderController::class, 'receiveForm'])
         ->middleware('role_or_permission:admin|edit purchase orders')
         ->name('purchase-orders.receive');
+
+    Route::get('inventory/{receipt}', [\App\Http\Controllers\Mobile\InventoryController::class, 'show'])
+        ->middleware('role_or_permission:admin|view purchase orders')
+        ->name('inventory.show');
 });
 
 require __DIR__ . '/auth.php';
