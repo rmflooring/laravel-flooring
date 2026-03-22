@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-22 (session 24)
+Updated: 2026-03-22 (session 25)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -50,16 +50,24 @@ Full details in `Context/context_graph_mail.md`.
 - `GraphMailService::sendAsUser(User $user, ...)` — active and tested
 - Auto token refresh built in; marks `mail_connected=false` if refresh fails
 - All sends logged to `mail_log` with `track=2` and `sent_from=user_email`
-- **Wired into**: estimates (edit page), sales (edit + show pages)
+- **Wired into**: estimates (edit + show pages), sales (edit + show pages)
 - **Not yet wired into**: invoices (module not built yet)
 
-### Fallback pattern (for when wiring Track 2 into estimates/invoices)
+### Send modal features (estimates + sales)
+- **To** field: quick-select buttons — Job Site email, PM email (if present), Custom text input
+- **CC** field: Alpine.js pill-based multi-address CC (optional). Add via text input + Enter/Add button; remove with ✕
+- `cc[]` submitted as array; validated as `nullable|email` per item; passed to `GraphMailService` as `ccRecipients` in Graph payload
+- Sale modals load PM email via `opportunity.projectManager` eager-load → `$pmEmail` passed to view
+- Sale `$homeownerEmail` resolves from `job_email` first, falls back to `sourceEstimate->homeowner_email`
+
+### Fallback pattern (with CC)
 ```php
+$cc   = array_filter($request->input('cc', []));
 $sent = $user->microsoftAccount?->mail_connected
-    ? $mailer->sendAsUser($user, $to, $subject, $body, $type)
+    ? $mailer->sendAsUser($user, $to, $subject, $body, $type, $attachment, $cc ?: null)
     : false;
 if (! $sent) {
-    $mailer->send($to, $subject, $body, $type); // Track 1 fallback
+    $mailer->send($to, $subject, $body, $type, null, $attachment, $cc ?: null); // Track 1 fallback
 }
 ```
 

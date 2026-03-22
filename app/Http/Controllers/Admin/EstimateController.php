@@ -1158,10 +1158,13 @@ public function makeRevision(Estimate $estimate)
             'to'      => ['required', 'email'],
             'subject' => ['required', 'string', 'max:255'],
             'body'    => ['required', 'string'],
+            'cc'      => ['nullable', 'array'],
+            'cc.*'    => ['nullable', 'email'],
         ]);
 
         $user   = auth()->user();
         $mailer = app(GraphMailService::class);
+        $cc     = array_filter($request->input('cc', []));
 
         $estimate->loadMissing(['rooms.items']);
         $pdfContent = Pdf::loadView('pdf.estimate', compact('estimate'))->output();
@@ -1171,11 +1174,11 @@ public function makeRevision(Estimate $estimate)
         ];
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment, $cc ?: null)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', null, $attachment);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', null, $attachment, $cc ?: null);
         }
 
         if (! $sent) {

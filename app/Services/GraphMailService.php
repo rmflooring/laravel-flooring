@@ -62,6 +62,7 @@ class GraphMailService
         string $type = 'system',
         ?string $fromAddress = null,
         ?array $attachment = null,
+        ?array $cc = null,
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -103,6 +104,12 @@ class GraphMailService
                     ['emailAddress' => ['address' => $replyTo]],
                 ],
             ];
+
+            if (! empty($cc)) {
+                $message['ccRecipients'] = collect($cc)->map(fn ($address) => [
+                    'emailAddress' => ['address' => $address],
+                ])->values()->all();
+            }
 
             if ($attachment) {
                 $message['attachments'] = [[
@@ -267,6 +274,7 @@ class GraphMailService
         string $body,
         string $type = 'system',
         ?array $attachment = null,
+        ?array $cc = null,
     ): bool {
         $token = $this->getUserToken($user);
 
@@ -292,6 +300,12 @@ class GraphMailService
                 ],
                 'toRecipients' => $recipients,
             ];
+
+            if (! empty($cc)) {
+                $message['ccRecipients'] = collect($cc)->map(fn ($address) => [
+                    'emailAddress' => ['address' => $address],
+                ])->values()->all();
+            }
 
             if ($attachment) {
                 $message['attachments'] = [[

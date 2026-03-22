@@ -142,9 +142,12 @@ DELETE /admin/settings/email-templates/{type}   admin.settings.email-templates.r
 **Controller method:** `EstimateController::sendEmail()`
 
 ### Flow
-1. Staff clicks **Send Email** button (purple) on the estimate edit page
-2. Alpine.js modal opens — pre-filled To (homeowner_email), Subject, Body from template
-3. Staff can edit any field before sending
+1. Staff clicks **Send Email** button (purple) on the estimate edit or show page
+2. Alpine.js modal opens with:
+   - **To** — quick-select buttons: Job Site email, PM email (if present), Custom text input
+   - **CC** — add/remove multiple CC addresses as pills (optional)
+   - Subject and Body pre-filled from user's saved template
+3. Staff can adjust any field before sending
 4. On submit:
    - Track 2 attempted if `user->microsoftAccount->mail_connected`
    - Falls back to Track 1 shared mailbox on failure or if not connected
@@ -173,9 +176,12 @@ DELETE /admin/settings/email-templates/{type}   admin.settings.email-templates.r
 **Controller method:** `SaleController::sendEmail()` + private `resolveEmailTemplate()`
 
 ### Flow
-Same modal/fallback pattern as estimates. Available on both:
+Same modal/fallback/CC pattern as estimates. Available on both:
 - **Edit page:** `resources/views/pages/sales/edit.blade.php`
 - **Show page:** `resources/views/pages/sales/show.blade.php`
+
+**To** field quick-select: Job Site email (`sale->job_email` fallback to `sourceEstimate->homeowner_email`), PM email (`sale->opportunity->projectManager->email`), Custom.
+`SaleController::show()` and `edit()` both eager-load `opportunity.projectManager` and pass `$pmEmail` to the view.
 
 Sale status is **not** changed on send (sale statuses are workflow states: open, scheduled, etc.).
 

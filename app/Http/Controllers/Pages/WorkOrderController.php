@@ -419,11 +419,14 @@ class WorkOrderController extends Controller
             'to'      => ['required', 'email'],
             'subject' => ['required', 'string', 'max:255'],
             'body'    => ['required', 'string'],
+            'cc'      => ['nullable', 'array'],
+            'cc.*'    => ['nullable', 'email'],
         ]);
 
         $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'sale', 'creator']);
 
         $mailer     = app(GraphMailService::class);
+        $cc         = array_filter($request->input('cc', []));
         $pdfContent = Pdf::loadView('pdf.work-order', compact('workOrder'))->output();
 
         $attachment = [
@@ -438,6 +441,7 @@ class WorkOrderController extends Controller
             'work_order',
             null,
             $attachment,
+            $cc ?: null,
         );
 
         if ($sent) {

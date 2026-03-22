@@ -52,6 +52,8 @@ $mailer->send(
     body:        'Plain text body',
     type:        'rfm_notification',      // used for mail_log grouping
     fromAddress: null,                    // usually leave null — reads from app_settings
+    attachment:  null,                    // ['filename' => '...', 'content' => base64]
+    cc:          ['cc@example.com'],      // optional array of CC addresses
 );
 ```
 
@@ -101,11 +103,13 @@ The `access_token`, `refresh_token`, and `token_expires_at` columns are shared w
 
 ```php
 $mailer->sendAsUser(
-    user:    $user,                   // App\Models\User
-    to:      'customer@example.com',  // string or array
-    subject: 'Your Estimate',
-    body:    'Plain text body',
-    type:    'estimate',              // used for mail_log grouping
+    user:       $user,                   // App\Models\User
+    to:         'customer@example.com',  // string or array
+    subject:    'Your Estimate',
+    body:       'Plain text body',
+    type:       'estimate',              // used for mail_log grouping
+    attachment: null,                    // ['filename' => '...', 'content' => base64]
+    cc:         ['cc@example.com'],      // optional array of CC addresses
 );
 ```
 
@@ -113,18 +117,19 @@ $mailer->sendAsUser(
 - Never throws
 - Writes `MailLog` row with `track=2`, `sent_from` = user's MS365 email
 
-### Fallback pattern (to implement at call sites)
+### Fallback pattern (with optional CC)
 
 ```php
 $mailer = app(GraphMailService::class);
+$cc     = array_filter($request->input('cc', [])); // from form cc[] inputs
 
 $sent = $user->microsoftAccount?->mail_connected
-    ? $mailer->sendAsUser($user, $to, $subject, $body, $type)
+    ? $mailer->sendAsUser($user, $to, $subject, $body, $type, $attachment, $cc ?: null)
     : false;
 
 if (! $sent) {
     // Fall back to Track 1 shared mailbox
-    $mailer->send($to, $subject, $body, $type);
+    $mailer->send($to, $subject, $body, $type, null, $attachment, $cc ?: null);
 }
 ```
 

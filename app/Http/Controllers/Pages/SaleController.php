@@ -100,6 +100,7 @@ class SaleController extends Controller
 		$sale->load([
 			'sourceEstimate',
 			'salesperson1Employee',
+			'opportunity.projectManager',
 			'rooms' => fn($q) => $q->orderBy('sort_order'),
 			'rooms.items' => fn($q) => $q->where('is_removed', false)->orderBy('sort_order'),
 			'purchaseOrders.vendor',
@@ -110,7 +111,8 @@ class SaleController extends Controller
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		$itemPoStatusMap = $this->buildItemPoStatusMap($sale);
 		$itemWoStatusMap = $this->buildItemWoStatusMap($sale);
-		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap'));
+		$pmEmail         = $sale->opportunity?->projectManager?->email;
+		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail'));
 	}
 
     public function edit(Sale $sale)
@@ -123,6 +125,7 @@ class SaleController extends Controller
             'rooms.items.productStyle',
             'sourceEstimate',
             'salesperson1Employee',
+            'opportunity.projectManager',
             'purchaseOrders.vendor',
             'purchaseOrders.items',
             'workOrders.installer',
@@ -142,10 +145,11 @@ class SaleController extends Controller
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
         $itemPoStatusMap = $this->buildItemPoStatusMap($sale);
         $itemWoStatusMap = $this->buildItemWoStatusMap($sale);
+        $pmEmail         = $sale->opportunity?->projectManager?->email;
 
         return view('pages.sales.edit', compact(
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
-            'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap',
+            'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
         ));
     }
 	
@@ -442,10 +446,13 @@ public function showProfits(Sale $sale)
             'to'      => ['required', 'email'],
             'subject' => ['required', 'string', 'max:255'],
             'body'    => ['required', 'string'],
+            'cc'      => ['nullable', 'array'],
+            'cc.*'    => ['nullable', 'email'],
         ]);
 
         $user   = auth()->user();
         $mailer = app(GraphMailService::class);
+        $cc     = array_filter($request->input('cc', []));
 
         $sale->loadMissing(['rooms.items', 'sourceEstimate']);
         $pdfContent = Pdf::loadView('pdf.sale', compact('sale'))->output();
@@ -455,11 +462,11 @@ public function showProfits(Sale $sale)
         ];
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null);
         }
 
         if (! $sent) {

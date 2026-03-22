@@ -394,6 +394,31 @@
                            placeholder="customer@example.com"
                            class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                 </div>
+                {{-- CC Addresses --}}
+                <div x-data="{ ccEmails: [], ccInput: '' }">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">CC <span class="text-xs text-gray-400 font-normal">(optional)</span></label>
+                    <div class="flex flex-wrap gap-1.5 mb-2" x-show="ccEmails.length > 0">
+                        <template x-for="(email, i) in ccEmails" :key="i">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">
+                                <span x-text="email"></span>
+                                <input type="hidden" name="cc[]" :value="email">
+                                <button type="button" @click="ccEmails.splice(i, 1)" class="text-blue-400 hover:text-blue-600 leading-none ml-1">&times;</button>
+                            </span>
+                        </template>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="email" x-model="ccInput"
+                               @keydown.enter.prevent="if(ccInput.trim() && !ccEmails.includes(ccInput.trim())) { ccEmails.push(ccInput.trim()); ccInput = ''; }"
+                               placeholder="cc@example.com"
+                               class="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                        <button type="button"
+                                @click="if(ccInput.trim() && !ccEmails.includes(ccInput.trim())) { ccEmails.push(ccInput.trim()); ccInput = ''; }"
+                                class="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                            Add
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
                     <input type="text" name="subject" value="{{ $emailSubject }}"

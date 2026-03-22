@@ -2174,8 +2174,17 @@
 <script src="{{ asset('assets/js/sales/wide_mode_toggle.js') }}" defer></script>
 
 {{-- Send Email Modal --}}
-@php $homeownerEmail = $sale->sourceEstimate?->homeowner_email ?? ''; @endphp
-<div x-data="{ open: false }"
+@php
+    $homeownerEmail = $sale->job_email ?: ($sale->sourceEstimate?->homeowner_email ?? '');
+@endphp
+<div x-data="{
+        open: false,
+        toEmail: '{{ $homeownerEmail }}',
+        customTo: '',
+        selected: '{{ $homeownerEmail ? 'jobsite' : 'custom' }}',
+        get finalTo() { return this.selected === 'custom' ? this.customTo : this.toEmail; },
+        select(val, email) { this.selected = val; this.toEmail = email; }
+     }"
      @open-send-email-modal.window="open = true"
      x-show="open"
      x-cloak
@@ -2189,17 +2198,83 @@
         <form method="POST" action="{{ route('pages.sales.send-email', $sale) }}">
             @csrf
             <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-                @if (! $homeownerEmail)
-                    <div class="p-3 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        No homeowner email found on the source estimate. Enter a recipient below.
-                    </div>
-                @endif
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
-                    <input type="email" name="to" value="{{ $homeownerEmail }}"
-                           placeholder="customer@example.com"
-                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+
+                    {{-- Recipient quick-select buttons --}}
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        @if ($homeownerEmail)
+                            <button type="button"
+                                    @click="select('jobsite', '{{ $homeownerEmail }}')"
+                                    :class="selected === 'jobsite' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                                Job Site — {{ $homeownerEmail }}
+                            </button>
+                        @endif
+
+                        @if (!empty($pmEmail))
+                            <button type="button"
+                                    @click="select('pm', '{{ $pmEmail }}')"
+                                    :class="selected === 'pm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                PM — {{ $pmEmail }}
+                            </button>
+                        @endif
+
+                        <button type="button"
+                                @click="select('custom', ''); $nextTick(() => $refs.customToInput.focus())"
+                                :class="selected === 'custom' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            Custom
+                        </button>
+                    </div>
+
+                    {{-- Display selected email or custom input --}}
+                    <template x-if="selected !== 'custom'">
+                        <div class="w-full bg-gray-100 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-700" x-text="toEmail"></div>
+                    </template>
+                    <template x-if="selected === 'custom'">
+                        <input type="email" x-ref="customToInput" x-model="customTo"
+                               placeholder="Enter email address"
+                               class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                    </template>
+
+                    {{-- Hidden input that always submits the final value --}}
+                    <input type="hidden" name="to" :value="finalTo">
+
+                    @if (! $homeownerEmail && empty($pmEmail))
+                        <p class="mt-1.5 text-xs text-yellow-700">No job site or PM email on this sale. Use Custom to enter a recipient.</p>
+                    @endif
                 </div>
+                {{-- CC Addresses --}}
+                <div x-data="{ ccEmails: [], ccInput: '' }">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">CC <span class="text-xs text-gray-400 font-normal">(optional)</span></label>
+                    <div class="flex flex-wrap gap-1.5 mb-2" x-show="ccEmails.length > 0">
+                        <template x-for="(email, i) in ccEmails" :key="i">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">
+                                <span x-text="email"></span>
+                                <input type="hidden" name="cc[]" :value="email">
+                                <button type="button" @click="ccEmails.splice(i, 1)" class="text-blue-400 hover:text-blue-600 leading-none ml-1">&times;</button>
+                            </span>
+                        </template>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="email" x-model="ccInput"
+                               @keydown.enter.prevent="if(ccInput.trim() && !ccEmails.includes(ccInput.trim())) { ccEmails.push(ccInput.trim()); ccInput = ''; }"
+                               placeholder="cc@example.com"
+                               class="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                        <button type="button"
+                                @click="if(ccInput.trim() && !ccEmails.includes(ccInput.trim())) { ccEmails.push(ccInput.trim()); ccInput = ''; }"
+                                class="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                            Add
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
                     <input type="text" name="subject" value="{{ $emailSubject }}"

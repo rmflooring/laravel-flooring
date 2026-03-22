@@ -699,11 +699,14 @@ class PurchaseOrderController extends Controller
             'to'      => ['required', 'email'],
             'subject' => ['required', 'string', 'max:255'],
             'body'    => ['required', 'string'],
+            'cc'      => ['nullable', 'array'],
+            'cc.*'    => ['nullable', 'email'],
         ]);
 
         $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy']);
 
         $mailer     = app(GraphMailService::class);
+        $cc         = array_filter($request->input('cc', []));
         $pdfContent = Pdf::loadView('pdf.purchase-order', compact('purchaseOrder'))->output();
 
         $attachment = [
@@ -718,6 +721,7 @@ class PurchaseOrderController extends Controller
             'purchase_order',
             null,
             $attachment,
+            $cc ?: null,
         );
 
         if ($sent) {
