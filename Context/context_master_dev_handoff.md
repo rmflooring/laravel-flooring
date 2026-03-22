@@ -325,6 +325,16 @@ Full details in `Context/context_purchase_orders.md`.
 - Email to vendor via Track 1 (shared mailbox) with PDF attached
 - PO summary card shown on Sale show + edit pages and Opportunity show page
 
+### Sale email → status update (open item, session 24, 2026-03-22)
+- `SaleController::sendEmail()` is missing the status update that `EstimateController::sendEmail()` has
+- Estimate: on successful send → `$estimate->update(['status' => 'sent'])`
+- Sale: currently returns success without updating status
+- **Blocker:** sales status enum does not include `sent` or `draft` — current values: `open, approved, scheduled, in_progress, on_hold, completed, partially_invoiced, invoiced, cancelled`
+- **Decision needed:** add `sent` to the sales status enum (migration required) to mirror estimate behaviour, or use a different existing status
+- Once decided: add `$sale->update(['status' => 'sent'])` after successful send in `SaleController::sendEmail()`, add `sent` to `update()` validation rule, and update the success flash message to include "status updated to Sent"
+
+---
+
 ### Purchase Orders — Stock POs (session 13, 2026-03-15)
 - `sale_id`, `opportunity_id` nullable on `purchase_orders`; `sale_item_id` nullable on `purchase_order_items`
 - New routes: `GET/POST pages/purchase-orders/create` (stock PO), `GET pages/purchase-orders/catalog-search`
@@ -685,6 +695,9 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 
 **To continue estimates/sales work:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to continue working on estimates and sales. One step at a time.
+
+**To fix sale email → status update:**
+> Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to add a `sent` status to the sales enum and wire up the status update in `SaleController::sendEmail()`. One step at a time.
 
 **To continue Purchase Orders work:**
 > Read CLAUDE.md and Context/context_purchase_orders.md. I want to continue working on the Purchase Orders module. One step at a time.
