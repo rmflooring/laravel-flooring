@@ -13,4 +13,13 @@ class PurchaseOrderController extends Controller
 
         return view('mobile.purchase-orders.show', compact('purchaseOrder'));
     }
+
+    public function receiveForm(PurchaseOrder $purchaseOrder)
+    {
+        abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
+
+        $purchaseOrder->load(['vendor', 'items', 'sale']);
+
+        return view('mobile.purchase-orders.receive', compact('purchaseOrder'));
+    }
 }

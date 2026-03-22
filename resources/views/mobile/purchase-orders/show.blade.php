@@ -55,7 +55,7 @@
     {{-- Receive Inventory --}}
     @can('edit purchase orders')
     @if($purchaseOrder->status === 'ordered')
-    <a href="{{ route('pages.purchase-orders.receive.form', $purchaseOrder) }}"
+    <a href="{{ route('mobile.purchase-orders.receive', $purchaseOrder) }}"
        class="flex items-center gap-4 rounded-xl border-2 border-green-500 bg-green-50 dark:bg-green-900/20 px-5 py-4 shadow-sm active:scale-95 transition-transform">
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

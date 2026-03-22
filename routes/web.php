@@ -1007,6 +1007,10 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
     Route::get('po/{purchaseOrder}', [\App\Http\Controllers\Mobile\PurchaseOrderController::class, 'show'])
         ->middleware('role_or_permission:admin|view purchase orders')
         ->name('purchase-orders.show');
+
+    Route::get('po/{purchaseOrder}/receive', [\App\Http\Controllers\Mobile\PurchaseOrderController::class, 'receiveForm'])
+        ->middleware('role_or_permission:admin|edit purchase orders')
+        ->name('purchase-orders.receive');
 });
 
 require __DIR__ . '/auth.php';
