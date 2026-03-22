@@ -335,9 +335,8 @@
     </div>
 
     @php
-        use SimpleSoftwareIO\QrCode\Facades\QrCode;
-        $mobileUrl  = route('mobile.purchase-orders.show', $purchaseOrder);
-        $qrPng      = base64_encode(QrCode::format('png')->size(72)->margin(1)->generate($mobileUrl));
+        $mobileUrl = route('mobile.purchase-orders.show', $purchaseOrder);
+        $qrPng     = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(72)->margin(1)->generate($mobileUrl));
     @endphp
     <table style="width:100%; margin-top:24px; border-top:1px solid #ddd; padding-top:10px;">
         <tr>

@@ -126,9 +126,8 @@
 
             {{-- QR Code --}}
             @php
-                use SimpleSoftwareIO\QrCode\Facades\QrCode;
                 $mobileUrl = route('mobile.purchase-orders.show', $purchaseOrder);
-                $qrSvg = QrCode::size(96)->margin(1)->generate($mobileUrl);
+                $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::size(96)->margin(1)->generate($mobileUrl);
             @endphp
             <div class="mb-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="shrink-0 rounded border border-gray-200 bg-white p-1 dark:border-gray-600">
