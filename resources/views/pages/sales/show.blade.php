@@ -233,7 +233,7 @@
                                                         @php
                                                             $poStatus = $itemPoStatusMap[$item->id] ?? null;
                                                             $qtyStyle = match($poStatus) {
-                                                                'delivered' => 'background-color:#bbf7d0; color:#166534;',
+                                                                'delivered' => 'background-color:#0f766e; color:#ffffff;',
                                                                 'received'  => 'background-color:#bbf7d0; color:#166534;',
                                                                 'ordered'   => 'background-color:#fef9c3; color:#854d0e;',
                                                                 'pending'   => 'background-color:#ffedd5; color:#9a3412;',
