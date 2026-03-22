@@ -181,8 +181,14 @@
                                                :name="`items[${index}][quantity]`"
                                                x-model="row.quantity"
                                                @input="recalc(row)"
+                                               @blur="checkBoxQtyForRow(row, $event.target)"
                                                min="0.01" step="0.01" required
+                                               :style="row.boxAligned ? 'background-color:#fed7aa;border-color:#fb923c;color:#9a3412;' : ''"
                                                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                        <p x-show="row.use_box_qty && row.units_per > 0" x-cloak
+                                           class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                                            Box: <span x-text="row.units_per"></span> units
+                                        </p>
                                     </div>
 
                                     {{-- Unit --}}
@@ -395,6 +401,26 @@
                 const qty  = parseFloat(row.quantity)   || 0;
                 const cost = parseFloat(row.cost_price) || 0;
                 row.total  = Math.round(qty * cost * 100) / 100;
+
+                // Live box-alignment highlight
+                if (row.use_box_qty && row.units_per > 0 && qty > 0) {
+                    row.boxAligned = Math.abs(Math.round(qty / row.units_per) * row.units_per - qty) < 0.001;
+                } else {
+                    row.boxAligned = false;
+                }
+            },
+
+            checkBoxQtyForRow(row, inputEl) {
+                if (!row.use_box_qty || !row.units_per || row.units_per <= 0) return;
+                const qty = parseFloat(row.quantity) || 0;
+                if (!qty) return;
+
+                const boxes  = Math.ceil(qty / row.units_per);
+                const boxQty = parseFloat((boxes * row.units_per).toFixed(4));
+
+                if (Math.abs(qty - boxQty) < 0.001) return; // already aligned
+
+                showBoxQtyModal(inputEl, qty, row.units_per, boxes, boxQty, row.catalogLabel || row.item_name);
             },
 
             searchCatalog(row) {
@@ -427,8 +453,15 @@
                 row.catalogLabel     = item.label;
                 row.search           = item.label;
                 row.product_style_id = item.product_style_id ?? null;
+                row.use_box_qty      = item.use_box_qty ?? false;
+                row.units_per        = item.units_per   ?? 0;
                 row.showDropdown     = false;
                 this.recalc(row);
+
+                // Auto-select the vendor if none is chosen yet and the item has one
+                if (!this.vendorId && item.vendor_id) {
+                    this.vendorId = String(item.vendor_id);
+                }
             },
 
             clearCatalog(row) {
@@ -437,6 +470,9 @@
                 row.results          = [];
                 row.showDropdown     = false;
                 row.product_style_id = null;
+                row.use_box_qty      = false;
+                row.units_per        = 0;
+                row.boxAligned       = false;
             },
 
             submitForm() {
@@ -459,8 +495,8 @@
 
         function newRow() {
             return {
-                id:           nextId++,
-                item_name:    '',
+                id:               nextId++,
+                item_name:        '',
                 quantity:         '',
                 unit:             '',
                 cost_price:       '',
@@ -472,8 +508,29 @@
                 searching:        false,
                 catalogLabel:     '',
                 product_style_id: null,
+                use_box_qty:      false,
+                units_per:        0,
+                boxAligned:       false,
             };
         }
     }
+
+    function showBoxQtyModal(inputEl, currentQty, unitsPer, boxes, boxQty, styleName) {
+        const modalEl = document.getElementById('box-qty-modal');
+        if (!modalEl) return;
+
+        window._boxQtyPendingInput = inputEl;
+        window._boxQtyPendingValue = boxQty;
+
+        modalEl.querySelectorAll('[data-box-style-name]').forEach(el => el.textContent = styleName || 'this style');
+        modalEl.querySelectorAll('[data-box-units-per]').forEach(el => el.textContent = unitsPer);
+        modalEl.querySelectorAll('[data-box-current-qty]').forEach(el => el.textContent = currentQty);
+        modalEl.querySelectorAll('[data-box-count]').forEach(el => el.textContent = boxes + (boxes === 1 ? ' box' : ' boxes'));
+        modalEl.querySelectorAll('[data-box-suggested-qty]').forEach(el => el.textContent = boxQty);
+
+        modalEl.style.display = 'flex';
+    }
     </script>
+
+@include('components.modals.box-qty-modal')
 </x-app-layout>

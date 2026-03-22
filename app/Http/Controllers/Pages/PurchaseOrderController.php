@@ -82,8 +82,12 @@ class PurchaseOrderController extends Controller
                 'product_styles.name as style_name',
                 'product_styles.color',
                 'product_styles.cost_price',
+                'product_styles.use_box_qty',
+                'product_styles.units_per',
+                'product_lines.id as product_line_id',
                 'product_lines.name as line_name',
                 'product_lines.manufacturer',
+                'product_lines.vendor_id',
                 'product_types.name as product_type',
                 'unit_measures.label as unit_label',
             ])
@@ -125,6 +129,9 @@ class PurchaseOrderController extends Controller
                     'unit'             => $row->unit_label ?? '',
                     'manufacturer'     => $row->manufacturer,
                     'product_type'     => $row->product_type,
+                    'vendor_id'        => $row->vendor_id,
+                    'use_box_qty'      => (bool) $row->use_box_qty,
+                    'units_per'        => (float) ($row->units_per ?? 0),
                 ];
             });
 
