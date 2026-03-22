@@ -345,8 +345,7 @@
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
           value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
-          class="w-24 border rounded-lg p-2"
-          style="{{ $qtyStyle }}">
+          class="w-24 border rounded-lg p-2">
       </td>
 
       <td class="px-3 py-2" data-order-qty-cell>
@@ -355,7 +354,7 @@
           value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
           placeholder="—"
           class="w-24 border rounded-lg p-2"
-          style="background-color:#eef2ff; border-color:#a5b4fc;">
+          style="{{ $qtyStyle ?: 'background-color:#eef2ff; border-color:#a5b4fc;' }}">
       </td>
 
       <td class="px-3 py-2">
@@ -886,8 +885,7 @@
     <input type="number" step="0.01"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][quantity]"
       value="{{ old("rooms.$roomIndex.labour.$i.quantity", $qty) }}"
-      class="w-24 border rounded-lg p-2"
-      style="{{ $woQtyStyle }}">
+      class="w-24 border rounded-lg p-2">
 
     <input type="hidden"
       name="rooms[{{ $roomIndex }}][labour][{{ $i }}][cost_price]"
@@ -906,7 +904,7 @@
       value="{{ old("rooms.$roomIndex.labour.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
       placeholder="—"
       class="w-24 border rounded-lg p-2"
-      style="background-color:#eef2ff; border-color:#a5b4fc;">
+      style="{{ $woQtyStyle ?: 'background-color:#eef2ff; border-color:#a5b4fc;' }}">
   </td>
 
   <td class="px-3 py-2">
