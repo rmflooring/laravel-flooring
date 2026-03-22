@@ -98,19 +98,31 @@ class ReturnToVendorService
                     $creditData = $itemCredits[$rtvItem->id] ?? null;
                     if (! $creditData) continue;
 
-                    $creditReceived   = (float) ($creditData['credit_received'] ?? 0);
-                    $applyToSaleCost  = ! empty($creditData['apply_to_sale_cost']);
+                    $creditReceived  = (float) ($creditData['credit_received'] ?? 0);
+                    $applyToSaleCost = ! empty($creditData['apply_to_sale_cost']);
 
                     $itemUpdates = [
                         'credit_received'    => $creditReceived > 0 ? $creditReceived : null,
                         'apply_to_sale_cost' => $applyToSaleCost,
                     ];
 
-                    // Reduce sale item cost_total by the credit amount
-                    if ($applyToSaleCost && $creditReceived > 0 && $rtvItem->saleItem) {
-                        $saleItem       = $rtvItem->saleItem;
-                        $newCostTotal   = max(0, (float) $saleItem->cost_total - $creditReceived);
-                        $saleItem->update(['cost_total' => $newCostTotal]);
+                    // Reduce order_qty by the returned quantity, leaving the original design qty
+                    // untouched. The profits page uses order_qty (when set) for cost calculations,
+                    // so this automatically reduces displayed cost and improves profit margin.
+                    if ($applyToSaleCost && $rtvItem->saleItem) {
+                        $saleItem    = $rtvItem->saleItem;
+                        $qtyReturned = (float) $rtvItem->quantity_returned;
+
+                        $currentOrderQty = $saleItem->order_qty !== null
+                            ? (float) $saleItem->order_qty
+                            : (float) $saleItem->quantity;
+                        $newOrderQty = max(0, $currentOrderQty - $qtyReturned);
+
+                        // Bypass the saving hook (which recalculates cost_total from quantity, not order_qty)
+                        DB::table('sale_items')->where('id', $saleItem->id)->update([
+                            'order_qty' => $newOrderQty,
+                        ]);
+
                         $itemUpdates['cost_applied_at'] = now();
                     }
 

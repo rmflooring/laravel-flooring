@@ -37,13 +37,28 @@ class InventoryReturn extends Model
     protected static function booted(): void
     {
         static::creating(function (InventoryReturn $rtv) {
-            $year = now()->year;
-            $max  = DB::table('inventory_returns')
-                ->whereYear('created_at', $year)
-                ->max(DB::raw("CAST(SUBSTRING_INDEX(return_number, '-', -1) AS UNSIGNED)"));
+            // Build sale suffix: look up sale via the linked PO
+            $saleSuffix = '';
+            if (! empty($rtv->purchase_order_id)) {
+                $saleId = DB::table('purchase_orders')->where('id', $rtv->purchase_order_id)->value('sale_id');
+                if ($saleId) {
+                    $saleNumber = DB::table('sales')->where('id', $saleId)->value('sale_number');
+                    if ($saleNumber) {
+                        $saleSuffix = '-' . $saleNumber;
+                    }
+                }
+            }
 
-            $next               = str_pad(((int) $max) + 1, 4, '0', STR_PAD_LEFT);
-            $rtv->return_number = "RTV-{$year}-{$next}";
+            // Sequential number — start from total count to avoid collisions with old-format records
+            $base = DB::table('inventory_returns')->count();
+            for ($attempt = 0; $attempt < 20; $attempt++) {
+                $seq       = $base + 1 + $attempt;
+                $candidate = 'RTV-' . $seq . $saleSuffix;
+                if (! DB::table('inventory_returns')->where('return_number', $candidate)->exists()) {
+                    $rtv->return_number = $candidate;
+                    break;
+                }
+            }
 
             if (auth()->check()) {
                 $rtv->returned_by_user_id ??= auth()->id();

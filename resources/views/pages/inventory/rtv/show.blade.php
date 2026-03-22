@@ -336,7 +336,7 @@
                     <div id="credit-note-section" style="display:none">
                         <div class="rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20 p-4 space-y-3">
                             <p class="text-sm font-medium text-green-800 dark:text-green-300">Credit Note Details</p>
-                            <p class="text-xs text-green-700 dark:text-green-400">Enter the credit amount received per item. Check "Apply to sale" to reduce the cost on the linked sale item, improving its profit margin.</p>
+                            <p class="text-xs text-green-700 dark:text-green-400">Enter the credit amount received per item. Check "Apply to sale" to reduce the Order Qty on the linked sale line item by the returned quantity — the original design qty is preserved, but cost and profit will reflect the reduced order quantity.</p>
 
                             <table class="min-w-full text-sm">
                                 <thead>

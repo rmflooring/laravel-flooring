@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-20 (session 23)
+Updated: 2026-03-22 (session 24)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -350,6 +350,39 @@ Full details in `Context/context_purchase_orders.md`.
 
 ---
 
+## RFC / RTV modules (session 24, 2026-03-22)
+
+### RFC — Request for Customer Return
+- Model: `CustomerReturn`, items: `CustomerReturnItem`
+- Number format: `RFC-{seq}-{sale_number}` (e.g. `RFC-1-13`) or `RFC-{seq}` if no sale linked
+- Flow: `draft` → `receive` (creates `InventoryReceipt` per item, inventory ↑, updates PT `returned_qty`, recalculates PT status)
+- Routes: `pages.inventory.rfc.*` — view: `view rfcs`, create/edit/receive/delete: `create rfcs`
+- Views: `resources/views/pages/inventory/rfc/` (index, create, show, edit)
+- Controller: `app/Http/Controllers/Pages/CustomerReturnController.php`
+- Service: `app/Services/CustomerReturnService.php`
+
+### RTV — Return to Vendor
+- Model: `InventoryReturn`, items: `InventoryReturnItem`
+- Number format: `RTV-{seq}-{sale_number}` (e.g. `RTV-1-13`) or `RTV-{seq}` if no sale/PO linked
+- Flow: `draft` → `ship` → `resolved`
+  - **Ship** (`ReturnToVendorService::ship()`): negative `InventoryTransaction`, reduces/deletes `InventoryAllocations` on the receipt, increments `PurchaseOrderItem.returned_quantity` (PO-sourced only)
+  - **Resolve** (`ReturnToVendorService::resolve()`): records outcome (`credit_note`, `replacement`, `refund`). For `credit_note` + `apply_to_sale_cost = true`: reduces `order_qty` on the linked `SaleItem` by `quantity_returned` (original `quantity` untouched); uses raw DB update to bypass the `SaleItem` saving hook. Stores `credit_received` as audit record.
+- Vendor auto-detection for RFC-sourced receipts: `sale_item_id → PurchaseOrderItem → PurchaseOrder → vendor`
+- Routes: `pages.inventory.rtv.*`
+- Views: `resources/views/pages/inventory/rtv/` (index, create, show, edit)
+- Controller: `app/Http/Controllers/Pages/ReturnToVendorController.php`
+- Service: `app/Services/ReturnToVendorService.php`
+
+### Profits page — Vendor Credits integration (session 24)
+- `SaleController::showProfits()` now loads `InventoryReturnItem` records where `sale_item_id` is in the sale's items AND `apply_to_sale_cost = true` AND `cost_applied_at != null` → passed as `$vendorCredits` and `$vendorCreditBySaleItem` (keyed by sale_item_id)
+- **Individual item rows**: unchanged — still show `qty × cost_price` (clean math, no confusion)
+- **Room footer**: new "Vendor Credit" row (green, −$X.XX) appears per room when a credit applies; Room Profit and Margin reflect the credit (`sell − cost + credit`); `data-room-vendor-credit` attribute on room card div drives JS recalculation
+- **Profit Summary card**: JS `recalculateRoom()` reads `data-room-vendor-credit` and applies it to profit (not cost total); `updateProfitSummaryHeader()` sums `data-room-profit` values directly (already credit-adjusted) — Total Cost shown as `sell − adjusted_profit`
+- **Vendor Credits card**: new card below room cards (green left border) — shows RTV # (linked), sale item name, qty returned, unit cost, credit value (+$X.XX) per credit; total at footer
+- Key files: `app/Http/Controllers/Pages/SaleController.php` (showProfits), `resources/views/pages/profits/show.blade.php`
+
+---
+
 ## Inventory enhancements (session 23, 2026-03-20)
 
 ### Product ID visibility + search
@@ -623,6 +656,11 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 - **Problem 2:** New job site customers were saved with `parent_id = null` because `#job_site_parent_id` hidden input was never wired to the parent select — so they were hidden in the job site dropdown and couldn't be auto-selected.
 - **Fix:** `CustomerController::store()` now appends `?new_js_id={id}` to the redirect URL. Blade JS saves all form state as query params before modal submits, restores it on reload, wires `#job_site_parent_id` via `syncModalParent()`, and auto-selects the new job site via `filterJobSites(newJobSiteId)`.
 - **Key files:** `app/Http/Controllers/Admin/CustomerController.php`, `resources/views/pages/opportunities/create.blade.php`
+
+---
+
+**To continue RFC / RTV work:**
+> Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to continue working on the RFC / RTV modules. One step at a time.
 
 ---
 

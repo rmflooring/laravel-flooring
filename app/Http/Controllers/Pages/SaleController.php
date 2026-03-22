@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryReturnItem;
 use App\Models\Sale;
 use App\Models\Employee;
 use App\Services\EmailTemplateService;
@@ -408,10 +409,19 @@ public function showProfits(Sale $sale)
         'rooms.items.sourceEstimateItem.productStyle',
     ]);
 
+    $saleItemIds = $sale->rooms->flatMap->items->pluck('id');
+
+    $vendorCredits = InventoryReturnItem::whereIn('sale_item_id', $saleItemIds)
+        ->where('apply_to_sale_cost', true)
+        ->whereNotNull('cost_applied_at')
+        ->with(['inventoryReturn', 'saleItem'])
+        ->get();
+
     return view('pages.profits.show', [
-        'recordType' => 'sale',
-        'record' => $sale,
-        'rooms' => $sale->rooms,
+        'recordType'    => 'sale',
+        'record'        => $sale,
+        'rooms'         => $sale->rooms,
+        'vendorCredits' => $vendorCredits,
     ]);
 }
 

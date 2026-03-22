@@ -88,7 +88,14 @@
         })
     );
 
-    $totalProfit = $totalSell - $totalCost;
+    $totalVendorCredit = isset($vendorCredits) ? $vendorCredits->sum(fn($c) => (float) $c->line_total) : 0;
+
+    // Map of sale_item_id => total credit for that item (used by JS per-row)
+    $vendorCreditBySaleItem = isset($vendorCredits)
+        ? $vendorCredits->groupBy('sale_item_id')->map(fn($g) => round($g->sum('line_total'), 2))
+        : collect();
+
+    $totalProfit = $totalSell - $totalCost + $totalVendorCredit;
 
     $profitMargin = $totalSell > 0
         ? ($totalProfit / $totalSell) * 100
@@ -140,7 +147,14 @@
 
             @if(isset($rooms) && $rooms->count())
                 <div class="space-y-3">
-                    @foreach($rooms as $room)                        <div class="border rounded-lg p-4" data-room-card>
+                    @foreach($rooms as $room)
+                        @php
+                            $roomItemIds = $room->items->pluck('id');
+                            $roomVendorCredit = isset($vendorCreditBySaleItem)
+                                ? $roomItemIds->sum(fn($id) => (float) ($vendorCreditBySaleItem[$id] ?? 0))
+                                : 0;
+                        @endphp
+                        <div class="border rounded-lg p-4" data-room-card data-room-vendor-credit="{{ $roomVendorCredit }}">
                             <h3 class="font-semibold text-gray-800">
                                 {{ $room->room_name ?: 'Unnamed Room' }}
                             </h3>
@@ -283,55 +297,49 @@
             $qty = (float)($item->quantity ?? 0);
             return $qty > 0 ? round($qty * $savedCost, 2) : $savedCost;
         });
-        $roomProfitTotal = $roomSellTotal - $roomCostTotal;
+        $roomProfitTotal = $roomSellTotal - $roomCostTotal + $roomVendorCredit;
         $roomMargin = $roomSellTotal > 0 ? ($roomProfitTotal / $roomSellTotal) * 100 : 0;
     @endphp
 
     <tr>
         <td colspan="8" class="px-3 py-2 text-right border-t">Room Sell Total</td>
-        <td
-    class="px-3 py-2 text-right border-t"
-    data-room-sell-total
-    data-value="{{ $roomSellTotal }}"
->
-    ${{ number_format($roomSellTotal, 2) }}
-</td>
+        <td class="px-3 py-2 text-right border-t" data-room-sell-total data-value="{{ $roomSellTotal }}">
+            ${{ number_format($roomSellTotal, 2) }}
+        </td>
         <td class="px-3 py-2 border-t"></td>
     </tr>
 
     <tr>
         <td colspan="8" class="px-3 py-2 text-right border-t">Room Cost Total</td>
-        <td
-    class="px-3 py-2 text-right border-t"
-    data-room-cost-total
-    data-value="{{ $roomCostTotal }}"
->
-    ${{ number_format($roomCostTotal, 2) }}
-</td>
+        <td class="px-3 py-2 text-right border-t" data-room-cost-total data-value="{{ $roomCostTotal }}">
+            ${{ number_format($roomCostTotal, 2) }}
+        </td>
         <td class="px-3 py-2 border-t"></td>
     </tr>
 
+    @if ($roomVendorCredit > 0)
+    <tr class="text-green-700">
+        <td colspan="8" class="px-3 py-2 text-right border-t font-medium">Vendor Credit</td>
+        <td class="px-3 py-2 text-right border-t font-semibold" data-room-vendor-credit-display data-value="{{ $roomVendorCredit }}">
+            −${{ number_format($roomVendorCredit, 2) }}
+        </td>
+        <td class="px-3 py-2 border-t"></td>
+    </tr>
+    @endif
+
     <tr>
         <td colspan="8" class="px-3 py-2 text-right border-t">Room Profit</td>
-        <td
-    class="px-3 py-2 text-right border-t"
-    data-room-profit
-    data-value="{{ $roomProfitTotal }}"
->
-    ${{ number_format($roomProfitTotal, 2) }}
-</td>
+        <td class="px-3 py-2 text-right border-t" data-room-profit data-value="{{ $roomProfitTotal }}">
+            ${{ number_format($roomProfitTotal, 2) }}
+        </td>
         <td class="px-3 py-2 border-t"></td>
     </tr>
 
     <tr>
         <td colspan="9" class="px-3 py-2 text-right border-t">Room Margin</td>
-        <td
-    class="px-3 py-2 text-right border-t"
-    data-room-margin
-    data-value="{{ $roomMargin }}"
->
-    {{ number_format($roomMargin, 2) }}%
-</td>
+        <td class="px-3 py-2 text-right border-t" data-room-margin data-value="{{ $roomMargin }}">
+            {{ number_format($roomMargin, 2) }}%
+        </td>
     </tr>
 </tfoot>
                                     </table>
@@ -347,6 +355,73 @@
             @endif
         </div>
 
+        {{-- Hidden element for JS to read vendor credit totals --}}
+        <div data-total-vendor-credit="{{ $totalVendorCredit }}" style="display:none"></div>
+
+        {{-- Vendor Credits card (sales only, when credits exist) --}}
+        @if (isset($vendorCredits) && $vendorCredits->isNotEmpty())
+        <div class="bg-white shadow rounded-lg p-6 border-l-4 border-green-500">
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Vendor Credits</h2>
+            <p class="text-sm text-gray-500 mb-4">Cost credits applied from resolved Return to Vendor (RTV) records.</p>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm border border-gray-200">
+                    <thead class="bg-green-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left border-b text-green-800">RTV #</th>
+                            <th class="px-3 py-2 text-left border-b text-green-800">Sale Item</th>
+                            <th class="px-3 py-2 text-right border-b text-green-800">Qty Returned</th>
+                            <th class="px-3 py-2 text-right border-b text-green-800">Unit Cost</th>
+                            <th class="px-3 py-2 text-right border-b text-green-800">Credit Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($vendorCredits as $credit)
+                        <tr class="odd:bg-white even:bg-green-50/40">
+                            <td class="px-3 py-2 border-b">
+                                @if ($credit->inventoryReturn)
+                                    <a href="{{ route('pages.inventory.rtv.show', $credit->inventoryReturn) }}"
+                                       class="text-green-700 hover:underline font-mono">
+                                        {{ $credit->inventoryReturn->return_number }}
+                                    </a>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 border-b text-gray-700">
+                                {{ $credit->item_name_resolved }}
+                                @if ($credit->saleItem)
+                                    <div class="text-xs text-gray-400">
+                                        {{ $credit->saleItem->style ?? $credit->saleItem->description ?? $credit->saleItem->freight_description ?? '' }}
+                                    </div>
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 border-b text-right text-gray-700">
+                                {{ rtrim(rtrim(number_format((float) $credit->quantity_returned, 2), '0'), '.') }}
+                                <span class="text-xs text-gray-400">{{ $credit->unit_resolved }}</span>
+                            </td>
+                            <td class="px-3 py-2 border-b text-right text-gray-600">
+                                ${{ number_format((float) $credit->unit_cost, 2) }}
+                            </td>
+                            <td class="px-3 py-2 border-b text-right font-semibold text-green-700">
+                                +${{ number_format((float) $credit->line_total, 2) }}
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-green-50 font-semibold">
+                        <tr>
+                            <td colspan="4" class="px-3 py-2 text-right border-t text-green-800">Total Vendor Credit</td>
+                            <td class="px-3 py-2 text-right border-t text-green-700 text-base">
+                                +${{ number_format($totalVendorCredit, 2) }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        @endif
+
 	</form>
 
     </div>
@@ -354,6 +429,9 @@
 </div>
 
 	<script>
+// Vendor credit amounts keyed by sale_item_id (from PHP)
+const vendorCreditBySaleItem = @json($vendorCreditBySaleItem ?? []);
+
 document.addEventListener('DOMContentLoaded', function () {
     function formatMoney(value) {
         return '$' + (parseFloat(value || 0).toFixed(2));
@@ -418,8 +496,17 @@ document.addEventListener('DOMContentLoaded', function () {
         costTotal += costTotalValue;
     });
 
-    const profit = sellTotal - costTotal;
+    // Factor in vendor credit at room level — cost stays as raw, profit improves by credit
+    const roomCredit = parseFloat(roomCard.dataset.roomVendorCredit || 0);
+    const profit = sellTotal - costTotal + roomCredit;
     const margin = sellTotal > 0 ? (profit / sellTotal) * 100 : 0;
+
+    // Update vendor credit display cell if present
+    const creditDisplayCell = roomCard.querySelector('[data-room-vendor-credit-display]');
+    if (creditDisplayCell && roomCredit > 0) {
+        creditDisplayCell.textContent = '−$' + roomCredit.toFixed(2);
+        creditDisplayCell.dataset.value = roomCredit;
+    }
 
     const sellCell = roomCard.querySelector('[data-room-sell-total]');
     const costCell = roomCard.querySelector('[data-room-cost-total]');
@@ -488,19 +575,14 @@ if (roomCard) {
 function updateProfitSummaryHeader() {
 
     let totalSell = 0;
+    let totalProfit = 0;
     let totalCost = 0;
 
     document.querySelectorAll('[data-room-card]').forEach(function(room){
-
-        const sell = parseFloat(room.querySelector('[data-room-sell-total]')?.dataset.value || 0);
-const cost = parseFloat(room.querySelector('[data-room-cost-total]')?.dataset.value || 0);
-
-        totalSell += sell;
-        totalCost += cost;
-
+        totalSell   += parseFloat(room.querySelector('[data-room-sell-total]')?.dataset.value || 0);
+        totalCost   += parseFloat(room.querySelector('[data-room-cost-total]')?.dataset.value || 0);
+        totalProfit += parseFloat(room.querySelector('[data-room-profit]')?.dataset.value || 0);
     });
-
-    const totalProfit = totalSell - totalCost;
 
     const margin = totalSell > 0
         ? (totalProfit / totalSell) * 100
@@ -509,8 +591,10 @@ const cost = parseFloat(room.querySelector('[data-room-cost-total]')?.dataset.va
     document.querySelector('[data-summary-sell]').textContent =
         '$' + totalSell.toFixed(2);
 
+    // Show cost net of vendor credits (sell - profit = adjusted cost)
+    const adjustedCost = totalSell - totalProfit;
     document.querySelector('[data-summary-cost]').textContent =
-        '$' + totalCost.toFixed(2);
+        '$' + adjustedCost.toFixed(2);
 
     const profitCell = document.querySelector('[data-summary-profit]');
 const marginCell = document.querySelector('[data-summary-margin]');

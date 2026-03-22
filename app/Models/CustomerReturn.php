@@ -27,14 +27,25 @@ class CustomerReturn extends Model
     protected static function booted(): void
     {
         static::creating(function (CustomerReturn $rfc) {
-            // Generate RFC-YYYY-0001 sequential per year
-            $year = now()->year;
-            $max  = DB::table('customer_returns')
-                ->whereYear('created_at', $year)
-                ->max(DB::raw("CAST(SUBSTRING_INDEX(rfc_number, '-', -1) AS UNSIGNED)"));
+            // Build sale suffix: -sale_number if a sale is linked
+            $saleSuffix = '';
+            if (! empty($rfc->sale_id)) {
+                $saleNumber = DB::table('sales')->where('id', $rfc->sale_id)->value('sale_number');
+                if ($saleNumber) {
+                    $saleSuffix = '-' . $saleNumber;
+                }
+            }
 
-            $next           = str_pad(((int) $max) + 1, 4, '0', STR_PAD_LEFT);
-            $rfc->rfc_number = "RFC-{$year}-{$next}";
+            // Sequential number — start from total count to avoid collisions with old-format records
+            $base = DB::table('customer_returns')->count();
+            for ($attempt = 0; $attempt < 20; $attempt++) {
+                $seq       = $base + 1 + $attempt;
+                $candidate = 'RFC-' . $seq . $saleSuffix;
+                if (! DB::table('customer_returns')->where('rfc_number', $candidate)->exists()) {
+                    $rfc->rfc_number = $candidate;
+                    break;
+                }
+            }
 
             if (auth()->check()) {
                 $rfc->created_by ??= auth()->id();
