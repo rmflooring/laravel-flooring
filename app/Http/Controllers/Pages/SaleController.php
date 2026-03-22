@@ -25,6 +25,7 @@ class SaleController extends Controller
 
 		$statusOptions = [
 			'open',
+			'sent',
 			'approved',
 			'scheduled',
 			'in_progress',
@@ -176,7 +177,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
         'tax_amount'         => ['nullable', 'numeric'],
         'grand_total'        => ['nullable', 'numeric'],
 
-        'status'             => ['nullable', 'in:open,approved,scheduled,in_progress,on_hold,completed,partially_invoiced,invoiced,cancelled'],
+        'status'             => ['nullable', 'in:open,sent,approved,scheduled,in_progress,on_hold,completed,partially_invoiced,invoiced,cancelled'],
 
         'rooms'              => ['nullable', 'array'],
         'rooms.*.id'         => ['nullable', 'integer'],
@@ -473,7 +474,9 @@ public function showProfits(Sale $sale)
             return back()->with('error', 'Failed to send sale email. Check the mail log for details.');
         }
 
-        return back()->with('success', 'Sale emailed to ' . $request->input('to') . '.');
+        $sale->update(['status' => 'sent']);
+
+        return back()->with('success', 'Sale emailed to ' . $request->input('to') . ' and status updated to Sent.');
     }
 
     private function resolveEmailTemplate(Sale $sale): array

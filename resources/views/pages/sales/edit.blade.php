@@ -1780,6 +1780,7 @@
 
         $statusColors = [
             'open'                => 'bg-gray-200 text-gray-800',
+            'sent'                => 'bg-sky-200 text-sky-800',
             'approved'            => 'bg-green-200 text-green-800',
             'scheduled'           => 'bg-blue-200 text-blue-800',
             'in_progress'         => 'bg-indigo-200 text-indigo-800',
@@ -1792,6 +1793,7 @@
 
         $statusLabels = [
             'open'                => 'Open',
+            'sent'                => 'Sent',
             'approved'            => 'Approved',
             'scheduled'           => 'Scheduled',
             'in_progress'         => 'In Progress',
