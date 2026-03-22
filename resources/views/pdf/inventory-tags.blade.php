@@ -151,7 +151,7 @@
 @foreach ($receipts as $receipt)
 @php
     $mobileUrl  = route('mobile.inventory.show', $receipt);
-    $qrPng      = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(64)->margin(1)->generate($mobileUrl));
+    $qrPng      = base64_encode((new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(new \BaconQrCode\Renderer\RendererStyle\RendererStyle(64), new \BaconQrCode\Renderer\Image\GdImageBackEnd())))->writeString($mobileUrl));
     $allocSale  = $receipt->allocations->first()?->sale;
     $qtyDisplay = rtrim(rtrim(number_format((float)$receipt->quantity_received, 2), '0'), '.');
 @endphp

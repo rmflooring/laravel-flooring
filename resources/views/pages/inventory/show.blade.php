@@ -12,7 +12,7 @@
 
     // QR code linking to mobile inventory view
     $tagQrUrl  = route('mobile.inventory.show', $inventoryReceipt);
-    $tagQrB64  = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(96)->margin(1)->generate($tagQrUrl));
+    $tagQrB64  = base64_encode((new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(new \BaconQrCode\Renderer\RendererStyle\RendererStyle(96), new \BaconQrCode\Renderer\Image\GdImageBackEnd())))->writeString($tagQrUrl));
 @endphp
 
     <div class="py-6">

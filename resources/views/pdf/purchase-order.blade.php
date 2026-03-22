@@ -336,7 +336,7 @@
 
     @php
         $mobileUrl = route('mobile.purchase-orders.show', $purchaseOrder);
-        $qrPng     = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(72)->margin(1)->generate($mobileUrl));
+        $qrPng     = base64_encode((new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(new \BaconQrCode\Renderer\RendererStyle\RendererStyle(72), new \BaconQrCode\Renderer\Image\GdImageBackEnd())))->writeString($mobileUrl));
     @endphp
     <table style="width:100%; margin-top:24px; border-top:1px solid #ddd; padding-top:10px;">
         <tr>
