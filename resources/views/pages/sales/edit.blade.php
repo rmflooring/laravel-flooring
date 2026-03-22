@@ -341,11 +341,17 @@
               'pending'   => 'background-color:#ffedd5; border-color:#fdba74; color:#9a3412;',
               default     => '',
           };
+          $useBoxQty  = $item->productStyle?->use_box_qty;
+          $unitsPer   = (float)($item->productStyle?->units_per ?? 0);
+          $currentQty = (float)old("rooms.$roomIndex.materials.$i.quantity", $item->quantity);
+          $boxAligned = $useBoxQty && $unitsPer > 0 && $currentQty > 0
+              && abs(round($currentQty / $unitsPer) * $unitsPer - $currentQty) < 0.001;
         @endphp
         <input type="number" step="0.01"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
           value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
-          class="w-24 border rounded-lg p-2">
+          class="w-24 border rounded-lg p-2"
+          @if($boxAligned) style="background-color:#fed7aa; border-color:#fb923c;" @endif>
       </td>
 
       <td class="px-3 py-2" data-order-qty-cell>

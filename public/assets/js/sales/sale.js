@@ -2123,6 +2123,42 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     if (roomCard) updateRoomTotals(roomCard);
   });
 
+  // ── Box quantity highlight ───────────────────────────────────────────────
+  function updateBoxQtyHighlight(qtyInput) {
+    const row = qtyInput.closest('tr');
+    if (!row) return;
+
+    const colorInput = row.querySelector('[data-color-input]');
+    if (!colorInput) return;
+
+    const useBoxQty = colorInput.dataset.useBoxQty === '1';
+    const unitsPer  = parseFloat(colorInput.dataset.unitsPer || 0);
+
+    if (!useBoxQty || !unitsPer || unitsPer <= 0) {
+      qtyInput.style.backgroundColor = '';
+      qtyInput.style.borderColor = '';
+      return;
+    }
+
+    const qty = parseFloat(qtyInput.value || 0);
+    if (!qty || qty <= 0) {
+      qtyInput.style.backgroundColor = '';
+      qtyInput.style.borderColor = '';
+      return;
+    }
+
+    const remainder = qty % unitsPer;
+    const isAligned = remainder < 0.001 || Math.abs(remainder - unitsPer) < 0.001;
+
+    if (isAligned) {
+      qtyInput.style.backgroundColor = '#fed7aa';
+      qtyInput.style.borderColor     = '#fb923c';
+    } else {
+      qtyInput.style.backgroundColor = '';
+      qtyInput.style.borderColor     = '';
+    }
+  }
+
   // ── Box quantity prompt ──────────────────────────────────────────────────
   function checkBoxQty(qtyInput) {
     const row = qtyInput.closest('tr');
@@ -2142,8 +2178,14 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const boxes = Math.ceil(qty / unitsPer);
     const boxQty = parseFloat((boxes * unitsPer).toFixed(4));
 
-    if (Math.abs(qty - boxQty) < 0.001) return; // already a clean multiple
+    if (Math.abs(qty - boxQty) < 0.001) {
+      updateBoxQtyHighlight(qtyInput); // already aligned — highlight orange
+      return;
+    }
 
+    // Not aligned — clear any stale highlight, then show modal
+    qtyInput.style.backgroundColor = '';
+    qtyInput.style.borderColor     = '';
     showBoxQtyModal(qtyInput, qty, unitsPer, boxes, boxQty, colorInput.value);
   }
 
@@ -2151,6 +2193,13 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const input = e.target;
     if (!input.matches('input[name*="[quantity]"]')) return;
     checkBoxQty(input);
+  });
+
+  // Live highlight update as user types (also fires after modal confirm dispatches input)
+  roomsContainer.addEventListener("input", e => {
+    const input = e.target;
+    if (!input.matches('input[name*="[materials]"][name*="[quantity]"]')) return;
+    updateBoxQtyHighlight(input);
   });
 
   function showBoxQtyModal(qtyInput, currentQty, unitsPer, boxes, boxQty, styleName) {
@@ -2262,6 +2311,11 @@ initLabourDescriptionDropdownForRow(newRow);
   });
 
   // ── Initialize existing rooms ───────────────────────────────────────────
+  // Apply box qty highlight to any existing material rows that are already aligned
+  roomsContainer.querySelectorAll('input[name*="[materials]"][name*="[quantity]"]').forEach(input => {
+    updateBoxQtyHighlight(input);
+  });
+
   roomsContainer.querySelectorAll(".room-card").forEach(card => {
   ensureDefaultRows(card);
 
