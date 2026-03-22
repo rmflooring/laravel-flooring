@@ -44,8 +44,8 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('pages.purchase-orders.update', $purchaseOrder) }}"
-                  x-data="poStockEdit()">
+            <div x-data="poStockEdit()">
+            <form method="POST" action="{{ route('pages.purchase-orders.update', $purchaseOrder) }}">
                 @csrf
                 @method('PUT')
 
@@ -84,6 +84,7 @@
                             </label>
                             <select id="status" name="status" required
                                     x-model="status"
+                                    @change="handleStatusChange()"
                                     class="block w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                                 <option value="pending"   {{ old('status', $purchaseOrder->status) === 'pending'   ? 'selected' : '' }}>Pending</option>
                                 <option value="ordered"   {{ old('status', $purchaseOrder->status) === 'ordered'   ? 'selected' : '' }}>Ordered</option>
@@ -286,6 +287,130 @@
                 </div>
 
             </form>
+
+            {{-- Receive Inventory Modal --}}
+            @can('edit purchase orders')
+            <div x-show="showReceiveModal"
+                 x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                 @keydown.escape.window="showReceiveModal = false">
+                <div class="w-full max-w-2xl rounded-xl bg-white shadow-xl dark:bg-gray-800 flex flex-col max-h-[90vh]"
+                     @click.stop>
+
+                    <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700 shrink-0">
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Receive items</h3>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                Confirm quantities received. The PO status will be set to
+                                <span class="font-medium text-green-700 dark:text-green-400">Received</span>.
+                            </p>
+                        </div>
+                        <button type="button" @click="showReceiveModal = false"
+                                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form method="POST" action="{{ route('pages.purchase-orders.receive', $purchaseOrder) }}"
+                          x-data="receiveModalForm()" class="flex flex-col min-h-0 flex-1 overflow-hidden">
+                        @csrf
+
+                        <div class="overflow-y-auto flex-1 p-6 space-y-6">
+
+                            <div>
+                                <label for="modal-received-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Date received <span class="text-red-500">*</span>
+                                </label>
+                                <input type="date"
+                                       id="modal-received-date"
+                                       name="received_date"
+                                       value="{{ now()->toDateString() }}"
+                                       max="{{ now()->toDateString() }}"
+                                       required
+                                       class="w-48 rounded-lg border-gray-300 text-sm shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Items ordered</h4>
+                                    <button type="button" @click="setAllToOrdered()"
+                                            class="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                        Reset all to ordered qty
+                                    </button>
+                                </div>
+                                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <table class="w-full text-left text-sm text-gray-700 dark:text-gray-300">
+                                        <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-400">
+                                            <tr>
+                                                <th class="px-4 py-3">Item</th>
+                                                <th class="px-4 py-3 text-right whitespace-nowrap">Ordered qty</th>
+                                                <th class="px-4 py-3 text-right whitespace-nowrap">Qty received</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                            @foreach ($purchaseOrder->items as $item)
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                                    <td class="px-4 py-3">
+                                                        <div class="font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</div>
+                                                        @if ($item->po_notes)
+                                                            <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $item->po_notes }}</div>
+                                                        @endif
+                                                        <div class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ $item->unit }}</div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                                                        {{ $item->quantity }} {{ $item->unit }}
+                                                    </td>
+                                                    <td class="px-4 py-3 text-right">
+                                                        <input type="number"
+                                                               name="quantities[{{ $item->id }}]"
+                                                               value="{{ $item->quantity }}"
+                                                               min="0"
+                                                               step="0.01"
+                                                               data-ordered="{{ $item->quantity }}"
+                                                               class="modal-qty-input w-24 rounded-lg border-gray-300 text-sm text-right shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                               required>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 px-5 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-400">
+                                <span class="font-medium text-gray-700 dark:text-gray-300">{{ $purchaseOrder->vendor->company_name }}</span>
+                                <span class="mx-2 text-gray-300">·</span>
+                                PO {{ $purchaseOrder->po_number }}
+                                @if ($purchaseOrder->vendor_order_number)
+                                    <span class="mx-2 text-gray-300">·</span>
+                                    Vendor order #{{ $purchaseOrder->vendor_order_number }}
+                                @endif
+                            </div>
+
+                        </div>
+
+                        <div class="flex items-center justify-between border-t border-gray-200 px-6 py-4 dark:border-gray-700 shrink-0">
+                            <button type="button" @click="showReceiveModal = false"
+                                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                    class="inline-flex items-center gap-2 rounded-lg bg-green-700 px-5 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Confirm receipt &amp; mark received
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+            @endcan
+
+            </div>{{-- /x-data="poStockEdit()" --}}
         </div>
     </div>
 
@@ -294,6 +419,24 @@
         return {
             status: '{{ old('status', $purchaseOrder->status) }}',
             fulfillmentMethod: '{{ old('fulfillment_method', $purchaseOrder->fulfillment_method) }}',
+            originalStatus: '{{ $purchaseOrder->status }}',
+            showReceiveModal: false,
+            handleStatusChange() {
+                if (this.status === 'received') {
+                    this.status = this.originalStatus;
+                    this.showReceiveModal = true;
+                }
+            },
+        };
+    }
+
+    function receiveModalForm() {
+        return {
+            setAllToOrdered() {
+                document.querySelectorAll('.modal-qty-input').forEach(input => {
+                    input.value = input.dataset.ordered;
+                });
+            },
         };
     }
 
