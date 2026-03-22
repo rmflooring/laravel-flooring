@@ -345,16 +345,16 @@
 
                 {{-- Create Job Site Modal --}}
                 <div id="create-job-site-modal" tabindex="-1" aria-hidden="true"
-                     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                     class="hidden fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto p-4">
 
-                    <div class="bg-white rounded-xl shadow-lg w-full max-w-3xl">
-                        <form method="POST" action="{{ route('pages.job-sites.store') }}">
+                    <div class="bg-white rounded-xl shadow-lg w-full max-w-3xl my-auto flex flex-col max-h-[90vh]">
+                        <form method="POST" action="{{ route('pages.job-sites.store') }}" class="flex flex-col min-h-0 flex-1">
                             @csrf
 
                             <input type="hidden" name="redirect_to" value="{{ route('pages.opportunities.edit', $opportunity->id) }}">
                             <input type="hidden" name="parent_id" id="job_site_parent_id">
 
-                            <div class="p-6 space-y-4">
+                            <div class="p-6 space-y-4 overflow-y-auto flex-1">
                                 <h3 class="text-lg font-semibold">Create Job Site (Customer)</h3>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
