@@ -36,6 +36,8 @@ This file allows us to resume development later without rethinking architecture 
 
 ```
 open
+sent
+approved
 scheduled
 in_progress
 on_hold
