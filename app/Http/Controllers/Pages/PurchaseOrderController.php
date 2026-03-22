@@ -433,7 +433,70 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy']);
 
-        return view('pages.purchase-orders.show', compact('purchaseOrder'));
+        // Scope: within same sale (if sale-linked), or within all stock POs
+        $base = PurchaseOrder::query();
+        if ($purchaseOrder->sale_id) {
+            $base->where('sale_id', $purchaseOrder->sale_id);
+        } else {
+            $base->whereNull('sale_id');
+        }
+
+        // Prev = newer in desc order (higher in the index list)
+        $prev = (clone $base)
+            ->where(function ($q) use ($purchaseOrder) {
+                $q->where('created_at', '>', $purchaseOrder->created_at)
+                  ->orWhere(function ($q2) use ($purchaseOrder) {
+                      $q2->where('created_at', $purchaseOrder->created_at)
+                         ->where('id', '>', $purchaseOrder->id);
+                  });
+            })
+            ->orderBy('created_at')->orderBy('id')
+            ->first();
+
+        // Next = older in desc order (lower in the index list)
+        $next = (clone $base)
+            ->where(function ($q) use ($purchaseOrder) {
+                $q->where('created_at', '<', $purchaseOrder->created_at)
+                  ->orWhere(function ($q2) use ($purchaseOrder) {
+                      $q2->where('created_at', $purchaseOrder->created_at)
+                         ->where('id', '<', $purchaseOrder->id);
+                  });
+            })
+            ->orderByDesc('created_at')->orderByDesc('id')
+            ->first();
+
+        // Position (1 = newest): count how many are newer than or equal (by id at same time)
+        $position = (clone $base)
+            ->where(function ($q) use ($purchaseOrder) {
+                $q->where('created_at', '>', $purchaseOrder->created_at)
+                  ->orWhere(function ($q2) use ($purchaseOrder) {
+                      $q2->where('created_at', $purchaseOrder->created_at)
+                         ->where('id', '>=', $purchaseOrder->id);
+                  });
+            })
+            ->count();
+
+        $total = (clone $base)->count();
+
+        return view('pages.purchase-orders.show', compact(
+            'purchaseOrder', 'prev', 'next', 'position', 'total'
+        ));
+    }
+
+    // -------------------------------------------------------------------------
+    // Jump — redirect to a PO by number
+    // -------------------------------------------------------------------------
+
+    public function jump(Request $request)
+    {
+        $q  = trim($request->input('q', ''));
+        $po = PurchaseOrder::where('po_number', $q)->first();
+
+        if ($po) {
+            return redirect()->route('pages.purchase-orders.show', $po);
+        }
+
+        return redirect()->back()->with('error', "No purchase order found with number \"{$q}\".");
     }
 
     // -------------------------------------------------------------------------

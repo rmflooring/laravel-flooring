@@ -124,6 +124,58 @@
                 </div>
             </div>
 
+            {{-- PO Navigation --}}
+            <div class="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+
+                {{-- Prev --}}
+                @if($prev)
+                    <a href="{{ route('pages.purchase-orders.show', $prev) }}"
+                       class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        Prev
+                    </a>
+                @else
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed select-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        Prev
+                    </span>
+                @endif
+
+                {{-- Centre: position + jump --}}
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        @if($purchaseOrder->sale_id)
+                            PO {{ $position }} of {{ $total }} &mdash; Sale #{{ $purchaseOrder->sale->sale_number }}
+                        @else
+                            Stock PO {{ $position }} of {{ $total }}
+                        @endif
+                    </span>
+                    <form method="GET" action="{{ route('pages.purchase-orders.jump') }}" class="flex items-center gap-1.5">
+                        <input type="text" name="q" placeholder="PO #" autocomplete="off"
+                               class="w-20 rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        <button type="submit"
+                                class="rounded-lg border border-gray-300 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                            Go
+                        </button>
+                    </form>
+                </div>
+
+                {{-- Next --}}
+                @if($next)
+                    <a href="{{ route('pages.purchase-orders.show', $next) }}"
+                       class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+                        Next
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                @else
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed select-none">
+                        Next
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </span>
+                @endif
+
+            </div>
+
             {{-- Flash --}}
             @if (session('success'))
                 <div class="mb-6 flex items-center rounded-lg border border-green-200 bg-green-50 p-4 text-green-800 dark:border-green-900 dark:bg-gray-800 dark:text-green-400" role="alert">

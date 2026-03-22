@@ -706,6 +706,10 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|create purchase orders|edit purchase orders')
 			->name('purchase-orders.catalog-search');
 
+		Route::get('purchase-orders/jump', [PurchaseOrderController::class, 'jump'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('purchase-orders.jump');
+
 		// Purchase Orders — standalone (view/edit/pdf/send)
 		Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])
 			->middleware('role_or_permission:admin|view purchase orders')
