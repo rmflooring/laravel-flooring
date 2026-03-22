@@ -11,7 +11,7 @@
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Edit Sale</h1>
-                    <p class="text-sm text-gray-600">Status: <span class="font-semibold">Draft</span></p>
+                    <p class="text-sm text-gray-600">Status: <span class="font-semibold">{{ ucwords(str_replace('_', ' ', $sale->status)) }}</span></p>
                 </div>
 @if (session('success'))
     <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded-lg rounded-lg">
