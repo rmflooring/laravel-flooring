@@ -651,8 +651,12 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('inventory.show');
 
-		// Warehouse — Pick Tickets
+		// Warehouse — Pick Tickets + Receive Inventory
 		Route::prefix('warehouse')->name('warehouse.')->group(function () {
+			Route::get('receive', [\App\Http\Controllers\Pages\WarehouseReceiveController::class, 'index'])
+				->middleware('role_or_permission:admin|view purchase orders')
+				->name('receive');
+
 			Route::get('pick-tickets', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'index'])
 				->middleware('role_or_permission:admin|view pick tickets')
 				->name('pick-tickets.index');
