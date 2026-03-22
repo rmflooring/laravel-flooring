@@ -9,6 +9,10 @@
     foreach ($inventoryReceipt->allocations as $alloc)
         if ($alloc->saleItem?->sale && ! $tagSaleNumbers->contains($alloc->saleItem->sale->sale_number))
             $tagSaleNumbers->push($alloc->saleItem->sale->sale_number);
+
+    // QR code linking to mobile inventory view
+    $tagQrUrl  = route('mobile.inventory.show', $inventoryReceipt);
+    $tagQrB64  = base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(96)->margin(1)->generate($tagQrUrl));
 @endphp
 
     <div class="py-6">
@@ -414,10 +418,16 @@
                 {{-- Spacer --}}
                 <div style="flex:1;"></div>
 
-                {{-- Footer --}}
-                <div style="margin-top:6px; padding-top:5px; border-top:1px solid #e5e7eb; font-size:8px; color:#9ca3af; display:flex; justify-content:space-between;">
-                    <span>RM Flooring</span>
-                    <span>{{ now()->format('M j, Y') }}</span>
+                {{-- QR + Footer --}}
+                <div style="margin-top:6px; padding-top:5px; border-top:1px solid #e5e7eb; display:flex; align-items:flex-end; justify-content:space-between;">
+                    <div style="font-size:8px; color:#9ca3af;">
+                        <div>RM Flooring</div>
+                        <div>{{ now()->format('M j, Y') }}</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <img src="data:image/png;base64,{{ $tagQrB64 }}" style="width:48px; height:48px; display:block;">
+                        <div style="font-size:6px; color:#c0c0c0; margin-top:1px;">Scan</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -522,7 +532,10 @@ function printTag() {
     .tag-notes        { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; flex-shrink: 0; }
     .tag-notes-label  { font-size: 8pt; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
     .tag-notes-text   { font-size: 10pt; color: #374151; white-space: pre-wrap; word-break: break-word; }
-    .tag-footer       { margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 7pt; color: #9ca3af; display: flex; justify-content: space-between; flex-shrink: 0; }
+    .tag-footer       { margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 7pt; color: #9ca3af; display: flex; justify-content: space-between; align-items: flex-end; flex-shrink: 0; }
+    .tag-qr           { text-align: center; }
+    .tag-qr img       { width: 72pt; height: 72pt; display: block; }
+    .tag-qr-caption   { font-size: 6pt; color: #c0c0c0; margin-top: 2pt; }
 </style>
 </head><body>
 <div class="tag">
@@ -538,8 +551,14 @@ function printTag() {
     ${noteHtml}
     <div class="tag-spacer"></div>
     <div class="tag-footer">
-        <span>RM Flooring</span>
-        <span>{{ now()->format('M j, Y') }}</span>
+        <div>
+            <div>RM Flooring</div>
+            <div>{{ now()->format('M j, Y') }}</div>
+        </div>
+        <div class="tag-qr">
+            <img src="data:image/png;base64,{{ $tagQrB64 }}" alt="QR">
+            <div class="tag-qr-caption">Scan for details</div>
+        </div>
     </div>
 </div>
 </body></html>`;
