@@ -74,7 +74,7 @@
             </div>
 
             {{-- ── Stat cards ───────────────────────────────────────────── --}}
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
 
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
                     <div class="text-2xl font-bold text-gray-900">{{ $totalMaterialItems }}</div>
@@ -89,6 +89,11 @@
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
                     <div class="text-2xl font-bold text-green-600">{{ $itemsReceived }}</div>
                     <div class="text-xs text-gray-500 mt-1">Items received</div>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">
+                    <div class="text-2xl font-bold" style="color:#0f766e;">{{ $itemsDelivered }}</div>
+                    <div class="text-xs text-gray-500 mt-1">Items delivered</div>
                 </div>
 
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm text-center">

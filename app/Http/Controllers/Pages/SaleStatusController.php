@@ -196,6 +196,9 @@ class SaleStatusController extends Controller
             ];
         });
 
+        // ── Delivered count ────────────────────────────────────────
+        $itemsDelivered = $coverageItems->filter(fn ($c) => $c['dot_status'] === 'delivered')->count();
+
         // ── Overall status badge ───────────────────────────────────
         $overallStatus = $this->deriveOverallStatus(
             $totalMaterialItems,
@@ -219,6 +222,7 @@ class SaleStatusController extends Controller
             'totalWOs',
             'activeWOs',
             'ptBySaleItemId',
+            'itemsDelivered',
         ));
     }
 
