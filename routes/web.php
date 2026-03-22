@@ -1002,4 +1002,11 @@ Route::middleware('auth')->group(function () {
 
 });
 
+// ─── Mobile views ─────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(function () {
+    Route::get('po/{purchaseOrder}', [\App\Http\Controllers\Mobile\PurchaseOrderController::class, 'show'])
+        ->middleware('role_or_permission:admin|view purchase orders')
+        ->name('purchase-orders.show');
+});
+
 require __DIR__ . '/auth.php';

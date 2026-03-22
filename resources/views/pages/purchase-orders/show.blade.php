@@ -124,6 +124,26 @@
                 </div>
             </div>
 
+            {{-- QR Code --}}
+            @php
+                use SimpleSoftwareIO\QrCode\Facades\QrCode;
+                $mobileUrl = route('mobile.purchase-orders.show', $purchaseOrder);
+                $qrSvg = QrCode::size(96)->margin(1)->generate($mobileUrl);
+            @endphp
+            <div class="mb-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="shrink-0 rounded border border-gray-200 bg-white p-1 dark:border-gray-600">
+                    {!! $qrSvg !!}
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">Mobile view</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Scan to open on a mobile device</p>
+                    <a href="{{ $mobileUrl }}" target="_blank"
+                       class="mt-1 inline-block text-xs text-blue-600 hover:underline dark:text-blue-400">
+                        Open mobile view →
+                    </a>
+                </div>
+            </div>
+
             {{-- PO Navigation --}}
             <div class="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
 

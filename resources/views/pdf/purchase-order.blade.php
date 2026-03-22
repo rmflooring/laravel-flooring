@@ -334,10 +334,23 @@
         Issued: {{ $purchaseOrder->created_at->format('F j, Y') }}
     </div>
 
-    <div class="footer">
-        {{ $brandName }} &mdash; Purchase Order {{ $purchaseOrder->po_number }}
-        @if ($brandEmail) &nbsp;|&nbsp; {{ $brandEmail }} @endif
-    </div>
+    @php
+        use SimpleSoftwareIO\QrCode\Facades\QrCode;
+        $mobileUrl  = route('mobile.purchase-orders.show', $purchaseOrder);
+        $qrPng      = base64_encode(QrCode::format('png')->size(72)->margin(1)->generate($mobileUrl));
+    @endphp
+    <table style="width:100%; margin-top:24px; border-top:1px solid #ddd; padding-top:10px;">
+        <tr>
+            <td style="font-size:10px; color:#888; vertical-align:middle;">
+                {{ $brandName }} &mdash; Purchase Order {{ $purchaseOrder->po_number }}
+                @if ($brandEmail) &nbsp;|&nbsp; {{ $brandEmail }} @endif
+            </td>
+            <td style="text-align:right; vertical-align:middle; width:90px;">
+                <img src="data:image/png;base64,{{ $qrPng }}" style="width:72px; height:72px;">
+                <div style="font-size:8px; color:#aaa; margin-top:2px; text-align:center;">Scan for mobile</div>
+            </td>
+        </tr>
+    </table>
 
 </body>
 </html>
