@@ -336,7 +336,7 @@
 
     @php
         $mobileUrl = route('mobile.purchase-orders.show', $purchaseOrder);
-        $qrPng     = base64_encode((new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(new \BaconQrCode\Renderer\RendererStyle\RendererStyle(72), new \BaconQrCode\Renderer\Image\GdImageBackEnd())))->writeString($mobileUrl));
+        $qrSvg     = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size(72)->margin(1)->generate($mobileUrl);
     @endphp
     <table style="width:100%; margin-top:24px; border-top:1px solid #ddd; padding-top:10px;">
         <tr>
@@ -345,7 +345,7 @@
                 @if ($brandEmail) &nbsp;|&nbsp; {{ $brandEmail }} @endif
             </td>
             <td style="text-align:right; vertical-align:middle; width:90px;">
-                <img src="data:image/png;base64,{{ $qrPng }}" style="width:72px; height:72px;">
+                <div style="width:72px; height:72px; display:inline-block;">{!! $qrSvg !!}</div>
                 <div style="font-size:8px; color:#aaa; margin-top:2px; text-align:center;">Scan for mobile</div>
             </td>
         </tr>

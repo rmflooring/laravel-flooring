@@ -12,7 +12,7 @@
 
     // QR code linking to mobile inventory view
     $tagQrUrl  = route('mobile.inventory.show', $inventoryReceipt);
-    $tagQrB64  = base64_encode((new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(new \BaconQrCode\Renderer\RendererStyle\RendererStyle(96), new \BaconQrCode\Renderer\Image\GdImageBackEnd())))->writeString($tagQrUrl));
+    $tagQrB64  = base64_encode((string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size(96)->margin(1)->generate($tagQrUrl));
 @endphp
 
     <div class="py-6">
@@ -425,7 +425,7 @@
                         <div>{{ now()->format('M j, Y') }}</div>
                     </div>
                     <div style="text-align:center;">
-                        <img src="data:image/png;base64,{{ $tagQrB64 }}" style="width:48px; height:48px; display:block;">
+                        <img src="data:image/svg+xml;base64,{{ $tagQrB64 }}" style="width:48px; height:48px; display:block;">
                         <div style="font-size:6px; color:#c0c0c0; margin-top:1px;">Scan</div>
                     </div>
                 </div>
@@ -556,7 +556,7 @@ function printTag() {
             <div>{{ now()->format('M j, Y') }}</div>
         </div>
         <div class="tag-qr">
-            <img src="data:image/png;base64,{{ $tagQrB64 }}" alt="QR">
+            <img src="data:image/svg+xml;base64,{{ $tagQrB64 }}" alt="QR">
             <div class="tag-qr-caption">Scan for details</div>
         </div>
     </div>
