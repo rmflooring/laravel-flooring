@@ -135,11 +135,63 @@
                 {{-- Sidebar --}}
                 <div class="space-y-4">
 
-                    {{-- Details --}}
+                    {{-- Receipt Details form --}}
                     <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                         <div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Details</h3>
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Receipt Details</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">These fields appear on the printed PDF.</p>
                         </div>
+                        <form method="POST" action="{{ route('pages.warehouse.packing-lists.update', $packingList) }}" class="px-4 py-4 space-y-4">
+                            @csrf
+                            @method('PATCH')
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+                                    Received By
+                                </label>
+                                <input type="text" name="received_by"
+                                    value="{{ old('received_by', $packingList->received_by) }}"
+                                    placeholder="Full name"
+                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+                                    Date Received
+                                </label>
+                                <input type="date" name="received_date"
+                                    value="{{ old('received_date', $packingList->received_date?->format('Y-m-d')) }}"
+                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+                                    Company / Installer
+                                </label>
+                                <input type="text" name="received_company"
+                                    value="{{ old('received_company', $packingList->received_company) }}"
+                                    placeholder="Company or installer name"
+                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+                                    Notes
+                                </label>
+                                <textarea name="notes" rows="3"
+                                    placeholder="Optional notes"
+                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">{{ old('notes', $packingList->notes) }}</textarea>
+                            </div>
+
+                            <button type="submit"
+                                class="w-full inline-flex justify-center items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                                Save
+                            </button>
+                        </form>
+                    </div>
+
+                    {{-- Meta --}}
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                         <div class="px-4 py-3 space-y-3 text-sm">
                             <div>
                                 <span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">PL Number</span>
@@ -150,23 +202,19 @@
                                 <p class="mt-0.5 text-gray-700 dark:text-gray-300">
                                     {{ $packingList->created_at->format('M j, Y g:i A') }}
                                     @if($packingList->creator)
-                                        <span class="text-gray-500">by {{ $packingList->creator->name }}</span>
+                                        <span class="text-gray-500 dark:text-gray-400"> by {{ $packingList->creator->name }}</span>
                                     @endif
                                 </p>
                             </div>
                             @if($packingList->pickTicket->workOrder)
                                 <div>
                                     <span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Work Order</span>
-                                    <p class="mt-0.5 text-gray-700 dark:text-gray-300">
-                                        WO #{{ $packingList->pickTicket->workOrder->wo_number }}
-                                    </p>
+                                    <p class="mt-0.5 text-gray-700 dark:text-gray-300">WO #{{ $packingList->pickTicket->workOrder->wo_number }}</p>
                                 </div>
                                 @if($packingList->pickTicket->workOrder->installer)
                                     <div>
                                         <span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Installer</span>
-                                        <p class="mt-0.5 text-gray-700 dark:text-gray-300">
-                                            {{ $packingList->pickTicket->workOrder->installer->company_name }}
-                                        </p>
+                                        <p class="mt-0.5 text-gray-700 dark:text-gray-300">{{ $packingList->pickTicket->workOrder->installer->company_name }}</p>
                                     </div>
                                 @endif
                             @endif

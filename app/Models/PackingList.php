@@ -10,6 +10,10 @@ class PackingList extends Model
 {
     protected $guarded = ['id', 'pl_number'];
 
+    protected $casts = [
+        'received_date' => 'date',
+    ];
+
     protected static function booted(): void
     {
         static::creating(function (PackingList $pl) {

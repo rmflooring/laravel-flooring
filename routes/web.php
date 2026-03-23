@@ -661,6 +661,10 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|view pick tickets')
 			->name('warehouse.packing-lists.show');
 
+		Route::patch('warehouse/packing-lists/{packingList}', [\App\Http\Controllers\Pages\PackingListController::class, 'update'])
+			->middleware('role_or_permission:admin|view pick tickets')
+			->name('warehouse.packing-lists.update');
+
 		Route::get('warehouse/packing-lists/{packingList}/pdf', [\App\Http\Controllers\Pages\PackingListController::class, 'pdf'])
 			->middleware('role_or_permission:admin|view pick tickets')
 			->name('warehouse.packing-lists.pdf');

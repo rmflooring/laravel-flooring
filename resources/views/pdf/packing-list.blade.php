@@ -192,6 +192,9 @@
     </div>
     <div class="signature-grid">
         <div class="signature-col">
+            @if($packingList->received_by)
+                <div style="padding-bottom:4px; font-size:12px;">{{ $packingList->received_by }}</div>
+            @endif
             <div class="signature-line"></div>
             <div class="signature-label">Received by (Print Name)</div>
         </div>
@@ -202,10 +205,16 @@
     </div>
     <div class="signature-grid" style="margin-top:28px">
         <div class="signature-col">
+            @if($packingList->received_date)
+                <div style="padding-bottom:4px; font-size:12px;">{{ $packingList->received_date->format('M j, Y') }}</div>
+            @endif
             <div class="signature-line"></div>
             <div class="signature-label">Date</div>
         </div>
         <div class="signature-col">
+            @if($packingList->received_company)
+                <div style="padding-bottom:4px; font-size:12px;">{{ $packingList->received_company }}</div>
+            @endif
             <div class="signature-line"></div>
             <div class="signature-label">Company / Installer</div>
         </div>

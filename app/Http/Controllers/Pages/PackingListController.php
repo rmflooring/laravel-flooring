@@ -48,6 +48,20 @@ class PackingListController extends Controller
         return view('pages.warehouse.packing-lists.show', compact('packingList'));
     }
 
+    public function update(Request $request, PackingList $packingList): RedirectResponse
+    {
+        $validated = $request->validate([
+            'received_by'      => 'nullable|string|max:255',
+            'received_date'    => 'nullable|date',
+            'received_company' => 'nullable|string|max:255',
+            'notes'            => 'nullable|string',
+        ]);
+
+        $packingList->update($validated);
+
+        return back()->with('success', 'Packing list updated.');
+    }
+
     public function pdf(PackingList $packingList)
     {
         $packingList->load([
