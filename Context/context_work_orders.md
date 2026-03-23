@@ -166,6 +166,8 @@ const INSTALLATIONS_GROUP_ID = 'a6890136-56b9-42fc-ac2b-8e05c98c0e8c';
 
 ### `show()`
 - Eager loads `items.relatedMaterials.saleItem`, `items.saleItem.room`, `calendarEvent.externalLink`, `creator`
+- Also `$sale->loadMissing('sourceEstimate')` for email template `customer_name` fallback
+- Calls `resolveEmailTemplate()` → passes `$emailSubject`, `$emailBody` to view
 
 ### `update()`
 - Validates item qtys vs remaining (excluding this WO); `wo_notes.*`; `wo_materials.*`
@@ -182,6 +184,11 @@ const INSTALLATIONS_GROUP_ID = 'a6890136-56b9-42fc-ac2b-8e05c98c0e8c';
 - Track 1 (shared mailbox)
 - PDF attached as base64 fileAttachment
 - Stamps `sent_at` on the WO
+
+### `resolveEmailTemplate(WorkOrder, Sale): array`
+- Private helper — resolves `work_order` email template via `EmailTemplateService`
+- Tags resolved: `customer_name`, `wo_number`, `job_name`, `job_no`, `job_address`, `pm_name`, `pm_first_name`, `sender_name`, `sender_email`, `wo_link`
+- `wo_link` = `route('mobile.work-orders.show', $workOrder)` — full URL to the mobile WO view
 
 ---
 
@@ -386,6 +393,34 @@ A Work Order can be **staged** — creating a `staged` PickTicket from the WO sh
 
 ### `WorkOrderController::show()`
 - `$stagingPickTicket` loaded via `PickTicket::where('work_order_id', ...)->whereNotIn('status', ['cancelled'])->with(['items.saleItem.room', 'creator'])->first()`
+
+---
+
+---
+
+## Mobile WO View & QR Code (2026-03-23)
+
+### Mobile view
+- Route: `GET /m/wo/{workOrder}` → `mobile.work-orders.show` (middleware: `auth + verified + role_or_permission:admin|view work orders`)
+- Controller: `app/Http/Controllers/Mobile/WorkOrderController::show()` — loads `sale`, `installer`, `items.saleItem.room`, `items.relatedMaterials.saleItem`, `creator`
+- View: `resources/views/mobile/work-orders/show.blade.php`
+  - WO# + status badge
+  - Scheduled date/time (prominent blue box)
+  - Job site card: homeowner name, job name, tappable Google Maps link for address
+  - Items grouped by room (blue house header), with related materials + WO notes per item
+  - Grand total, notes, Print PDF link
+
+### QR code in WO PDF
+- Footer of `resources/views/pdf/work-order.blade.php` includes a QR code pointing to `mobile.work-orders.show`
+- Rendered as SVG base64 data URI in an `<img>` tag (NOT inline SVG, NOT PNG — Imagick not installed; inline SVG conflicts with global `table {}` CSS)
+- Uses `display:table` div layout (not `<table>`) to avoid global table CSS interference
+
+### `{{wo_link}}` email tag
+- `EmailTemplate::TAGS['work_order']` includes `{{wo_link}}`
+- `EmailTemplate::DEFAULTS['work_order']['body']` includes `View on mobile: {{wo_link}}`
+- `WorkOrderController::resolveEmailTemplate()` resolves all tags including `wo_link = route('mobile.work-orders.show', $workOrder)`
+- WO show email modal now pre-filled from resolved template (was previously hardcoded)
+- `{{wo_link}}` appears in Settings → Email Templates → Work Order tab (auto-rendered from TAGS constant)
 
 ---
 

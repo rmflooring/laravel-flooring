@@ -44,6 +44,7 @@ class EmailTemplate extends Model
         'work_order' => [
             '{{customer_name}}', '{{wo_number}}', '{{job_name}}', '{{job_no}}', '{{job_address}}',
             '{{pm_name}}', '{{pm_first_name}}', '{{sender_name}}', '{{sender_email}}',
+            '{{wo_link}}',
         ],
         'purchase_order' => [
             '{{customer_name}}', '{{po_number}}', '{{job_name}}', '{{job_no}}', '{{job_address}}',
@@ -76,7 +77,7 @@ class EmailTemplate extends Model
         ],
         'work_order' => [
             'subject' => 'Work Order {{wo_number}} — {{job_name}}',
-            'body'    => "Hi {{customer_name}},\n\nPlease find your work order below.\n\nWork Order #: {{wo_number}}\nJob: {{job_name}}\nAddress: {{job_address}}\n\n{{sender_name}}\n{{sender_email}}",
+            'body'    => "Hi {{customer_name}},\n\nPlease find your work order attached.\n\nWork Order #: {{wo_number}}\nJob: {{job_name}}\nAddress: {{job_address}}\n\nView on mobile: {{wo_link}}\n\n{{sender_name}}\n{{sender_email}}",
         ],
         'purchase_order' => [
             'subject' => 'Purchase Order {{po_number}} — {{job_name}}',

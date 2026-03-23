@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-23 (session 28)
+Updated: 2026-03-23 (session 29)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -253,6 +253,7 @@ Full details in `Context/context_work_orders.md`.
 - WO card on sale **edit** page (below PO card); WO section on sale show page; Sale Status page fully wired
 - **WO Staging / Pick Tickets (session 14–16, 2026-03-16)**: "Stage Work Order" button on WO show page creates a `staged` PickTicket with all linked material items. `staged` is a new PickTicket status (orange badge). `PickTicketService::createFromWorkOrder()` handles creation. `inventory_allocation_id` made nullable on `pick_ticket_items`. **No stock check on staging** — the inventory allocation stock check was removed in session 16; staging does not require formal allocations (receipts only need to be in the warehouse).
 - **Calendar opt-out bug fix (session 14)**: `$request->boolean('sync_calendar', true)` → changed default to `false` in both `store()` and `update()` — unchecked checkbox posts no value, so `true` default was always overriding the user's opt-out.
+- **Mobile WO view + QR code (2026-03-23)**: Route `GET /m/wo/{workOrder}` → `mobile.work-orders.show`; controller `Mobile\WorkOrderController::show()`; view `resources/views/mobile/work-orders/show.blade.php` (schedule, job site with Maps link, items by room). WO PDF footer has QR code as SVG base64 `<img>` (not inline SVG — conflicts with global `table {}` CSS; not PNG — no Imagick). `{{wo_link}}` tag added to `work_order` email template type; `WorkOrderController::resolveEmailTemplate()` now wires up `EmailTemplateService` for the WO send modal (was previously hardcoded).
 
 ---
 

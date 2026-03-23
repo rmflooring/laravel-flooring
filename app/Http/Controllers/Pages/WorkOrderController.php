@@ -14,6 +14,7 @@ use App\Models\SaleItem;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
 use App\Models\WorkOrderItemMaterial;
+use App\Services\EmailTemplateService;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
 use App\Services\PickTicketService;
@@ -189,6 +190,7 @@ class WorkOrderController extends Controller
     public function show(Sale $sale, WorkOrder $workOrder)
     {
         abort_if($workOrder->sale_id !== $sale->id, 404);
+        $sale->loadMissing('sourceEstimate');
         $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'calendarEvent.externalLink', 'creator']);
 
         // Load the active staging pick ticket for this WO (if any)
@@ -232,7 +234,34 @@ class WorkOrderController extends Controller
             }
         }
 
-        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings'));
+        [$emailSubject, $emailBody] = $this->resolveEmailTemplate($workOrder, $sale);
+
+        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody'));
+    }
+
+    private function resolveEmailTemplate(WorkOrder $workOrder, Sale $sale): array
+    {
+        $user            = auth()->user();
+        $templateService = app(EmailTemplateService::class);
+        $template        = $templateService->getTemplate($user, 'work_order');
+
+        $vars = [
+            'customer_name' => $sale->sourceEstimate?->homeowner_name ?: $sale->customer_name,
+            'wo_number'     => $workOrder->wo_number,
+            'job_name'      => $sale->job_name,
+            'job_no'        => $sale->job_no,
+            'job_address'   => $sale->job_address,
+            'pm_name'       => $sale->pm_name,
+            'pm_first_name' => explode(' ', trim($sale->pm_name ?? ''))[0],
+            'sender_name'   => $user->name,
+            'sender_email'  => $user->email,
+            'wo_link'       => route('mobile.work-orders.show', $workOrder),
+        ];
+
+        return [
+            $templateService->render($template['subject'], $vars),
+            $templateService->render($template['body'], $vars),
+        ];
     }
 
     // ── Stage Work Order — create a staging pick ticket ───────────

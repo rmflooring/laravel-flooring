@@ -619,22 +619,15 @@
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
                         <input type="text" name="subject"
-                               value="{{ old('subject', 'Work Order ' . $workOrder->wo_number . ' — ' . ($sale->customer_name ?? $sale->sale_number)) }}"
+                               value="{{ old('subject', $emailSubject) }}"
                                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                required>
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
-                        <textarea name="body" rows="5"
+                        <textarea name="body" rows="7"
                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                  required>Please find the attached work order {{ $workOrder->wo_number }}.
-
-Scheduled: {{ $workOrder->scheduled_date?->format('M j, Y') ?? 'TBD' }}{{ $workOrder->scheduled_time ? ' at ' . \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_time)->format('g:i A') : '' }}
-Address: {{ $sale->job_address ?? 'TBD' }}
-
-Please review and confirm.
-
-Thank you.</textarea>
+                                  required>{{ old('body', $emailBody) }}</textarea>
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">A PDF copy of {{ $workOrder->wo_number }} will be attached automatically.</p>
                 </div>
