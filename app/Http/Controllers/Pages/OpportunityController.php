@@ -13,6 +13,49 @@ use App\Models\Employee;
 
 class OpportunityController extends Controller
 {
+    private function applyOpportunityFilters($query, Request $request): void
+    {
+        $sort = $request->input('sort', 'updated_desc');
+        switch ($sort) {
+            case 'updated_asc': $query->orderBy('updated_at', 'asc'); break;
+            case 'job_no_asc':  $query->orderBy('job_no', 'asc'); break;
+            case 'job_no_desc': $query->orderBy('job_no', 'desc'); break;
+            default:            $query->orderBy('updated_at', 'desc'); break;
+        }
+
+        if ($request->filled('project_manager_id')) {
+            $query->where('project_manager_id', $request->input('project_manager_id'));
+        }
+
+        if ($request->filled('q')) {
+            $q = trim($request->input('q'));
+            $query->where(function ($sub) use ($q) {
+                $sub->where('job_no', 'like', "%{$q}%")
+                    ->orWhere('sales_person_1', 'like', "%{$q}%")
+                    ->orWhere('sales_person_2', 'like', "%{$q}%")
+                    ->orWhereHas('parentCustomer', function ($c) use ($q) {
+                        $c->where('company_name', 'like', "%{$q}%")
+                          ->orWhere('name', 'like', "%{$q}%");
+                    })
+                    ->orWhereHas('jobSiteCustomer', function ($c) use ($q) {
+                        $c->where('company_name', 'like', "%{$q}%")
+                          ->orWhere('name', 'like', "%{$q}%");
+                    })
+                    ->orWhereHas('projectManager', function ($pm) use ($q) {
+                        $pm->where('name', 'like', "%{$q}%");
+                    });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('parent_customer_id')) {
+            $query->where('parent_customer_id', $request->input('parent_customer_id'));
+        }
+    }
+
     public function index(Request $request)
 {
     $statuses = [
@@ -29,64 +72,7 @@ class OpportunityController extends Controller
         ->with(['parentCustomer', 'jobSiteCustomer', 'projectManager'])
         ->withCount(['rfms', 'estimates', 'sales', 'purchaseOrders']);
 
-// Sorting
-$sort = $request->input('sort', 'updated_desc');
-
-switch ($sort) {
-    case 'updated_asc':
-        $query->orderBy('updated_at', 'asc');
-        break;
-
-    case 'job_no_asc':
-        $query->orderBy('job_no', 'asc');
-        break;
-
-    case 'job_no_desc':
-        $query->orderBy('job_no', 'desc');
-        break;
-
-    case 'updated_desc':
-    default:
-        $query->orderBy('updated_at', 'desc');
-        break;
-}
-
-		// Project Manager filter
-if ($request->filled('project_manager_id')) {
-    $query->where('project_manager_id', $request->input('project_manager_id'));
-}
-
-    // Search (q)
-    if ($request->filled('q')) {
-        $q = trim($request->input('q'));
-
-        $query->where(function ($sub) use ($q) {
-            $sub->where('job_no', 'like', "%{$q}%")
-                ->orWhere('sales_person_1', 'like', "%{$q}%")
-                ->orWhere('sales_person_2', 'like', "%{$q}%")
-                ->orWhereHas('parentCustomer', function ($c) use ($q) {
-                    $c->where('company_name', 'like', "%{$q}%")
-                      ->orWhere('name', 'like', "%{$q}%");
-                })
-                ->orWhereHas('jobSiteCustomer', function ($c) use ($q) {
-                    $c->where('company_name', 'like', "%{$q}%")
-                      ->orWhere('name', 'like', "%{$q}%");
-                })
-                ->orWhereHas('projectManager', function ($pm) use ($q) {
-                    $pm->where('name', 'like', "%{$q}%");
-                });
-        });
-    }
-
-    // Status filter
-    if ($request->filled('status')) {
-        $query->where('status', $request->input('status'));
-    }
-
-    // Parent customer filter
-    if ($request->filled('parent_customer_id')) {
-        $query->where('parent_customer_id', $request->input('parent_customer_id'));
-    }
+    $this->applyOpportunityFilters($query, $request);
 
     $opportunities = $query
         ->paginate(15)
@@ -174,7 +160,7 @@ $employees = Employee::query()
             ->with('success', 'Opportunity created.');
     }
 
-		public function show(string $id)
+		public function show(Request $request, string $id)
 		{
 			$opportunity = Opportunity::with([
 				'parentCustomer',
@@ -200,7 +186,26 @@ $employees = Employee::query()
 				->orderByDesc('created_at')
 				->get();
 
-			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales', 'purchaseOrders'));
+			// Prev / next navigation within the current filter context
+			$filterParams = $request->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'sort']);
+			$navQuery = Opportunity::query()->select('id');
+			$this->applyOpportunityFilters($navQuery, $request);
+			$ids = $navQuery->pluck('id')->toArray();
+			$pos = array_search((int) $id, $ids);
+
+			$prev = ($pos !== false && $pos > 0)
+				? Opportunity::find($ids[$pos - 1], ['id', 'job_no'])
+				: null;
+			$next = ($pos !== false && $pos < count($ids) - 1)
+				? Opportunity::find($ids[$pos + 1], ['id', 'job_no'])
+				: null;
+
+			$navPosition = $pos !== false ? $pos + 1 : null;
+			$navTotal    = count($ids);
+
+			$backUrl = route('pages.opportunities.index', array_filter($filterParams));
+
+			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales', 'purchaseOrders', 'prev', 'next', 'backUrl', 'filterParams', 'navPosition', 'navTotal'));
 		}
 
 

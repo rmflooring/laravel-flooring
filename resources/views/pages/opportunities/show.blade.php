@@ -21,11 +21,43 @@
                             <span>Job No:</span>
                             <span class="font-semibold text-gray-900 dark:text-white">{{ $opportunity->job_no }}</span>
                         @endif
+
+                        @if($navPosition && $navTotal > 1)
+                            <span class="text-gray-400 dark:text-gray-500">•</span>
+                            <span class="text-gray-500 dark:text-gray-400">{{ $navPosition }} of {{ $navTotal }}</span>
+                        @endif
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('pages.opportunities.index') }}"
+                    {{-- Prev/Next navigation --}}
+                    @php $qs = http_build_query(array_filter($filterParams)); @endphp
+
+                    @if($prev)
+                        <a href="{{ route('pages.opportunities.show', $prev->id) }}{{ $qs ? '?' . $qs : '' }}"
+                           title="Previous: {{ $prev->job_no ?: 'Opp #' . $prev->id }}"
+                           class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
+                            ← Prev
+                        </a>
+                    @else
+                        <span class="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-400 cursor-not-allowed">
+                            ← Prev
+                        </span>
+                    @endif
+
+                    @if($next)
+                        <a href="{{ route('pages.opportunities.show', $next->id) }}{{ $qs ? '?' . $qs : '' }}"
+                           title="Next: {{ $next->job_no ?: 'Opp #' . $next->id }}"
+                           class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
+                            Next →
+                        </a>
+                    @else
+                        <span class="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-400 cursor-not-allowed">
+                            Next →
+                        </span>
+                    @endif
+
+                    <a href="{{ $backUrl }}"
                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
                         Back
                     </a>

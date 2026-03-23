@@ -134,6 +134,10 @@
                     </div>
                 </div>
 
+                @php
+                    $qs = http_build_query(request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'sort']));
+                @endphp
+
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-700">
@@ -201,7 +205,7 @@
                                                 || $opp->purchase_orders_count > 0;
                                         @endphp
                                         <div class="inline-flex items-center gap-2">
-                                            <a href="{{ route('pages.opportunities.show', $opp->id) }}"
+                                            <a href="{{ route('pages.opportunities.show', $opp->id) }}{{ $qs ? '?' . $qs : '' }}"
                                                class="inline-flex items-center px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                                                 View
                                             </a>
