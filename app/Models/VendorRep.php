@@ -32,6 +32,12 @@ class VendorRep extends Model
         });
     }
 
+    // Relationship to vendors (many-to-many)
+    public function vendors()
+    {
+        return $this->belongsToMany(Vendor::class, 'vendor_vendor_rep');
+    }
+
     // Relationship to creator user
     public function creator()
     {

@@ -16,6 +16,19 @@
                             </div>
 
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Vendor</label>
+                                <select name="vendor_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">— No vendor —</option>
+                                    @foreach ($vendors as $vendor)
+                                        <option value="{{ $vendor->id }}" {{ old('vendor_id') == $vendor->id ? 'selected' : '' }}>
+                                            {{ $vendor->company_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('vendor_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
                                 <input type="email" name="email" value="{{ old('email') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 email-input">
                             </div>

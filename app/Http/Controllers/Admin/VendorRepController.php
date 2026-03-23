@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Vendor;
 use App\Models\VendorRep;
 use Illuminate\Http\Request;
 
@@ -10,71 +11,68 @@ class VendorRepController extends Controller
 {
     public function index()
     {
-        $reps = VendorRep::with('creator')->paginate(15);
+        $reps = VendorRep::with(['creator', 'vendors'])->paginate(15);
 
         return view('admin.vendor_reps.index', compact('reps'));
     }
 
-    // start create functions
+    public function create()
+    {
+        $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
 
-	public function create()
-	{
-    return view('admin.vendor_reps.create');
-	}
-     //end create function
+        return view('admin.vendor_reps.create', compact('vendors'));
+    }
 
-	//start store function
-	public function store(Request $request)
-	{
-    	$request->validate([
-        'name' => 'required|string|max:255',
-        'phone' => 'nullable|string',
-        'mobile' => 'nullable|string',
-        'email' => 'nullable|email',
-        'notes' => 'nullable|string',
-   	 ]);
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name'      => 'required|string|max:255',
+            'vendor_id' => 'nullable|exists:vendors,id',
+            'phone'     => 'nullable|string',
+            'mobile'    => 'nullable|string',
+            'email'     => 'nullable|email',
+            'notes'     => 'nullable|string',
+        ]);
 
-    	VendorRep::create($request->all());
+        $rep = VendorRep::create($request->only('name', 'phone', 'mobile', 'email', 'notes'));
 
-    	return redirect()->route('admin.vendor_reps.index')->with('success', 'Vendor Rep created successfully.');
-	}
+        if ($request->filled('vendor_id')) {
+            $rep->vendors()->sync([$request->vendor_id]);
+        }
 
-	// end store function
-	
-	//start edit function
-	
-	public function edit(VendorRep $vendorRep)
-	{
-    	return view('admin.vendor_reps.edit', compact('vendorRep'));
-	}
+        return redirect()->route('admin.vendor_reps.index')->with('success', 'Vendor Rep created successfully.');
+    }
 
-	//end edit function
-	
-	//start update function
-	public function update(Request $request, VendorRep $vendorRep)
-	{
-    	$request->validate([
-        'name' => 'required|string|max:255',
-        'phone' => 'nullable|string',
-        'mobile' => 'nullable|string',
-        'email' => 'nullable|email',
-        'notes' => 'nullable|string',
-   	 ]);
+    public function edit(VendorRep $vendorRep)
+    {
+        $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
+        $currentVendorId = $vendorRep->vendors->first()?->id;
 
-    	$vendorRep->update($request->all());
+        return view('admin.vendor_reps.edit', compact('vendorRep', 'vendors', 'currentVendorId'));
+    }
 
-    	return redirect()->route('admin.vendor_reps.index')->with('success', 'Vendor Rep updated successfully.');
-	}
-	//end update function
+    public function update(Request $request, VendorRep $vendorRep)
+    {
+        $request->validate([
+            'name'      => 'required|string|max:255',
+            'vendor_id' => 'nullable|exists:vendors,id',
+            'phone'     => 'nullable|string',
+            'mobile'    => 'nullable|string',
+            'email'     => 'nullable|email',
+            'notes'     => 'nullable|string',
+        ]);
 
-	//start destroy function
-	public function destroy(VendorRep $vendorRep)
-	{
-    	$vendorRep->delete();
+        $vendorRep->update($request->only('name', 'phone', 'mobile', 'email', 'notes'));
 
-    	return redirect()->route('admin.vendor_reps.index')->with('success', 'Vendor Rep deleted successfully.');
-	}
+        $vendorRep->vendors()->sync($request->filled('vendor_id') ? [$request->vendor_id] : []);
 
-	//end destroy function
+        return redirect()->route('admin.vendor_reps.index')->with('success', 'Vendor Rep updated successfully.');
+    }
 
+    public function destroy(VendorRep $vendorRep)
+    {
+        $vendorRep->delete();
+
+        return redirect()->route('admin.vendor_reps.index')->with('success', 'Vendor Rep deleted successfully.');
+    }
 }

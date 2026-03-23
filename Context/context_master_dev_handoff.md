@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-23 (session 27)
+Updated: 2026-03-23 (session 28)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -445,6 +445,17 @@ All nested under `pages/sales/{sale}/change-orders/`:
 - Email CO to homeowner (send modal + Graph mail, same pattern as sale/estimate)
 - Mark CO as "sent" / track `sent_at` / homeowner approval date via email flow
 - `change_in_progress` badge in sale **edit** page status dropdown (index already done)
+
+---
+
+## Vendor Reps (session 28, 2026-03-23)
+
+- Pivot table `vendor_vendor_rep` already existed (`vendor_id`, `vendor_rep_id`)
+- `Vendor` model already had `reps()` belongsToMany
+- **Added**: `VendorRep::vendors()` belongsToMany inverse relationship
+- **Updated**: `VendorRepController` — `create()` passes all vendors; `store()` syncs selected vendor via pivot; `edit()` passes vendors + current vendor ID; `update()` syncs pivot (clears if blank)
+- **Updated**: create + edit blades — vendor dropdown added (optional, "— No vendor —" default)
+- Vendor assignment is optional; sync enforces one vendor per rep (clearing removes the link)
 
 ---
 
