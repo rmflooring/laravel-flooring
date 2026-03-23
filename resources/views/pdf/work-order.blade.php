@@ -208,11 +208,22 @@
 </div>
 @endif
 
-<div class="footer">
-    {{ $companyName }}
-    @if($phone) · {{ $phone }} @endif
-    @if($email) · {{ $email }} @endif
-    @if($website) · {{ $website }} @endif
+@php
+    $mobileUrl = route('mobile.work-orders.show', $workOrder);
+    $qrSvg     = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size(72)->margin(1)->generate($mobileUrl);
+    $qrDataUri = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+@endphp
+<div style="display:table; width:100%; margin-top:24px; border-top:1px solid #e5e7eb; padding-top:10px;">
+    <div style="display:table-cell; vertical-align:middle; font-size:10px; color:#888;">
+        {{ $companyName }}
+        @if($phone) &mdash; {{ $phone }} @endif
+        @if($email) &nbsp;|&nbsp; {{ $email }} @endif
+        @if($website) &nbsp;|&nbsp; {{ $website }} @endif
+    </div>
+    <div style="display:table-cell; vertical-align:middle; text-align:right; width:90pt;">
+        <img src="{{ $qrDataUri }}" style="width:72pt; height:72pt;">
+        <div style="font-size:8px; color:#aaa; margin-top:2px; text-align:center;">Scan for mobile</div>
+    </div>
 </div>
 
 </body>

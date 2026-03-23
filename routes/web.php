@@ -1069,6 +1069,10 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
     Route::get('inventory/{receipt}', [\App\Http\Controllers\Mobile\InventoryController::class, 'show'])
         ->middleware('role_or_permission:admin|view purchase orders')
         ->name('inventory.show');
+
+    Route::get('wo/{workOrder}', [\App\Http\Controllers\Mobile\WorkOrderController::class, 'show'])
+        ->middleware('role_or_permission:admin|view work orders')
+        ->name('work-orders.show');
 });
 
 require __DIR__ . '/auth.php';
