@@ -235,6 +235,12 @@ class PurchaseOrderController extends Controller
 
     public function create(Sale $sale)
     {
+        if ($sale->status === 'change_in_progress') {
+            return redirect()
+                ->route('pages.sales.show', $sale)
+                ->with('error', 'This sale has an active Change Order. Purchase Orders cannot be created until the Change Order is approved or cancelled.');
+        }
+
         if ($sale->status !== 'approved') {
             return redirect()
                 ->route('pages.sales.show', $sale)

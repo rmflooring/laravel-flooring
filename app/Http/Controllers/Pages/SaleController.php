@@ -22,11 +22,13 @@ class SaleController extends Controller
 		$status   = trim((string) $request->get('status', ''));
 		$dateFrom = trim((string) $request->get('date_from', ''));
 		$dateTo   = trim((string) $request->get('date_to', ''));
+		$hasCo    = $request->boolean('has_co', false);
 
 		$statusOptions = [
 			'open',
 			'sent',
 			'approved',
+			'change_in_progress',
 			'scheduled',
 			'in_progress',
 			'on_hold',
@@ -43,6 +45,11 @@ class SaleController extends Controller
 			$query->where('status', $status);
 		}
 
+		// Has change orders filter
+		if ($hasCo) {
+			$query->whereHas('changeOrders');
+		}
+
 		// Date range filters (created_at)
 		if ($dateFrom !== '') {
 			$query->whereDate('created_at', '>=', $dateFrom);
@@ -51,7 +58,7 @@ class SaleController extends Controller
 			$query->whereDate('created_at', '<=', $dateTo);
 		}
 
-		// Safe search across existing columns only
+		// Search — includes CO number via subquery
 		if ($q !== '') {
 			$table = (new Sale())->getTable();
 
@@ -70,7 +77,6 @@ class SaleController extends Controller
 			));
 
 			$query->where(function ($qq) use ($q, $existingCols) {
-				// id exact match if numeric
 				if (ctype_digit($q) && in_array('id', $existingCols, true)) {
 					$qq->orWhere('id', (int) $q);
 				}
@@ -79,11 +85,17 @@ class SaleController extends Controller
 					if ($col === 'id') continue;
 					$qq->orWhere($col, 'like', "%{$q}%");
 				}
+
+				// CO number search (e.g. "CO-1-3")
+				$qq->orWhereHas('changeOrders', fn ($cq) =>
+					$cq->where('co_number', 'like', "%{$q}%")
+				);
 			});
 		}
 
 		$sales = $query
-            ->withCount(['purchaseOrders', 'workOrders'])
+            ->withCount(['purchaseOrders', 'workOrders', 'changeOrders'])
+            ->with(['changeOrders' => fn($q) => $q->whereIn('status', ['draft', 'sent'])->limit(1)])
             ->paginate(25)->withQueryString();
 
 		return view('pages.sales.index', compact(
@@ -92,6 +104,7 @@ class SaleController extends Controller
 			'status',
 			'dateFrom',
 			'dateTo',
+			'hasCo',
 			'statusOptions'
 		));
 	}
@@ -108,6 +121,7 @@ class SaleController extends Controller
 			'purchaseOrders.items',
 			'workOrders.installer',
 			'workOrders.items',
+			'changeOrders',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		$itemPoStatusMap = $this->buildItemPoStatusMap($sale);

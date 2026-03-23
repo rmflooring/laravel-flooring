@@ -38,6 +38,16 @@ class Sale extends Model
         });
     }
 
+    public function changeOrders(): HasMany
+    {
+        return $this->hasMany(SaleChangeOrder::class)->orderByDesc('created_at');
+    }
+
+    public function activeChangeOrder(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SaleChangeOrder::class)->whereIn('status', ['draft', 'sent'])->latest();
+    }
+
     public function purchaseOrders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class)->orderByDesc('created_at');

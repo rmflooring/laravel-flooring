@@ -607,6 +607,31 @@ Route::prefix('pages')
 			->name('sales.work-orders.stage-pick-ticket')
 			->middleware('role_or_permission:admin|edit work orders');
 
+		// Change Orders
+		Route::get('sales/{sale}/change-orders/create', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'create'])
+			->name('sales.change-orders.create')
+			->middleware('role_or_permission:admin|edit estimates');
+
+		Route::post('sales/{sale}/change-orders', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'store'])
+			->name('sales.change-orders.store')
+			->middleware('role_or_permission:admin|edit estimates');
+
+		Route::get('sales/{sale}/change-orders/{changeOrder}', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'show'])
+			->name('sales.change-orders.show')
+			->middleware('role_or_permission:admin|edit estimates');
+
+		Route::get('sales/{sale}/change-orders/{changeOrder}/pdf', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'previewPdf'])
+			->name('sales.change-orders.pdf')
+			->middleware('role_or_permission:admin|edit estimates');
+
+		Route::post('sales/{sale}/change-orders/{changeOrder}/approve', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'approve'])
+			->name('sales.change-orders.approve')
+			->middleware('role_or_permission:admin|edit estimates');
+
+		Route::post('sales/{sale}/change-orders/{changeOrder}/cancel', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'cancel'])
+			->name('sales.change-orders.cancel')
+			->middleware('role_or_permission:admin|edit estimates');
+
 		// Inventory Records
 		Route::get('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'index'])
 			->middleware('role_or_permission:admin|view purchase orders')

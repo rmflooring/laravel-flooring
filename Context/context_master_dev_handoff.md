@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-22 (session 25)
+Updated: 2026-03-23 (session 27)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -367,6 +367,87 @@ Full details in `Context/context_purchase_orders.md`.
 
 ---
 
+## Change Orders (session 26, 2026-03-23)
+
+### Overview
+Change Orders (CO) allow a homeowner/job site customer to request scope changes to an approved sale before any materials are ordered. The CO snapshots the current sale state, tracks deltas as the user edits the sale, and produces a printable/emailable document for homeowner approval.
+
+### Business Rules
+- CO can only be created on an `approved` sale with no ordered/received POs and no scheduled/in-progress WOs
+- Any non-cancelled PO (including `pending`) blocks CO creation
+- Deleting an ordered/received PO does NOT re-enable CO creation (checked via `withTrashed()`)
+- While a CO is `draft` or `sent`: sale status = `change_in_progress`, PO/WO creation is blocked
+- CO approved → sale re-locks at new totals, `revised_contract_total` updated, status returns to `approved`
+- CO cancelled → sale items reverted from snapshot, original totals restored, status returns to `approved`
+- Multiple COs per sale allowed (sequentially, never concurrent)
+
+### Data Model
+- `sale_change_orders` — main CO record (`co_number` = `CO-{seq}-{sale_number}`)
+  - `status`: draft | sent | approved | rejected | cancelled
+  - `original_pretax_total`, `original_tax_amount`, `original_grand_total` — sale totals at CO creation
+  - `locked_pretax_total`, `locked_tax_amount`, `locked_grand_total` — frozen on approval
+  - `sent_at`, `approved_at`, `approved_by`
+- `sale_change_order_rooms` — snapshot of rooms at CO creation; `sale_room_id` links back to live room
+- `sale_change_order_items` — snapshot of items; `sale_item_id` is a plain nullable integer (NO FK constraint — see below)
+- `sales.status` enum includes `change_in_progress`
+
+### Critical Design Decision — Positional Delta Matching
+**Problem**: `SaleController::update()` does a full delete+recreate of all items on every save (`SaleItem::where('sale_room_id', $id)->delete()` then recreates). This gives items new IDs on every save, making ID-based FK links useless.
+
+**Why FK was dropped**: MariaDB `ON DELETE SET NULL` fired on every save, wiping all `sale_item_id` values on snapshot items. Additionally, `ON DELETE SET NULL` does not reliably roll back within failed transactions in MariaDB.
+
+**Solution**: `ChangeOrderService::calculateDelta()` uses **positional sort_order matching** — snapshot items and current items are both sorted by `sort_order` and matched index-by-index within each room. This is robust regardless of how items are saved.
+
+### Delta Calculation (`ChangeOrderService::calculateDelta()`)
+- Matches snapshot rooms → current rooms via `sale_room_id`
+- Matches snapshot items → current items positionally by `sort_order` index (NOT by ID)
+- If snap item exists but no current item at that index → "removed"
+- If no snap item but current item exists at that index → "added"
+- Both exist → compare `line_total` and label → "changed" or "unchanged"
+- New rooms with no snapshot counterpart (new `sale_room_id` not in snapshot) → "added"
+- Returns: `rooms[]` with `rows[]` (status: added/removed/changed/unchanged), plus `orig_grand_total`, `new_grand_total`, `grand_delta`
+
+### Revert Logic (`ChangeOrderService::revert()`)
+- For each snapshot room: deletes ALL current items then rebuilds from snapshot data directly
+- Does NOT rely on `sale_item_id` — safe regardless of FK state
+- Guards `whereNotIn` with empty array check (empty array would match ALL rooms)
+- Cancels the CO, re-locks sale at original totals
+
+### Key Files
+- Service: `app/Services/ChangeOrderService.php` — create (snapshot), calculateDelta, approve, revert, markSent
+- Controller: `app/Http/Controllers/Pages/ChangeOrderController.php`
+- Models: `app/Models/SaleChangeOrder.php`, `SaleChangeOrderRoom.php`, `SaleChangeOrderItem.php`
+- Views: `resources/views/pages/change-orders/create.blade.php`, `show.blade.php`
+- PDF: `resources/views/pdf/change-order.blade.php`
+- Migrations: `2026_03_23_025836_patch_change_order_tables_add_missing_fields`, `2026_03_23_033518_drop_fk_on_sale_change_order_items_sale_item_id`
+
+### Routes
+All nested under `pages/sales/{sale}/change-orders/`:
+- `pages.sales.change-orders.create` / `.store` / `.show` / `.approve` / `.cancel` / `.pdf`
+- Permission: `role_or_permission:admin|edit estimates`
+
+### CO Section on Sale Show Page
+- Shows table of all COs with status, original total, delta (approved COs only), revised total
+- "New Change Order" button: only shown when status = `approved`, no active COs, no blocking POs
+- Shows "CO in progress" label when active CO exists; "Blocked — POs exist" when ordered POs present
+
+### CO on Sales Index Page
+- "Has Change Orders" checkbox filter (`has_co=1`) — filters to sales with at least one CO
+- CO # search added to main search field (searches `co_number` via `whereHas('changeOrders', ...)`)
+- Status dropdown includes `change_in_progress` with label "Change In Progress"
+- CO badge in status column: amber linked badge for active draft/sent CO, grey count badge for closed COs
+
+### PDF Notes
+- Template: `resources/views/pdf/change-order.blade.php`
+- **Important**: inline Blade `@if/@endif` on same line as `{{ }}` output causes ParseError in DomPDF context — use ternary expressions instead: `{{ $phone ? ' · '.$phone : '' }}`
+
+### Open Items
+- Email CO to homeowner (send modal + Graph mail, same pattern as sale/estimate)
+- Mark CO as "sent" / track `sent_at` / homeowner approval date via email flow
+- `change_in_progress` badge in sale **edit** page status dropdown (index already done)
+
+---
+
 ## RFC / RTV modules (session 24, 2026-03-22)
 
 ### RFC — Request for Customer Return
@@ -432,7 +513,7 @@ Full details in `Context/context_purchase_orders.md`.
 | Profits page | `resources/views/pages/profits/show.blade.php` |
 | Estimate builder JS | `public/assets/js/estimates/estimate.js` |
 | Sale builder JS | `public/assets/js/sales/sale.js` |
-| PDF templates | `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php`, `resources/views/pdf/purchase-order.blade.php`, `resources/views/pdf/work-order.blade.php` |
+| PDF templates | `resources/views/pdf/estimate.blade.php`, `resources/views/pdf/sale.blade.php`, `resources/views/pdf/purchase-order.blade.php`, `resources/views/pdf/work-order.blade.php`, `resources/views/pdf/change-order.blade.php` |
 | PO controller | `app/Http/Controllers/Pages/PurchaseOrderController.php` |
 | PO views | `resources/views/pages/purchase-orders/` |
 | PO models | `app/Models/PurchaseOrder.php`, `app/Models/PurchaseOrderItem.php` |

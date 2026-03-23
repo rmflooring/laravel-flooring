@@ -64,6 +64,12 @@ class WorkOrderController extends Controller
 
     public function create(Sale $sale)
     {
+        if ($sale->status === 'change_in_progress') {
+            return redirect()
+                ->route('pages.sales.show', $sale)
+                ->with('error', 'This sale has an active Change Order. Work Orders cannot be created until the Change Order is approved or cancelled.');
+        }
+
         $rooms = $sale->rooms()
             ->with(['items' => fn($q) => $q->whereIn('item_type', ['labour', 'material'])
                 ->where('is_removed', false)
@@ -79,6 +85,12 @@ class WorkOrderController extends Controller
 
     public function store(Sale $sale, Request $request)
     {
+        if ($sale->status === 'change_in_progress') {
+            return redirect()
+                ->route('pages.sales.show', $sale)
+                ->with('error', 'This sale has an active Change Order. Work Orders cannot be created until it is resolved.');
+        }
+
         $data = $request->validate([
             'installer_id'   => ['nullable', 'integer', 'exists:installers,id'],
             'scheduled_date' => ['nullable', 'date'],

@@ -38,6 +38,7 @@ This file allows us to resume development later without rethinking architecture 
 open
 sent
 approved
+change_in_progress
 scheduled
 in_progress
 on_hold
@@ -46,6 +47,9 @@ partially_invoiced
 invoiced
 cancelled
 ```
+
+- `sent` — set automatically when sale email is sent to homeowner
+- `change_in_progress` — set when a draft/sent Change Order exists; blocks PO/WO creation
 
 ## Invoicing Status Logic
 - `partially_invoiced` when:
@@ -100,22 +104,39 @@ locked_grand_total + sum(approved CO locked totals)
 # 5. Change Orders (COs)
 
 ## Purpose
-Handle scope additions or credits after Sale creation.
+Handle scope additions or credits after a Sale is approved, before any POs are ordered.
 
 ## CO Header (`sale_change_orders`)
 - Linked to `sale_id`
 - Status: draft, sent, approved, rejected, cancelled
-- CO totals
-- Locked snapshot on approval
+- `co_number` auto-generated: `CO-{seq}-{sale_number}`
+- Snapshots `original_grand_total` at creation for delta tracking
+- `locked_grand_total` frozen on approval
 
-## CO Items
-- Same structure as Sale Items
-- Supports credits via:
-  - Negative quantity (recommended approach)
+## CO Rooms / Items
+- `sale_change_order_rooms` — room snapshots; `sale_room_id` FK back to live room
+- `sale_change_order_items` — item snapshots; `sale_item_id` is plain nullable integer (no FK constraint)
+- **No FK on sale_item_id** — sale update deletes+recreates all items on every save; FK caused ON DELETE SET NULL to wipe all snapshot links. Delta uses positional sort_order matching instead.
+
+## Delta Calculation
+- Snapshot items matched to current items positionally by sort_order index within each room
+- Statuses: added / removed / changed / unchanged
+- `ChangeOrderService::calculateDelta()` returns structured rooms[] array with grand totals
+
+## Revert
+- Deletes all current items in each snapshot room, rebuilds directly from snapshot data
+- Does not rely on sale_item_id; safe regardless of FK state
+
+## Sales Status
+- `change_in_progress` added to `sales.status` enum — set when a draft/sent CO exists
+- PO and WO creation blocked while `change_in_progress`
 
 ## Tax Handling
 - CO always uses the Sale’s tax group and rate
 - No separate tax selector for CO
+
+## Full Implementation Details
+See `Context/context_master_dev_handoff.md` → "Change Orders (session 26)"
 
 ---
 

@@ -43,7 +43,7 @@
                                 </svg>
                             </div>
                             <input type="text" name="q" value="{{ $q }}"
-                                   placeholder="Sale #, estimate #, customer, job, PM..."
+                                   placeholder="Sale #, estimate #, customer, job, PM, CO #..."
                                    class="block w-full pl-10 p-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
@@ -55,7 +55,7 @@
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                             <option value="">All</option>
                             @foreach ($statusOptions as $opt)
-                                <option value="{{ $opt }}" @selected($status === $opt)>{{ $opt }}</option>
+                                <option value="{{ $opt }}" @selected($status === $opt)>{{ $statusLabels[$opt] ?? $opt }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -75,7 +75,14 @@
                     </div>
 
                     {{-- Buttons --}}
-                    <div class="md:col-span-12 flex flex-wrap items-center gap-2">
+                    <div class="md:col-span-12 flex flex-wrap items-center gap-4">
+                        {{-- Has CO checkbox --}}
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                            <input type="checkbox" name="has_co" value="1" @checked($hasCo)
+                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            Has Change Orders
+                        </label>
+
                         <button type="submit"
                                 class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
                             Apply Filters
@@ -96,6 +103,21 @@
             </form>
 
             {{-- Table --}}
+            @php
+                $statusLabels = [
+                    'open'                => 'Open',
+                    'sent'                => 'Sent',
+                    'approved'            => 'Approved',
+                    'change_in_progress'  => 'Change In Progress',
+                    'scheduled'           => 'Scheduled',
+                    'in_progress'         => 'In Progress',
+                    'on_hold'             => 'On Hold',
+                    'completed'           => 'Completed',
+                    'partially_invoiced'  => 'Partially Invoiced',
+                    'invoiced'            => 'Invoiced',
+                    'cancelled'           => 'Cancelled',
+                ];
+            @endphp
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-700">
@@ -118,12 +140,17 @@
         @php
             $statusVal = $sale->status ?? 'open';
             $badge = match ($statusVal) {
-                'completed', 'invoiced' => 'bg-green-100 text-green-800',
-                'in_progress'           => 'bg-blue-100 text-blue-800',
-                'on_hold'               => 'bg-yellow-100 text-yellow-800',
-                'cancelled'             => 'bg-red-100 text-red-800',
-                default                 => 'bg-gray-100 text-gray-800',
+                'completed', 'invoiced'  => 'bg-green-100 text-green-800',
+                'in_progress'            => 'bg-blue-100 text-blue-800',
+                'on_hold'                => 'bg-yellow-100 text-yellow-800',
+                'cancelled'              => 'bg-red-100 text-red-800',
+                'approved'               => 'bg-emerald-100 text-emerald-800',
+                'sent'                   => 'bg-sky-100 text-sky-800',
+                'change_in_progress'     => 'bg-amber-100 text-amber-800',
+                default                  => 'bg-gray-100 text-gray-800',
             };
+            $statusLabel = $statusLabels[$statusVal] ?? $statusVal;
+            $activeCo    = $sale->changeOrders->first(); // eager-loaded active CO (draft/sent only)
 
             $isLocked = !empty($sale->locked_at);
             $lockedBadge = $isLocked ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800';
@@ -158,13 +185,25 @@
 
             <td class="px-6 py-4">
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $badge }}">
-                    {{ $statusVal }}
+                    {{ $statusLabel }}
                 </span>
 
-                @if (!empty($sale->has_changes))
-                    <span class="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        Changed
-                    </span>
+                @if ($sale->change_orders_count > 0)
+                    <div class="mt-1">
+                        @if($activeCo)
+                            <a href="{{ route('pages.sales.change-orders.show', [$sale, $activeCo]) }}"
+                               class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200">
+                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                </svg>
+                                {{ $activeCo->co_number }} — Active
+                            </a>
+                        @else
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                {{ $sale->change_orders_count }} {{ Str::plural('CO', $sale->change_orders_count) }}
+                            </span>
+                        @endif
+                    </div>
                 @endif
             </td>
 

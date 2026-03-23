@@ -558,6 +558,119 @@
             </div>
             @endcan
 
+            {{-- Change Orders Section --}}
+            @can('edit estimates')
+            <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+
+            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                <h3 class="font-semibold text-gray-900 dark:text-white">Change Orders</h3>
+                <div class="flex items-center gap-2">
+                    @if($sale->status === 'approved')
+                        @php
+                            $hasActiveCo = $sale->changeOrders->whereIn('status', ['draft', 'sent'])->isNotEmpty();
+                            $hasOrderedPo = $sale->purchaseOrders->whereNotIn('status', ['cancelled', 'pending'])->isNotEmpty();
+                        @endphp
+                        @if($hasActiveCo)
+                            <span class="text-xs text-amber-700 dark:text-amber-400">CO in progress</span>
+                        @elseif($hasOrderedPo)
+                            <span class="text-xs text-gray-400 dark:text-gray-500">Blocked — POs exist</span>
+                        @else
+                            <a href="{{ route('pages.sales.change-orders.create', $sale) }}"
+                               class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                New Change Order
+                            </a>
+                        @endif
+                    @elseif($sale->status === 'change_in_progress')
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-300">
+                            Change In Progress
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            @if($sale->changeOrders->isEmpty())
+                <div class="px-5 py-6 text-sm text-gray-400">No change orders yet.</div>
+            @else
+                @php
+                    $coStatusColors = [
+                        'draft'     => 'bg-gray-100 text-gray-700',
+                        'sent'      => 'bg-sky-100 text-sky-800',
+                        'approved'  => 'bg-green-100 text-green-800',
+                        'rejected'  => 'bg-red-100 text-red-800',
+                        'cancelled' => 'bg-gray-100 text-gray-500',
+                    ];
+                @endphp
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                            <th class="px-5 py-3 text-left">CO #</th>
+                            <th class="px-4 py-3 text-left">Title</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                            <th class="px-4 py-3 text-right">Original</th>
+                            <th class="px-4 py-3 text-right">Delta</th>
+                            <th class="px-4 py-3 text-right">Revised Total</th>
+                            <th class="px-4 py-3 text-left">Date</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+                        @foreach($sale->changeOrders as $co)
+                            @php
+                                $coDelta = $co->original_grand_total > 0
+                                    ? ($sale->grand_total - $co->original_grand_total)
+                                    : null;
+                            @endphp
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-5 py-3 font-medium text-gray-900 dark:text-white">
+                                    <a href="{{ route('pages.sales.change-orders.show', [$sale, $co]) }}"
+                                       class="text-blue-600 hover:underline dark:text-blue-400">
+                                        {{ $co->co_number }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ $co->title ?: '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $coStatusColors[$co->status] ?? '' }}">
+                                        {{ ucfirst($co->status) }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
+                                    ${{ number_format($co->original_grand_total, 2) }}
+                                </td>
+                                <td class="px-4 py-3 text-right font-semibold">
+                                    @if($co->status === 'approved' && $coDelta !== null)
+                                        <span class="{{ $coDelta >= 0 ? 'text-green-700' : 'text-red-600' }}">
+                                            {{ $coDelta >= 0 ? '+' : '' }}${{ number_format($coDelta, 2) }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-200">
+                                    @if($co->status === 'approved')
+                                        ${{ number_format($co->locked_grand_total, 2) }}
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+                                    {{ $co->created_at->format('M j, Y') }}
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <a href="{{ route('pages.sales.change-orders.show', [$sale, $co]) }}"
+                                       class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">View</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+
+            </div>
+            @endcan
+
         </div>
     </div>
 
