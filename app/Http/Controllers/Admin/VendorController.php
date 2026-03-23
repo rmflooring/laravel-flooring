@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Installer;
 use App\Models\Vendor;
 use App\Models\VendorRep;
 use Illuminate\Http\Request;
@@ -177,8 +178,10 @@ class VendorController extends Controller
 
         $reps = VendorRep::pluck('name', 'id');
         $selectedReps = $vendor->reps->pluck('id')->toArray();
+        $installers = Installer::orderBy('contact_name')->get(['id', 'contact_name', 'vendor_id']);
+        $linkedInstallerId = Installer::where('vendor_id', $vendor->id)->value('id');
 
-        return view('admin.vendors.edit', compact('vendor', 'provinces', 'vendorTypes', 'reps', 'selectedReps'));
+        return view('admin.vendors.edit', compact('vendor', 'provinces', 'vendorTypes', 'reps', 'selectedReps', 'installers', 'linkedInstallerId'));
     }
 
     // start update function
@@ -198,8 +201,24 @@ class VendorController extends Controller
 
         $vendor->update($request->all());
 
-        // Sync the selected reps
-        $vendor->reps()->sync($request->reps ?? []);
+        if ($request->input('vendor_type') === 'Subcontractor') {
+            // Clear any previously linked installer for this vendor
+            Installer::where('vendor_id', $vendor->id)->update(['vendor_id' => null]);
+
+            // Link the selected installer (if any)
+            if ($request->filled('installer_id')) {
+                Installer::where('id', $request->installer_id)->update(['vendor_id' => $vendor->id]);
+            }
+
+            // Clear reps for subcontractors
+            $vendor->reps()->sync([]);
+        } else {
+            // Sync the selected reps
+            $vendor->reps()->sync($request->reps ?? []);
+
+            // Clear any installer link if type changed away from Subcontractor
+            Installer::where('vendor_id', $vendor->id)->update(['vendor_id' => null]);
+        }
 
         return redirect()->route('admin.vendors.index')->with('success', 'Vendor updated successfully.');
     }

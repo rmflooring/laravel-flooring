@@ -5,7 +5,8 @@
                 <div class="p-6 text-gray-900">
                     <h1 class="text-3xl font-bold mb-6">Edit Vendor: {{ $vendor->company_name }}</h1>
 
-                    <form method="POST" action="{{ route('admin.vendors.update', $vendor) }}">
+                    <form method="POST" action="{{ route('admin.vendors.update', $vendor) }}"
+                          x-data="{ vendorType: '{{ old('vendor_type', $vendor->vendor_type) }}' }">
                         @csrf
                         @method('PATCH')
 
@@ -42,7 +43,7 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Vendor Type</label>
-                                <select name="vendor_type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <select name="vendor_type" x-model="vendorType" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     @foreach($vendorTypes as $value => $label)
                                         <option value="{{ $value }}" {{ old('vendor_type', $vendor->vendor_type) == $value ? 'selected' : '' }}>{{ $label }}</option>
                                     @endforeach
@@ -93,15 +94,31 @@
                                 <input type="text" name="terms" value="{{ old('terms', $vendor->terms) }}" placeholder="e.g., Net 30" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             </div>
 
-       			<div class="md:col-span-2">
-    			<label class="block text-sm font-medium text-gray-700 mb-2">Vendor Reps</label>
-    			<select name="reps[]" multiple class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-32">
-        			@foreach($reps as $id => $name)
-            			<option value="{{ $id }}" {{ in_array($id, $selectedReps ?? []) ? 'selected' : '' }}>{{ $name }}</option>
-        			@endforeach
-    				</select>
-    				<p class="text-xs text-gray-500 mt-1">Hold Ctrl (Windows) or Cmd (Mac) to select multiple reps.</p>
-			</div>
+                            {{-- Vendor Reps — shown for all types except Subcontractor --}}
+                            <div class="md:col-span-2" x-show="vendorType !== 'Subcontractor'">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Vendor Reps</label>
+                                <select name="reps[]" multiple class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-32">
+                                    @foreach($reps as $id => $name)
+                                        <option value="{{ $id }}" {{ in_array($id, $selectedReps ?? []) ? 'selected' : '' }}>{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Hold Ctrl (Windows) or Cmd (Mac) to select multiple reps.</p>
+                            </div>
+
+                            {{-- Installer — shown only for Subcontractor --}}
+                            <div class="md:col-span-2" x-show="vendorType === 'Subcontractor'">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Installer</label>
+                                <select name="installer_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">— No installer linked —</option>
+                                    @foreach($installers as $installer)
+                                        <option value="{{ $installer->id }}"
+                                            {{ old('installer_id', $linkedInstallerId) == $installer->id ? 'selected' : '' }}>
+                                            {{ $installer->contact_name ?: '(no contact name)' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Link this subcontractor vendor to an installer record.</p>
+                            </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>

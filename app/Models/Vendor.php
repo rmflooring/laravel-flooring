@@ -63,8 +63,14 @@ class Vendor extends Model
 
     // A vendor can have many reps (many-to-many)
     public function reps()
-	{
-    return $this->belongsToMany(VendorRep::class, 'vendor_vendor_rep');
-	}
+    {
+        return $this->belongsToMany(VendorRep::class, 'vendor_vendor_rep');
+    }
+
+    // A subcontractor vendor may have a linked installer
+    public function installers()
+    {
+        return $this->hasMany(Installer::class);
+    }
 
 }
