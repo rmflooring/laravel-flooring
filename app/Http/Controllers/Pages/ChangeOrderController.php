@@ -6,8 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use App\Models\SaleChangeOrder;
 use App\Services\ChangeOrderService;
+use App\Services\GraphMailService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ChangeOrderController extends Controller
 {
@@ -41,9 +42,15 @@ class ChangeOrderController extends Controller
     {
         abort_unless($changeOrder->sale_id === $sale->id, 404);
 
-        $delta = $this->service->calculateDelta($changeOrder);
+        $sale->loadMissing(['sourceEstimate', 'opportunity.projectManager']);
 
-        return view('pages.change-orders.show', compact('sale', 'changeOrder', 'delta'));
+        $delta         = $this->service->calculateDelta($changeOrder);
+        $homeownerEmail = $sale->job_email ?: ($sale->sourceEstimate?->homeowner_email ?? '');
+        $pmEmail        = $sale->opportunity?->projectManager?->email;
+
+        [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale, $changeOrder);
+
+        return view('pages.change-orders.show', compact('sale', 'changeOrder', 'delta', 'homeownerEmail', 'pmEmail', 'emailSubject', 'emailBody'));
     }
 
     public function approve(Request $request, Sale $sale, SaleChangeOrder $changeOrder)
@@ -76,13 +83,78 @@ class ChangeOrderController extends Controller
 
         $delta = $this->service->calculateDelta($changeOrder);
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.change-order', compact('sale', 'changeOrder', 'delta'));
+        $pdf = Pdf::loadView('pdf.change-order', compact('sale', 'changeOrder', 'delta'));
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->stream("CO-{$changeOrder->co_number}.pdf");
     }
 
+    public function sendEmail(Request $request, Sale $sale, SaleChangeOrder $changeOrder)
+    {
+        abort_unless($changeOrder->sale_id === $sale->id, 404);
+
+        $request->validate([
+            'to'      => ['required', 'email'],
+            'subject' => ['required', 'string', 'max:255'],
+            'body'    => ['required', 'string'],
+            'cc'      => ['nullable', 'array'],
+            'cc.*'    => ['nullable', 'email'],
+        ]);
+
+        $user   = auth()->user();
+        $mailer = app(GraphMailService::class);
+        $cc     = array_filter($request->input('cc', []));
+
+        $delta      = $this->service->calculateDelta($changeOrder);
+        $pdfContent = Pdf::loadView('pdf.change-order', compact('sale', 'changeOrder', 'delta'))->output();
+        $attachment = [
+            'filename' => "{$changeOrder->co_number}.pdf",
+            'content'  => base64_encode($pdfContent),
+        ];
+
+        $sent = $user->microsoftAccount?->mail_connected
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', $attachment, $cc ?: null)
+            : false;
+
+        if (! $sent) {
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', null, $attachment, $cc ?: null);
+        }
+
+        if (! $sent) {
+            return back()->with('error', 'Failed to send email. Check the mail log for details.');
+        }
+
+        $this->service->markSent($changeOrder, $user->id);
+
+        return back()->with('success', "Change Order {$changeOrder->co_number} emailed to {$request->input('to')}.");
+    }
+
     // ── Private helpers ──────────────────────────────────────────────────────
+
+    private function resolveEmailTemplate(Sale $sale, SaleChangeOrder $changeOrder): array
+    {
+        $user        = auth()->user();
+        $customerName = $sale->homeowner_name ?: ($sale->customer_name ?? '');
+        $jobRef      = $sale->job_name ?: "Sale #{$sale->sale_number}";
+
+        $subject = "Change Order {$changeOrder->co_number} — {$jobRef}";
+
+        $body  = "Hi" . ($customerName ? " {$customerName}" : '') . ",\n\n";
+        $body .= "Please find attached Change Order {$changeOrder->co_number}";
+        if ($changeOrder->title) {
+            $body .= " — {$changeOrder->title}";
+        }
+        $body .= ".\n\n";
+
+        if ($changeOrder->reason) {
+            $body .= "Reason for change: {$changeOrder->reason}\n\n";
+        }
+
+        $body .= "Please review the attached document and let us know if you have any questions.\n\n";
+        $body .= "Regards,\n{$user->name}";
+
+        return [$subject, $body];
+    }
 
     private function authorizeCoCreate(Sale $sale): void
     {

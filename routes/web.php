@@ -632,6 +632,10 @@ Route::prefix('pages')
 			->name('sales.change-orders.cancel')
 			->middleware('role_or_permission:admin|edit estimates');
 
+		Route::post('sales/{sale}/change-orders/{changeOrder}/send-email', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'sendEmail'])
+			->name('sales.change-orders.send-email')
+			->middleware('role_or_permission:admin|edit estimates');
+
 		// Inventory Records
 		Route::get('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'index'])
 			->middleware('role_or_permission:admin|view purchase orders')
