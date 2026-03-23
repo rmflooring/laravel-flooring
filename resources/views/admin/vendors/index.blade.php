@@ -87,7 +87,9 @@
                                 @forelse($vendors as $vendor)
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {{ $vendor->company_name ?? '-' }}
+                                            <a href="{{ route('admin.vendors.show', $vendor) }}" class="text-blue-600 hover:underline">
+                                                {{ $vendor->company_name ?? '-' }}
+                                            </a>
                                         </td>
 
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

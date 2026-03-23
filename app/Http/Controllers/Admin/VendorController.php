@@ -83,6 +83,13 @@ class VendorController extends Controller
         return view('admin.vendors.index', compact('vendors', 'statusOptions', 'typeOptions'));
     }
 
+    public function show(Vendor $vendor)
+    {
+        $vendor->load(['reps', 'creator', 'updater']);
+
+        return view('admin.vendors.show', compact('vendor'));
+    }
+
     // create function starts
     public function create()
     {
