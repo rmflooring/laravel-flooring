@@ -48,7 +48,9 @@ class WarehousePickTicketController extends Controller
     {
         $pickTicket->load(['sale', 'workOrder.installer', 'items.saleItem.room', 'creator', 'updater', 'unstagedBy']);
 
-        return view('pages.warehouse.pick-tickets.show', compact('pickTicket'));
+        $packingList = \App\Models\PackingList::where('pick_ticket_id', $pickTicket->id)->first();
+
+        return view('pages.warehouse.pick-tickets.show', compact('pickTicket', 'packingList'));
     }
 
     public function pdf(PickTicket $pickTicket): Response

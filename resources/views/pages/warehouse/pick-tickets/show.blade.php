@@ -112,6 +112,30 @@
                                        class="inline-flex items-center rounded-md border border-amber-400 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-900/20">
                                         Create RFC
                                     </a>
+
+                                    {{-- Packing List --}}
+                                    @if($packingList)
+                                        <a href="{{ route('pages.warehouse.packing-lists.show', $packingList) }}"
+                                           class="inline-flex items-center rounded-md border border-indigo-400 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:text-indigo-400 dark:hover:bg-indigo-900/20">
+                                            <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                            </svg>
+                                            View Packing List
+                                        </a>
+                                    @else
+                                        <form method="POST" action="{{ route('pages.warehouse.packing-lists.store', $pickTicket) }}">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="inline-flex items-center rounded-md border border-indigo-400 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:text-indigo-400 dark:hover:bg-indigo-900/20">
+                                                <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                </svg>
+                                                Create Packing List
+                                            </button>
+                                        </form>
+                                    @endif
                                 @endif
 
                                 {{-- Revert status --}}

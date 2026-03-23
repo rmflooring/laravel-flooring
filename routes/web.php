@@ -652,6 +652,19 @@ Route::prefix('pages')
 			->name('inventory.show');
 
 		// Warehouse — Pick Tickets + Receive Inventory
+		// Packing Lists
+		Route::post('warehouse/pick-tickets/{pickTicket}/packing-lists', [\App\Http\Controllers\Pages\PackingListController::class, 'store'])
+			->middleware('role_or_permission:admin|view pick tickets')
+			->name('warehouse.packing-lists.store');
+
+		Route::get('warehouse/packing-lists/{packingList}', [\App\Http\Controllers\Pages\PackingListController::class, 'show'])
+			->middleware('role_or_permission:admin|view pick tickets')
+			->name('warehouse.packing-lists.show');
+
+		Route::get('warehouse/packing-lists/{packingList}/pdf', [\App\Http\Controllers\Pages\PackingListController::class, 'pdf'])
+			->middleware('role_or_permission:admin|view pick tickets')
+			->name('warehouse.packing-lists.pdf');
+
 		Route::prefix('warehouse')->name('warehouse.')->group(function () {
 			Route::get('receive', [\App\Http\Controllers\Pages\WarehouseReceiveController::class, 'index'])
 				->middleware('role_or_permission:admin|view purchase orders')
