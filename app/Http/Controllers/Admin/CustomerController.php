@@ -124,7 +124,7 @@ public function store(Request $request)
     $request->validate([
         'name' => 'nullable|string|max:255',
         'company_name' => 'nullable|string|max:255',
-        'email' => 'nullable|email|unique:customers,email',
+        'email' => 'nullable|email|max:255',
         'phone' => 'nullable|string',
         'mobile' => 'nullable|string',
         'parent_id' => 'nullable|exists:customers,id',
