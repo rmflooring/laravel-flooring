@@ -76,57 +76,55 @@ public function index(Opportunity $opportunity, Request $request)
         $userId = Auth::id();
 
         // ✅ apply to every uploaded file in this batch
-        $labelId     = $request->input(‘label_id’);
-        $description = $request->input(‘description’);
+        $labelId     = $request->input('label_id');
+        $description = $request->input('description');
 
         // Auto-detect the "Photos" label for image uploads when no label chosen
-        $photosLabelId = $labelId ?? OpportunityDocumentLabel::where(‘name’, ‘Photos’)
-            ->where(‘is_active’, true)
-            ->value(‘id’);
+        $photosLabelId = $labelId ?? (OpportunityDocumentLabel::where('name', 'Photos')->where('is_active', true)->value('id'));
 
-        foreach ($request->file(‘files’, []) as $file) {
-            $mime = $file->getMimeType() ?? ‘’;
+        foreach ($request->file('files', []) as $file) {
+            $mime = $file->getMimeType() ?? '';
 
             // Category values (plural)
-            $category = (str_starts_with($mime, ‘image/’) || str_starts_with($mime, ‘video/’))
-                ? ‘media’
-                : ‘documents’;
+            $category = (str_starts_with($mime, 'image/') || str_starts_with($mime, 'video/'))
+                ? 'media'
+                : 'documents';
 
             // Auto-apply "Photos" label to images when no label was manually selected
-            $resolvedLabelId = (str_starts_with($mime, ‘image/’) && ! $labelId)
+            $resolvedLabelId = (str_starts_with($mime, 'image/') && ! $labelId)
                 ? $photosLabelId
                 : $labelId;
 
-            // Save in public disk so it’s accessible via /storage/...
-            $disk = ‘public’;
+            // Save in public disk so it's accessible via /storage/...
+            $disk = 'public';
             $dir  = "opportunities/{$opportunity->id}";
 
             $path = $file->store($dir, $disk);
 
-            \Log::info(‘[docs] stored file’, [
-                ‘opportunity_id’ => $opportunity->id,
-                ‘path’           => $path,
-                ‘mime’           => $mime,
-                ‘original’       => $file->getClientOriginalName(),
+            \Log::info('[docs] stored file', [
+                'opportunity_id' => $opportunity->id,
+                'path'           => $path,
+                'mime'           => $mime,
+                'original'       => $file->getClientOriginalName(),
             ]);
 
             OpportunityDocument::create([
-                ‘opportunity_id’ => $opportunity->id,
-                ‘disk’           => $disk,
-                ‘path’           => $path,
-                ‘original_name’  => $file->getClientOriginalName(),
-                ‘stored_name’    => basename($path),
-                ‘mime_type’      => $mime,
-                ‘extension’      => $file->getClientOriginalExtension(),
-                ‘size_bytes’     => $file->getSize(),
-                ‘category’       => $category,
+                'opportunity_id' => $opportunity->id,
+                'disk'           => $disk,
+                'path'           => $path,
+                'original_name'  => $file->getClientOriginalName(),
+                'stored_name'    => basename($path),
+                'mime_type'      => $mime,
+                'extension'      => $file->getClientOriginalExtension(),
+                'size_bytes'     => $file->getSize(),
+                'category'       => $category,
 
                 // ✅ NEW
-                ‘label_id’       => $resolvedLabelId,
-                ‘description’    => $description,
+                'label_id'       => $resolvedLabelId,
+                'description'    => $description,
 
-                ‘created_by’     => $userId,
-                ‘updated_by’     => $userId,
+                'created_by'     => $userId,
+                'updated_by'     => $userId,
             ]);
         }
 
