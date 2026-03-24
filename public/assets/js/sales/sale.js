@@ -98,7 +98,7 @@ function applyWideMode(isWide) {
 
   function formatMoney(value) {
     const n = Number(value);
-    return isNaN(n) ? "$0.00" : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+    return isNaN(n) ? "$0.00" : "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
   function parseNumber(value) {
