@@ -24,36 +24,108 @@
         </div>
 
         {{-- Media Controls --}}
+<div x-data="mediaGallery()" x-init="init()" :data-select-mode="selectMode">
+
 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
     <div class="text-sm text-gray-600">
         Showing {{ $media->total() }} media file(s)
     </div>
 
-    <form method="GET" class="flex flex-wrap items-center gap-3">
-        {{-- Uploader filter --}}
-        @if($uploaders->isNotEmpty())
-        <select name="uploaded_by"
-                onchange="this.form.submit()"
-                class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            <option value="">All uploaders</option>
-            @foreach($uploaders as $u)
-                <option value="{{ $u->id }}" {{ (string)$uploadedBy === (string)$u->id ? 'selected' : '' }}>
-                    {{ $u->name }}
-                </option>
-            @endforeach
-        </select>
-        @endif
+    <div class="flex flex-wrap items-center gap-3">
+        <form method="GET" class="flex flex-wrap items-center gap-3">
+            @if($uploaders->isNotEmpty())
+            <select name="uploaded_by"
+                    onchange="this.form.submit()"
+                    class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All uploaders</option>
+                @foreach($uploaders as $u)
+                    <option value="{{ $u->id }}" {{ (string)$uploadedBy === (string)$u->id ? 'selected' : '' }}>
+                        {{ $u->name }}
+                    </option>
+                @endforeach
+            </select>
+            @endif
 
-        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox"
+                       name="show_archived"
+                       value="1"
+                       onchange="this.form.submit()"
+                       {{ $showArchived ? 'checked' : '' }}
+                       class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                Show Archived
+            </label>
+        </form>
+
+        {{-- Select toggle --}}
+        @if($media->count() > 0)
+        <button type="button"
+                @click="toggleSelectMode()"
+                class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="selectMode ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span x-text="selectMode ? 'Cancel' : 'Select'"></span>
+        </button>
+        @endif
+    </div>
+</div>
+
+{{-- Selection action bar --}}
+<div x-show="selectMode" x-cloak
+     class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
+    <div class="flex items-center gap-3">
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-blue-800 cursor-pointer">
             <input type="checkbox"
-                   name="show_archived"
-                   value="1"
-                   onchange="this.form.submit()"
-                   {{ $showArchived ? 'checked' : '' }}
+                   @change="toggleAll($event.target.checked)"
+                   :checked="selected.length > 0 && selected.length === totalTiles"
+                   :indeterminate="selected.length > 0 && selected.length < totalTiles"
                    class="w-4 h-4 text-blue-600 border-gray-300 rounded">
-            Show Archived
+            Select All
         </label>
-    </form>
+        <span class="text-sm text-blue-700" x-text="selected.length + ' selected'"></span>
+    </div>
+
+    <div class="flex items-center gap-2" x-show="selected.length > 0">
+        {{-- Soft delete (archive) --}}
+        <form method="POST"
+              action="{{ route('pages.opportunities.documents.bulkDestroy', $opportunity) }}"
+              @submit.prevent="submitBulk($el)">
+            @csrf
+            @method('DELETE')
+            <template x-for="id in selected" :key="id">
+                <input type="hidden" name="ids[]" :value="id">
+            </template>
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
+                </svg>
+                Archive
+            </button>
+        </form>
+
+        {{-- Force delete (admin only) --}}
+        @role('admin')
+        <form method="POST"
+              action="{{ route('pages.opportunities.documents.bulkForceDestroy', $opportunity) }}"
+              @submit.prevent="confirmForceDelete($el)">
+            @csrf
+            @method('DELETE')
+            <template x-for="id in selected" :key="id">
+                <input type="hidden" name="ids[]" :value="id">
+            </template>
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                </svg>
+                Delete Permanently
+            </button>
+        </form>
+        @endrole
+    </div>
 </div>
 
 {{-- Thumbnail Grid --}}
@@ -70,36 +142,49 @@
                     $uploaderName = $doc->creator?->name ?? 'Unknown';
                     $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
                 @endphp
-                <button type="button"
-                        class="group relative aspect-square w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        data-media-url="{{ $url }}"
-                        data-media-type="{{ $isVideo ? 'video' : 'image' }}"
-                        data-uploader="{{ $uploaderName }}"
-                        data-uploaded-at="{{ $uploadedAt }}"
-                        data-filename="{{ $doc->original_name }}">
-                    @if ($isVideo)
-                        <video class="h-full w-full object-cover"
-                               muted
-                               playsinline
-                               preload="metadata">
-                            <source src="{{ $url }}">
-                        </video>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/80 border border-gray-200">
-                                ▶
-                            </div>
-                        </div>
-                    @else
-                        <img src="{{ $url }}"
-                             alt="{{ $doc->original_name }}"
-                             class="h-full w-full object-cover group-hover:scale-105 transition-transform">
-                    @endif
-
-                    <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1">
-                        <div class="truncate font-medium">{{ $doc->original_name }}</div>
-                        <div class="truncate opacity-80">{{ $uploaderName }} &middot; {{ $doc->created_at?->format('M j, Y') }}</div>
+                <div class="relative group aspect-square">
+                    {{-- Selection checkbox (shown in select mode) --}}
+                    <div x-show="selectMode"
+                         class="absolute top-1.5 left-1.5 z-10"
+                         @click.stop>
+                        <input type="checkbox"
+                               value="{{ $doc->id }}"
+                               class="media-item-checkbox w-5 h-5 rounded border-2 border-white text-blue-600 shadow cursor-pointer"
+                               @change="toggleItem($event.target.value, $event.target.checked)"
+                               :checked="selected.includes('{{ $doc->id }}')">
                     </div>
-                </button>
+
+                    {{-- Selected overlay --}}
+                    <div x-show="selectMode && selected.includes('{{ $doc->id }}')"
+                         class="absolute inset-0 rounded-lg ring-2 ring-blue-500 bg-blue-500/10 z-10 pointer-events-none"></div>
+
+                    <button type="button"
+                            class="w-full h-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-media-url="{{ $url }}"
+                            data-media-type="{{ $isVideo ? 'video' : 'image' }}"
+                            data-uploader="{{ $uploaderName }}"
+                            data-uploaded-at="{{ $uploadedAt }}"
+                            data-filename="{{ $doc->original_name }}"
+                            @click="selectMode ? toggleItem('{{ $doc->id }}') : null">
+                        @if ($isVideo)
+                            <video class="h-full w-full object-cover" muted playsinline preload="metadata">
+                                <source src="{{ $url }}">
+                            </video>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/80 border border-gray-200">▶</div>
+                            </div>
+                        @else
+                            <img src="{{ $url }}"
+                                 alt="{{ $doc->original_name }}"
+                                 class="h-full w-full object-cover group-hover:scale-105 transition-transform">
+                        @endif
+
+                        <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1">
+                            <div class="truncate font-medium">{{ $doc->original_name }}</div>
+                            <div class="truncate opacity-80">{{ $uploaderName }} &middot; {{ $doc->created_at?->format('M j, Y') }}</div>
+                        </div>
+                    </button>
+                </div>
             @endforeach
         </div>
 
@@ -108,6 +193,8 @@
         </div>
     @endif
 </div>
+
+</div>{{-- end x-data --}}
 
 
     </div>
@@ -198,6 +285,57 @@
 </div>
 
 <script>
+function mediaGallery() {
+    return {
+        selectMode: false,
+        selected: [],
+        totalTiles: 0,
+
+        init() {
+            this.totalTiles = document.querySelectorAll('.media-item-checkbox').length;
+        },
+
+        toggleSelectMode() {
+            this.selectMode = !this.selectMode;
+            if (!this.selectMode) this.selected = [];
+        },
+
+        toggleItem(id, checked) {
+            id = String(id);
+            if (checked === undefined) {
+                // toggle
+                checked = !this.selected.includes(id);
+            }
+            if (checked) {
+                if (!this.selected.includes(id)) this.selected.push(id);
+            } else {
+                this.selected = this.selected.filter(s => s !== id);
+            }
+        },
+
+        toggleAll(checked) {
+            if (checked) {
+                this.selected = Array.from(document.querySelectorAll('.media-item-checkbox'))
+                    .map(cb => cb.value);
+            } else {
+                this.selected = [];
+            }
+        },
+
+        submitBulk(form) {
+            if (this.selected.length === 0) return;
+            if (!confirm(`Archive ${this.selected.length} photo(s)? They can be restored from the Documents page.`)) return;
+            form.submit();
+        },
+
+        confirmForceDelete(form) {
+            if (this.selected.length === 0) return;
+            if (!confirm(`Permanently delete ${this.selected.length} photo(s)? This cannot be undone.`)) return;
+            form.submit();
+        },
+    };
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const tiles = Array.from(document.querySelectorAll('[data-media-url]'));
     const modal = document.getElementById('mediaLightbox');
@@ -284,9 +422,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function goFirst() { if (tiles.length) openModal(0); }
     function goLast()  { if (tiles.length) openModal(tiles.length - 1); }
 
-    // Tile clicks
+    // Tile clicks — skip lightbox when in select mode
+    const galleryRoot = document.querySelector('[data-select-mode]') ?? document.querySelector('[x-data]');
     tiles.forEach((tile, idx) => {
-        tile.addEventListener('click', () => openModal(idx));
+        tile.addEventListener('click', () => {
+            if (galleryRoot?.dataset.selectMode === 'true') return;
+            openModal(idx);
+        });
     });
 
     // Buttons
