@@ -21,6 +21,17 @@
         $itemsByRoom = $workOrder->items->groupBy(fn($item) => $item->saleItem?->sale_room_id ?? 0);
     @endphp
 
+    {{-- Back link --}}
+    @if(auth()->user()->hasRole('installer'))
+    <a href="{{ route('installer.dashboard') }}"
+       class="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        My Jobs
+    </a>
+    @endif
+
     {{-- Flash messages --}}
     @if (session('success'))
         <div class="rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 px-4 py-3 flex items-center justify-between gap-3">
