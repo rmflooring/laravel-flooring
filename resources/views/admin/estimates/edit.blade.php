@@ -557,6 +557,14 @@
           placeholder="0">
       </td>
 
+      <td class="px-3 py-2" data-order-qty-cell>
+        <input type="number" step="0.01"
+          name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][order_qty]"
+          placeholder="—"
+          class="w-24 border rounded-lg p-2"
+          style="background-color:#eef2ff; border-color:#a5b4fc;">
+      </td>
+
       <td class="px-3 py-2">
         <input type="text"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][unit]"
