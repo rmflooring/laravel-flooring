@@ -17,7 +17,29 @@
             </svg>
             <span class="text-sm font-bold text-gray-900 dark:text-white tracking-tight">Floor Manager</span>
         </div>
-        <span class="text-xs text-gray-400 dark:text-gray-500">{{ auth()->user()->name }}</span>
+        <div class="relative" x-data="{ open: false }">
+            <button @click="open = !open" @click.outside="open = false"
+                    class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                <span>{{ auth()->user()->name }}</span>
+                <svg class="w-3.5 h-3.5 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <div x-show="open" x-cloak
+                 class="absolute right-0 mt-2 w-40 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-50">
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit"
+                            class="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
+                        </svg>
+                        Sign Out
+                    </button>
+                </form>
+            </div>
+        </div>
     </header>
 
     {{-- Content --}}
