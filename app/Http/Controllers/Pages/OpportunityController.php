@@ -97,7 +97,7 @@ class OpportunityController extends Controller
     $parentCustomers = Customer::whereNull('parent_id')
         ->orderBy('company_name')
         ->orderBy('name')
-        ->get(['id', 'company_name', 'name']);
+        ->get(['id', 'company_name', 'name', 'email', 'phone', 'mobile', 'address', 'address2', 'city', 'province', 'postal_code', 'customer_type']);
 
     // Job sites = child customers
     $jobSiteCustomers = Customer::whereNotNull('parent_id')
@@ -217,7 +217,7 @@ $employees = Employee::query()
     $parentCustomers = Customer::whereNull('parent_id')
         ->orderBy('company_name')
         ->orderBy('name')
-        ->get(['id', 'company_name', 'name']);
+        ->get(['id', 'company_name', 'name', 'email', 'phone', 'mobile', 'address', 'address2', 'city', 'province', 'postal_code', 'customer_type']);
 
     // Job sites = child customers
     $jobSiteCustomers = Customer::whereNotNull('parent_id')

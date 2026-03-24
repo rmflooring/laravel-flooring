@@ -149,6 +149,12 @@
                                                 class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                                             Edit Job Site
                                         </button>
+                                        <button id="same-as-parent-btn"
+                                                type="button"
+                                                style="display:none"
+                                                class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                                            Same as Parent
+                                        </button>
                                         <button id="open-job-site-modal"
                                                 type="button"
                                                 data-modal-target="create-job-site-modal"
@@ -547,6 +553,8 @@
     </div>
 
     <script>
+        const parentCustomerData = @json($parentCustomers->keyBy('id'));
+
         document.addEventListener('DOMContentLoaded', () => {
             const parentSelect =
                 document.getElementById('parent_customer_select') ||
@@ -554,6 +562,7 @@
 
             const jobSiteSelect = document.getElementById('job_site_customer_id');
             const pmSelect = document.getElementById('project_manager_id');
+            const sameAsParentBtn = document.getElementById('same-as-parent-btn');
 
             // Desired values for edit (also respect validation failures)
             const desiredParentId = @json(old('parent_customer_id', $opportunity->parent_customer_id));
@@ -585,10 +594,12 @@
                 if (!parentId) {
                     jobSiteSelect.value = "";
                     jobSiteSelect.disabled = true;
+                    if (sameAsParentBtn) sameAsParentBtn.style.display = 'none';
                     return;
                 }
 
                 jobSiteSelect.disabled = false;
+                if (sameAsParentBtn) sameAsParentBtn.style.display = '';
 
                 // Unhide only options that match selected parent
                 allJobSiteOptions.forEach(o => {
@@ -606,6 +617,49 @@
 
                 // Otherwise clear selection if current selection doesn't match visible set
                 jobSiteSelect.value = "";
+            }
+
+            // ----------------------------
+            // Same as Parent — pre-fill Create Job Site modal
+            // ----------------------------
+            function fillModalFromParent() {
+                const parentId = parentSelect.value;
+                if (!parentId || !parentCustomerData[parentId]) return;
+
+                const p = parentCustomerData[parentId];
+                const modal = document.getElementById('create-job-site-modal');
+                if (!modal) return;
+
+                const set = (name, val) => {
+                    const el = modal.querySelector(`[name="${name}"]`);
+                    if (el) el.value = val || '';
+                };
+
+                set('name',          p.name);
+                set('company_name',  p.company_name);
+                set('email',         p.email);
+                set('phone',         p.phone);
+                set('mobile',        p.mobile);
+                set('address',       p.address);
+                set('address2',      p.address2);
+                set('city',          p.city);
+                set('postal_code',   p.postal_code);
+                set('customer_type', p.customer_type);
+
+                const provinceEl = modal.querySelector('[name="province"]');
+                if (provinceEl) provinceEl.value = p.province || '';
+
+                // Open the modal (Flowbite or fallback)
+                if (window.FlowbiteInstances) {
+                    const instance = window.FlowbiteInstances.getInstance('Modal', 'create-job-site-modal');
+                    if (instance) { instance.show(); return; }
+                }
+                modal.classList.remove('hidden');
+                modal.removeAttribute('aria-hidden');
+            }
+
+            if (sameAsParentBtn) {
+                sameAsParentBtn.addEventListener('click', fillModalFromParent);
             }
 
             // ----------------------------
