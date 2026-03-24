@@ -151,6 +151,14 @@ Route::prefix('admin')
             Route::delete('/settings/email-templates/{type}', [\App\Http\Controllers\Admin\AdminEmailTemplateController::class, 'reset'])
                 ->name('settings.email-templates.reset');
 
+            // Calendar entry templates (admin)
+            Route::get('/settings/calendar-templates', [\App\Http\Controllers\Admin\AdminCalendarTemplateController::class, 'index'])
+                ->name('settings.calendar-templates.index');
+            Route::post('/settings/calendar-templates/{type}', [\App\Http\Controllers\Admin\AdminCalendarTemplateController::class, 'save'])
+                ->name('settings.calendar-templates.save');
+            Route::delete('/settings/calendar-templates/{type}', [\App\Http\Controllers\Admin\AdminCalendarTemplateController::class, 'reset'])
+                ->name('settings.calendar-templates.reset');
+
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);
 
@@ -1073,6 +1081,22 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
     Route::get('wo/{workOrder}', [\App\Http\Controllers\Mobile\WorkOrderController::class, 'show'])
         ->middleware('role_or_permission:admin|view work orders')
         ->name('work-orders.show');
+
+    Route::post('wo/{workOrder}/photos', [\App\Http\Controllers\Mobile\WorkOrderController::class, 'uploadPhotos'])
+        ->middleware('role_or_permission:admin|view work orders')
+        ->name('work-orders.upload-photos');
+
+    Route::get('opportunity/{opportunity}/photos', [\App\Http\Controllers\Mobile\PhotoGalleryController::class, 'show'])
+        ->name('opportunity.photos');
+});
+
+// ─── Installer portal ──────────────────────────────────────────────────────────
+Route::middleware(['auth', 'verified', 'role:installer'])->prefix('installer')->name('installer.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Installer\DashboardController::class, 'index'])
+        ->name('dashboard');
+
+    Route::post('wo/{workOrder}/status', [\App\Http\Controllers\Installer\WorkOrderController::class, 'updateStatus'])
+        ->name('wo.update-status');
 });
 
 require __DIR__ . '/auth.php';

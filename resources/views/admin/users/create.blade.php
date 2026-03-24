@@ -57,17 +57,54 @@
                             </div>
                         </div>
 
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Assign Roles</label>
-                            <div class="space-y-2">
-                                @foreach($roles as $role)
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="roles[]" value="{{ $role->name }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                        <span class="ml-2">{{ $role->name }}</span>
-                                    </label>
-                                @endforeach
+                        {{-- User Type --}}
+                        <div class="mt-6" x-data="{ userType: '{{ old('user_type', 'staff') }}' }">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">User Type</label>
+                            <div class="flex gap-6">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="user_type" value="staff"
+                                           x-model="userType"
+                                           class="text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                    <span class="text-sm text-gray-700">Staff</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="user_type" value="installer"
+                                           x-model="userType"
+                                           class="text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                    <span class="text-sm text-gray-700">Installer</span>
+                                </label>
                             </div>
-                            @error('roles') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+
+                            {{-- Installer picker --}}
+                            <div x-show="userType === 'installer'" x-cloak class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Link to Installer Record</label>
+                                <select name="installer_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">— Select installer —</option>
+                                    @foreach($installers as $ins)
+                                        <option value="{{ $ins->id }}"
+                                                {{ old('installer_id') == $ins->id ? 'selected' : '' }}
+                                                {{ $ins->user_id ? 'disabled' : '' }}>
+                                            {{ $ins->company_name }}{{ $ins->user_id ? ' (already linked)' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('installer_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                                <p class="text-xs text-gray-500 mt-1">The installer role will be assigned automatically.</p>
+                            </div>
+
+                            {{-- Staff roles (only shown for staff type) --}}
+                            <div x-show="userType !== 'installer'" class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Assign Roles</label>
+                                <div class="space-y-2">
+                                    @foreach($roles->where('name', '<>', 'installer') as $role)
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                            <span class="ml-2">{{ $role->name }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error('roles') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                            </div>
                         </div>
 
                         <div class="mt-8 flex justify-end gap-4">

@@ -36,4 +36,9 @@ class OpportunityDocument extends Model
     {
         return $this->belongsTo(OpportunityDocumentLabel::class, 'label_id');
     }
+
+    public function creator()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
 }

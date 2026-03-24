@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Models\Opportunity;
+use App\Models\OpportunityDocument;
 use App\Models\WorkOrder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WorkOrderController extends Controller
 {
@@ -18,5 +22,52 @@ class WorkOrderController extends Controller
         ]);
 
         return view('mobile.work-orders.show', compact('workOrder'));
+    }
+
+    public function uploadPhotos(WorkOrder $workOrder, Request $request)
+    {
+        $request->validate([
+            'files'   => ['required', 'array', 'min:1'],
+            'files.*' => ['required', 'image', 'max:20480'], // 20 MB per image
+        ]);
+
+        $workOrder->loadMissing(['sale']);
+
+        $opportunity = Opportunity::findOrFail($workOrder->sale->opportunity_id);
+
+        $userId = auth()->id();
+        $count  = 0;
+
+        foreach ($request->file('files', []) as $file) {
+            $mime = $file->getMimeType() ?? '';
+            $path = $file->store("opportunities/{$opportunity->id}", 'public');
+
+            OpportunityDocument::create([
+                'opportunity_id' => $opportunity->id,
+                'disk'           => 'public',
+                'path'           => $path,
+                'original_name'  => $file->getClientOriginalName(),
+                'stored_name'    => basename($path),
+                'mime_type'      => $mime,
+                'extension'      => $file->getClientOriginalExtension(),
+                'size_bytes'     => $file->getSize(),
+                'category'       => 'media',
+                'created_by'     => $userId,
+                'updated_by'     => $userId,
+            ]);
+
+            $count++;
+        }
+
+        Log::info('[Mobile WO] Photos uploaded', [
+            'wo_id'          => $workOrder->id,
+            'opportunity_id' => $opportunity->id,
+            'count'          => $count,
+            'user_id'        => $userId,
+        ]);
+
+        return redirect()
+            ->route('mobile.opportunity.photos', $opportunity)
+            ->with('success', $count . ' photo' . ($count !== 1 ? 's' : '') . ' uploaded.');
     }
 }

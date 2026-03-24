@@ -20,14 +20,32 @@ class WorkOrder extends Model
         'deleted_at'     => 'datetime',
     ];
 
-    const STATUSES = ['created', 'scheduled', 'in_progress', 'completed', 'cancelled'];
+    const STATUSES = [
+        'created', 'scheduled', 'in_progress', 'partial',
+        'site_not_ready', 'needs_levelling', 'needs_attention',
+        'completed', 'cancelled',
+    ];
 
     const STATUS_LABELS = [
-        'created'     => 'Created',
-        'scheduled'   => 'Scheduled',
-        'in_progress' => 'In Progress',
-        'completed'   => 'Completed',
-        'cancelled'   => 'Cancelled',
+        'created'         => 'Created',
+        'scheduled'       => 'Scheduled',
+        'in_progress'     => 'In Progress',
+        'partial'         => 'Partially Complete',
+        'site_not_ready'  => 'Site Not Ready',
+        'needs_levelling' => 'Needs Levelling',
+        'needs_attention' => 'Needs Attention',
+        'completed'       => 'Completed',
+        'cancelled'       => 'Cancelled',
+    ];
+
+    // Statuses an installer can set from the mobile portal
+    const INSTALLER_STATUSES = [
+        'in_progress'     => 'In Progress',
+        'partial'         => 'Partially Complete',
+        'site_not_ready'  => 'Site Not Ready',
+        'needs_levelling' => 'Needs Levelling',
+        'needs_attention' => 'Needs Attention',
+        'completed'       => 'Completed',
     ];
 
     protected static function booted(): void

@@ -58,15 +58,65 @@
                             </div>
                         </div>
 
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Roles</label>
-                            <div class="space-y-2">
-                                @foreach($roles as $role)
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="roles[]" value="{{ $role->name }}" {{ in_array($role->name, $userRoles) ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                        <span class="ml-2">{{ $role->name }}</span>
-                                    </label>
-                                @endforeach
+                        @php
+                            $currentType = old('user_type', in_array('installer', $userRoles) ? 'installer' : 'staff');
+                        @endphp
+
+                        {{-- User Type --}}
+                        <div class="mt-6" x-data="{ userType: '{{ $currentType }}' }">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">User Type</label>
+                            <div class="flex gap-6">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="user_type" value="staff"
+                                           x-model="userType"
+                                           class="text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                    <span class="text-sm text-gray-700">Staff</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="user_type" value="installer"
+                                           x-model="userType"
+                                           class="text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                    <span class="text-sm text-gray-700">Installer</span>
+                                </label>
+                            </div>
+
+                            {{-- Installer picker --}}
+                            <div x-show="userType === 'installer'" x-cloak class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Link to Installer Record</label>
+                                <select name="installer_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">— Select installer —</option>
+                                    @foreach($installers as $ins)
+                                        @php
+                                            $isLinkedToThisUser = $ins->user_id === $user->id;
+                                            $isLinkedToOther    = $ins->user_id && ! $isLinkedToThisUser;
+                                            $selected = old('installer_id')
+                                                ? old('installer_id') == $ins->id
+                                                : $isLinkedToThisUser;
+                                        @endphp
+                                        <option value="{{ $ins->id }}"
+                                                {{ $selected ? 'selected' : '' }}
+                                                {{ $isLinkedToOther ? 'disabled' : '' }}>
+                                            {{ $ins->company_name }}{{ $isLinkedToOther ? ' (linked to another user)' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('installer_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                                <p class="text-xs text-gray-500 mt-1">The installer role will be assigned automatically.</p>
+                            </div>
+
+                            {{-- Staff roles --}}
+                            <div x-show="userType !== 'installer'" class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Roles</label>
+                                <div class="space-y-2">
+                                    @foreach($roles->where('name', '<>', 'installer') as $role)
+                                        <label class="flex items-center">
+                                            <input type="checkbox" name="roles[]" value="{{ $role->name }}"
+                                                   {{ in_array($role->name, $userRoles) ? 'checked' : '' }}
+                                                   class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                            <span class="ml-2">{{ $role->name }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
 

@@ -14,6 +14,7 @@ use App\Models\SaleItem;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
 use App\Models\WorkOrderItemMaterial;
+use App\Services\CalendarTemplateService;
 use App\Services\EmailTemplateService;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
@@ -555,31 +556,30 @@ class WorkOrderController extends Controller
         $start = Carbon::parse($date . ' ' . $time);
         $end   = $start->copy()->addHours(2);
 
-        $installerFirstName = explode(' ', trim($workOrder->installer?->company_name ?? 'Installer'))[0];
-        $homeownerName      = $sale->homeowner_name ?? $sale->customer_name ?? $sale->job_name ?? 'Customer';
-        $title = $installerFirstName . ' - ' . $homeownerName;
+        $homeownerName = $sale->homeowner_name ?? $sale->customer_name ?? $sale->job_name ?? 'Customer';
+        $itemSummary   = $workOrder->items->map(fn($i) => $i->item_name . ' (' . $i->quantity . ' ' . $i->unit . ')')->implode(', ');
 
-        $notesParts = [];
-        if ($sale->sale_number) {
-            $notesParts[] = 'Sale: ' . $sale->sale_number;
-        }
-        if ($workOrder->installer) {
-            $notesParts[] = 'Installer: ' . $workOrder->installer->company_name;
-        }
-        $itemSummary = $workOrder->items->map(fn($i) => $i->item_name . ' (' . $i->quantity . ' ' . $i->unit . ')')->implode(', ');
-        if ($itemSummary) {
-            $notesParts[] = 'Work: ' . $itemSummary;
-        }
-        if ($workOrder->notes) {
-            $notesParts[] = "\nNotes:\n" . $workOrder->notes;
-        }
+        $vars = [
+            'wo_number'            => $workOrder->wo_number ?? '',
+            'installer_name'       => $workOrder->installer?->company_name ?? '',
+            'installer_first_name' => explode(' ', trim($workOrder->installer?->company_name ?? 'Installer'))[0],
+            'customer_name'        => $homeownerName,
+            'sale_number'          => $sale->sale_number ?? '',
+            'job_address'          => $sale->job_address ?? '',
+            'items_summary'        => $itemSummary,
+            'wo_notes'             => $workOrder->notes ?? '',
+            'pm_name'              => $sale->pm_name ?? '',
+            'pm_first_name'        => explode(' ', trim($sale->pm_name ?? ''))[0],
+        ];
+
+        $rendered = app(CalendarTemplateService::class)->renderTemplate('work_order_calendar', $vars);
 
         return [
-            'title'    => $title,
+            'title'    => $rendered['title'],
             'start'    => $start,
             'end'      => $end,
             'location' => $sale->job_address ?? null,
-            'notes'    => implode("\n", $notesParts),
+            'notes'    => $rendered['notes'],
         ];
     }
 

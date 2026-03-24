@@ -11,6 +11,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Sale;
 use App\Models\Setting;
 use App\Models\Vendor;
+use App\Services\CalendarTemplateService;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
 use App\Services\InventoryService;
@@ -926,23 +927,27 @@ class PurchaseOrderController extends Controller
     {
         $po->loadMissing(['vendor', 'sale']);
 
-        $title = 'Pickup — PO ' . $po->po_number . ' / ' . ($po->vendor->company_name ?? 'Vendor');
+        $vars = [
+            'po_number'            => $po->po_number,
+            'vendor_name'          => $po->vendor?->company_name ?? 'Vendor',
+            'sale_number'          => $po->sale?->sale_number ?? '',
+            'customer_name'        => $po->sale?->customer_name ?? '',
+            'special_instructions' => $po->special_instructions ?? '',
+            'pm_name'              => $po->sale?->pm_name ?? '',
+            'pm_first_name'        => explode(' ', trim($po->sale?->pm_name ?? ''))[0],
+        ];
 
-        $notes = 'Purchase Order: ' . $po->po_number;
-        if ($po->sale) {
-            $notes .= "\nSale: " . $po->sale->sale_number;
-            if ($po->sale->customer_name) {
-                $notes .= ' — ' . $po->sale->customer_name;
-            }
-        }
-        if ($po->special_instructions) {
-            $notes .= "\n\nInstructions: " . $po->special_instructions;
-        }
+        $rendered = app(CalendarTemplateService::class)->renderTemplate('po_pickup_calendar', $vars);
 
         $start = $po->pickup_at;
         $end   = $po->pickup_at->copy()->addHour();
 
-        return compact('title', 'notes', 'start', 'end');
+        return [
+            'title' => $rendered['title'],
+            'notes' => $rendered['notes'],
+            'start' => $start,
+            'end'   => $end,
+        ];
     }
 
     private function syncCalendarCreate(PurchaseOrder $po): void

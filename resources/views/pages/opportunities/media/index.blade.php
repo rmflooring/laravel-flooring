@@ -8,21 +8,42 @@
                 Media for Opportunity #{{ $opportunity->id }}
             </h1>
 
-            <p class="text-sm text-gray-600 mt-2">
+            <div class="mt-4 flex justify-center gap-3">
                 <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
-                   class="text-blue-700 hover:underline">
+                   class="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
                     ← Back to Opportunity
                 </a>
-            </p>
+                <a href="{{ route('pages.opportunities.documents.index', $opportunity->id) }}"
+                   class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                    </svg>
+                    Documents
+                </a>
+            </div>
         </div>
 
         {{-- Media Controls --}}
-<div class="flex items-center justify-between mb-4">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
     <div class="text-sm text-gray-600">
         Showing {{ $media->total() }} media file(s)
     </div>
 
-    <form method="GET" class="flex items-center gap-3">
+    <form method="GET" class="flex flex-wrap items-center gap-3">
+        {{-- Uploader filter --}}
+        @if($uploaders->isNotEmpty())
+        <select name="uploaded_by"
+                onchange="this.form.submit()"
+                class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">All uploaders</option>
+            @foreach($uploaders as $u)
+                <option value="{{ $u->id }}" {{ (string)$uploadedBy === (string)$u->id ? 'selected' : '' }}>
+                    {{ $u->name }}
+                </option>
+            @endforeach
+        </select>
+        @endif
+
         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox"
                    name="show_archived"
@@ -43,14 +64,19 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             @foreach ($media as $doc)
                 @php
-					$absoluteUrl = Storage::disk($doc->disk)->url($doc->path);
-					$url = parse_url($absoluteUrl, PHP_URL_PATH) ?: $absoluteUrl; // becomes "/storage/..."
-					$isVideo = str_starts_with($doc->mime_type ?? '', 'video/');
-				@endphp
+                    $absoluteUrl  = Storage::disk($doc->disk)->url($doc->path);
+                    $url          = parse_url($absoluteUrl, PHP_URL_PATH) ?: $absoluteUrl;
+                    $isVideo      = str_starts_with($doc->mime_type ?? '', 'video/');
+                    $uploaderName = $doc->creator?->name ?? 'Unknown';
+                    $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
+                @endphp
                 <button type="button"
                         class="group relative aspect-square w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         data-media-url="{{ $url }}"
-                        data-media-type="{{ $isVideo ? 'video' : 'image' }}">
+                        data-media-type="{{ $isVideo ? 'video' : 'image' }}"
+                        data-uploader="{{ $uploaderName }}"
+                        data-uploaded-at="{{ $uploadedAt }}"
+                        data-filename="{{ $doc->original_name }}">
                     @if ($isVideo)
                         <video class="h-full w-full object-cover"
                                muted
@@ -58,7 +84,6 @@
                                preload="metadata">
                             <source src="{{ $url }}">
                         </video>
-
                         <div class="absolute inset-0 flex items-center justify-center">
                             <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/80 border border-gray-200">
                                 ▶
@@ -70,10 +95,10 @@
                              class="h-full w-full object-cover group-hover:scale-105 transition-transform">
                     @endif
 
-                    <div class="absolute inset-x-0 bottom-0 bg-black/50 text-white text-[11px] p-1">
-				    <div class="truncate">{{ $doc->original_name }}</div>
-				    <div class="truncate opacity-80">{{ $url }}</div>
-					</div>
+                    <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1">
+                        <div class="truncate font-medium">{{ $doc->original_name }}</div>
+                        <div class="truncate opacity-80">{{ $uploaderName }} &middot; {{ $doc->created_at?->format('M j, Y') }}</div>
+                    </div>
                 </button>
             @endforeach
         </div>
@@ -162,6 +187,13 @@
                 <source id="lightboxVideoSource" src="">
             </video>
         </div>
+
+        {{-- Caption bar --}}
+        <div id="lightboxCaption"
+             class="hidden sm:flex absolute bottom-0 inset-x-0 z-10 items-center justify-between gap-4 px-4 py-2 bg-black/60 text-white text-xs">
+            <span id="lightboxCaptionFilename" class="truncate font-medium"></span>
+            <span id="lightboxCaptionMeta" class="shrink-0 opacity-75 text-right"></span>
+        </div>
     </div>
 </div>
 
@@ -182,20 +214,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnPrevM = document.getElementById('lightboxPrevMobile');
     const btnNextM = document.getElementById('lightboxNextMobile');
-	
-	const btnFirstM = document.getElementById('lightboxFirstMobile');
-	const btnLastM  = document.getElementById('lightboxLastMobile');
-	const counterEl = document.getElementById('lightboxCounter');
+
+    const btnFirstM  = document.getElementById('lightboxFirstMobile');
+    const btnLastM   = document.getElementById('lightboxLastMobile');
+    const counterEl  = document.getElementById('lightboxCounter');
+    const captionEl  = document.getElementById('lightboxCaption');
+    const capFile    = document.getElementById('lightboxCaptionFilename');
+    const capMeta    = document.getElementById('lightboxCaptionMeta');
 
     let currentIndex = -1;
 
     function openModal(index) {
         if (index < 0 || index >= tiles.length) return;
         currentIndex = index;
-		if (counterEl) counterEl.textContent = `${index + 1} / ${tiles.length}`;
+        if (counterEl) counterEl.textContent = `${index + 1} / ${tiles.length}`;
 
-        const url = tiles[index].dataset.mediaUrl;
-        const type = tiles[index].dataset.mediaType;
+        const tile     = tiles[index];
+        const url      = tile.dataset.mediaUrl;
+        const type     = tile.dataset.mediaType;
+        const uploader = tile.dataset.uploader || '';
+        const uploadedAt = tile.dataset.uploadedAt || '';
+        const filename = tile.dataset.filename || '';
+
+        if (captionEl) captionEl.classList.remove('hidden');
+        if (capFile)   capFile.textContent = filename;
+        if (capMeta)   capMeta.textContent  = uploader + (uploadedAt ? '  ·  ' + uploadedAt : '');
 
         // stop any previous video
         try { vidEl.pause(); } catch (e) {}
@@ -209,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             vidEl.classList.add('hidden');
             imgEl.classList.remove('hidden');
             imgEl.src = url;
-            imgEl.alt = tiles[index].getAttribute('title') || 'Media';
+            imgEl.alt = filename || 'Media';
         }
 
         modal.classList.remove('hidden');

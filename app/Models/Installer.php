@@ -10,6 +10,7 @@ class Installer extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'vendor_id',
         'company_name',
         'contact_name',
@@ -62,6 +63,11 @@ class Installer extends Model
     public function workOrders()
     {
         return $this->hasMany(WorkOrder::class)->orderByDesc('created_at');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function creator()

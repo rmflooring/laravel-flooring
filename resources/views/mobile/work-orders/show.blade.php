@@ -3,11 +3,15 @@
 
     @php
         $statusColors = [
-            'created'     => 'bg-gray-100 text-gray-700',
-            'scheduled'   => 'bg-blue-100 text-blue-800',
-            'in_progress' => 'bg-amber-100 text-amber-800',
-            'completed'   => 'bg-green-100 text-green-800',
-            'cancelled'   => 'bg-red-100 text-red-800',
+            'created'         => 'bg-gray-100 text-gray-700',
+            'scheduled'       => 'bg-blue-100 text-blue-800',
+            'in_progress'     => 'bg-amber-100 text-amber-800',
+            'partial'         => 'bg-purple-100 text-purple-800',
+            'site_not_ready'  => 'bg-orange-100 text-orange-800',
+            'needs_levelling' => 'bg-orange-100 text-orange-800',
+            'needs_attention' => 'bg-red-100 text-red-800',
+            'completed'       => 'bg-green-100 text-green-800',
+            'cancelled'       => 'bg-red-100 text-red-800',
         ];
         $statusColor = $statusColors[$workOrder->status] ?? 'bg-gray-100 text-gray-800';
 
@@ -16,6 +20,38 @@
 
         $itemsByRoom = $workOrder->items->groupBy(fn($item) => $item->saleItem?->sale_room_id ?? 0);
     @endphp
+
+    {{-- Flash messages --}}
+    @if (session('success'))
+        <div class="rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 px-4 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-sm font-medium text-green-800 dark:text-green-200">{{ session('success') }}</span>
+            </div>
+            <button type="button" onclick="this.closest('div').remove()" class="text-green-600 dark:text-green-400 shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                </svg>
+                <span class="text-sm font-medium text-red-800 dark:text-red-200">{{ session('error') }}</span>
+            </div>
+            <button type="button" onclick="this.closest('div').remove()" class="text-red-600 dark:text-red-400 shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    @endif
 
     {{-- WO Identity card --}}
     <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4">
@@ -181,5 +217,150 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
         </svg>
     </a>
+
+    {{-- Add Photos card --}}
+    @if($sale && $sale->opportunity_id)
+    <div class="rounded-xl border border-emerald-200 bg-white dark:border-emerald-800 dark:bg-gray-800 shadow-sm overflow-hidden">
+        <form method="POST" action="{{ route('mobile.work-orders.upload-photos', $workOrder) }}"
+              enctype="multipart/form-data" id="photo-upload-form">
+            @csrf
+
+            {{-- Tap target --}}
+            <button type="button" onclick="document.getElementById('photo-file-input').click()"
+                    class="w-full flex items-center gap-4 px-5 py-4 active:scale-95 transition-transform text-left">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+                    <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-base font-bold text-gray-900 dark:text-white">Add Job Photos</p>
+                    <p id="photo-upload-label" class="text-xs text-gray-500 dark:text-gray-400">Tap to take or choose photos</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+
+            <input type="file" id="photo-file-input" name="files[]"
+                   multiple accept="image/*"
+                   class="hidden"
+                   onchange="handlePhotoSelection(this)">
+
+            {{-- Submit row — revealed after files selected --}}
+            <div id="photo-submit-area" style="display:none"
+                 class="border-t border-gray-100 dark:border-gray-700 px-5 py-3 flex items-center justify-between gap-3">
+                <span id="photo-count-label" class="text-sm text-gray-600 dark:text-gray-300"></span>
+                <button type="submit"
+                        class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-lg">
+                    Upload
+                </button>
+            </div>
+        </form>
+    </div>
+    @endif
+
+    {{-- View Photos card --}}
+    @if($sale && $sale->opportunity_id)
+    <a href="{{ route('mobile.opportunity.photos', $sale->opportunity_id) }}"
+       class="flex items-center gap-4 rounded-xl border border-indigo-200 bg-white dark:border-indigo-800 dark:bg-gray-800 px-5 py-4 shadow-sm active:scale-95 transition-transform">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40">
+            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+            </svg>
+        </div>
+        <div class="flex-1">
+            <p class="text-base font-bold text-gray-900 dark:text-white">View Job Photos</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Browse all photos for this job</p>
+        </div>
+        <svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+    </a>
+    @endif
+
+    {{-- Installer: Update Status --}}
+    @auth
+    @if(auth()->user()->hasRole('installer'))
+    @php
+        $myInstaller = \App\Models\Installer::where('user_id', auth()->id())->first();
+        $canUpdateStatus = $myInstaller && (int) $workOrder->installer_id === (int) $myInstaller->id;
+    @endphp
+    @if($canUpdateStatus)
+    <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 shadow-sm overflow-hidden"
+         x-data="{ open: false }">
+
+        <button type="button" @click="open = !open"
+                class="w-full flex items-center gap-4 px-5 py-4 text-left active:bg-gray-50 dark:active:bg-gray-700/50 transition-colors">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40">
+                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <p class="text-base font-bold text-gray-900 dark:text-white">Update Status</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Current: {{ \App\Models\WorkOrder::STATUS_LABELS[$workOrder->status] ?? $workOrder->status }}
+                </p>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 shrink-0 transition-transform" :class="open ? 'rotate-90' : ''"
+                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+
+        <div x-show="open" x-cloak class="border-t border-gray-100 dark:border-gray-700 px-5 py-4">
+            <form method="POST" action="{{ route('installer.wo.update-status', $workOrder) }}">
+                @csrf
+
+                <p class="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">Select New Status</p>
+
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    @foreach(\App\Models\WorkOrder::INSTALLER_STATUSES as $value => $label)
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="status" value="{{ $value }}"
+                                   {{ $workOrder->status === $value ? 'checked' : '' }}
+                                   class="peer sr-only">
+                            <div class="rounded-lg border-2 px-3 py-2.5 text-center text-xs font-semibold transition-colors
+                                        border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400
+                                        peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700
+                                        dark:peer-checked:bg-blue-900/30 dark:peer-checked:text-blue-300">
+                                {{ $label }}
+                            </div>
+                        </label>
+                    @endforeach
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">
+                        Notes <span class="font-normal normal-case text-gray-400">(optional)</span>
+                    </label>
+                    <textarea name="installer_notes" rows="3"
+                              placeholder="Any notes about site conditions, issues, etc."
+                              class="block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-blue-500 focus:ring-blue-500">{{ $workOrder->installer_notes }}</textarea>
+                </div>
+
+                <button type="submit"
+                        class="w-full py-3 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-colors">
+                    Save Status
+                </button>
+            </form>
+        </div>
+    </div>
+    @endif
+    @endif
+    @endauth
+
+    <script>
+    function handlePhotoSelection(input) {
+        var count = input.files.length;
+        if (count === 0) return;
+        var label = count + ' photo' + (count !== 1 ? 's' : '') + ' selected';
+        document.getElementById('photo-count-label').textContent = label;
+        document.getElementById('photo-upload-label').textContent = label + ' — ready to upload';
+        document.getElementById('photo-submit-area').style.display = 'flex';
+    }
+    </script>
 
 </x-mobile-layout>

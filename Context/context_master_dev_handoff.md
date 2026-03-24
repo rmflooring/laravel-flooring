@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-23 (session 29)
+Updated: 2026-03-24 (session 30)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -22,10 +22,12 @@ Current core modules:
 - Sales
 - Purchase Orders — see `Context/context_purchase_orders.md`
 - Installers — see `Context/context_installers.md`
+- **Installer Portal** (mobile) — see `Context/context_installer_portal.md`
 - Documents / Media
 - Calendar (MS365 integration)
 - Email system (Track 1 + Track 2) — see `Context/context_graph_mail.md`
 - Email Templates (per-user + admin system) — see `Context/context_email_templates.md`
+- Calendar Entry Templates (admin) — `app/Models/CalendarTemplate.php`, `app/Services/CalendarTemplateService.php`, `admin.settings.calendar-templates.*`
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 - **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
@@ -254,6 +256,8 @@ Full details in `Context/context_work_orders.md`.
 - **WO Staging / Pick Tickets (session 14–16, 2026-03-16)**: "Stage Work Order" button on WO show page creates a `staged` PickTicket with all linked material items. `staged` is a new PickTicket status (orange badge). `PickTicketService::createFromWorkOrder()` handles creation. `inventory_allocation_id` made nullable on `pick_ticket_items`. **No stock check on staging** — the inventory allocation stock check was removed in session 16; staging does not require formal allocations (receipts only need to be in the warehouse).
 - **Calendar opt-out bug fix (session 14)**: `$request->boolean('sync_calendar', true)` → changed default to `false` in both `store()` and `update()` — unchecked checkbox posts no value, so `true` default was always overriding the user's opt-out.
 - **Mobile WO view + QR code (2026-03-23)**: Route `GET /m/wo/{workOrder}` → `mobile.work-orders.show`; controller `Mobile\WorkOrderController::show()`; view `resources/views/mobile/work-orders/show.blade.php` (schedule, job site with Maps link, items by room). WO PDF footer has QR code as SVG base64 `<img>` (not inline SVG — conflicts with global `table {}` CSS; not PNG — no Imagick). `{{wo_link}}` tag added to `work_order` email template type; `WorkOrderController::resolveEmailTemplate()` now wires up `EmailTemplateService` for the WO send modal (was previously hardcoded).
+- **Installer portal (2026-03-24)**: See `Context/context_installer_portal.md`. Mobile dashboard for installers showing Today/Upcoming/Past WOs. Installers can update WO status (new statuses: `partial`, `site_not_ready`, `needs_levelling`, `needs_attention`) + add optional notes. Status changes notify `team@rmflooring.ca` via Track 1. Mobile photo gallery at `/m/opportunity/{id}/photos`. Add/view photos from mobile WO page. `installer` role granted `view work orders` permission. User admin updated with User Type (Staff/Installer) and installer record linker.
+- **Calendar entry templates (2026-03-24)**: Admin can customize MS365 calendar event titles/body for WO installations, PO pickups, and RFM entries. `CalendarTemplate` model, `CalendarTemplateService::renderTemplate()`. All 3 calendar-creating controllers now use the service (falls back to previous hardcoded defaults). Tags include `{{pm_name}}`, `{{pm_first_name}}` and job/WO/PO context tags. Admin UI at Settings → Calendar Entry Templates.
 
 ---
 
@@ -446,6 +450,37 @@ All nested under `pages/sales/{sale}/change-orders/`:
 - Email CO to homeowner (send modal + Graph mail, same pattern as sale/estimate)
 - Mark CO as "sent" / track `sent_at` / homeowner approval date via email flow
 - `change_in_progress` badge in sale **edit** page status dropdown (index already done)
+
+---
+
+## Calendar Entry Templates (session 29, 2026-03-24)
+
+Admin-only setting to customise the title and notes for MS365 calendar events created by the system.
+
+### Model / Service
+- Model: `app/Models/CalendarTemplate.php` — `TYPES`, `TAGS`, `DEFAULTS` constants; `type` (unique), `title_template`, `notes_template`
+- Service: `app/Services/CalendarTemplateService.php` — `getTemplate(string $type)`, `render(string $template, array $vars)`, `renderTemplate(string $type, array $vars)`
+- Table: `calendar_templates` (migration `2026_03_24_020654`)
+
+### Three template types
+- `work_order_calendar` — WO Installation (RM – Installations calendar)
+- `po_pickup_calendar` — PO Pickup / Delivery (RM – Warehouse calendar)
+- `rfm_calendar` — RFM / Measure (RM – RFM/Measures calendar)
+
+### Available tags per type
+- WO: `{{wo_number}}`, `{{installer_name}}`, `{{installer_first_name}}`, `{{customer_name}}`, `{{sale_number}}`, `{{job_address}}`, `{{items_summary}}`, `{{wo_notes}}`, `{{pm_name}}`, `{{pm_first_name}}`
+- PO pickup: `{{po_number}}`, `{{vendor_name}}`, `{{sale_number}}`, `{{customer_name}}`, `{{special_instructions}}`, `{{pm_name}}`, `{{pm_first_name}}`
+- RFM: `{{customer_name}}`, `{{estimator_name}}`, `{{job_number}}`, `{{flooring_type}}`, `{{site_address}}`, `{{special_instructions}}`, `{{pm_name}}`, `{{pm_first_name}}`
+
+### Routes & UI
+- Routes: `admin.settings.calendar-templates.index` / `.save` / `.reset` (GET, POST, DELETE)
+- View: `resources/views/admin/settings/calendar-templates.blade.php` — tab UI mirroring email templates
+- Linked from admin settings page button "Calendar Entry Templates"
+
+### Wired into controllers
+- `WorkOrderController::buildEventData()` — uses `CalendarTemplateService::renderTemplate('work_order_calendar', $vars)`
+- `PurchaseOrderController::buildPickupEventData()` — uses `renderTemplate('po_pickup_calendar', $vars)`
+- `RfmController::store()` — uses `renderTemplate('rfm_calendar', $vars)`; `$opportunity->loadMissing(['projectManager'])` added before vars
 
 ---
 

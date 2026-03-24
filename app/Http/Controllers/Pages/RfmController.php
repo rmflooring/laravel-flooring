@@ -10,6 +10,7 @@ use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
 use App\Models\Opportunity;
 use App\Models\Rfm;
+use App\Services\CalendarTemplateService;
 use App\Services\GraphCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -70,6 +71,7 @@ class RfmController extends Controller
 
                 if ($calendar) {
                     $rfm->load(['estimator', 'parentCustomer']);
+                    $opportunity->loadMissing(['projectManager']);
 
                     $customerName = $opportunity->parentCustomer?->company_name
                         ?: $opportunity->parentCustomer?->name
@@ -80,19 +82,6 @@ class RfmController extends Controller
                         : null;
 
                     $flooringLabel = implode(' / ', (array) $rfm->flooring_type);
-                    $title = 'RFM: ' . $customerName . ' – ' . $flooringLabel;
-                    if ($opportunity->job_no) {
-                        $title = 'RFM #' . $opportunity->job_no . ': ' . $customerName . ' – ' . $flooringLabel;
-                    }
-
-                    $start = \Carbon\Carbon::parse($rfm->scheduled_at);
-                    $end   = $start->copy()->addHours(2);
-
-                    $notesParts = [];
-                    if ($estimatorName) $notesParts[] = 'Estimator: ' . $estimatorName;
-                    $addressLine = implode(', ', array_filter([$rfm->site_address, $rfm->site_city, $rfm->site_postal_code]));
-                    if ($addressLine) $notesParts[] = 'Address: ' . $addressLine;
-                    if ($rfm->special_instructions) $notesParts[] = "\nNotes:\n" . $rfm->special_instructions;
 
                     $fullAddress = implode(', ', array_filter([
                         $rfm->site_address,
@@ -100,12 +89,29 @@ class RfmController extends Controller
                         $rfm->site_postal_code,
                     ]));
 
+                    $start = \Carbon\Carbon::parse($rfm->scheduled_at);
+                    $end   = $start->copy()->addHours(2);
+
+                    $pmName = $opportunity->projectManager?->name ?? '';
+                    $vars = [
+                        'customer_name'        => $customerName,
+                        'estimator_name'       => $estimatorName ?? '',
+                        'job_number'           => $opportunity->job_no ?? '',
+                        'flooring_type'        => $flooringLabel,
+                        'site_address'         => $fullAddress,
+                        'special_instructions' => $rfm->special_instructions ?? '',
+                        'pm_name'              => $pmName,
+                        'pm_first_name'        => explode(' ', trim($pmName))[0],
+                    ];
+
+                    $rendered = app(CalendarTemplateService::class)->renderTemplate('rfm_calendar', $vars);
+
                     $eventData = [
-                        'title'    => $title,
+                        'title'    => $rendered['title'],
                         'start'    => $start,
                         'end'      => $end,
                         'location' => $fullAddress ?: null,
-                        'notes'    => implode("\n", $notesParts),
+                        'notes'    => $rendered['notes'],
                     ];
 
                     $service     = new GraphCalendarService();

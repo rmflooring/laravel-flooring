@@ -25,6 +25,7 @@ Work Orders (WOs) represent scheduled installation tasks assigned to an **Instal
 | `calendar_event_id` | nullable FK → calendar_events | Local CalendarEvent record                              |
 | `sent_at`           | nullable timestamp      | Stamped when WO email is sent to installer                    |
 | `notes`             | nullable text           |                                                               |
+| `installer_notes`   | nullable text           | Set by installer via mobile portal; visible on WO card in installer dashboard |
 | `created_by`        | nullable FK → users     |                                                               |
 | `updated_by`        | nullable FK → users     |                                                               |
 | `created_at` / `updated_at` | timestamps      |                                                               |
@@ -93,12 +94,40 @@ Links a WO labour item to one or more sale material items (the products being in
 
 ```
 created → scheduled:      requires installer_id + scheduled_date
-scheduled → in_progress:  manual
-in_progress → completed:  manual
+scheduled → in_progress:  manual or installer update
+in_progress → completed:  manual or installer update
 any → cancelled:          with confirmation dialog (calendar event deleted)
 ```
 
-Constants: `WorkOrder::STATUSES = ['created', 'scheduled', 'in_progress', 'completed', 'cancelled']`
+Constants (updated 2026-03-24):
+```php
+WorkOrder::STATUSES = [
+    'created', 'scheduled', 'in_progress', 'partial',
+    'site_not_ready', 'needs_levelling', 'needs_attention',
+    'completed', 'cancelled',
+]
+
+WorkOrder::STATUS_LABELS = [
+    'created'         => 'Created',
+    'scheduled'       => 'Scheduled',
+    'in_progress'     => 'In Progress',
+    'partial'         => 'Partially Complete',
+    'site_not_ready'  => 'Site Not Ready',
+    'needs_levelling' => 'Needs Levelling',
+    'needs_attention' => 'Needs Attention',
+    'completed'       => 'Completed',
+    'cancelled'       => 'Cancelled',
+]
+
+WorkOrder::INSTALLER_STATUSES = [
+    'in_progress'     => 'In Progress',
+    'partial'         => 'Partially Complete',
+    'site_not_ready'  => 'Site Not Ready',
+    'needs_levelling' => 'Needs Levelling',
+    'needs_attention' => 'Needs Attention',
+    'completed'       => 'Completed',
+]
+```
 
 Status auto-advance in `store()`: if `installer_id` + `scheduled_date` are both set, status is set to `scheduled` automatically.
 
@@ -398,17 +427,29 @@ A Work Order can be **staged** — creating a `staged` PickTicket from the WO sh
 
 ---
 
-## Mobile WO View & QR Code (2026-03-23)
+## Mobile WO View & QR Code (2026-03-23, updated 2026-03-24)
 
 ### Mobile view
 - Route: `GET /m/wo/{workOrder}` → `mobile.work-orders.show` (middleware: `auth + verified + role_or_permission:admin|view work orders`)
+- The `installer` role also has `view work orders` permission (granted via migration `2026_03_24_040007_grant_view_work_orders_to_installer_role`)
 - Controller: `app/Http/Controllers/Mobile/WorkOrderController::show()` — loads `sale`, `installer`, `items.saleItem.room`, `items.relatedMaterials.saleItem`, `creator`
 - View: `resources/views/mobile/work-orders/show.blade.php`
-  - WO# + status badge
+  - WO# + status badge (all statuses including new ones)
   - Scheduled date/time (prominent blue box)
   - Job site card: homeowner name, job name, tappable Google Maps link for address
   - Items grouped by room (blue house header), with related materials + WO notes per item
   - Grand total, notes, Print PDF link
+  - **Add Job Photos card** (emerald): upload photos to the opportunity's media library; redirects to mobile photo gallery on success
+  - **View Job Photos card** (indigo): links to `mobile.opportunity.photos` — shown when WO has a linked opportunity
+  - **Update Status card** (blue, collapsible): only shown to installer-role users whose installer record matches the WO's `installer_id`; 2-col radio grid of `INSTALLER_STATUSES` + optional notes textarea; POSTs to `installer.wo.update-status`
+
+### Photo upload from mobile WO
+- Route: `POST /m/wo/{workOrder}/photos` → `mobile.work-orders.upload-photos`
+- Controller: `Mobile\WorkOrderController::uploadPhotos()`
+  - Validates images, max 20MB each (PHP `upload_max_filesize = 20M`, `post_max_size = 64M`)
+  - Stores to `public` disk at `opportunities/{id}/`
+  - Creates `OpportunityDocument` records with `category = media`, `created_by = auth()->id()`
+  - Redirects to `mobile.opportunity.photos` with success flash
 
 ### QR code in WO PDF
 - Footer of `resources/views/pdf/work-order.blade.php` includes a QR code pointing to `mobile.work-orders.show`

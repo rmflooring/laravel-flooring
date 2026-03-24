@@ -1,6 +1,6 @@
 # Installers Module Context
 
-Updated: 2026-03-14
+Updated: 2026-03-24
 
 ---
 
@@ -17,6 +17,7 @@ Installers are subcontractor profiles used to track installation crews and compa
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | bigint | PK |
+| `user_id` | nullable unique FK → users | Links to a User account for installer portal login; nullOnDelete |
 | `vendor_id` | FK → vendors | Nullable. Links to a subcontractor vendor. |
 | `company_name` | string | Required |
 | `contact_name` | string | Nullable |
@@ -46,6 +47,7 @@ Installers are subcontractor profiles used to track installation crews and compa
 `app/Models/Installer.php`
 
 Relationships:
+- `belongsTo(User, 'user_id')` — `user()` — linked portal user account
 - `belongsTo(Vendor)` — via `vendor_id`
 - `belongsTo(GLAccount, 'gl_cost_account_id')` — `glCostAccount()`
 - `belongsTo(GLAccount, 'gl_sale_account_id')` — `glSaleAccount()`
@@ -121,8 +123,34 @@ The user can then edit any of these before saving. The `vendor_id` is stored as 
 
 ---
 
+## User Account Linking (2026-03-24)
+
+Installer users log in through the normal auth system but are redirected to the installer portal.
+
+### Admin setup flow
+- In Users admin (`/admin/users`), edit or create a user
+- Set **User Type = Installer** (radio button)
+- Select the **Installer Record** from the dropdown (already-linked installers shown as disabled)
+- On save: `installer` role is auto-assigned; `installers.user_id` is set to the new user's ID
+- Switching back to **Staff** type clears the `user_id` link and syncs normal roles
+
+### UserController changes
+- `create()` / `edit()` now pass `$installers` and `$linkedInstaller` to views
+- `store()` / `update()` handle `user_type = installer` → sync role + set `installers.user_id`
+- Edit blade detects current type from `$userRoles` to pre-select the right radio
+
+### Post-login redirect
+`AuthenticatedSessionController::store()` checks `hasRole('installer')` → redirects to `installer.dashboard`; otherwise continues to normal home.
+
+---
+
+## Installer Portal
+
+See `Context/context_installer_portal.md` for full details.
+
+---
+
 ## Open Items / Future Work
 
 - Installer labour rates / pricing section for cost estimation
 - Filter Work Orders list by installer
-- Installer portal / login access (if ever needed)

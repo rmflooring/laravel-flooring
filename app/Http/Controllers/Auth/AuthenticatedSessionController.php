@@ -28,6 +28,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if (auth()->user()->hasRole('installer')) {
+            return redirect()->route('installer.dashboard');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
