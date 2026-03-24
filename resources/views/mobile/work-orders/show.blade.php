@@ -361,6 +361,16 @@
         document.getElementById('photo-upload-label').textContent = label + ' — ready to upload';
         document.getElementById('photo-submit-area').style.display = 'flex';
     }
+
+    // Reset upload form when returning via browser back button (bfcache restore)
+    window.addEventListener('pageshow', function (e) {
+        var form = document.getElementById('photo-upload-form');
+        if (form) {
+            form.reset();
+            document.getElementById('photo-submit-area').style.display = 'none';
+            document.getElementById('photo-upload-label').textContent = 'Tap to take or choose photos';
+        }
+    });
     </script>
 
 </x-mobile-layout>
