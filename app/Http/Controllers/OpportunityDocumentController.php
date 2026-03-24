@@ -192,8 +192,7 @@ public function index(Opportunity $opportunity, Request $request)
 			$count++;
 		}
 
-		return redirect()
-			->route('pages.opportunities.documents.index', $opportunity->id)
+		return $this->redirectAfterBulk($opportunity, $request)
 			->with('success', 'Selected files archived.');
 	}
 
@@ -261,8 +260,7 @@ public function index(Opportunity $opportunity, Request $request)
 			$doc->forceDelete();
 		}
 
-		return redirect()
-			->route('pages.opportunities.documents.index', $opportunity->id)
+		return $this->redirectAfterBulk($opportunity, $request)
 			->with('success', "{$docs->count()} archived file(s) permanently deleted.");
 	}
 	
@@ -293,6 +291,14 @@ public function index(Opportunity $opportunity, Request $request)
         $doc->forceDelete();
 
         return back()->with('success', 'Document permanently deleted.');
+    }
+
+    private function redirectAfterBulk(Opportunity $opportunity, Request $request): \Illuminate\Http\RedirectResponse
+    {
+        if ($request->input('redirect_to') === 'media') {
+            return redirect()->route('pages.opportunities.media.index', $opportunity->id);
+        }
+        return redirect()->route('pages.opportunities.documents.index', $opportunity->id);
     }
 
     private function assertBelongsToOpportunity(Opportunity $opportunity, OpportunityDocument $document): void

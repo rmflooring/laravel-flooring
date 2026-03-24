@@ -94,6 +94,7 @@
               @submit.prevent="submitBulk($el)">
             @csrf
             @method('DELETE')
+            <input type="hidden" name="redirect_to" value="media">
             <template x-for="id in selected" :key="id">
                 <input type="hidden" name="ids[]" :value="id">
             </template>
@@ -113,6 +114,7 @@
               @submit.prevent="confirmForceDelete($el)">
             @csrf
             @method('DELETE')
+            <input type="hidden" name="redirect_to" value="media">
             <template x-for="id in selected" :key="id">
                 <input type="hidden" name="ids[]" :value="id">
             </template>
