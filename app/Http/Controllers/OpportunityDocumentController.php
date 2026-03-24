@@ -236,17 +236,23 @@ public function index(Opportunity $opportunity, Request $request)
 				->with('error', 'No files selected.');
 		}
 
-		// Only archived docs that belong to this opportunity
-		$docs = OpportunityDocument::withTrashed()
+		// From the media gallery, active files can be force-deleted directly.
+		// From the documents page, only already-archived files are eligible.
+		$fromMedia = $request->input('redirect_to') === 'media';
+
+		$query = OpportunityDocument::withTrashed()
 			->where('opportunity_id', $opportunity->id)
-			->whereIn('id', $ids)
-			->whereNotNull('deleted_at') // archived only
-			->get();
+			->whereIn('id', $ids);
+
+		if (! $fromMedia) {
+			$query->whereNotNull('deleted_at');
+		}
+
+		$docs = $query->get();
 
 		if ($docs->isEmpty()) {
-			return redirect()
-				->route('pages.opportunities.documents.index', $opportunity->id)
-				->with('error', 'No archived files found to delete.');
+			return $this->redirectAfterBulk($opportunity, $request)
+				->with('error', 'No files found to delete.');
 		}
 
 		$count = 0;
