@@ -69,6 +69,11 @@ class PermissionsSeeder extends Seeder
             'edit unit measures',
             'delete unit measures',
 
+            // ===== Estimates =====
+            'view estimates',
+            'create estimates',
+            'edit estimates',
+
             // ===== RFMs =====
             'view rfms',
             'create rfms',
