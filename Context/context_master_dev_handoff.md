@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-25 (session 32)
+Updated: 2026-03-25 (session 33)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -522,7 +522,7 @@ Full details in `Context/context_sms.md`.
 
 ---
 
-## Vendor Reps (session 28, 2026-03-23)
+## Vendor Reps (session 28, 2026-03-23 / session 33, 2026-03-25)
 
 - Pivot table `vendor_vendor_rep` already existed (`vendor_id`, `vendor_rep_id`)
 - `Vendor` model already had `reps()` belongsToMany
@@ -530,6 +530,8 @@ Full details in `Context/context_sms.md`.
 - **Updated**: `VendorRepController` — `create()` passes all vendors; `store()` syncs selected vendor via pivot; `edit()` passes vendors + current vendor ID; `update()` syncs pivot (clears if blank)
 - **Updated**: create + edit blades — vendor dropdown added (optional, "— No vendor —" default)
 - Vendor assignment is optional; sync enforces one vendor per rep (clearing removes the link)
+- **Show page** (session 33): `VendorRepController::show()` added; view at `resources/views/admin/vendor_reps/show.blade.php` — two-column layout (contact details + notes | record info); vendor name links to `admin.vendors.show`
+- **Index** (session 33): rep name is a clickable link to show page; email is a `mailto:` link
 
 ---
 

@@ -43,6 +43,13 @@ class VendorRepController extends Controller
         return redirect()->route('admin.vendor_reps.index')->with('success', 'Vendor Rep created successfully.');
     }
 
+    public function show(VendorRep $vendorRep)
+    {
+        $vendorRep->load(['vendors', 'creator', 'updater']);
+
+        return view('admin.vendor_reps.show', compact('vendorRep'));
+    }
+
     public function edit(VendorRep $vendorRep)
     {
         $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);

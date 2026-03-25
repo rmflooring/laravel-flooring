@@ -25,13 +25,17 @@
                                 @forelse($reps as $rep)
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {{ $rep->name }}
+                                            <a href="{{ route('admin.vendor_reps.show', $rep) }}" class="text-indigo-600 hover:text-indigo-900">{{ $rep->name }}</a>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {{ $rep->phone ?? $rep->mobile ?? '-' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $rep->email ?? '-' }}
+                                            @if($rep->email)
+                                                <a href="mailto:{{ $rep->email }}" class="text-indigo-600 hover:text-indigo-900">{{ $rep->email }}</a>
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {{ $rep->creator?->name ?? '-' }}
