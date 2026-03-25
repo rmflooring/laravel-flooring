@@ -113,16 +113,35 @@
                     </a>
                 </li>
 
-                {{-- Customers --}}
-                <li>
-                    <a href="{{ route('admin.customers.index') }}"
-                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 19">
-                            <path d="M10 0a5 5 0 1 1 0 10A5 5 0 0 1 10 0Z"/>
-                            <path d="M0 19a10 10 0 0 1 20 0H0Z"/>
+                {{-- Customers accordion --}}
+                <li x-data="{ open: false }">
+                    <button @click="open = !open"
+                            class="sidebar-link flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                        <div class="flex items-center gap-3">
+                            <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 19">
+                                <path d="M10 0a5 5 0 1 1 0 10A5 5 0 0 1 10 0Z"/>
+                                <path d="M0 19a10 10 0 0 1 20 0H0Z"/>
+                            </svg>
+                            <span class="sidebar-label">Customers</span>
+                        </div>
+                        <svg :class="open ? 'rotate-90' : ''" class="sidebar-label h-4 w-4 flex-shrink-0 text-gray-500 transition-transform dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
-                        <span class="sidebar-label">Customers</span>
-                    </a>
+                    </button>
+                    <ul x-show="open" class="mt-1 space-y-1 pl-10">
+                        <li>
+                            <a href="{{ route('admin.customers.index') }}"
+                               class="block rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+                                Customers
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.project_managers.index') }}"
+                               class="block rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+                                Project Managers
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 {{-- Vendors accordion --}}
@@ -155,6 +174,12 @@
                             </a>
                         </li>
 						<li>
+                            <a href="{{ route('admin.vendor_reps.index') }}"
+                               class="block rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+                                Vendor Reps
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('pages.purchase-orders.index') }}"
                                class="block rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
                                 Purchase Orders
