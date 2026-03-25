@@ -69,6 +69,7 @@
         });
         </script>
 		<script src="{{ asset('assets/js/phone-format.js') }}"></script>
+		<script src="{{ asset('assets/js/postal-format.js') }}"></script>
 		<script src="{{ asset('assets/js/email-validate.js') }}"></script>
     </body>
 </html>

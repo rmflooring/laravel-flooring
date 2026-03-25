@@ -173,7 +173,7 @@
                                         <label class="block mb-1 text-sm font-medium text-gray-700">Postal Code</label>
                                         <input type="text" name="job_postal"
                                             value="{{ $site?->postal_code }}"
-                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                            class="postal-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                             placeholder="T2A 1B3">
                                     </div>
                                 </div>

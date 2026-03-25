@@ -123,7 +123,7 @@
                             <input type="text" name="postal"
                                    value="{{ old('postal', $postal) }}"
                                    placeholder="e.g. T2A 1B3"
-                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                                   class="postal-input w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                         </div>
 
                         <div>

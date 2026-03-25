@@ -71,7 +71,7 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
-                                <input type="text" name="postal_code" value="{{ old('postal_code') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="text" name="postal_code" value="{{ old('postal_code') }}" class="postal-input block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             </div>
 
                             <div>

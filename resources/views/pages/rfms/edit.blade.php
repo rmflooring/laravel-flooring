@@ -138,7 +138,7 @@
                                         <input type="text" id="site_postal_code" name="site_postal_code"
                                                value="{{ old('site_postal_code', $rfm->site_postal_code) }}"
                                                placeholder="A1A 1A1"
-                                               class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_postal_code') border-red-500 @enderror">
+                                               class="postal-input w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_postal_code') border-red-500 @enderror">
                                         @error('site_postal_code')
                                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                         @enderror

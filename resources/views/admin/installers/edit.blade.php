@@ -139,7 +139,7 @@
                             <label for="postal_code" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Postal Code</label>
                             <input type="text" id="postal_code" name="postal_code"
                                    value="{{ old('postal_code', $installer->postal_code) }}"
-                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                                   class="postal-input block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
                     </div>
                 </div>

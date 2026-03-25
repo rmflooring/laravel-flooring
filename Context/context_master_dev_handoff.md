@@ -809,6 +809,23 @@ Full details in `Context/context_warehouse_pick_tickets.md`.
 
 ---
 
+## Global input formatters (session 31, 2026-03-25)
+
+Two global JS scripts auto-format inputs on blur, loaded via `resources/views/layouts/app.blade.php`.
+
+### Phone formatter — `public/assets/js/phone-format.js`
+- Class: `phone-input`
+- Strips non-digits; formats 10-digit as `604-555-1234`; 11-digit (1+) as `1-604-555-1234`
+
+### Postal code formatter — `public/assets/js/postal-format.js`
+- Class: `postal-input`
+- Strips spaces, uppercases, reformats `A1A1A1` → `A1A 1A1` on blur
+- Dispatches `input` event after formatting so Alpine `x-model` reactive data stays in sync
+- For Alpine `x-model` fields, use inline `@blur` Alpine directive instead of relying on the class (avoids reactivity race): `@blur="(function(){ var c = form.postal_code.replace(/\s/g,'').toUpperCase(); if(/^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(c)){ form.postal_code = c.slice(0,3)+' '+c.slice(3); } })()"`
+- Applied to: RFM create/edit, Opportunity create/edit (×2 — one Alpine @blur, one postal-input class), Estimate create, Customer create/edit, Vendor create/edit, Installer create/edit, Employee create/edit, Branding settings
+
+---
+
 ## Resume prompts for next chat
 
 **To continue email work (RFM templates, HTML bodies, invoice send flow):**

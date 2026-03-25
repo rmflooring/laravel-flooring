@@ -279,6 +279,7 @@
                                                     <div>
                                                         <label class="block text-sm font-medium mb-1">Postal Code</label>
                                                         <input type="text" name="postal_code" x-model="form.postal_code"
+                                                               @blur="(function(){ var c = form.postal_code.replace(/\s/g,'').toUpperCase(); if(/^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(c)){ form.postal_code = c.slice(0,3)+' '+c.slice(3); } })()"
                                                                class="w-full border border-gray-300 rounded-lg p-2 text-sm">
                                                     </div>
 
@@ -447,7 +448,7 @@
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Postal Code</label>
                                         <input type="text" name="postal_code"
-                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                               class="postal-input w-full border border-gray-300 rounded-lg p-2 text-sm">
                                     </div>
 
                                     <div>

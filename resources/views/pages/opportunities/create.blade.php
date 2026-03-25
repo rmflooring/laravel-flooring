@@ -272,7 +272,7 @@
                                     <div>
                                         <label class="block text-sm font-medium mb-1">Postal Code</label>
                                         <input type="text" name="postal_code"
-                                               class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                               class="postal-input w-full border border-gray-300 rounded-lg p-2 text-sm">
                                     </div>
 
                                     <div>

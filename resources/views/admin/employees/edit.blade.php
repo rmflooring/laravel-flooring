@@ -123,7 +123,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
                             <input type="text" name="postal_code"
                                    value="{{ old('postal_code', $employee->postal_code) }}"
-                                   class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5">
+                                   class="postal-input w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5">
                         </div>
                     </div>
                 </div>
