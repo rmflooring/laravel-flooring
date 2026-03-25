@@ -99,6 +99,7 @@ class EstimateController extends Controller
 			'rooms.*.materials.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.materials.*.sell_price'        => ['nullable', 'numeric'],
             'rooms.*.materials.*.notes'             => ['nullable', 'string'],
+			'rooms.*.materials.*.order_qty'  => ['nullable', 'numeric'],
 			'rooms.*.materials.*.line_total' => ['nullable', 'numeric'],
 			'rooms.*.freight.*.line_total'   => ['nullable', 'numeric'],
 			'rooms.*.labour.*.line_total'    => ['nullable', 'numeric'],
@@ -119,8 +120,9 @@ class EstimateController extends Controller
 			'rooms.*.labour.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.labour.*.sell_price'           => ['nullable', 'numeric'],
             'rooms.*.labour.*.notes'                => ['nullable', 'string'],
+            'rooms.*.labour.*.order_qty'            => ['nullable', 'numeric'],
         ]);
-		
+
 
 		// Force tax_rate_percent to be the TAX GROUP TOTAL (not the effective %)
 $taxGroupId = $data['tax_group_id'] ?? null;
@@ -461,7 +463,8 @@ public function update(Request $request, Estimate $estimate)
 'rooms.*.labour.*.line_total'    => ['nullable', 'numeric'],
 'rooms.*.labour.*.cost_price'    => ['nullable', 'numeric'],
 'rooms.*.labour.*.cost_total'    => ['nullable', 'numeric'],
-		
+'rooms.*.labour.*.order_qty'     => ['nullable', 'numeric'],
+
 		'rooms.*.materials.*.product_type'      => ['nullable', 'string'],
 'rooms.*.materials.*.manufacturer'      => ['nullable', 'string'],
 'rooms.*.materials.*.style'             => ['nullable', 'string'],
@@ -473,6 +476,7 @@ public function update(Request $request, Estimate $estimate)
 'rooms.*.materials.*.cost_total'        => ['nullable', 'numeric'],
 'rooms.*.materials.*.sell_price'        => ['nullable', 'numeric'],
 'rooms.*.materials.*.line_total'        => ['nullable', 'numeric'],
+'rooms.*.materials.*.order_qty'         => ['nullable', 'numeric'],
 'rooms.*.materials.*.notes'             => ['nullable', 'string'],
 
 'rooms.*.freight.*.freight_description' => ['nullable', 'string'],
