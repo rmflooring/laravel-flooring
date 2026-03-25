@@ -106,6 +106,12 @@ class PermissionsSeeder extends Seeder
             'view rtvs',
             'create rtvs',
             'edit rtvs',
+
+            // ===== Installers =====
+            'view installers',
+            'create installers',
+            'edit installers',
+            'delete installers',
         ];
 
         foreach ($permissions as $permission) {
