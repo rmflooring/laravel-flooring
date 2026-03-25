@@ -10,6 +10,12 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// SMS day-before reminders — runs daily at the configured time (default 4pm)
+Schedule::command('sms:send-reminders')
+    ->dailyAt(\App\Models\Setting::get('sms_reminder_time', '16:00'))
+    ->name('sms-send-reminders')
+    ->withoutOverlapping();
+
 Schedule::call(function () {
     $users = \App\Models\User::whereHas('microsoftAccount', function ($q) {
         $q->where('is_connected', 1);

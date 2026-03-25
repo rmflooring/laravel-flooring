@@ -159,6 +159,20 @@ Route::prefix('admin')
             Route::delete('/settings/calendar-templates/{type}', [\App\Http\Controllers\Admin\AdminCalendarTemplateController::class, 'reset'])
                 ->name('settings.calendar-templates.reset');
 
+            Route::get('/settings/sms', [\App\Http\Controllers\Admin\SmsSettingsController::class, 'index'])
+                ->name('settings.sms');
+            Route::post('/settings/sms', [\App\Http\Controllers\Admin\SmsSettingsController::class, 'update'])
+                ->name('settings.sms.update');
+            Route::post('/settings/sms/test', [\App\Http\Controllers\Admin\SmsSettingsController::class, 'testSend'])
+                ->name('settings.sms.test');
+
+            Route::get('/settings/sms-templates', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'index'])
+                ->name('settings.sms-templates.index');
+            Route::post('/settings/sms-templates/{type}', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'save'])
+                ->name('settings.sms-templates.save');
+            Route::delete('/settings/sms-templates/{type}', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'reset'])
+                ->name('settings.sms-templates.reset');
+
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);
 

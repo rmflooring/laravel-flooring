@@ -23,11 +23,13 @@ class Rfm extends Model
         'calendar_event_id',
         'created_by',
         'updated_by',
+        'sms_reminder_sent_at',
     ];
 
     protected $casts = [
-        'scheduled_at'  => 'datetime',
-        'flooring_type' => 'array',
+        'scheduled_at'        => 'datetime',
+        'sms_reminder_sent_at'=> 'datetime',
+        'flooring_type'       => 'array',
     ];
 
     // Valid statuses in lifecycle order

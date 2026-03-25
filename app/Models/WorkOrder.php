@@ -15,9 +15,10 @@ class WorkOrder extends Model
     protected $guarded = ['id', 'wo_number'];
 
     protected $casts = [
-        'scheduled_date' => 'date',
-        'sent_at'        => 'datetime',
-        'deleted_at'     => 'datetime',
+        'scheduled_date'      => 'date',
+        'sent_at'             => 'datetime',
+        'sms_reminder_sent_at'=> 'datetime',
+        'deleted_at'          => 'datetime',
     ];
 
     const STATUSES = [

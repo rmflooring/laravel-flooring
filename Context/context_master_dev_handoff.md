@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-24 (session 30)
+Updated: 2026-03-25 (session 32)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -28,6 +28,7 @@ Current core modules:
 - Email system (Track 1 + Track 2) — see `Context/context_graph_mail.md`
 - Email Templates (per-user + admin system) — see `Context/context_email_templates.md`
 - Calendar Entry Templates (admin) — `app/Models/CalendarTemplate.php`, `app/Services/CalendarTemplateService.php`, `admin.settings.calendar-templates.*`
+- **SMS Notifications** (Twilio) — see `Context/context_sms.md`
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 - **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
@@ -481,6 +482,43 @@ Admin-only setting to customise the title and notes for MS365 calendar events cr
 - `WorkOrderController::buildEventData()` — uses `CalendarTemplateService::renderTemplate('work_order_calendar', $vars)`
 - `PurchaseOrderController::buildPickupEventData()` — uses `renderTemplate('po_pickup_calendar', $vars)`
 - `RfmController::store()` — uses `renderTemplate('rfm_calendar', $vars)`; `$opportunity->loadMissing(['projectManager'])` added before vars
+
+---
+
+## SMS Notifications (session 31, 2026-03-25)
+Full details in `Context/context_sms.md`.
+
+- Provider: **Twilio** (`twilio/sdk ^8.11`)
+- `SmsService` — wraps Twilio, normalizes phone to E.164, logs every send to `sms_log`, never throws
+- `SmsTemplateService` — `getBody()`, `render()`, `renderTemplate()` — same pattern as CalendarTemplateService
+- `SmsTemplate` model — `TYPES`, `TAGS`, `DEFAULTS` constants for 4 notification types
+- `SmsLog` model — `sms_log` table; mirrors `mail_log`
+- `users` table: `phone` + `mobile` columns added; UserController + create/edit views updated
+- `work_orders.sms_reminder_sent_at` + `rfms.sms_reminder_sent_at` — nullable timestamps; prevent duplicate reminders
+- Artisan command: `sms:send-reminders` — queries WOs/RFMs scheduled tomorrow, sends reminders, stamps sent_at
+- Scheduler: `routes/console.php` — runs daily at `sms_reminder_time` setting (default `16:00`)
+
+### Notification types + triggers
+| Type | Trigger | Recipients |
+|------|---------|------------|
+| `wo_scheduled` | WO status → `scheduled` in store() or update() | PM (`projectManager.mobile`), Installer (`installer.mobile`) |
+| `wo_reminder` | `sms:send-reminders` cron | PM, Installer, Homeowner (`job_phone`) |
+| `rfm_booked` | `RfmController::store()` | Estimator (`employee.phone`), PM (`projectManager.mobile`) |
+| `rfm_reminder` | `sms:send-reminders` cron | Estimator, PM, Customer (`customer.mobile`) |
+
+### Admin pages
+- `GET /admin/settings/sms` → `admin.settings.sms` — credentials, toggles, recipient checkboxes, test send, send log
+- `GET /admin/settings/sms-templates` → `admin.settings.sms-templates.index` — tab UI with live char counter, copy-to-clipboard tags
+
+### Changes (session 32)
+- **Homeowner added to WO Scheduled**: `sendScheduledSms()` now sends to `sale.job_phone` (fallback `sourceEstimate.homeowner_phone`) when `homeowner` is in `sms_wo_scheduled_to`
+- **Customer added to RFM Booked**: `RfmController::store()` now sends to `parentCustomer.mobile` (fallback `.phone`) when `customer` is in `sms_rfm_booked_to`
+- **Toggle save bug fixed**: `SmsSettingsController::update()` used `$request->has()` — always true due to hidden input fields. Fixed to `$request->input(...) === '1'`
+
+### Open items
+- Wire RFM updated SMS (when `scheduled_at` changes on edit)
+- Manual on-demand SMS send button on WO show page
+- Consider adding `mobile` to `Employee` model for estimator mobile sends (currently uses `employee.phone`)
 
 ---
 

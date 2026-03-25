@@ -19,6 +19,8 @@ use App\Services\EmailTemplateService;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
 use App\Services\PickTicketService;
+use App\Services\SmsService;
+use App\Services\SmsTemplateService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -181,6 +183,10 @@ class WorkOrderController extends Controller
 
         if ($request->boolean('sync_calendar', false)) {
             $this->syncCalendarCreate($workOrder);
+        }
+
+        if ($status === 'scheduled') {
+            $this->sendScheduledSms($workOrder);
         }
 
         return redirect()
@@ -364,6 +370,7 @@ class WorkOrderController extends Controller
             || ($data['scheduled_date'] ?? '') !== ($workOrder->scheduled_date?->format('Y-m-d') ?? '')
             || ($data['scheduled_time'] ?? '') !== ($workOrder->scheduled_time ?? '');
 
+        $previousStatus = $workOrder->status;
         $wasCancelled   = $workOrder->status === 'cancelled';
         $beingCancelled = $data['status'] === 'cancelled';
 
@@ -416,6 +423,11 @@ class WorkOrderController extends Controller
                     $this->syncCalendarCreate($workOrder);
                 }
             }
+        }
+
+        // Send scheduled SMS when status transitions to scheduled
+        if ($data['status'] === 'scheduled' && $previousStatus !== 'scheduled') {
+            $this->sendScheduledSms($workOrder);
         }
 
         return redirect()
@@ -706,6 +718,69 @@ class WorkOrderController extends Controller
             Log::info('[WO] Calendar event deleted', ['wo_id' => $workOrder->id]);
         } catch (\Throwable $e) {
             Log::error('[WO] Calendar event deletion failed', [
+                'wo_id' => $workOrder->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    // ── SMS helpers ───────────────────────────────────────────────
+
+    /**
+     * Send WO scheduled SMS to configured recipients (best-effort, never blocks).
+     */
+    private function sendScheduledSms(WorkOrder $workOrder): void
+    {
+        if (! \App\Models\Setting::get('sms_notify_wo_scheduled')) {
+            return;
+        }
+
+        try {
+            $workOrder->loadMissing(['installer', 'sale.opportunity.projectManager', 'sale.sourceEstimate']);
+
+            $sale        = $workOrder->sale;
+            $installer   = $workOrder->installer;
+            $pm          = $sale?->opportunity?->projectManager;
+
+            $scheduledDate = $workOrder->scheduled_date?->format('M j, Y') ?? '';
+            $scheduledTime = $workOrder->scheduled_time
+                ? \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_time)->format('g:ia')
+                : '';
+
+            $vars = [
+                'wo_number'            => $workOrder->wo_number ?? '',
+                'sale_number'          => $sale?->sale_number ?? '',
+                'customer_name'        => $sale?->homeowner_name ?? $sale?->job_name ?? '',
+                'job_address'          => $sale?->job_address ?? '',
+                'scheduled_date'       => $scheduledDate,
+                'scheduled_time'       => $scheduledTime,
+                'installer_name'       => $installer?->company_name ?? '',
+                'installer_first_name' => explode(' ', trim($installer?->company_name ?? 'Installer'))[0],
+                'pm_name'              => $pm?->name ?? '',
+                'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
+            ];
+
+            $recipients = array_filter(explode(',', \App\Models\Setting::get('sms_wo_scheduled_to', 'pm,installer')));
+            $sms        = new SmsService();
+            $tpl        = new SmsTemplateService();
+            $body       = $tpl->renderTemplate('wo_scheduled', $vars);
+
+            if (in_array('pm', $recipients) && $pm?->mobile) {
+                $sms->send($pm->mobile, $body, 'wo_scheduled', $workOrder);
+            }
+
+            if (in_array('installer', $recipients) && $installer?->mobile) {
+                $sms->send($installer->mobile, $body, 'wo_scheduled', $workOrder);
+            }
+
+            if (in_array('homeowner', $recipients)) {
+                $phone = $sale?->job_phone ?? $sale?->sourceEstimate?->homeowner_phone ?? null;
+                if ($phone) {
+                    $sms->send($phone, $body, 'wo_scheduled', $workOrder);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('[WO SMS] scheduled send failed', [
                 'wo_id' => $workOrder->id,
                 'error' => $e->getMessage(),
             ]);

@@ -57,6 +57,19 @@
                             </div>
                         </div>
 
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                                <input type="text" name="phone" value="{{ old('phone') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="e.g. 416-555-1234">
+                                @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Mobile</label>
+                                <input type="text" name="mobile" value="{{ old('mobile') }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="e.g. 416-555-5678">
+                                @error('mobile') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+
                         {{-- User Type --}}
                         <div class="mt-6" x-data="{ userType: '{{ old('user_type', 'staff') }}' }">
                             <label class="block text-sm font-medium text-gray-700 mb-2">User Type</label>
