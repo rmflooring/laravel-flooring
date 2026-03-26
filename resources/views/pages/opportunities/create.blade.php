@@ -60,16 +60,23 @@
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                         </div>
 
-                        <div class="md:col-span-3">
+                        <div class="md:col-span-3" x-data="{ status: '{{ old('status', 'New') }}' }">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select name="status" form="opportunity-form"
+                            <select name="status" form="opportunity-form" x-model="status"
                                     class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                                 @foreach ($statuses as $status)
-                                    <option value="{{ $status }}" {{ $status === 'New' ? 'selected' : '' }}>
+                                    <option value="{{ $status }}" {{ old('status', 'New') === $status ? 'selected' : '' }}>
                                         {{ $status }}
                                     </option>
                                 @endforeach
                             </select>
+
+                            <div x-show="status === 'Lost' || status === 'Closed'" x-cloak class="mt-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                <textarea name="status_reason" form="opportunity-form" rows="3"
+                                          placeholder="Enter reason for this status…"
+                                          class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm resize-none">{{ old('status_reason') }}</textarea>
+                            </div>
                         </div>
 
                         <div class="md:col-span-3">

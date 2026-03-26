@@ -16,6 +16,7 @@
 		<style>
   body.sidebar-collapsed .sidebar-label { display: none; }
   body.sidebar-collapsed #app-sidebar .sidebar-link { justify-content: center; }
+  [x-cloak] { display: none !important; }
 </style>
     </head>
     <body class="font-sans antialiased">

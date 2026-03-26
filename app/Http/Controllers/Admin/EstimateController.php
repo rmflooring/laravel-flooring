@@ -609,6 +609,20 @@ if ($taxGroupId) {
             'updated_by'         => auth()->id(),
         ])->save();
 
+        // Auto-approve linked sale + opportunity when estimate is marked approved
+        if ($data['status'] === 'approved') {
+            $linkedSale = \App\Models\Sale::where('source_estimate_id', $estimate->id)->first();
+            if ($linkedSale && ! in_array($linkedSale->status, ['approved', 'cancelled'])) {
+                $linkedSale->update(['status' => 'approved', 'updated_by' => auth()->id()]);
+            }
+
+            if ($estimate->opportunity_id) {
+                \App\Models\Opportunity::where('id', $estimate->opportunity_id)
+                    ->whereNotIn('status', ['Approved', 'Lost', 'Closed'])
+                    ->update(['status' => 'Approved', 'updated_by' => auth()->id()]);
+            }
+        }
+
         // 2) Rooms + items
         $rooms = $data['rooms'] ?? [];
 		

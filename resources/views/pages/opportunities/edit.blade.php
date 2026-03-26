@@ -61,9 +61,9 @@
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                         </div>
 
-                        <div class="md:col-span-3">
+                        <div class="md:col-span-3" x-data="{ status: '{{ old('status', $opportunity->status) }}', activeSales: {{ $activeSaleCount }} }">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select name="status" form="opportunity-form"
+                            <select name="status" form="opportunity-form" x-model="status"
                                     class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                                 @foreach ($statuses as $status)
                                     <option value="{{ $status }}" {{ old('status', $opportunity->status) === $status ? 'selected' : '' }}>
@@ -71,6 +71,18 @@
                                     </option>
                                 @endforeach
                             </select>
+
+                            <div x-show="status === 'Lost' && activeSales > 0" x-cloak class="mt-2 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800">
+                                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+                                <span>This opportunity has <strong x-text="activeSales"></strong> active <span x-text="activeSales === 1 ? 'job' : 'jobs'"></span>. Cancel all active jobs before marking as Lost.</span>
+                            </div>
+
+                            <div x-show="status === 'Lost' || status === 'Closed'" x-cloak class="mt-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                <textarea name="status_reason" form="opportunity-form" rows="3"
+                                          placeholder="Enter reason for this status…"
+                                          class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm resize-none">{{ old('status_reason', $opportunity->status_reason) }}</textarea>
+                            </div>
                         </div>
 
                         <div class="md:col-span-3">

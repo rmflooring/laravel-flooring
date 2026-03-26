@@ -12,6 +12,7 @@ class Opportunity extends Model
         'project_manager_id',
         'job_no',
         'status',
+        'status_reason',
         'is_active',
         'sales_person_1',
         'sales_person_2',

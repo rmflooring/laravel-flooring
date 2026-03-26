@@ -16,6 +16,11 @@
                             {{ $opportunity->status ?? 'New' }}
                         </span>
 
+                        @if($opportunity->status_reason && in_array($opportunity->status, ['Lost', 'Closed']))
+                            <span class="text-gray-400 dark:text-gray-500">—</span>
+                            <span class="text-sm text-gray-600 dark:text-gray-400 italic">{{ $opportunity->status_reason }}</span>
+                        @endif
+
                         @if($opportunity->job_no)
                             <span class="text-gray-400 dark:text-gray-500">•</span>
                             <span>Job No:</span>

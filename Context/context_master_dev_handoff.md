@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-25 (session 33)
+Updated: 2026-03-26 (session 34)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -519,6 +519,17 @@ Full details in `Context/context_sms.md`.
 - Wire RFM updated SMS (when `scheduled_at` changes on edit)
 - Manual on-demand SMS send button on WO show page
 - Consider adding `mobile` to `Employee` model for estimator mobile sends (currently uses `employee.phone`)
+
+---
+
+## Opportunities — Status guard rails + auto-approve (session 34, 2026-03-26)
+
+- `status_reason` (nullable text) added to `opportunities` table — shown as textarea on edit/create when status is Lost or Closed; displayed on show page
+- **Guard rail — Lost**: `OpportunityController::update()` blocks setting status to `Lost` if any non-cancelled sale exists. Returns back with error: "X active jobs — cancel all before marking Lost." Edit blade also shows an inline Alpine.js amber warning before submit.
+- **Auto-approve cascade**: `EstimateController::update()` — when estimate status is set to `approved`:
+  - Linked sale (`source_estimate_id`) → set to `approved` (skips if already approved/cancelled)
+  - Linked opportunity (`opportunity_id`) → set to `Approved` (skips if already Approved/Lost/Closed)
+- Opportunity statuses (string, not enum): `New`, `In Progress`, `Awaiting Site Measure`, `Estimate Sent`, `Approved`, `Lost`, `Closed`
 
 ---
 

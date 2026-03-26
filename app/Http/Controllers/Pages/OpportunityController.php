@@ -149,9 +149,14 @@ $employees = Employee::query()
             'project_manager_id'   => ['nullable', 'exists:project_managers,id'],
             'job_no'               => ['nullable', 'string', 'max:255'],
             'status'               => ['required', 'string', 'max:50'],
+            'status_reason'        => ['nullable', 'string', 'max:1000'],
             'sales_person_1'       => ['nullable', 'string', 'max:255'],
             'sales_person_2'       => ['nullable', 'string', 'max:255'],
         ]);
+
+        if (! in_array($data['status'], ['Lost', 'Closed'])) {
+            $data['status_reason'] = null;
+        }
 
         $opportunity = Opportunity::create($data);
 
@@ -242,13 +247,18 @@ $employees = Employee::query()
     ->orderBy('first_name')
     ->get(['id', 'first_name']);
 
+    $activeSaleCount = $opportunity->sales()
+        ->where('status', '<>', 'cancelled')
+        ->count();
+
     return view('pages.opportunities.edit', compact(
         'opportunity',
         'parentCustomers',
         'jobSiteCustomers',
         'projectManagers',
          'statuses',
-		 'employees'
+		 'employees',
+        'activeSaleCount'
     ));
 }
 
@@ -262,9 +272,25 @@ public function update(Request $request, string $id)
         'project_manager_id'   => ['nullable', 'exists:project_managers,id'],
         'job_no'               => ['nullable', 'string', 'max:255'],
         'status'               => ['required', 'string', 'max:50'],
+        'status_reason'        => ['nullable', 'string', 'max:1000'],
         'sales_person_1'       => ['nullable', 'string', 'max:255'],
         'sales_person_2'       => ['nullable', 'string', 'max:255'],
     ]);
+
+    if (! in_array($data['status'], ['Lost', 'Closed'])) {
+        $data['status_reason'] = null;
+    }
+
+    if ($data['status'] === 'Lost') {
+        $activeSaleCount = $opportunity->sales()
+            ->where('status', '<>', 'cancelled')
+            ->count();
+        if ($activeSaleCount > 0) {
+            return back()
+                ->withInput()
+                ->with('error', 'This opportunity has ' . $activeSaleCount . ' active ' . ($activeSaleCount === 1 ? 'job' : 'jobs') . '. Please cancel all active jobs before marking this opportunity as Lost.');
+        }
+    }
 
     $opportunity->update($data);
 
