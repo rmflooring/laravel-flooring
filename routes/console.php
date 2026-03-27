@@ -13,6 +13,7 @@ Artisan::command('inspire', function () {
 // SMS day-before reminders — runs daily at the configured time (default 4pm)
 Schedule::command('sms:send-reminders')
     ->dailyAt(\App\Models\Setting::get('sms_reminder_time', '16:00'))
+    ->timezone('America/Vancouver')
     ->name('sms-send-reminders')
     ->withoutOverlapping();
 
