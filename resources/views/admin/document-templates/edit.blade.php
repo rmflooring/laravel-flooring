@@ -96,6 +96,10 @@
     </div>
 
     <script>
+    const _previewDate = '{{ now()->format("F j, Y") }}';
+    </script>
+    @verbatim
+    <script>
     (function () {
         const PLACEHOLDERS = {
             '{{customer_name}}':      'John Smith',
@@ -109,7 +113,7 @@
             '{{pm_first_name}}':      'Sarah',
             '{{pm_phone}}':           '(604) 555-0199',
             '{{pm_email}}':           'sarah@rmflooring.ca',
-            '{{date}}':               '{{ now()->format("F j, Y") }}',
+            '{{date}}':               _previewDate,
             '{{generated_by}}':       'Admin User',
             '{{sale_number}}':        '2024-0042',
             '{{flooring_items_table}}': `<table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -185,5 +189,6 @@
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
     })();
     </script>
+    @endverbatim
 
 </x-app-layout>
