@@ -58,7 +58,7 @@
             border-collapse: collapse;
         }
 
-        /* Flooring items table (injected via {{flooring_items_table}}) */
+        /* Flooring items table */
         .flooring-table {
             width: 100%;
             border-collapse: collapse;
