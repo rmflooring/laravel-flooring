@@ -764,6 +764,11 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('purchase-orders.index');
 
+		// RFMs — index
+		Route::get('rfms', [\App\Http\Controllers\Pages\RfmController::class, 'index'])
+			->middleware('role_or_permission:admin|view rfms')
+			->name('rfms.index');
+
 		// Work Orders — index
 		Route::get('work-orders', [\App\Http\Controllers\Pages\WorkOrderController::class, 'index'])
 			->middleware('role_or_permission:admin|view work orders')
