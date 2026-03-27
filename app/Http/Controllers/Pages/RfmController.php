@@ -20,6 +20,44 @@ use Illuminate\Support\Facades\Log;
 
 class RfmController extends Controller
 {
+    public function index(Request $request)
+    {
+        $q            = trim($request->input('q', ''));
+        $status       = $request->input('status', '');
+        $estimatorId  = $request->input('estimator_id', '');
+        $flooringType = $request->input('flooring_type', '');
+        $dateFrom     = $request->input('date_from', '');
+        $dateTo       = $request->input('date_to', '');
+
+        $rfms = Rfm::with(['opportunity.projectManager', 'parentCustomer', 'estimator'])
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('site_address', 'like', "%{$q}%")
+                        ->orWhere('site_city', 'like', "%{$q}%")
+                        ->orWhereHas('parentCustomer', fn ($cq) => $cq->where('company_name', 'like', "%{$q}%")->orWhere('name', 'like', "%{$q}%"))
+                        ->orWhereHas('estimator', fn ($eq) => $eq->where('first_name', 'like', "%{$q}%")->orWhere('last_name', 'like', "%{$q}%"))
+                        ->orWhereHas('opportunity', fn ($oq) => $oq->where('job_no', 'like', "%{$q}%")->orWhere('job_name', 'like', "%{$q}%"));
+                });
+            })
+            ->when($status,       fn ($query) => $query->where('status', $status))
+            ->when($estimatorId,  fn ($query) => $query->where('estimator_id', $estimatorId))
+            ->when($flooringType, fn ($query) => $query->whereJsonContains('flooring_type', $flooringType))
+            ->when($dateFrom,     fn ($query) => $query->whereDate('scheduled_at', '>=', $dateFrom))
+            ->when($dateTo,       fn ($query) => $query->whereDate('scheduled_at', '<=', $dateTo))
+            ->orderByDesc('scheduled_at')
+            ->paginate(25)
+            ->withQueryString();
+
+        $estimators   = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name']);
+        $statusOptions = Rfm::STATUSES;
+        $flooringTypes = Rfm::FLOORING_TYPES;
+
+        return view('pages.rfms.index', compact(
+            'rfms', 'estimators', 'statusOptions', 'flooringTypes',
+            'q', 'status', 'estimatorId', 'flooringType', 'dateFrom', 'dateTo'
+        ));
+    }
+
     public function create(Opportunity $opportunity)
     {
         $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']);
@@ -288,6 +326,13 @@ class RfmController extends Controller
         $oldPostal     = $rfm->site_postal_code ?? '';
 
         $rfm->update($data);
+
+        // If scheduled_at changed, clear the reminder stamp so it fires again for the new date
+        $newScheduledRaw = \Carbon\Carbon::parse($data['scheduled_at'])->format('M j, Y g:i A');
+        if ($oldScheduled !== $newScheduledRaw) {
+            $rfm->update(['sms_reminder_sent_at' => null]);
+        }
+
         $rfm->load(['estimator']);
 
         // Build change list
