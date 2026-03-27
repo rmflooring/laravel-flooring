@@ -44,6 +44,11 @@ class DocumentTemplateService
             'pm_first_name'    => explode(' ', trim($pmName))[0] ?? '',
             'pm_phone'         => $pm?->phone ?? '',
             'pm_email'         => $pm?->email ?? '',
+            'insurance_company'=> $jobSite?->insurance_company ?? '',
+            'adjuster'         => $jobSite?->adjuster ?? '',
+            'policy_number'    => $jobSite?->policy_number ?? '',
+            'claim_number'     => $jobSite?->claim_number ?? '',
+            'dol'              => $jobSite?->dol ? \Carbon\Carbon::parse($jobSite->dol)->format('M j, Y') : '',
             'date'             => now()->format('F j, Y'),
             'generated_by'     => auth()->user()?->name ?? '',
         ];

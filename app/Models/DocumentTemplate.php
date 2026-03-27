@@ -40,6 +40,11 @@ class DocumentTemplate extends Model
         '{{pm_first_name}}',
         '{{pm_phone}}',
         '{{pm_email}}',
+        '{{insurance_company}}',
+        '{{adjuster}}',
+        '{{policy_number}}',
+        '{{claim_number}}',
+        '{{dol}}',
         '{{date}}',
         '{{generated_by}}',
     ];

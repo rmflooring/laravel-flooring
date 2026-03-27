@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-27 (session 36)
+Updated: 2026-03-27 (session 37)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -307,12 +307,12 @@ Full details in `Context/context_sale_status.md`.
 
 ---
 
-## Document Templates (session 36, 2026-03-27)
+## Document Templates (session 36–37, 2026-03-27)
 Full details in `Context/context_document_templates.md`.
 
 - Admin-managed printable templates with HTML body + `{{merge_tags}}`
 - Staff generate PDFs from the opportunity Documents tab → saved as `generated_document` category `OpportunityDocument`
-- Model: `app/Models/DocumentTemplate.php` — `OPPORTUNITY_TAGS` (13 tags) + `SALE_TAGS` (2 tags incl. `{{flooring_items_table}}`)
+- Model: `app/Models/DocumentTemplate.php` — `OPPORTUNITY_TAGS` (18 tags) + `SALE_TAGS` (2 tags incl. `{{flooring_items_table}}`)
 - Service: `app/Services/DocumentTemplateService.php` — `render()` + `buildFlooringTable()`
 - PDF template: `resources/views/pdf/document-template.blade.php` — DejaVu Sans, branding logo/header/footer
 - Admin CRUD: `admin.document-templates.*` (index/create/edit/update/destroy); gated `role_or_permission:admin`
@@ -324,6 +324,13 @@ Full details in `Context/context_document_templates.md`.
 - Front File Label layout mirrors RFM show page: blue header (Job#/customer), job name strip, left=Customer+PM / right=Job Site, measure details fill-in lines, special instructions (amber), notes
 - Admin sidebar + admin settings page both have "Document Templates" links
 - ⚠️ Blade parses `{{tags}}` everywhere — use `@{{tag}}` in text, `@verbatim` in `<script>` blocks, avoid in CSS comments
+- **Insurance tags (session 37)**: `{{insurance_company}}`, `{{adjuster}}`, `{{policy_number}}`, `{{claim_number}}`, `{{dol}}` — resolve from `jobSiteCustomer` columns; `{{dol}}` formatted as `M j, Y`
+
+## RFMs index page (session 37, 2026-03-27)
+- `RfmController::index()` — search (customer, estimator, job#, address), status, estimator dropdown, flooring type (`whereJsonContains`), scheduled date range; paginated 25/page
+- Route: `GET pages/rfms` → `pages.rfms.index` (middleware: `role_or_permission:admin|view rfms`)
+- View: `resources/views/pages/rfms/index.blade.php` — columns: Customer+PM, Job (linked), Site Address, Flooring type badges, Estimator, Scheduled, Status, Calendar sync, View button
+- Sidebar: "RFMs" link added between Opportunities and Estimates
 
 ---
 

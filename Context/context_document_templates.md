@@ -38,8 +38,9 @@ Added to link generated documents back to their source template. `nullOnDelete()
 - `fillable`: name, description, body, needs_sale, is_active, sort_order, created_by, updated_by
 - Booted hooks: set `created_by` / `updated_by` on create/update
 - Relationships: `creator()`, `updater()` (BelongsTo User), `generatedDocuments()` (HasMany OpportunityDocument)
-- **`OPPORTUNITY_TAGS`** constant — 13 tags always available:
-  `{{customer_name}}`, `{{job_name}}`, `{{job_no}}`, `{{job_site_name}}`, `{{job_site_address}}`, `{{job_site_phone}}`, `{{job_site_email}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{pm_phone}}`, `{{pm_email}}`, `{{date}}`, `{{generated_by}}`
+- **`OPPORTUNITY_TAGS`** constant — 18 tags always available:
+  `{{customer_name}}`, `{{job_name}}`, `{{job_no}}`, `{{job_site_name}}`, `{{job_site_address}}`, `{{job_site_phone}}`, `{{job_site_email}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{pm_phone}}`, `{{pm_email}}`, `{{insurance_company}}`, `{{adjuster}}`, `{{policy_number}}`, `{{claim_number}}`, `{{dol}}`, `{{date}}`, `{{generated_by}}`
+- Insurance tags resolve from `jobSiteCustomer` columns (`insurance_company`, `adjuster`, `policy_number`, `claim_number`, `dol`). `{{dol}}` formatted as `M j, Y` (e.g. "Jan 15, 2024"); empty string if not set.
 - **`SALE_TAGS`** constant — 2 tags available when `needs_sale = true`:
   `{{sale_number}}`, `{{flooring_items_table}}`
 
