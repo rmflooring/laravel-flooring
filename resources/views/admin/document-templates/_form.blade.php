@@ -46,7 +46,7 @@
                    class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
             <label for="needs_sale" class="text-sm text-gray-700 dark:text-gray-300">
                 Requires Sale selection
-                <span class="block text-xs text-gray-400 dark:text-gray-500">Staff picks a sale when generating — enables <code class="text-xs">{{flooring_items_table}}</code></span>
+                <span class="block text-xs text-gray-400 dark:text-gray-500">Staff picks a sale when generating — enables <code class="text-xs">@{{flooring_items_table}}</code></span>
             </label>
         </div>
 
@@ -98,7 +98,7 @@
                 @endforeach
             </div>
             <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-                <code>{{flooring_items_table}}</code> renders a full HTML table of rooms + material items from the selected sale.
+                <code>@{{flooring_items_table}}</code> renders a full HTML table of rooms + material items from the selected sale.
             </p>
         </div>
 
