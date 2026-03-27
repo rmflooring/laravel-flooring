@@ -20,6 +20,7 @@ class OpportunityDocument extends Model
         'size_bytes',
         'category',
         'category_override',
+        'template_id',
         'label_id',
         'label_text',
         'description',

@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DocumentTemplate;
 use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Models\OpportunityDocumentLabel;
+use App\Models\Sale;
+use App\Services\DocumentTemplateService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class OpportunityDocumentController extends Controller
 {
@@ -31,7 +36,7 @@ public function index(Opportunity $opportunity, Request $request)
 
     // type filter
     if ($type === 'documents') {
-        $documentsQuery->where('category', 'documents');
+        $documentsQuery->whereIn('category', ['documents', 'generated_document']);
     } elseif ($type === 'media') {
         $documentsQuery->where('category', 'media');
     }
@@ -51,14 +56,25 @@ public function index(Opportunity $opportunity, Request $request)
         ->orderBy('name')
         ->get(['id', 'name']);
 
+    $activeTemplates = DocumentTemplate::where('is_active', true)
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get(['id', 'name', 'description', 'needs_sale']);
+
+    $opportunitySales = $opportunity->sales()
+        ->orderByDesc('id')
+        ->get(['id', 'sale_number', 'job_name']);
+
     return view('pages.opportunities.documents.index', [
-        'opportunity'   => $opportunity,
-        'documents'     => $documents,
-        'labels'        => $labels,
-        'type'          => $type,
-        'labelId'       => $labelId,
-        'labelText'     => $labelText,
-        'showArchived'  => $showArchived,
+        'opportunity'      => $opportunity,
+        'documents'        => $documents,
+        'labels'           => $labels,
+        'type'             => $type,
+        'labelId'          => $labelId,
+        'labelText'        => $labelText,
+        'showArchived'     => $showArchived,
+        'activeTemplates'  => $activeTemplates,
+        'opportunitySales' => $opportunitySales,
     ]);
 }
 
@@ -306,6 +322,79 @@ public function index(Opportunity $opportunity, Request $request)
         }
         return redirect()->route('pages.opportunities.documents.index', $opportunity->id);
     }
+
+    // ── Document generation ───────────────────────────────────────────────────
+
+    public function generate(Request $request, Opportunity $opportunity)
+    {
+        $request->validate([
+            'template_id' => ['required', 'exists:document_templates,id'],
+            'sale_id'     => ['nullable', 'exists:sales,id'],
+        ]);
+
+        $template = DocumentTemplate::findOrFail($request->template_id);
+
+        $sale = null;
+        if ($template->needs_sale) {
+            $request->validate(['sale_id' => ['required', 'exists:sales,id']]);
+            $sale = Sale::findOrFail($request->sale_id);
+            abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 403);
+        }
+
+        $service = new DocumentTemplateService();
+        $body    = $service->render($template, $opportunity, $sale);
+
+        $pdf = Pdf::loadView('pdf.document-template', [
+            'template'    => $template,
+            'body'        => $body,
+            'opportunity' => $opportunity,
+            'sale'        => $sale,
+        ])->setPaper('letter', 'portrait');
+
+        $pdfContent = $pdf->output();
+
+        $slug      = Str::slug($template->name);
+        $timestamp = now()->format('Ymd_His');
+        $filename  = "doc_{$slug}_{$timestamp}.pdf";
+        $path      = "opportunities/{$opportunity->id}/{$filename}";
+
+        Storage::disk('public')->put($path, $pdfContent);
+
+        $doc = OpportunityDocument::create([
+            'opportunity_id' => $opportunity->id,
+            'template_id'    => $template->id,
+            'disk'           => 'public',
+            'path'           => $path,
+            'original_name'  => $template->name . '.pdf',
+            'stored_name'    => $filename,
+            'mime_type'      => 'application/pdf',
+            'extension'      => 'pdf',
+            'size_bytes'     => strlen($pdfContent),
+            'category'       => 'generated_document',
+            'created_by'     => Auth::id(),
+            'updated_by'     => Auth::id(),
+        ]);
+
+        return redirect()
+            ->route('pages.opportunities.documents.index', $opportunity)
+            ->with('success', '"' . $template->name . '" generated successfully.')
+            ->with('generated_doc_id', $doc->id);
+    }
+
+    public function reprint(Opportunity $opportunity, OpportunityDocument $document)
+    {
+        $this->assertBelongsToOpportunity($opportunity, $document);
+        abort_if($document->category !== 'generated_document', 404);
+        abort_if(! Storage::disk($document->disk)->exists($document->path), 404);
+
+        $file = Storage::disk($document->disk)->get($document->path);
+
+        return response($file, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $document->original_name . '"');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private function assertBelongsToOpportunity(Opportunity $opportunity, OpportunityDocument $document): void
     {

@@ -335,6 +335,19 @@ Route::prefix('admin')
                 'destroy' => 'vendor_reps.destroy',
             ]);
 
+        // Document Templates
+        Route::resource('document-templates', \App\Http\Controllers\Admin\DocumentTemplateController::class)
+            ->middleware('role_or_permission:admin')
+            ->names([
+                'index'   => 'document-templates.index',
+                'create'  => 'document-templates.create',
+                'store'   => 'document-templates.store',
+                'edit'    => 'document-templates.edit',
+                'update'  => 'document-templates.update',
+                'destroy' => 'document-templates.destroy',
+            ])
+            ->except(['show']);
+
         // Opportunity Document Labels
         Route::resource('opportunity-document-labels', OpportunityDocumentLabelController::class)
             ->middleware('role_or_permission:admin|manage document labels')
@@ -1012,6 +1025,12 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             Route::delete('documents/{document}/force', [OpportunityDocumentController::class, 'forceDestroy'])
                 ->name('opportunities.documents.forceDestroy')
                 ->middleware('role_or_permission:admin');
+
+            Route::post('documents/generate', [OpportunityDocumentController::class, 'generate'])
+                ->name('opportunities.documents.generate');
+
+            Route::get('documents/{document}/reprint', [OpportunityDocumentController::class, 'reprint'])
+                ->name('opportunities.documents.reprint');
 
             // RFM routes
             Route::get('rfms/create', [RfmController::class, 'create'])
