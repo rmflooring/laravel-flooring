@@ -23,8 +23,7 @@ class SendSmsReminders extends Command
             return;
         }
 
-        // !! TESTING MODE: using today instead of tomorrow — revert when done !!
-        $tomorrow = Carbon::today()->toDateString();
+        $tomorrow = Carbon::tomorrow()->toDateString();
         $sms      = new SmsService();
         $tpl      = new SmsTemplateService();
 
