@@ -60,12 +60,13 @@ class RfmController extends Controller
 
     public function create(Opportunity $opportunity)
     {
-        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']);
+        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']);
 
         return view('pages.rfms.create', [
-            'opportunity' => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
-            'estimators'  => $estimators,
-            'flooringTypes' => Rfm::FLOORING_TYPES,
+            'opportunity'          => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
+            'estimators'           => $estimators,
+            'flooringTypes'        => Rfm::FLOORING_TYPES,
+            'smsRfmBookedEnabled'  => (bool) Setting::get('sms_notify_rfm_booked', '0'),
         ]);
     }
 
@@ -82,8 +83,10 @@ class RfmController extends Controller
             'special_instructions'=> ['nullable', 'string'],
         ]);
 
-        $notifyEstimator = $request->boolean('notify_estimator', false);
-        $notifyPm        = $request->boolean('notify_pm', false);
+        $notifyEstimator    = $request->boolean('notify_estimator', false);
+        $notifyPm           = $request->boolean('notify_pm', false);
+        $smsNotifyEstimator = $request->boolean('sms_notify_estimator', false);
+        $smsNotifyPm        = $request->boolean('sms_notify_pm', false);
 
         $rfm = Rfm::create([
             'opportunity_id'      => $opportunity->id,
@@ -244,11 +247,11 @@ class RfmController extends Controller
                 $tpl        = new SmsTemplateService();
                 $body       = $tpl->renderTemplate('rfm_booked', $vars);
 
-                if (in_array('estimator', $recipients) && $estimator?->phone) {
+                if ($smsNotifyEstimator && in_array('estimator', $recipients) && $estimator?->phone) {
                     $sms->send($estimator->phone, $body, 'rfm_booked', $rfm);
                 }
 
-                if (in_array('pm', $recipients) && $pm?->mobile) {
+                if ($smsNotifyPm && in_array('pm', $recipients) && $pm?->mobile) {
                     $sms->send($pm->mobile, $body, 'rfm_booked', $rfm);
                 }
 
