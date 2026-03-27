@@ -67,6 +67,9 @@
                         <a href="{{ route('admin.settings.sms-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             SMS Templates
                         </a>
+                        <a href="{{ route('admin.document-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Document Templates
+                        </a>
                         <a href="{{ url('/') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Back to Home
                         </a>
