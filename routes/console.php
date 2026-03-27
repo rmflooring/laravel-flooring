@@ -11,8 +11,9 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // SMS day-before reminders — runs daily at the configured time (default 4pm)
+// !! TESTING MODE: everyMinute() + today's date — revert to dailyAt() when done !!
 Schedule::command('sms:send-reminders')
-    ->dailyAt(\App\Models\Setting::get('sms_reminder_time', '16:00'))
+    ->everyMinute()
     ->name('sms-send-reminders')
     ->withoutOverlapping();
 
