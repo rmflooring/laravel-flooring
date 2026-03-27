@@ -198,6 +198,7 @@ class RfmController extends Controller
                     'estimator_first_name' => explode(' ', trim($estimatorName))[0],
                     'pm_name'              => $pm?->name ?? '',
                     'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
+                    'rfm_link'             => route('mobile.rfms.show', $rfm->id),
                 ];
 
                 $recipients = array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm')));

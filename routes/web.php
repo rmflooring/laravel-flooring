@@ -1102,6 +1102,14 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
 
     Route::get('opportunity/{opportunity}/photos', [\App\Http\Controllers\Mobile\PhotoGalleryController::class, 'show'])
         ->name('opportunity.photos');
+
+    Route::get('rfm/{rfm}', [\App\Http\Controllers\Mobile\RfmController::class, 'show'])
+        ->middleware('role_or_permission:admin|view rfms')
+        ->name('rfms.show');
+
+    Route::post('rfm/{rfm}/photos', [\App\Http\Controllers\Mobile\RfmController::class, 'uploadPhotos'])
+        ->middleware('role_or_permission:admin|view rfms')
+        ->name('rfms.upload-photos');
 });
 
 // ─── Installer portal ──────────────────────────────────────────────────────────

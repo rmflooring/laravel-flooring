@@ -33,19 +33,21 @@ class SmsTemplate extends Model
             '{{site_address}}', '{{special_instructions}}',
             '{{estimator_name}}', '{{estimator_first_name}}',
             '{{pm_name}}', '{{pm_first_name}}',
+            '{{rfm_link}}',
         ],
         'rfm_reminder' => [
             '{{customer_name}}', '{{rfm_date}}', '{{rfm_time}}',
             '{{site_address}}', '{{special_instructions}}',
             '{{estimator_name}}', '{{estimator_first_name}}',
             '{{pm_name}}', '{{pm_first_name}}',
+            '{{rfm_link}}',
         ],
     ];
 
     public const DEFAULTS = [
         'wo_scheduled' => "Hi {{pm_first_name}}, WO {{wo_number}} has been scheduled for {{scheduled_date}} at {{scheduled_time}}. Installer: {{installer_name}}. Job: {{customer_name}}, {{job_address}}.",
         'wo_reminder'  => "Reminder: WO {{wo_number}} is tomorrow ({{scheduled_date}}) at {{scheduled_time}}. Installer: {{installer_name}}. Job: {{customer_name}}, {{job_address}}.",
-        'rfm_booked'   => "Hi {{estimator_first_name}}, RFM booked for {{rfm_date}} at {{rfm_time}}. Customer: {{customer_name}}, {{site_address}}. PM: {{pm_name}}.",
-        'rfm_reminder' => "Reminder: RFM appointment tomorrow ({{rfm_date}}) at {{rfm_time}}. Customer: {{customer_name}}, {{site_address}}.",
+        'rfm_booked'   => "Hi {{estimator_first_name}}, RFM booked for {{rfm_date}} at {{rfm_time}}. Customer: {{customer_name}}, {{site_address}}. PM: {{pm_name}}. View: {{rfm_link}}",
+        'rfm_reminder' => "Reminder: RFM appointment tomorrow ({{rfm_date}}) at {{rfm_time}}. Customer: {{customer_name}}, {{site_address}}. View: {{rfm_link}}",
     ];
 }

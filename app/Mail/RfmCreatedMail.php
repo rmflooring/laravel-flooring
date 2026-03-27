@@ -116,10 +116,7 @@ class RfmCreatedMail
             ? implode(', ', (array) $rfm->flooring_type)
             : '—';
 
-        $showUrl = route('pages.opportunities.rfms.show', [
-            $opportunity->id,
-            $rfm->id,
-        ]);
+        $mobileUrl = route('mobile.rfms.show', $rfm->id);
 
         $lines = [
             'A new Request for Measure has been scheduled.',
@@ -141,7 +138,7 @@ class RfmCreatedMail
 
         $lines[] = '';
         $lines[] = '----------------------------------------';
-        $lines[] = "View RFM: {$showUrl}";
+        $lines[] = "Open on mobile: {$mobileUrl}";
 
         return implode("\n", $lines);
     }

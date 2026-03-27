@@ -58,10 +58,12 @@ class EmailTemplate extends Model
         'rfm_created' => [
             '{{customer_name}}', '{{rfm_date}}', '{{rfm_time}}',
             '{{job_address}}', '{{estimator_name}}', '{{pm_name}}', '{{special_instructions}}',
+            '{{rfm_link}}',
         ],
         'rfm_updated' => [
             '{{customer_name}}', '{{rfm_date}}', '{{rfm_time}}',
             '{{job_address}}', '{{estimator_name}}', '{{pm_name}}', '{{special_instructions}}',
+            '{{rfm_link}}',
         ],
     ];
 
@@ -89,11 +91,11 @@ class EmailTemplate extends Model
         ],
         'rfm_created' => [
             'subject' => 'RFM Scheduled — {{customer_name}}',
-            'body'    => "A new RFM has been scheduled.\n\nCustomer: {{customer_name}}\nDate: {{rfm_date}}\nTime: {{rfm_time}}\nAddress: {{job_address}}\nEstimator: {{estimator_name}}\nPM: {{pm_name}}\n\nSpecial Instructions:\n{{special_instructions}}",
+            'body'    => "A new RFM has been scheduled.\n\nCustomer: {{customer_name}}\nDate: {{rfm_date}}\nTime: {{rfm_time}}\nAddress: {{job_address}}\nEstimator: {{estimator_name}}\nPM: {{pm_name}}\n\nSpecial Instructions:\n{{special_instructions}}\n\nView on mobile: {{rfm_link}}",
         ],
         'rfm_updated' => [
             'subject' => 'RFM Updated — {{customer_name}}',
-            'body'    => "An RFM has been updated.\n\nCustomer: {{customer_name}}\nDate: {{rfm_date}}\nTime: {{rfm_time}}\nAddress: {{job_address}}\nEstimator: {{estimator_name}}\nPM: {{pm_name}}\n\nSpecial Instructions:\n{{special_instructions}}",
+            'body'    => "An RFM has been updated.\n\nCustomer: {{customer_name}}\nDate: {{rfm_date}}\nTime: {{rfm_time}}\nAddress: {{job_address}}\nEstimator: {{estimator_name}}\nPM: {{pm_name}}\n\nSpecial Instructions:\n{{special_instructions}}\n\nView on mobile: {{rfm_link}}",
         ],
     ];
 }
