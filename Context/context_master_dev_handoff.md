@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-27 (session 35)
+Updated: 2026-03-27 (session 36)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -29,6 +29,7 @@ Current core modules:
 - Email Templates (per-user + admin system) — see `Context/context_email_templates.md`
 - Calendar Entry Templates (admin) — `app/Models/CalendarTemplate.php`, `app/Services/CalendarTemplateService.php`, `admin.settings.calendar-templates.*`
 - **SMS Notifications** (Twilio) — see `Context/context_sms.md`
+- **Document Templates** (admin-managed, PDF generation) — see `Context/context_document_templates.md`
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 - **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
@@ -303,6 +304,26 @@ Full details in `Context/context_sale_status.md`.
   - Delete blocked if label has assigned documents (shows "In use" instead); deactivate via edit instead
   - Filter: search by name, toggle show inactive
 - Sidebar: "Document Labels" link in admin section
+
+---
+
+## Document Templates (session 36, 2026-03-27)
+Full details in `Context/context_document_templates.md`.
+
+- Admin-managed printable templates with HTML body + `{{merge_tags}}`
+- Staff generate PDFs from the opportunity Documents tab → saved as `generated_document` category `OpportunityDocument`
+- Model: `app/Models/DocumentTemplate.php` — `OPPORTUNITY_TAGS` (13 tags) + `SALE_TAGS` (2 tags incl. `{{flooring_items_table}}`)
+- Service: `app/Services/DocumentTemplateService.php` — `render()` + `buildFlooringTable()`
+- PDF template: `resources/views/pdf/document-template.blade.php` — DejaVu Sans, branding logo/header/footer
+- Admin CRUD: `admin.document-templates.*` (index/create/edit/update/destroy); gated `role_or_permission:admin`
+- Admin edit page has **client-side Preview button** — replaces tags with sample values in a simulated PDF layout; script wrapped in `@verbatim`/`@endverbatim`
+- `opportunity_documents.template_id` nullable FK links generated docs back to their template
+- Generate modal: Alpine.js on documents index; conditional sale dropdown appears when `needs_sale = true`
+- Print action on generated docs streams the stored PDF inline via `reprint()` route
+- 3 starter templates seeded: Front File Label, Flooring Selection Sign-Off (needs_sale), Work Authorization Form
+- Front File Label layout mirrors RFM show page: blue header (Job#/customer), job name strip, left=Customer+PM / right=Job Site, measure details fill-in lines, special instructions (amber), notes
+- Admin sidebar + admin settings page both have "Document Templates" links
+- ⚠️ Blade parses `{{tags}}` everywhere — use `@{{tag}}` in text, `@verbatim` in `<script>` blocks, avoid in CSS comments
 
 ---
 
@@ -637,6 +658,11 @@ Full details in `Context/context_sms.md`.
 | Installer model | `app/Models/Installer.php` |
 | Branding controller | `app/Http/Controllers/Admin/BrandingController.php` |
 | Branding settings view | `resources/views/admin/settings/branding.blade.php` |
+| Document template model | `app/Models/DocumentTemplate.php` |
+| Document template service | `app/Services/DocumentTemplateService.php` |
+| Document template controller (admin) | `app/Http/Controllers/Admin/DocumentTemplateController.php` |
+| Document template views (admin) | `resources/views/admin/document-templates/` |
+| Document template PDF | `resources/views/pdf/document-template.blade.php` |
 
 ---
 
