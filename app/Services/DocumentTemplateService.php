@@ -19,13 +19,9 @@ class DocumentTemplateService
         $jobSite  = $opportunity->jobSiteCustomer;
         $pm       = $opportunity->projectManager;
 
-        $customerName = $customer?->company_name
-            ?: trim(($customer?->first_name ?? '') . ' ' . ($customer?->last_name ?? ''))
-            ?: '';
+        $customerName = $customer?->company_name ?: ($customer?->name ?? '');
 
-        $jobSiteName = $jobSite?->company_name
-            ?: trim(($jobSite?->first_name ?? '') . ' ' . ($jobSite?->last_name ?? ''))
-            ?: '';
+        $jobSiteName = $jobSite?->company_name ?: ($jobSite?->name ?? '');
 
         $jobSiteAddress = implode(', ', array_filter([
             $jobSite?->address,
