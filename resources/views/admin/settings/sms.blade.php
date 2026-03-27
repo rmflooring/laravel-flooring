@@ -104,7 +104,7 @@
                                     <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Daily Reminder Send Time</label>
                                     <input type="time" name="sms_reminder_time" value="{{ $smsReminderTime }}"
                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                    <p class="mt-1 text-xs text-gray-500">Time of day to send day-before reminders (WO + RFM).</p>
+                                    <p class="mt-1 text-xs text-gray-500">Time of day for reminders (WO + RFM).</p>
                                 </div>
                             </div>
                         </div>
