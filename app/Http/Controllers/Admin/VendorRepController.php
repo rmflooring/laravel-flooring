@@ -9,9 +9,29 @@ use Illuminate\Http\Request;
 
 class VendorRepController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $reps = VendorRep::with(['creator', 'vendors'])->paginate(15);
+        $query = VendorRep::with(['creator', 'vendors']);
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%");
+            });
+        }
+
+        $sortable = ['name', 'email'];
+        $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'name';
+        $dir  = $request->input('dir') === 'desc' ? 'desc' : 'asc';
+        $query->orderBy($sort, $dir);
+
+        $perPage = in_array((int) $request->input('perPage'), [15, 25, 50, 100])
+            ? (int) $request->input('perPage')
+            : 15;
+
+        $reps = $query->paginate($perPage)->withQueryString();
 
         return view('admin.vendor_reps.index', compact('reps'));
     }
