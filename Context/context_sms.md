@@ -1,5 +1,5 @@
 # SMS Notification System — Dev Context
-Updated: 2026-03-25 (session 32)
+Updated: 2026-03-27 (session 36)
 
 ---
 
@@ -65,10 +65,12 @@ All stored in `app_settings` table via `Setting::get()` / `Setting::set()`.
 | `sms_notify_wo_scheduled`| `1`/`0` | WO scheduled notification on/off               |
 | `sms_notify_wo_reminder` | `1`/`0` | WO day-before reminder on/off                  |
 | `sms_notify_rfm_booked`  | `1`/`0` | RFM booked notification on/off                 |
+| `sms_notify_rfm_updated` | `1`/`0` | RFM updated notification on/off                |
 | `sms_notify_rfm_reminder`| `1`/`0` | RFM day-before reminder on/off                 |
 | `sms_wo_scheduled_to`    | string  | Comma-separated: `pm`, `installer`, `homeowner`|
 | `sms_wo_reminder_to`     | string  | Comma-separated: `pm`, `installer`, `homeowner`|
 | `sms_rfm_booked_to`      | string  | Comma-separated: `estimator`, `pm`, `customer` |
+| `sms_rfm_updated_to`     | string  | Comma-separated: `estimator`, `pm`, `customer` |
 | `sms_rfm_reminder_to`    | string  | Comma-separated: `estimator`, `pm`, `customer` |
 
 ---
@@ -80,6 +82,7 @@ All stored in `app_settings` table via `Setting::get()` / `Setting::set()`.
 | `wo_scheduled` | Work Order Scheduled          | WO status → `scheduled` (store or update)        | PM (`projectManager.mobile`), Installer (`installer.mobile`), Homeowner (`sale.job_phone` → `sourceEstimate.homeowner_phone`) |
 | `wo_reminder`  | WO Day-Before Reminder        | `sms:send-reminders` command, day before WO date | PM, Installer, Homeowner (`job_phone`) |
 | `rfm_booked`   | RFM Booked                    | `RfmController::store()`                         | Estimator (`employee.phone`), PM (`projectManager.mobile`), Customer (`parentCustomer.mobile` → `.phone`) |
+| `rfm_updated`  | RFM Updated                   | `RfmController::update()` — fires on every save  | Estimator (`employee.phone`), PM (`projectManager.mobile`), Customer (`parentCustomer.mobile` → `.phone`) |
 | `rfm_reminder` | RFM Day-Before Reminder       | `sms:send-reminders` command, day before RFM     | Estimator, PM, Customer (`customer.mobile` or `.phone`) |
 
 ---
@@ -206,7 +209,7 @@ Two tabs:
 
 ## Open Items
 
-- Wire RFM updated SMS (when `scheduled_at` changes on edit)
+- ~~Wire RFM updated SMS~~ — Done (2026-03-27): `rfm_updated` type wired in `RfmController::update()`, fires on every save when enabled
 - Wire homeowner SMS for CO (change order sent notification)
 - Add SMS send button to WO show page (manual on-demand send to installer/PM)
 - Consider adding `mobile` field to `Employee` model for estimator mobile SMS (currently uses `employee.phone`)

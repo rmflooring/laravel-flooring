@@ -334,6 +334,64 @@ class RfmController extends Controller
         }
         // --- end email ---
 
+        // --- SMS notification (best-effort, never blocks the save) ---
+        if (Setting::get('sms_notify_rfm_updated')) {
+            try {
+                $rfm->loadMissing(['estimator']);
+                $opportunity->loadMissing(['parentCustomer', 'projectManager']);
+
+                $estimator     = $rfm->estimator;
+                $pm            = $opportunity->projectManager;
+                $customerName  = $opportunity->parentCustomer?->company_name
+                    ?: $opportunity->parentCustomer?->name
+                    ?: 'Customer';
+                $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
+                $fullAddress   = implode(', ', array_filter([
+                    $rfm->site_address, $rfm->site_city, $rfm->site_postal_code,
+                ]));
+                $scheduled     = \Carbon\Carbon::parse($rfm->scheduled_at);
+
+                $vars = [
+                    'customer_name'        => $customerName,
+                    'rfm_date'             => $scheduled->format('M j, Y'),
+                    'rfm_time'             => $scheduled->format('g:ia'),
+                    'site_address'         => $fullAddress,
+                    'special_instructions' => $rfm->special_instructions ?? '',
+                    'estimator_name'       => $estimatorName,
+                    'estimator_first_name' => explode(' ', trim($estimatorName))[0],
+                    'pm_name'              => $pm?->name ?? '',
+                    'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
+                    'rfm_link'             => route('mobile.rfms.show', $rfm->id),
+                ];
+
+                $recipients = array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm')));
+                $sms        = new SmsService();
+                $tpl        = new SmsTemplateService();
+                $body       = $tpl->renderTemplate('rfm_updated', $vars);
+
+                if (in_array('estimator', $recipients) && $estimator?->phone) {
+                    $sms->send($estimator->phone, $body, 'rfm_updated', $rfm);
+                }
+
+                if (in_array('pm', $recipients) && $pm?->mobile) {
+                    $sms->send($pm->mobile, $body, 'rfm_updated', $rfm);
+                }
+
+                if (in_array('customer', $recipients)) {
+                    $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
+                    if ($phone) {
+                        $sms->send($phone, $body, 'rfm_updated', $rfm);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error('[RFM SMS] updated send failed', [
+                    'rfm_id' => $rfm->id,
+                    'error'  => $e->getMessage(),
+                ]);
+            }
+        }
+        // --- end SMS ---
+
         return redirect()
             ->route('pages.opportunities.show', $opportunity->id)
             ->with('success', 'RFM updated.');

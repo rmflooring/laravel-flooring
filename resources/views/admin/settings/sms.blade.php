@@ -143,6 +143,15 @@
                                         'recipients'=> ['estimator' => 'Estimator', 'pm' => 'Project Manager', 'customer' => 'Customer'],
                                     ],
                                     [
+                                        'key'       => 'rfm_updated',
+                                        'label'     => 'RFM Updated',
+                                        'desc'      => 'Sent when an RFM is edited and saved.',
+                                        'toggle'    => $notifyRfmUpdated,
+                                        'to_key'    => 'sms_rfm_updated_to',
+                                        'to_val'    => $rfmUpdatedTo,
+                                        'recipients'=> ['estimator' => 'Estimator', 'pm' => 'Project Manager', 'customer' => 'Customer'],
+                                    ],
+                                    [
                                         'key'       => 'rfm_reminder',
                                         'label'     => 'RFM Day-Before Reminder',
                                         'desc'      => 'Sent automatically the day before a scheduled RFM appointment.',

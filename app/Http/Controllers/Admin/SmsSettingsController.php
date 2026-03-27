@@ -22,11 +22,13 @@ class SmsSettingsController extends Controller
             'notifyWoScheduled'   => Setting::get('sms_notify_wo_scheduled', '0'),
             'notifyWoReminder'    => Setting::get('sms_notify_wo_reminder', '0'),
             'notifyRfmBooked'     => Setting::get('sms_notify_rfm_booked', '0'),
+            'notifyRfmUpdated'    => Setting::get('sms_notify_rfm_updated', '0'),
             'notifyRfmReminder'   => Setting::get('sms_notify_rfm_reminder', '0'),
             // Recipients per notification
             'woScheduledTo'       => Setting::get('sms_wo_scheduled_to', 'pm,installer'),
             'woReminderTo'        => Setting::get('sms_wo_reminder_to', 'pm,installer'),
             'rfmBookedTo'         => Setting::get('sms_rfm_booked_to', 'estimator,pm'),
+            'rfmUpdatedTo'        => Setting::get('sms_rfm_updated_to', 'estimator,pm'),
             'rfmReminderTo'       => Setting::get('sms_rfm_reminder_to', 'estimator,pm'),
             // Send log
             'smsLogs'             => SmsLog::latest()->take(100)->get(),
@@ -52,12 +54,14 @@ class SmsSettingsController extends Controller
         Setting::set('sms_notify_wo_scheduled', $request->input('sms_notify_wo_scheduled') === '1' ? '1' : '0');
         Setting::set('sms_notify_wo_reminder',  $request->input('sms_notify_wo_reminder') === '1' ? '1' : '0');
         Setting::set('sms_notify_rfm_booked',   $request->input('sms_notify_rfm_booked') === '1' ? '1' : '0');
+        Setting::set('sms_notify_rfm_updated',  $request->input('sms_notify_rfm_updated') === '1' ? '1' : '0');
         Setting::set('sms_notify_rfm_reminder', $request->input('sms_notify_rfm_reminder') === '1' ? '1' : '0');
 
         // Recipients
         Setting::set('sms_wo_scheduled_to', implode(',', (array) $request->input('sms_wo_scheduled_to', [])));
         Setting::set('sms_wo_reminder_to',  implode(',', (array) $request->input('sms_wo_reminder_to', [])));
         Setting::set('sms_rfm_booked_to',   implode(',', (array) $request->input('sms_rfm_booked_to', [])));
+        Setting::set('sms_rfm_updated_to',  implode(',', (array) $request->input('sms_rfm_updated_to', [])));
         Setting::set('sms_rfm_reminder_to', implode(',', (array) $request->input('sms_rfm_reminder_to', [])));
 
         return back()->with('success', 'SMS settings saved.');
