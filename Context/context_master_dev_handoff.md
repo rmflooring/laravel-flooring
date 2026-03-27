@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-26 (session 34)
+Updated: 2026-03-27 (session 35)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -97,6 +97,12 @@ Full details in `Context/context_rfm.md`.
 - Job Transactions card on opportunity show: RFMs listed as clickable links
 - Email notifications on create: estimator (default ON) + PM (default OFF), checkbox-driven
 - Email notifications on edit: estimator auto-checked when key fields change, PM always OFF by default
+- **Mobile RFM page** (2026-03-27): `GET /m/rfm/{rfm}` → `mobile.rfms.show`; controller `Mobile\RfmController`; view `resources/views/mobile/rfms/show.blade.php`
+  - Shows: status, scheduled date/time, site address + Google Maps link, estimator, flooring types, PM, special instructions
+  - Add Measure Photos (tap to upload → stored as `OpportunityDocument` category `media`)
+  - View Job Photos (links to `mobile.opportunity.photos`)
+  - "Mobile View" green button added to desktop RFM show page header
+- **`{{rfm_link}}`** tag (2026-03-27): resolves to mobile RFM URL; available in email templates (rfm_created, rfm_updated) and SMS templates (rfm_booked, rfm_reminder); injected into hardcoded mail bodies and all SMS `$vars`
 
 ### RFM open items
 1. Sync MS365 calendar event when RFM is edited

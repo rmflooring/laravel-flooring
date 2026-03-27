@@ -266,6 +266,22 @@ When an RFM is **created** (`store`), the controller attempts (best-effort) to:
 - [x] Email notifications on **create** — estimator (default ON, detailed internal), PM (default OFF, customer-facing); checkboxes shown in Notifications section
 - [x] Email notifications on **edit** — estimator (auto-checked by JS when key fields change, shows change diff), PM (always OFF by default); both show target email as hint
 - [x] `RfmUpdatedMail` — new class, separate subjects and bodies for estimator vs PM
+- [x] **Mobile RFM view** — `GET /m/rfm/{rfm}` → `mobile.rfms.show`; controller `Mobile\RfmController::show()`; view `resources/views/mobile/rfms/show.blade.php`
+- [x] **Mobile photo upload** — `POST /m/rfm/{rfm}/photos` → `mobile.rfms.upload-photos`; uploads to `OpportunityDocument` (same as mobile WO pattern)
+- [x] **"Mobile View" button** on desktop RFM show page header (green, links to mobile page)
+- [x] **`{{rfm_link}}`** tag — resolves to mobile RFM URL; added to `EmailTemplate::TAGS` + `DEFAULTS` (rfm_created, rfm_updated), `SmsTemplate::TAGS` + `DEFAULTS` (rfm_booked, rfm_reminder), `RfmCreatedMail`/`RfmUpdatedMail` estimator bodies, and SMS `$vars` in `RfmController::store()` and `SendSmsReminders`
+
+---
+
+## Mobile RFM Page (`/m/rfm/{id}`)
+
+- **Controller**: `app/Http/Controllers/Mobile/RfmController.php`
+- **View**: `resources/views/mobile/rfms/show.blade.php`
+- **Routes**: `mobile.rfms.show` (GET) + `mobile.rfms.upload-photos` (POST)
+- **Permission**: `view rfms` (same as desktop)
+- **Sections**: RFM identity card (status badge + scheduled date/time in blue), Job Site card (customer name + Google Maps link), Measure Details (estimator, flooring type pills, PM), Special Instructions (amber, only if set), Add Measure Photos, View Job Photos
+- **Photo upload**: stores to `OpportunityDocument` under `opportunities/{id}/` on `public` disk, category `media` — same as mobile WO; redirects to `mobile.opportunity.photos` on success
+- RFM has direct `opportunity_id` so no sale lookup needed (simpler than WO path)
 
 ---
 

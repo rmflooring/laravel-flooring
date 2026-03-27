@@ -67,7 +67,9 @@ Templates support `{{merge_tags}}` that are resolved at send time with live reco
 `{{customer_name}}`, `{{invoice_number}}`, `{{grand_total}}`, `{{job_name}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{sender_name}}`, `{{sender_email}}`
 
 ### rfm_created / rfm_updated
-`{{customer_name}}`, `{{rfm_date}}`, `{{rfm_time}}`, `{{job_address}}`, `{{estimator_name}}`, `{{pm_name}}`, `{{special_instructions}}`
+`{{customer_name}}`, `{{rfm_date}}`, `{{rfm_time}}`, `{{job_address}}`, `{{estimator_name}}`, `{{pm_name}}`, `{{special_instructions}}`, `{{rfm_link}}`
+
+- `{{rfm_link}}` — resolves to the mobile RFM URL (`/m/rfm/{id}`); tapping it opens the mobile RFM page for the estimator
 
 ---
 
@@ -203,7 +205,7 @@ Sale status is **not** changed on send (sale statuses are workflow states: open,
 
 ## Open Items
 
-1. **Wire RFM templates** — `rfm_created` / `rfm_updated` admin templates not yet connected to the `RfmController` send logic (currently uses hardcoded `RfmCreatedMail` / `RfmUpdatedMail` classes)
+1. **Wire RFM templates** — `rfm_created` / `rfm_updated` admin templates not yet connected to the `RfmController` send logic (currently uses hardcoded `RfmCreatedMail` / `RfmUpdatedMail` classes). `{{rfm_link}}` IS resolved in the hardcoded bodies already.
 2. **Work Order / PO / Invoice send flows** — template types stubbed, send UI not built (modules don't exist yet)
 3. **HTML email bodies** — all sends are currently plain text; future improvement is branded HTML templates
 4. **Per-user test send** — available at `/admin/settings/mail` Track 2 section (green **Send Test** button per connected user)
