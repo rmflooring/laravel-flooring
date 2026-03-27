@@ -21,24 +21,26 @@ return new class extends Migration
     {{job_name}}
   </div>
 
-  <!-- Job Site + PM -->
+  <!-- Left: Parent Customer + PM | Right: Job Site -->
   <table style="width:100%; border-collapse:collapse;">
     <tr>
       <td style="width:50%; vertical-align:top; padding-right:8px;">
-        <p style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#6b7280; margin:0 0 5px;">Job Site</p>
-        <div style="border:1px solid #e5e7eb; border-radius:4px; padding:10px 12px;">
+        <p style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#6b7280; margin:0 0 4px;">Parent Customer</p>
+        <div style="font-size:13px; font-weight:600; margin-bottom:10px;">{{customer_name}}</div>
+        <div style="border:1px solid #e5e7eb; border-radius:4px; background:#f9fafb; padding:10px 12px;">
+          <p style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#6b7280; margin:0 0 5px;">Project Manager</p>
+          <div style="font-weight:600; margin-bottom:3px;">{{pm_name}}</div>
+          <div style="color:#6b7280;">{{pm_phone}}</div>
+          <div style="color:#6b7280;">{{pm_email}}</div>
+        </div>
+      </td>
+      <td style="width:50%; vertical-align:top; padding-left:8px;">
+        <p style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#6b7280; margin:0 0 4px;">Job Site</p>
+        <div style="border:1px solid #e5e7eb; border-radius:4px; background:#f9fafb; padding:10px 12px;">
           <div style="font-weight:600; margin-bottom:3px;">{{job_site_name}}</div>
           <div style="white-space:pre-line; color:#374151; margin-bottom:3px;">{{job_site_address}}</div>
           <div style="color:#6b7280;">{{job_site_phone}}</div>
           <div style="color:#6b7280;">{{job_site_email}}</div>
-        </div>
-      </td>
-      <td style="width:50%; vertical-align:top; padding-left:8px;">
-        <p style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#6b7280; margin:0 0 5px;">Project Manager</p>
-        <div style="border:1px solid #e5e7eb; border-radius:4px; padding:10px 12px;">
-          <div style="font-weight:600; margin-bottom:3px;">{{pm_name}}</div>
-          <div style="color:#6b7280;">{{pm_phone}}</div>
-          <div style="color:#6b7280;">{{pm_email}}</div>
         </div>
       </td>
     </tr>
