@@ -38,6 +38,16 @@ class Sale extends Model
         });
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class)->orderByDesc('created_at');
+    }
+
+    public function activeInvoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class)->whereNotIn('status', ['voided']);
+    }
+
     public function changeOrders(): HasMany
     {
         return $this->hasMany(SaleChangeOrder::class)->orderByDesc('created_at');

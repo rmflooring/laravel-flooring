@@ -112,6 +112,12 @@ class PermissionsSeeder extends Seeder
             'create installers',
             'edit installers',
             'delete installers',
+
+            // ===== Invoices =====
+            'view invoices',
+            'create invoices',
+            'edit invoices',
+            'delete invoices',
         ];
 
         foreach ($permissions as $permission) {

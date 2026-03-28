@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-27 (session 37)
+Updated: 2026-03-28 (session 38)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -30,6 +30,7 @@ Current core modules:
 - Calendar Entry Templates (admin) — `app/Models/CalendarTemplate.php`, `app/Services/CalendarTemplateService.php`, `admin.settings.calendar-templates.*`
 - **SMS Notifications** (Twilio) — see `Context/context_sms.md`
 - **Document Templates** (admin-managed, PDF generation) — see `Context/context_document_templates.md`
+- **Invoices** (progress billing, payments) — see `Context/context_invoices.md`
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 - **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
@@ -325,6 +326,81 @@ Full details in `Context/context_document_templates.md`.
 - Admin sidebar + admin settings page both have "Document Templates" links
 - ⚠️ Blade parses `{{tags}}` everywhere — use `@{{tag}}` in text, `@verbatim` in `<script>` blocks, avoid in CSS comments
 - **Insurance tags (session 37)**: `{{insurance_company}}`, `{{adjuster}}`, `{{policy_number}}`, `{{claim_number}}`, `{{dol}}` — resolve from `jobSiteCustomer` columns; `{{dol}}` formatted as `M j, Y`
+
+## Invoice Module (session 38, 2026-03-28)
+Full details in `Context/context_invoices.md`.
+
+### Overview
+Invoices are created from an approved sale by selecting a subset of sale items (supports deposit/progress billing). Multiple invoices per sale allowed.
+
+### Invoice numbering
+`YYYY-NNN` — sequential per calendar year, global (not per-sale). Zero-padded to 3 digits. Resets each year. Generated in `Invoice::booted()`.
+
+### Data Model
+- `payment_terms` — `name`, `days` (nullable), `description`, `is_active`; reusable on vendors/subcontractors later
+- `invoices` — `invoice_number`, `sale_id`, `payment_term_id`, `status` (draft/sent/paid/overdue/partially_paid/voided), `due_date`, `customer_po_number`, `notes`, `subtotal`, `tax_amount`, `grand_total`, `amount_paid`, `sent_at`, `voided_at`, `void_reason`; soft deletes
+- `invoice_rooms` — `invoice_id`, `sale_room_id` (ref only, no FK), `name`, `sort_order`
+- `invoice_items` — `invoice_id`, `invoice_room_id`, `sale_item_id` (ref only, no FK), `item_type`, `label`, `quantity`, `unit`, `sell_price`, `line_total`, `tax_rate`, `tax_amount`, `tax_group_id`, `sort_order`
+- `invoice_payments` — `invoice_id`, `amount`, `payment_date`, `payment_method` (cash/cheque/e-transfer/credit_card/other), `reference_number`, `notes`, `recorded_by`
+
+### Tax approach
+Tax is snapshotted from `sale.tax_rate_percent` at invoice creation. Each invoice item stores `tax_rate` and `tax_amount`. `sale.tax_rate_percent` is a float percentage (e.g. `2.456`); convert to decimal (`/ 100`) for calculations.
+
+### Partial invoicing
+- `InvoiceService::getInvoicedQtyBySaleItem()` returns already-invoiced qty per sale_item_id across all non-voided invoices
+- Create form shows remaining qty per item; fully-invoiced items are greyed out with checkmark
+- Items with partial invoicing show remaining available qty
+
+### Sale status sync
+`InvoiceService::syncSaleInvoiceStatus()` recalculates `invoiced_total` and `is_fully_invoiced` on Sale after any invoice create/void/payment. Sale status auto-updates to `partially_invoiced` or `invoiced` when appropriate.
+
+### Permissions
+`view invoices`, `create invoices`, `edit invoices`, `delete invoices` — seeded to `admin` + `coordinator` via migration `2026_03_28_000006`. Added to `PermissionsSeeder` for re-seeding.
+
+### Payment Terms admin
+- Route: `admin/payment-terms` → `admin.payment-terms.*` (index, store, edit, update, destroy); gated `admin`
+- Controller: `app/Http/Controllers/Admin/PaymentTermController.php`
+- Views: `resources/views/admin/payment-terms/index.blade.php` + `edit.blade.php`
+- Sidebar: "Payment Terms" link in admin section (above Document Labels)
+- Delete blocked if term has invoices; deactivate via edit instead
+
+### Key Files
+- Models: `app/Models/Invoice.php`, `InvoiceRoom.php`, `InvoiceItem.php`, `InvoicePayment.php`, `PaymentTerm.php`
+- Service: `app/Services/InvoiceService.php` — `createFromSale()`, `recalculateTotals()`, `recalculateAfterPayment()`, `syncSaleInvoiceStatus()`, `getInvoicedQtyBySaleItem()`
+- Controller: `app/Http/Controllers/Pages/InvoiceController.php`
+- Views: `resources/views/pages/invoices/create.blade.php`, `show.blade.php`, `edit.blade.php`
+- PDF: `resources/views/pdf/invoice.blade.php` (loads branding from `app_settings` directly like change-order PDF)
+- Sale model: added `invoices()` hasMany + `activeInvoices()` hasMany (excludes voided)
+- Sale show page: Invoices section added after Change Orders; eager-loads `invoices` in `SaleController::show()`
+
+### Routes (all under `pages` middleware group)
+- `GET  pages/sales/{sale}/invoices/create` → `pages.sales.invoices.create`
+- `POST pages/sales/{sale}/invoices` → `pages.sales.invoices.store`
+- `GET  pages/sales/{sale}/invoices/{invoice}` → `pages.sales.invoices.show`
+- `GET  pages/sales/{sale}/invoices/{invoice}/edit` → `pages.sales.invoices.edit`
+- `PUT  pages/sales/{sale}/invoices/{invoice}` → `pages.sales.invoices.update`
+- `POST pages/sales/{sale}/invoices/{invoice}/void` → `pages.sales.invoices.void`
+- `GET  pages/sales/{sale}/invoices/{invoice}/pdf` → `pages.sales.invoices.pdf`
+- `POST pages/sales/{sale}/invoices/{invoice}/send-email` → `pages.sales.invoices.send-email`
+- `POST pages/sales/{sale}/invoices/{invoice}/payments` → `pages.sales.invoices.payments.store`
+- `DELETE pages/sales/{sale}/invoices/{invoice}/payments/{payment}` → `pages.sales.invoices.payments.destroy`
+
+### Invoice show page features
+- Status badge, financial summary (total / paid / balance due), voided date + reason
+- Line items grouped by room with room subtotals
+- Payments table with remove button
+- Add Payment modal (pre-fills balance due amount)
+- Void modal with optional reason
+- Send Email modal (auto-attaches PDF; marks status `sent` if was `draft`)
+- Print/PDF button
+
+### Open items
+- Index page for invoices (list all invoices across all sales)
+- Sidebar link for invoices
+- Overdue auto-detection (cron/scheduler to flip `sent` → `overdue` when due_date passes)
+- Invoice edit should allow re-selecting line items (currently only edits header fields)
+
+---
 
 ## RFMs index page (session 37, 2026-03-27)
 - `RfmController::index()` — search (customer, estimator, job#, address), status, estimator dropdown, flooring type (`whereJsonContains`), scheduled date range; paginated 25/page
@@ -670,6 +746,13 @@ Full details in `Context/context_sms.md`.
 | Document template controller (admin) | `app/Http/Controllers/Admin/DocumentTemplateController.php` |
 | Document template views (admin) | `resources/views/admin/document-templates/` |
 | Document template PDF | `resources/views/pdf/document-template.blade.php` |
+| Invoice controller | `app/Http/Controllers/Pages/InvoiceController.php` |
+| Invoice service | `app/Services/InvoiceService.php` |
+| Invoice models | `app/Models/Invoice.php`, `InvoiceRoom.php`, `InvoiceItem.php`, `InvoicePayment.php` |
+| Invoice views | `resources/views/pages/invoices/` |
+| Invoice PDF | `resources/views/pdf/invoice.blade.php` |
+| Payment terms controller (admin) | `app/Http/Controllers/Admin/PaymentTermController.php` |
+| Payment terms views (admin) | `resources/views/admin/payment-terms/` |
 
 ---
 

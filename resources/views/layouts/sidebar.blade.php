@@ -453,6 +453,17 @@
                         </a>
                     </li>
 
+                    {{-- Payment Terms --}}
+                    <li>
+                        <a href="{{ route('admin.payment-terms.index') }}"
+                           class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                            <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 8h8M8 12h8M8 16h4M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/>
+                            </svg>
+                            <span class="sidebar-label">Payment Terms</span>
+                        </a>
+                    </li>
+
                     {{-- Document Labels --}}
                     <li>
                         <a href="{{ route('admin.opportunity_document_labels.index') }}"

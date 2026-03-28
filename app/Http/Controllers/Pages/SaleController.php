@@ -122,6 +122,7 @@ class SaleController extends Controller
 			'workOrders.installer',
 			'workOrders.items',
 			'changeOrders',
+			'invoices',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		$itemPoStatusMap = $this->buildItemPoStatusMap($sale);

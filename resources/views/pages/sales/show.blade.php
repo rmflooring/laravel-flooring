@@ -671,6 +671,119 @@
             </div>
             @endcan
 
+            {{-- Invoices Section --}}
+            @can('view invoices')
+            <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+
+                <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Invoices</h3>
+                        @php
+                            $invoiceableStatuses = ['approved','scheduled','in_progress','completed','partially_invoiced','invoiced','change_in_progress'];
+                        @endphp
+                        @if($sale->is_fully_invoiced)
+                            <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">Fully Invoiced</span>
+                        @elseif($sale->invoiced_total > 0)
+                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-300">Partially Invoiced</span>
+                        @endif
+                    </div>
+                    @can('create invoices')
+                        @if(in_array($sale->status, $invoiceableStatuses))
+                            <a href="{{ route('pages.sales.invoices.create', $sale) }}"
+                               class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                New Invoice
+                            </a>
+                        @else
+                            <span class="text-xs text-gray-400 dark:text-gray-500">Sale must be approved to invoice</span>
+                        @endif
+                    @endcan
+                </div>
+
+                @if($sale->invoices->isEmpty())
+                    <div class="px-5 py-6 text-sm text-gray-400">No invoices yet.</div>
+                @else
+                    @php
+                        $invStatusColors = [
+                            'draft'          => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                            'sent'           => 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300',
+                            'paid'           => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                            'overdue'        => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+                            'partially_paid' => 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
+                            'voided'         => 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
+                        ];
+                    @endphp
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                                <th class="px-5 py-3 text-left">Invoice #</th>
+                                <th class="px-4 py-3 text-left">Status</th>
+                                <th class="px-4 py-3 text-left">Due Date</th>
+                                <th class="px-4 py-3 text-right">Total</th>
+                                <th class="px-4 py-3 text-right">Paid</th>
+                                <th class="px-4 py-3 text-right">Balance</th>
+                                <th class="px-4 py-3 text-left">Date</th>
+                                <th class="px-4 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+                            @foreach($sale->invoices as $inv)
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 {{ $inv->status === 'voided' ? 'opacity-50' : '' }}">
+                                    <td class="px-5 py-3 font-medium">
+                                        <a href="{{ route('pages.sales.invoices.show', [$sale, $inv]) }}"
+                                           class="text-blue-600 hover:underline dark:text-blue-400">{{ $inv->invoice_number }}</a>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="text-xs font-semibold px-2 py-0.5 rounded {{ $invStatusColors[$inv->status] ?? '' }}">
+                                            {{ match($inv->status) {
+                                                'draft'          => 'Draft',
+                                                'sent'           => 'Sent',
+                                                'paid'           => 'Paid',
+                                                'overdue'        => 'Overdue',
+                                                'partially_paid' => 'Partially Paid',
+                                                'voided'         => 'Voided',
+                                                default          => ucfirst($inv->status),
+                                            } }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                        @if($inv->due_date)
+                                            <span class="{{ $inv->due_date->isPast() && !in_array($inv->status, ['paid','voided']) ? 'text-red-600 dark:text-red-400 font-semibold' : '' }}">
+                                                {{ $inv->due_date->format('M j, Y') }}
+                                            </span>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300">${{ number_format((float)$inv->grand_total, 2) }}</td>
+                                    <td class="px-4 py-3 text-right text-green-700 dark:text-green-400">${{ number_format((float)$inv->amount_paid, 2) }}</td>
+                                    <td class="px-4 py-3 text-right {{ $inv->balance_due > 0 && !in_array($inv->status, ['voided']) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-400' }}">
+                                        ${{ number_format(max(0, $inv->balance_due), 2) }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $inv->created_at->format('M j, Y') }}</td>
+                                    <td class="px-4 py-3 text-right">
+                                        <a href="{{ route('pages.sales.invoices.show', [$sale, $inv]) }}"
+                                           class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">View</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-gray-50 dark:bg-gray-700 text-sm font-semibold">
+                                <td colspan="3" class="px-5 py-3 text-right text-gray-600 dark:text-gray-300">Total Invoiced (excl. voided)</td>
+                                <td class="px-4 py-3 text-right text-gray-900 dark:text-white">${{ number_format((float)$sale->invoiced_total, 2) }}</td>
+                                <td class="px-4 py-3 text-right text-green-700 dark:text-green-400">${{ number_format((float)$sale->invoices->whereNotIn('status',['voided'])->sum('amount_paid'), 2) }}</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                @endif
+
+            </div>
+            @endcan
+
         </div>
     </div>
 

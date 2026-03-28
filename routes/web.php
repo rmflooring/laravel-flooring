@@ -348,6 +348,18 @@ Route::prefix('admin')
             ])
             ->except(['show']);
 
+        // Payment Terms
+        Route::resource('payment-terms', \App\Http\Controllers\Admin\PaymentTermController::class)
+            ->middleware('role_or_permission:admin')
+            ->names([
+                'index'   => 'payment-terms.index',
+                'store'   => 'payment-terms.store',
+                'edit'    => 'payment-terms.edit',
+                'update'  => 'payment-terms.update',
+                'destroy' => 'payment-terms.destroy',
+            ])
+            ->only(['index', 'store', 'edit', 'update', 'destroy']);
+
         // Opportunity Document Labels
         Route::resource('opportunity-document-labels', OpportunityDocumentLabelController::class)
             ->middleware('role_or_permission:admin|manage document labels')
@@ -670,6 +682,48 @@ Route::prefix('pages')
 		Route::post('sales/{sale}/change-orders/{changeOrder}/send-email', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'sendEmail'])
 			->name('sales.change-orders.send-email')
 			->middleware('role_or_permission:admin|edit estimates');
+
+		// Invoices
+		Route::get('sales/{sale}/invoices/create', [\App\Http\Controllers\Pages\InvoiceController::class, 'create'])
+			->name('sales.invoices.create')
+			->middleware('role_or_permission:admin|create invoices');
+
+		Route::post('sales/{sale}/invoices', [\App\Http\Controllers\Pages\InvoiceController::class, 'store'])
+			->name('sales.invoices.store')
+			->middleware('role_or_permission:admin|create invoices');
+
+		Route::get('sales/{sale}/invoices/{invoice}', [\App\Http\Controllers\Pages\InvoiceController::class, 'show'])
+			->name('sales.invoices.show')
+			->middleware('role_or_permission:admin|view invoices');
+
+		Route::get('sales/{sale}/invoices/{invoice}/edit', [\App\Http\Controllers\Pages\InvoiceController::class, 'edit'])
+			->name('sales.invoices.edit')
+			->middleware('role_or_permission:admin|edit invoices');
+
+		Route::put('sales/{sale}/invoices/{invoice}', [\App\Http\Controllers\Pages\InvoiceController::class, 'update'])
+			->name('sales.invoices.update')
+			->middleware('role_or_permission:admin|edit invoices');
+
+		Route::post('sales/{sale}/invoices/{invoice}/void', [\App\Http\Controllers\Pages\InvoiceController::class, 'void'])
+			->name('sales.invoices.void')
+			->middleware('role_or_permission:admin|edit invoices');
+
+		Route::get('sales/{sale}/invoices/{invoice}/pdf', [\App\Http\Controllers\Pages\InvoiceController::class, 'pdf'])
+			->name('sales.invoices.pdf')
+			->middleware('role_or_permission:admin|view invoices');
+
+		Route::post('sales/{sale}/invoices/{invoice}/send-email', [\App\Http\Controllers\Pages\InvoiceController::class, 'sendEmail'])
+			->name('sales.invoices.send-email')
+			->middleware('role_or_permission:admin|edit invoices');
+
+		// Invoice Payments
+		Route::post('sales/{sale}/invoices/{invoice}/payments', [\App\Http\Controllers\Pages\InvoiceController::class, 'storePayment'])
+			->name('sales.invoices.payments.store')
+			->middleware('role_or_permission:admin|edit invoices');
+
+		Route::delete('sales/{sale}/invoices/{invoice}/payments/{payment}', [\App\Http\Controllers\Pages\InvoiceController::class, 'destroyPayment'])
+			->name('sales.invoices.payments.destroy')
+			->middleware('role_or_permission:admin|edit invoices');
 
 		// Inventory Records
 		Route::get('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'index'])
