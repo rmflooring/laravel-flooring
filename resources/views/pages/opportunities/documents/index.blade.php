@@ -66,71 +66,71 @@
                  class="hidden mt-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <h2 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Upload New Document or Media</h2>
 
-                <form id="upload-form"
-                      method="POST"
-                      action="{{ route('pages.opportunities.documents.store', $opportunity->id) }}"
-                      enctype="multipart/form-data"
-                      class="space-y-4">
-                    @csrf
+                {{-- Drop Zone --}}
+                <div id="drop-zone"
+                     class="cursor-pointer select-none rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-900/30">
+                    <svg class="mx-auto mb-2 h-8 w-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                    </svg>
+                    <p class="font-medium text-gray-800 dark:text-gray-100">Drag &amp; drop files here or click to select</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Images, PDFs, Word docs, and more</p>
+                    <input id="file-upload-input" type="file" multiple class="hidden">
+                </div>
 
-                    {{-- Drop Zone --}}
-                    <div id="drop-zone"
-                         class="cursor-pointer select-none rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-900/30">
-                        <div class="font-medium text-gray-800 dark:text-gray-100">
-                            Drag & drop files here or click to select
-                        </div>
-                        <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Browse Files</div>
+                {{-- Per-file queue --}}
+                <div id="file-queue" class="hidden mt-3 space-y-2"></div>
 
-                        <input id="file-upload-input"
-                               type="file"
-                               name="files[]"
-                               multiple
-                               class="hidden">
-                    </div>
-
-                    {{-- Selected files list --}}
-                    <div id="selected-files-wrap" class="hidden">
-                        <div class="mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">Selected files:</div>
-                        <ul id="selected-files" class="list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-300"></ul>
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                        {{-- Label --}}
+                {{-- Apply-to-all defaults (shown when 2+ files queued) --}}
+                <div id="queue-defaults" class="hidden mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-900/20">
+                    <p class="mb-2 text-xs font-semibold text-blue-700 dark:text-blue-300">Apply to all files:</p>
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Document Label</label>
-                            <select name="label_id"
-                                    class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500">
-                                <option value="">-- Select Label --</option>
+                            <select id="global-label-id"
+                                    class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                <option value="">— Apply label to all —</option>
                                 @foreach ($labels as $label)
                                     <option value="{{ $label->id }}">{{ $label->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-
-                        {{-- Description --}}
                         <div class="lg:col-span-2">
-                            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Description (optional)</label>
                             <input type="text"
-                                   name="description"
-                                   class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-                                   placeholder="Applies to all uploaded files">
+                                   id="global-description"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                   placeholder="Apply description to all files">
                         </div>
                     </div>
+                </div>
 
-                    {{-- Upload button --}}
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button type="submit"
-                                class="inline-flex items-center justify-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                            Upload
-                        </button>
-
-                        <button type="button"
-                                id="close-upload-panel"
-                                class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
-                            Cancel
-                        </button>
+                {{-- Progress bar --}}
+                <div id="upload-progress-wrap" class="hidden mt-3">
+                    <div class="mb-1 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                        <span id="upload-progress-label">Uploading…</span>
+                        <span id="upload-progress-pct">0%</span>
                     </div>
-                </form>
+                    <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div id="upload-progress-bar"
+                             class="h-2 rounded-full bg-blue-600 transition-all duration-150"
+                             style="width: 0%"></div>
+                    </div>
+                </div>
+
+                {{-- Buttons --}}
+                <div class="mt-4 flex flex-wrap items-center gap-2">
+                    <button type="button"
+                            id="upload-submit-btn"
+                            class="hidden inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                        </svg>
+                        Upload
+                    </button>
+                    <button type="button"
+                            id="close-upload-panel"
+                            class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
+                        Cancel
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -156,7 +156,7 @@
                             ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200'
                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'
                         }}">
-                        Show All
+                        All ({{ $counts['all'] }})
                     </a>
 
                     <a href="{{ route('pages.opportunities.documents.index', $opportunity->id) . '?' . http_build_query(array_merge($baseParams, ['type' => 'documents'])) }}"
@@ -164,7 +164,7 @@
                             ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200'
                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'
                         }}">
-                        Documents
+                        Documents ({{ $counts['documents'] }})
                     </a>
 
                     <a href="{{ route('pages.opportunities.documents.index', $opportunity->id) . '?' . http_build_query(array_merge($baseParams, ['type' => 'media'])) }}"
@@ -172,7 +172,7 @@
                             ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200'
                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'
                         }}">
-                        Media
+                        Media ({{ $counts['media'] }})
                     </a>
                 </div>
 
@@ -181,6 +181,15 @@
                       action="{{ route('pages.opportunities.documents.index', $opportunity->id) }}"
                       class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
                     <input type="hidden" name="type" value="{{ $type }}">
+
+                    <div class="w-full sm:max-w-xs">
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Search</label>
+                        <input type="text"
+                               name="search"
+                               value="{{ $search }}"
+                               placeholder="File name or description…"
+                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500">
+                    </div>
 
                     <div class="w-full sm:max-w-xs">
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Filter by Label</label>
@@ -297,18 +306,28 @@
                     <tbody>
                         @forelse ($documents as $doc)
                             @php
-                                $docType = match(strtolower($doc->extension ?? '')) {
+                                $docExt   = strtolower($doc->extension ?? '');
+                                $docMime  = $doc->mime_type ?? '';
+                                $docType  = match($docExt) {
                                     'pdf'  => 'pdf',
                                     'docx' => 'docx',
                                     default => null,
                                 };
+                                $isImage  = str_starts_with($docMime, 'image/') || in_array($docExt, ['jpg','jpeg','png','gif','webp','bmp','tiff','heic','heif','avif']);
+                                $isVideo  = str_starts_with($docMime, 'video/') || in_array($docExt, ['mp4','mov','avi','mkv','webm','wmv','m4v']);
+                                $docUrl   = asset('storage/' . $doc->path);
                             @endphp
                             <tr class="border-t border-gray-200 {{ $doc->trashed() ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-white dark:bg-gray-800' }} hover:bg-gray-50 dark:hover:bg-gray-700/50"
                                 @if($docType)
                                     data-doc-id="{{ $doc->id }}"
-                                    data-doc-url="{{ asset('storage/' . $doc->path) }}"
+                                    data-doc-url="{{ $docUrl }}"
                                     data-doc-name="{{ $doc->original_name }}"
                                     data-doc-type="{{ $docType }}"
+                                @elseif($isImage)
+                                    data-doc-id="{{ $doc->id }}"
+                                    data-doc-url="{{ $docUrl }}"
+                                    data-doc-name="{{ $doc->original_name }}"
+                                    data-doc-type="image"
                                 @endif
                             >
                                 <td class="px-4 py-3">
@@ -320,9 +339,18 @@
 
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-3">
-                                        <div class="flex h-10 w-10 items-center justify-center rounded bg-gray-100 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-200">
-                                            FILE
-                                        </div>
+                                        @if($isImage)
+                                            <img src="{{ $docUrl }}"
+                                                 alt="{{ $doc->original_name }}"
+                                                 class="h-10 w-10 rounded object-cover shrink-0 cursor-pointer"
+                                                 @if(!$doc->trashed()) onclick="openDocImageViewer('{{ $docUrl }}', '{{ addslashes($doc->original_name) }}')" @endif>
+                                        @elseif($isVideo)
+                                            <div class="flex h-10 w-10 items-center justify-center rounded bg-gray-800 text-white text-sm shrink-0">▶</div>
+                                        @else
+                                            <div class="flex h-10 w-10 items-center justify-center rounded bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-200 shrink-0">
+                                                {{ strtoupper($docExt ?: 'FILE') }}
+                                            </div>
+                                        @endif
                                         <div class="min-w-0">
                                             <div class="truncate font-medium text-gray-900 dark:text-white">
                                                 {{ $doc->original_name }}
@@ -408,8 +436,14 @@
                                                     data-doc-id="{{ $doc->id }}">
                                                 View
                                             </button>
+                                        @elseif($isImage)
+                                            <button type="button"
+                                                    onclick="openDocImageViewer('{{ $docUrl }}', '{{ addslashes($doc->original_name) }}')"
+                                                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
+                                                View
+                                            </button>
                                         @else
-                                            <a href="{{ asset('storage/' . $doc->path) }}"
+                                            <a href="{{ $docUrl }}"
                                                target="_blank"
                                                class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
                                                 View
@@ -579,6 +613,28 @@
     {{-- ============================================================ --}}
 
     {{-- ============================================================ --}}
+    {{-- Image Viewer Modal                                           --}}
+    {{-- ============================================================ --}}
+    <div id="docImageViewer"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90 p-4"
+         aria-hidden="true"
+         onclick="if(event.target===this)closeDocImageViewer()">
+        <button type="button"
+                onclick="closeDocImageViewer()"
+                class="absolute top-4 right-4 z-10 inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 text-white hover:bg-white/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        <div class="flex flex-col items-center gap-3 max-w-5xl max-h-full w-full">
+            <img id="docImageViewerImg" src="" alt=""
+                 class="max-h-[85vh] max-w-full rounded-lg object-contain shadow-2xl">
+            <p id="docImageViewerName" class="text-sm text-white/70 truncate max-w-full"></p>
+        </div>
+    </div>
+    {{-- ============================================================ --}}
+
+    {{-- ============================================================ --}}
     {{-- Document Viewer Modal                                        --}}
     {{-- ============================================================ --}}
     <div id="docViewer"
@@ -670,6 +726,30 @@
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
     <script>
+        function openDocImageViewer(url, name) {
+            const modal = document.getElementById('docImageViewer');
+            const img   = document.getElementById('docImageViewerImg');
+            const label = document.getElementById('docImageViewerName');
+            if (!modal || !img) return;
+            img.src = url;
+            img.alt = name;
+            if (label) label.textContent = name;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeDocImageViewer() {
+            const modal = document.getElementById('docImageViewer');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+            document.getElementById('docImageViewerImg').src = '';
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeDocImageViewer();
+        });
+
         // Set PDF.js worker before any document interactions
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -842,79 +922,235 @@
 
             updateBulkUI();
 
-            // -------------------------
-            // Toggle upload panel
-            // -------------------------
-            const toggleBtn = document.getElementById('toggle-upload-panel');
-            const closeBtn = document.getElementById('close-upload-panel');
-            const uploadPanel = document.getElementById('upload-panel');
+            // =========================================================
+            // Upload panel — per-file queue with XHR progress
+            // =========================================================
+            const toggleBtn    = document.getElementById('toggle-upload-panel');
+            const closeBtn     = document.getElementById('close-upload-panel');
+            const uploadPanel  = document.getElementById('upload-panel');
+            const dropZone     = document.getElementById('drop-zone');
+            const uploadInput  = document.getElementById('file-upload-input');
+            const fileQueueEl  = document.getElementById('file-queue');
+            const queueDefaults = document.getElementById('queue-defaults');
+            const submitBtn    = document.getElementById('upload-submit-btn');
+            const progressWrap = document.getElementById('upload-progress-wrap');
+            const progressBar  = document.getElementById('upload-progress-bar');
+            const progressPct  = document.getElementById('upload-progress-pct');
+            const progressLabel = document.getElementById('upload-progress-label');
+            const globalLabelEl = document.getElementById('global-label-id');
+            const globalDescEl  = document.getElementById('global-description');
 
-            if (toggleBtn && uploadPanel) {
-                toggleBtn.addEventListener('click', () => {
-                    uploadPanel.classList.toggle('hidden');
-                });
+            const labelsData = @json($labels->map(fn($l) => ['id' => $l->id, 'name' => $l->name])->values());
+            const uploadUrl  = '{{ route('pages.opportunities.documents.store', $opportunity->id) }}';
+            const csrfToken  = '{{ csrf_token() }}';
+
+            let fileQueue = []; // [{ file: File, labelId: '', description: '' }]
+
+            function fmtBytes(b) {
+                if (b < 1024) return b + ' B';
+                if (b < 1048576) return Math.round(b / 1024) + ' KB';
+                return (b / 1048576).toFixed(1) + ' MB';
             }
 
-            if (closeBtn && uploadPanel) {
-                closeBtn.addEventListener('click', () => {
-                    uploadPanel.classList.add('hidden');
+            function buildLabelOpts(sel) {
+                let h = '<option value="">\u2014 Label \u2014</option>';
+                labelsData.forEach(l => {
+                    h += `<option value="${l.id}"${String(l.id) === String(sel) ? ' selected' : ''}>${l.name}</option>`;
                 });
+                return h;
             }
 
-            // -------------------------
-            // Mass upload drop zone
-            // -------------------------
-            const dropZone = document.getElementById('drop-zone');
-            const uploadInput = document.getElementById('file-upload-input');
-            const selectedWrap = document.getElementById('selected-files-wrap');
-            const selectedList = document.getElementById('selected-files');
+            function renderQueue() {
+                if (!fileQueueEl) return;
+                fileQueueEl.innerHTML = '';
 
-            function renderSelectedFiles(files) {
-                if (!selectedWrap || !selectedList) return;
-
-                selectedList.innerHTML = '';
-                if (!files || files.length === 0) {
-                    selectedWrap.classList.add('hidden');
-                    return;
+                const count = fileQueue.length;
+                fileQueueEl.classList.toggle('hidden', count === 0);
+                if (queueDefaults) queueDefaults.classList.toggle('hidden', count < 2);
+                if (submitBtn) {
+                    submitBtn.classList.toggle('hidden', count === 0);
+                    submitBtn.innerHTML = count === 0 ? 'Upload'
+                        : `<svg class="h-4 w-4 inline-block mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg> Upload ${count} File${count !== 1 ? 's' : ''}`;
                 }
+                if (count === 0) return;
 
-                selectedWrap.classList.remove('hidden');
-                Array.from(files).forEach((f) => {
-                    const li = document.createElement('li');
-                    li.textContent = `${f.name} (${Math.round(f.size / 1024)} KB)`;
-                    selectedList.appendChild(li);
+                fileQueue.forEach((item, i) => {
+                    const isImg = item.file.type.startsWith('image/');
+                    const objUrl = isImg ? URL.createObjectURL(item.file) : null;
+
+                    const thumb = isImg
+                        ? `<img src="${objUrl}" data-obj-url="${objUrl}" class="w-10 h-10 rounded object-cover shrink-0" alt="">`
+                        : `<div class="w-10 h-10 rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0 text-gray-400 dark:text-gray-300">
+                               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                               </svg>
+                           </div>`;
+
+                    const row = document.createElement('div');
+                    row.className = 'file-queue-row flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-700/50';
+                    row.dataset.index = i;
+                    row.innerHTML = `
+                        ${thumb}
+                        <div class="min-w-0 w-36 lg:w-44 shrink-0">
+                            <p class="text-xs font-medium text-gray-900 dark:text-white truncate" title="${item.file.name.replace(/"/g, '&quot;')}">${item.file.name}</p>
+                            <p class="text-[11px] text-gray-400">${fmtBytes(item.file.size)}</p>
+                        </div>
+                        <div class="w-36 shrink-0">
+                            <select class="queue-label block w-full rounded-lg border border-gray-300 bg-white p-1.5 text-xs text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" data-index="${i}">
+                                ${buildLabelOpts(item.labelId)}
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="text"
+                                   class="queue-desc block w-full rounded-lg border border-gray-300 bg-white p-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                   placeholder="Description (optional)"
+                                   value="${item.description.replace(/"/g, '&quot;')}"
+                                   data-index="${i}">
+                        </div>
+                        <div class="w-5 shrink-0 flex items-center justify-center" id="file-status-${i}"></div>
+                        <button type="button" class="remove-file shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/40 dark:hover:text-red-400" data-index="${i}" title="Remove">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>`;
+                    fileQueueEl.appendChild(row);
+                });
+
+                fileQueueEl.querySelectorAll('.queue-label').forEach(sel => {
+                    sel.addEventListener('change', () => { fileQueue[sel.dataset.index].labelId = sel.value; });
+                });
+                fileQueueEl.querySelectorAll('.queue-desc').forEach(inp => {
+                    inp.addEventListener('input', () => { fileQueue[inp.dataset.index].description = inp.value; });
+                });
+                fileQueueEl.querySelectorAll('.remove-file').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const idx = parseInt(btn.dataset.index);
+                        const img = fileQueueEl.querySelector(`img[data-obj-url]`);
+                        if (img && fileQueue[idx]?.file?.type?.startsWith('image/')) URL.revokeObjectURL(img.dataset.objUrl);
+                        fileQueue.splice(idx, 1);
+                        renderQueue();
+                    });
                 });
             }
 
+            function addFiles(newFiles) {
+                Array.from(newFiles).forEach(f => {
+                    if (!fileQueue.some(item => item.file.name === f.name && item.file.size === f.size)) {
+                        fileQueue.push({ file: f, labelId: '', description: '' });
+                    }
+                });
+                renderQueue();
+                uploadInput.value = '';
+            }
+
+            function resetPanel() {
+                fileQueueEl?.querySelectorAll('img[data-obj-url]').forEach(img => URL.revokeObjectURL(img.dataset.objUrl));
+                fileQueue = [];
+                renderQueue();
+                if (progressWrap) progressWrap.classList.add('hidden');
+                if (progressBar) { progressBar.style.width = '0%'; progressBar.style.backgroundColor = ''; }
+                if (globalLabelEl) globalLabelEl.value = '';
+                if (globalDescEl) globalDescEl.value = '';
+                uploadInput.value = '';
+            }
+
+            // Toggle panel open/close
+            if (toggleBtn && uploadPanel) {
+                toggleBtn.addEventListener('click', () => uploadPanel.classList.toggle('hidden'));
+            }
+            if (closeBtn && uploadPanel) {
+                closeBtn.addEventListener('click', () => { uploadPanel.classList.add('hidden'); resetPanel(); });
+            }
+
+            // Drop zone
             if (dropZone && uploadInput) {
                 dropZone.addEventListener('click', () => uploadInput.click());
-
-                uploadInput.addEventListener('change', () => {
-                    renderSelectedFiles(uploadInput.files);
+                uploadInput.addEventListener('change', () => { if (uploadInput.files.length) addFiles(uploadInput.files); });
+                ['dragenter', 'dragover'].forEach(evt => {
+                    dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('ring-2', 'ring-blue-400'); });
                 });
+                ['dragleave', 'drop'].forEach(evt => {
+                    dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('ring-2', 'ring-blue-400'); });
+                });
+                dropZone.addEventListener('drop', e => {
+                    const files = e.dataTransfer?.files;
+                    if (files?.length) addFiles(files);
+                });
+            }
 
-                ['dragenter', 'dragover'].forEach((evt) => {
-                    dropZone.addEventListener(evt, (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        dropZone.classList.add('ring-2', 'ring-blue-400');
+            // Apply-to-all label
+            if (globalLabelEl) {
+                globalLabelEl.addEventListener('change', () => {
+                    const val = globalLabelEl.value;
+                    fileQueue.forEach(item => item.labelId = val);
+                    renderQueue();
+                });
+            }
+
+            // Apply-to-all description
+            if (globalDescEl) {
+                globalDescEl.addEventListener('input', () => {
+                    const val = globalDescEl.value;
+                    fileQueue.forEach(item => item.description = val);
+                    fileQueueEl?.querySelectorAll('.queue-desc').forEach(inp => { inp.value = val; });
+                });
+            }
+
+            // XHR upload with progress
+            if (submitBtn) {
+                submitBtn.addEventListener('click', () => {
+                    if (fileQueue.length === 0 || submitBtn.disabled) return;
+
+                    const fd = new FormData();
+                    fd.append('_token', csrfToken);
+                    fileQueue.forEach(item => {
+                        fd.append('files[]', item.file);
+                        fd.append('label_ids[]', item.labelId);
+                        fd.append('descriptions[]', item.description);
                     });
-                });
 
-                ['dragleave', 'drop'].forEach((evt) => {
-                    dropZone.addEventListener(evt, (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        dropZone.classList.remove('ring-2', 'ring-blue-400');
+                    if (progressWrap) progressWrap.classList.remove('hidden');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Uploading…';
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', uploadUrl);
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+
+                    xhr.upload.addEventListener('progress', e => {
+                        if (!e.lengthComputable) return;
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        if (progressBar) progressBar.style.width = pct + '%';
+                        if (progressPct) progressPct.textContent = pct + '%';
+                        if (progressLabel) progressLabel.textContent = `Uploading ${fileQueue.length} file${fileQueue.length !== 1 ? 's' : ''}…`;
                     });
-                });
 
-                dropZone.addEventListener('drop', (e) => {
-                    const dt = e.dataTransfer;
-                    if (!dt || !dt.files || dt.files.length === 0) return;
+                    xhr.addEventListener('load', () => {
+                        let data = null;
+                        try { data = JSON.parse(xhr.responseText); } catch {}
 
-                    uploadInput.files = dt.files;
-                    renderSelectedFiles(uploadInput.files);
+                        if (data?.success) {
+                            if (progressBar) progressBar.style.width = '100%';
+                            if (progressPct) progressPct.textContent = '100%';
+                            if (progressLabel) progressLabel.textContent = `${data.count ?? fileQueue.length} file(s) uploaded!`;
+                            setTimeout(() => window.location.reload(), 1200);
+                        } else {
+                            let msg = data?.message || (data?.errors ? Object.values(data.errors).flat().join(' ') : null) || `Upload failed (HTTP ${xhr.status}).`;
+                            if (progressLabel) progressLabel.textContent = msg;
+                            if (progressBar) progressBar.style.backgroundColor = '#ef4444';
+                            submitBtn.disabled = false;
+                        }
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        if (progressLabel) progressLabel.textContent = 'Upload failed — network error.';
+                        if (progressBar) progressBar.style.backgroundColor = '#ef4444';
+                        submitBtn.disabled = false;
+                    });
+
+                    xhr.send(fd);
                 });
             }
 

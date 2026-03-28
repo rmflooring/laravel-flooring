@@ -19,35 +19,56 @@ class OpportunityDocumentController extends Controller
 
 public function index(Opportunity $opportunity, Request $request)
 {
-    // Filters (optional for now)
     $type         = $request->get('type'); // all | documents | media
-    $labelId      = $request->get('label_id'); // managed label
-    $labelText    = $request->get('label_text'); // free text
+    $labelId      = $request->get('label_id');
+    $labelText    = $request->get('label_text');
+    $search       = trim($request->get('search', ''));
     $showArchived = $request->boolean('show_archived');
 
+    // Shared base constraints (everything except type filter)
+    $base = function ($q) use ($showArchived, $labelId, $labelText, $search) {
+        if (!$showArchived) {
+            $q->whereNull('deleted_at');
+        }
+        if ($labelId) {
+            $q->where('label_id', $labelId);
+        }
+        if ($labelText) {
+            $q->where('label_text', $labelText);
+        }
+        if ($search !== '') {
+            $q->where(function ($q) use ($search) {
+                $q->where('original_name', 'like', '%' . $search . '%')
+                  ->orWhere('description', 'like', '%' . $search . '%');
+            });
+        }
+    };
+
+    // Per-category counts (ignores the active type tab so tabs always show totals)
+    $catCounts = $opportunity->documents()
+        ->withTrashed()
+        ->tap($base)
+        ->selectRaw('category, count(*) as cnt')
+        ->groupBy('category')
+        ->pluck('cnt', 'category');
+
+    $counts = [
+        'all'       => $catCounts->sum(),
+        'documents' => ($catCounts['documents'] ?? 0) + ($catCounts['generated_document'] ?? 0),
+        'media'     => $catCounts['media'] ?? 0,
+    ];
+
+    // Main query (applies type filter on top of base)
     $documentsQuery = $opportunity->documents()
         ->withTrashed()
         ->with('label')
+        ->tap($base)
         ->orderByDesc('created_at');
 
-    if (!$showArchived) {
-        $documentsQuery->whereNull('deleted_at');
-    }
-
-    // type filter
     if ($type === 'documents') {
         $documentsQuery->whereIn('category', ['documents', 'generated_document']);
     } elseif ($type === 'media') {
         $documentsQuery->where('category', 'media');
-    }
-
-    // label filter
-    if ($labelId) {
-        $documentsQuery->where('label_id', $labelId);
-    }
-
-    if ($labelText) {
-        $documentsQuery->where('label_text', $labelText);
     }
 
     $documents = $documentsQuery->paginate(25)->withQueryString();
@@ -72,7 +93,9 @@ public function index(Opportunity $opportunity, Request $request)
         'type'             => $type,
         'labelId'          => $labelId,
         'labelText'        => $labelText,
+        'search'           => $search,
         'showArchived'     => $showArchived,
+        'counts'           => $counts,
         'activeTemplates'  => $activeTemplates,
         'opportunitySales' => $opportunitySales,
     ]);
@@ -80,81 +103,102 @@ public function index(Opportunity $opportunity, Request $request)
 
 
     public function store(Opportunity $opportunity, Request $request)
-{
-    $request->validate([
-        'files'   => ['required', 'array', 'min:1'],
-        'files.*' => ['file', 'max:512000'], // 500MB per file (KB)
-        'label_id' => ['nullable', 'integer', 'exists:opportunity_document_labels,id'],
-        'description' => ['nullable', 'string'],
-    ]);
-
-    try {
-        $userId = Auth::id();
-
-        // ✅ apply to every uploaded file in this batch
-        $labelId     = $request->input('label_id');
-        $description = $request->input('description');
-
-        // Auto-detect the "Photos" label for image uploads when no label chosen
-        $photosLabelId = $labelId ?? (OpportunityDocumentLabel::where('name', 'Photos')->where('is_active', true)->value('id'));
-
-        foreach ($request->file('files', []) as $file) {
-            $mime = $file->getMimeType() ?? '';
-
-            // Category values (plural)
-            $category = (str_starts_with($mime, 'image/') || str_starts_with($mime, 'video/'))
-                ? 'media'
-                : 'documents';
-
-            // Auto-apply "Photos" label to images when no label was manually selected
-            $resolvedLabelId = (str_starts_with($mime, 'image/') && ! $labelId)
-                ? $photosLabelId
-                : $labelId;
-
-            // Save in public disk so it's accessible via /storage/...
-            $disk = 'public';
-            $dir  = "opportunities/{$opportunity->id}";
-
-            $path = $file->store($dir, $disk);
-
-            \Log::info('[docs] stored file', [
-                'opportunity_id' => $opportunity->id,
-                'path'           => $path,
-                'mime'           => $mime,
-                'original'       => $file->getClientOriginalName(),
-            ]);
-
-            OpportunityDocument::create([
-                'opportunity_id' => $opportunity->id,
-                'disk'           => $disk,
-                'path'           => $path,
-                'original_name'  => $file->getClientOriginalName(),
-                'stored_name'    => basename($path),
-                'mime_type'      => $mime,
-                'extension'      => $file->getClientOriginalExtension(),
-                'size_bytes'     => $file->getSize(),
-                'category'       => $category,
-
-                // ✅ NEW
-                'label_id'       => $resolvedLabelId,
-                'description'    => $description,
-
-                'created_by'     => $userId,
-                'updated_by'     => $userId,
-            ]);
-        }
-
-        return back()->with('success', 'Files uploaded successfully.');
-    } catch (\Throwable $e) {
-        \Log::error('[docs] upload failed', [
-            'message' => $e->getMessage(),
-            'file'    => $e->getFile(),
-            'line'    => $e->getLine(),
+    {
+        $request->validate([
+            'files'          => ['required', 'array', 'min:1'],
+            'files.*'        => ['file', 'max:512000'], // 500 MB per file
+            'label_ids'      => ['nullable', 'array'],
+            'label_ids.*'    => ['nullable', 'integer'],   // existence checked in code below
+            'descriptions'   => ['nullable', 'array'],
+            'descriptions.*' => ['nullable', 'string'],
+            'label_id'       => ['nullable', 'integer'],   // existence checked in code below
+            'description'    => ['nullable', 'string'],
         ]);
 
-        return back()->with('error', 'Upload failed: ' . $e->getMessage());
+        try {
+            $userId = Auth::id();
+
+            $labelIds    = $request->input('label_ids', []);
+            $descriptions = $request->input('descriptions', []);
+            $globalLabel = $request->input('label_id');
+            $globalDesc  = $request->input('description');
+
+            $photosLabelId = OpportunityDocumentLabel::where('name', 'Photos')
+                ->where('is_active', true)
+                ->value('id');
+
+            $mediaExtensions = ['jpg','jpeg','png','gif','webp','bmp','tiff','tif','heic','heif','avif','svg','mp4','mov','avi','mkv','webm','wmv','m4v','3gp'];
+
+            foreach ($request->file('files', []) as $i => $file) {
+                $mime = $file->getMimeType() ?? '';
+                $ext  = strtolower($file->getClientOriginalExtension());
+
+                $isMedia = str_starts_with($mime, 'image/')
+                    || str_starts_with($mime, 'video/')
+                    || in_array($ext, $mediaExtensions);
+
+                $category = $isMedia ? 'media' : 'documents';
+
+                // Per-file label takes priority, then global fallback, then auto-Photos for images/media
+                $rawLabelId  = $labelIds[$i] ?? $globalLabel;
+                $fileLabelId = ($rawLabelId && is_numeric($rawLabelId)) ? (int) $rawLabelId : null;
+                if (! $fileLabelId && $isMedia) {
+                    $fileLabelId = $photosLabelId;
+                }
+
+                $fileDesc = $descriptions[$i] ?? $globalDesc;
+
+                $disk = 'public';
+                $path = $file->store("opportunities/{$opportunity->id}", $disk);
+
+                \Log::info('[docs] stored file', [
+                    'opportunity_id' => $opportunity->id,
+                    'path'           => $path,
+                    'mime'           => $mime,
+                    'original'       => $file->getClientOriginalName(),
+                ]);
+
+                OpportunityDocument::create([
+                    'opportunity_id' => $opportunity->id,
+                    'disk'           => $disk,
+                    'path'           => $path,
+                    'original_name'  => $file->getClientOriginalName(),
+                    'stored_name'    => basename($path),
+                    'mime_type'      => $mime,
+                    'extension'      => $file->getClientOriginalExtension(),
+                    'size_bytes'     => $file->getSize(),
+                    'category'       => $category,
+                    'label_id'       => $fileLabelId,
+                    'description'    => $fileDesc,
+                    'created_by'     => $userId,
+                    'updated_by'     => $userId,
+                ]);
+            }
+
+            $count = count($request->file('files', []));
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'count' => $count]);
+            }
+
+            return back()->with('success', $count === 1
+                ? 'File uploaded successfully.'
+                : "{$count} files uploaded successfully.");
+
+        } catch (\Throwable $e) {
+            \Log::error('[docs] upload failed', [
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Upload failed: ' . $e->getMessage()], 500);
+            }
+
+            return back()->with('error', 'Upload failed: ' . $e->getMessage());
+        }
     }
-}
 
 
     public function update(Opportunity $opportunity, OpportunityDocument $document, Request $request)

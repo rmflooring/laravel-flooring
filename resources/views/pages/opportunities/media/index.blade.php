@@ -23,6 +23,18 @@
             </div>
         </div>
 
+        {{-- Flash Messages --}}
+        @if(session('success'))
+            <div class="mb-4 flex items-center rounded-lg border border-green-200 bg-green-50 p-4 text-green-800" role="alert">
+                <span class="text-sm font-medium">{{ session('success') }}</span>
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="mb-4 flex items-center rounded-lg border border-red-200 bg-red-50 p-4 text-red-800" role="alert">
+                <span class="text-sm font-medium">{{ session('error') }}</span>
+            </div>
+        @endif
+
         {{-- Media Controls --}}
 <div x-data="mediaGallery()" x-init="init()" :data-select-mode="selectMode">
 
@@ -57,6 +69,16 @@
             </label>
         </form>
 
+        {{-- Upload Photos button --}}
+        <button type="button"
+                id="gallery-upload-toggle"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+            </svg>
+            Upload Photos
+        </button>
+
         {{-- Select toggle --}}
         @if($media->count() > 0)
         <button type="button"
@@ -69,6 +91,55 @@
             <span x-text="selectMode ? 'Cancel' : 'Select'"></span>
         </button>
         @endif
+    </div>
+</div>
+
+{{-- Upload Panel --}}
+<div id="gallery-upload-panel"
+     class="hidden mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+
+    {{-- Drop Zone --}}
+    <div id="gallery-drop-zone"
+         class="cursor-pointer select-none rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-900/30">
+        <svg class="mx-auto mb-2 h-8 w-8 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+        </svg>
+        <p class="font-medium text-gray-800 dark:text-gray-100">Drag &amp; drop photos or videos here or click to select</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Images and videos up to 500 MB each</p>
+        <input id="gallery-upload-input" type="file" multiple accept="image/*,video/*" class="hidden">
+    </div>
+
+    {{-- Per-file queue --}}
+    <div id="gallery-file-queue" class="hidden mt-3 space-y-2"></div>
+
+    {{-- Progress bar --}}
+    <div id="gallery-progress-wrap" class="hidden mt-3">
+        <div class="mb-1 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+            <span id="gallery-progress-label">Uploading…</span>
+            <span id="gallery-progress-pct">0%</span>
+        </div>
+        <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+            <div id="gallery-progress-bar"
+                 class="h-2 rounded-full bg-blue-600 transition-all duration-150"
+                 style="width: 0%"></div>
+        </div>
+    </div>
+
+    {{-- Buttons --}}
+    <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button type="button"
+                id="gallery-upload-submit"
+                class="hidden inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+            </svg>
+            Upload
+        </button>
+        <button type="button"
+                id="gallery-upload-cancel"
+                class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+            Cancel
+        </button>
     </div>
 </div>
 
@@ -138,8 +209,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             @foreach ($media as $doc)
                 @php
-                    $absoluteUrl  = Storage::disk($doc->disk)->url($doc->path);
-                    $url          = parse_url($absoluteUrl, PHP_URL_PATH) ?: $absoluteUrl;
+                    $url = parse_url($doc->url, PHP_URL_PATH) ?: $doc->url;
                     $isVideo      = str_starts_with($doc->mime_type ?? '', 'video/');
                     $uploaderName = $doc->creator?->name ?? 'Unknown';
                     $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
@@ -480,6 +550,200 @@ document.addEventListener('DOMContentLoaded', () => {
         if (diff < 0) goNext();
         else goPrev();
     }, { passive: true });
+
+    // =========================================================
+    // Gallery upload panel
+    // =========================================================
+    const gUploadToggle  = document.getElementById('gallery-upload-toggle');
+    const gUploadPanel   = document.getElementById('gallery-upload-panel');
+    const gDropZone      = document.getElementById('gallery-drop-zone');
+    const gUploadInput   = document.getElementById('gallery-upload-input');
+    const gFileQueue     = document.getElementById('gallery-file-queue');
+    const gProgressWrap  = document.getElementById('gallery-progress-wrap');
+    const gProgressBar   = document.getElementById('gallery-progress-bar');
+    const gProgressPct   = document.getElementById('gallery-progress-pct');
+    const gProgressLabel = document.getElementById('gallery-progress-label');
+    const gSubmitBtn     = document.getElementById('gallery-upload-submit');
+    const gCancelBtn     = document.getElementById('gallery-upload-cancel');
+
+    const gUploadUrl  = '{{ route('pages.opportunities.documents.store', $opportunity->id) }}';
+    const gCsrfToken  = '{{ csrf_token() }}';
+
+    let gQueue = []; // [{ file: File, description: '' }]
+
+    function gFmtBytes(b) {
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return Math.round(b / 1024) + ' KB';
+        return (b / 1048576).toFixed(1) + ' MB';
+    }
+
+    function gRenderQueue() {
+        if (!gFileQueue) return;
+        gFileQueue.innerHTML = '';
+
+        const count = gQueue.length;
+        gFileQueue.classList.toggle('hidden', count === 0);
+        if (gSubmitBtn) {
+            gSubmitBtn.classList.toggle('hidden', count === 0);
+            gSubmitBtn.innerHTML = count === 0 ? 'Upload'
+                : `<svg class="h-4 w-4 inline-block mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg> Upload ${count} File${count !== 1 ? 's' : ''}`;
+        }
+        if (count === 0) return;
+
+        gQueue.forEach((item, i) => {
+            const isImg   = item.file.type.startsWith('image/');
+            const isVideo = item.file.type.startsWith('video/');
+            const objUrl  = (isImg || isVideo) ? URL.createObjectURL(item.file) : null;
+
+            let thumb;
+            if (isImg) {
+                thumb = `<img src="${objUrl}" data-obj-url="${objUrl}" class="w-10 h-10 rounded object-cover shrink-0" alt="">`;
+            } else if (isVideo) {
+                thumb = `<div class="w-10 h-10 rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0 text-gray-500 dark:text-gray-300 text-lg">▶</div>`;
+            } else {
+                thumb = `<div class="w-10 h-10 rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18"/>
+                    </svg>
+                </div>`;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-700/50';
+            row.innerHTML = `
+                ${thumb}
+                <div class="min-w-0 w-36 lg:w-48 shrink-0">
+                    <p class="text-xs font-medium text-gray-900 dark:text-white truncate" title="${item.file.name.replace(/"/g, '&quot;')}">${item.file.name}</p>
+                    <p class="text-[11px] text-gray-400">${gFmtBytes(item.file.size)}</p>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <input type="text"
+                           class="g-desc block w-full rounded-lg border border-gray-300 bg-white p-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                           placeholder="Description (optional)"
+                           value="${item.description.replace(/"/g, '&quot;')}"
+                           data-index="${i}">
+                </div>
+                <button type="button"
+                        class="g-remove shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/40 dark:hover:text-red-400"
+                        data-index="${i}" title="Remove">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>`;
+            gFileQueue.appendChild(row);
+        });
+
+        gFileQueue.querySelectorAll('.g-desc').forEach(inp => {
+            inp.addEventListener('input', () => { gQueue[inp.dataset.index].description = inp.value; });
+        });
+        gFileQueue.querySelectorAll('.g-remove').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.index);
+                if (gQueue[idx]?.file?.type?.startsWith('image/') || gQueue[idx]?.file?.type?.startsWith('video/')) {
+                    const img = gFileQueue.querySelectorAll('[data-obj-url]')[idx];
+                    if (img) URL.revokeObjectURL(img.dataset.objUrl);
+                }
+                gQueue.splice(idx, 1);
+                gRenderQueue();
+            });
+        });
+    }
+
+    function gAddFiles(newFiles) {
+        Array.from(newFiles).forEach(f => {
+            if (!gQueue.some(item => item.file.name === f.name && item.file.size === f.size)) {
+                gQueue.push({ file: f, description: '' });
+            }
+        });
+        gRenderQueue();
+        gUploadInput.value = '';
+    }
+
+    function gResetPanel() {
+        gFileQueue?.querySelectorAll('[data-obj-url]').forEach(el => URL.revokeObjectURL(el.dataset.objUrl));
+        gQueue = [];
+        gRenderQueue();
+        if (gProgressWrap) gProgressWrap.classList.add('hidden');
+        if (gProgressBar) { gProgressBar.style.width = '0%'; gProgressBar.style.backgroundColor = ''; }
+        gUploadInput.value = '';
+    }
+
+    // Toggle
+    gUploadToggle?.addEventListener('click', () => gUploadPanel.classList.toggle('hidden'));
+    gCancelBtn?.addEventListener('click', () => { gUploadPanel.classList.add('hidden'); gResetPanel(); });
+
+    // Drop zone
+    if (gDropZone && gUploadInput) {
+        gDropZone.addEventListener('click', () => gUploadInput.click());
+        gUploadInput.addEventListener('change', () => { if (gUploadInput.files.length) gAddFiles(gUploadInput.files); });
+        ['dragenter', 'dragover'].forEach(evt => {
+            gDropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); gDropZone.classList.add('ring-2', 'ring-blue-400'); });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            gDropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); gDropZone.classList.remove('ring-2', 'ring-blue-400'); });
+        });
+        gDropZone.addEventListener('drop', e => {
+            const files = e.dataTransfer?.files;
+            if (files?.length) gAddFiles(files);
+        });
+    }
+
+    // XHR upload
+    gSubmitBtn?.addEventListener('click', () => {
+        if (gQueue.length === 0 || gSubmitBtn.disabled) return;
+
+        const fd = new FormData();
+        fd.append('_token', gCsrfToken);
+        gQueue.forEach(item => {
+            fd.append('files[]', item.file);
+            // Only send description — let server auto-assign Photos label for media
+            if (item.description) fd.append('descriptions[]', item.description);
+            else fd.append('descriptions[]', '');
+        });
+
+        if (gProgressWrap) gProgressWrap.classList.remove('hidden');
+        gSubmitBtn.disabled = true;
+        gSubmitBtn.innerHTML = '<svg class="h-4 w-4 animate-spin inline-block mr-1" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Uploading…';
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', gUploadUrl);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('X-CSRF-TOKEN', gCsrfToken);
+
+        xhr.upload.addEventListener('progress', e => {
+            if (!e.lengthComputable) return;
+            const pct = Math.round((e.loaded / e.total) * 100);
+            if (gProgressBar) gProgressBar.style.width = pct + '%';
+            if (gProgressPct) gProgressPct.textContent = pct + '%';
+            if (gProgressLabel) gProgressLabel.textContent = `Uploading ${gQueue.length} file${gQueue.length !== 1 ? 's' : ''}…`;
+        });
+
+        xhr.addEventListener('load', () => {
+            let data = null;
+            try { data = JSON.parse(xhr.responseText); } catch {}
+
+            if (data?.success) {
+                if (gProgressBar) gProgressBar.style.width = '100%';
+                if (gProgressPct) gProgressPct.textContent = '100%';
+                if (gProgressLabel) gProgressLabel.textContent = `${data.count ?? gQueue.length} photo(s) uploaded!`;
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                let msg = data?.message || (data?.errors ? Object.values(data.errors).flat().join(' ') : null) || `Upload failed (HTTP ${xhr.status}).`;
+                if (gProgressLabel) gProgressLabel.textContent = msg;
+                if (gProgressBar) gProgressBar.style.backgroundColor = '#ef4444';
+                gSubmitBtn.disabled = false;
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            if (gProgressLabel) gProgressLabel.textContent = 'Upload failed — network error.';
+            if (gProgressBar) gProgressBar.style.backgroundColor = '#ef4444';
+            gSubmitBtn.disabled = false;
+        });
+
+        xhr.send(fd);
+    });
 });
 </script>
 

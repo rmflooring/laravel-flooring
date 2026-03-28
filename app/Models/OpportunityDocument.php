@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class OpportunityDocument extends Model
 {
@@ -27,6 +28,11 @@ class OpportunityDocument extends Model
         'created_by',
         'updated_by',
     ];
+
+    public function getUrlAttribute(): string
+    {
+        return Storage::disk($this->disk)->url($this->path);
+    }
 
     public function opportunity()
     {
