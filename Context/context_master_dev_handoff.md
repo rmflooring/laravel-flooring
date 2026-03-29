@@ -65,6 +65,9 @@ Full details in `Context/context_graph_mail.md`.
 - Sale modals load PM email via `opportunity.projectManager` eager-load → `$pmEmail` passed to view
 - Sale `$homeownerEmail` resolves from `job_email` first, falls back to `sourceEstimate->homeowner_email`
 
+### GraphMailService signatures
+Both `send()` and `sendAsUser()` accept optional `?string $icsContent = null` as the last parameter. When provided, a `text/calendar; method=REQUEST` attachment (`invite.ics`) is added alongside any PDF attachment.
+
 ### Fallback pattern (with CC)
 ```php
 $cc   = array_filter($request->input('cc', []));
@@ -107,6 +110,7 @@ Full details in `Context/context_rfm.md`.
 - **`{{rfm_link}}`** tag (2026-03-27): resolves to mobile RFM URL; available in email templates (rfm_created, rfm_updated) and SMS templates (rfm_booked, rfm_reminder); injected into hardcoded mail bodies and all SMS `$vars`
 - **Calendar sync on edit (2026-03-29)**: `RfmController::update()` now calls `syncCalendarUpdate()` — PATCHes existing MS365 event or creates one if missing. Shared `buildRfmEventData()` helper used by both create and update paths. See `context_rfm.md` for full details.
 - **MS365 token expiry notification (2026-03-29)**: `GraphCalendarService::ensureAccessToken()` marks `is_connected = false` + `disconnected_at = now()` on refresh failure. Persistent amber banner in `app.blade.php` shown whenever the user's MS account was once connected but is now disconnected (links to Settings → Integrations). Yellow `session('warning')` flash shown on RFM/WO/PO save if calendar event creation/update fails.
+- **Email calendar invites (2026-03-27)**: `ICalService` generates RFC 5545 `.ics` attachments. Admin toggles `rfm_email_calendar_invite` + `wo_email_calendar_invite` on mail settings page control whether invites are included. RFM estimator emails attach invite (UID `rfm-{id}@rmflooring.ca`, +2h duration). WO installer emails attach invite when `scheduled_date` set (UID `wo-{id}@rmflooring.ca`, +4h duration). Same UID on updates overwrites the existing calendar event in the recipient's client. `GraphMailService::send()` and `sendAsUser()` accept optional `?string $icsContent = null`.
 
 ### RFM open items
 1. ~~Sync MS365 calendar event when RFM is edited~~ ✓ Done (session 39)

@@ -112,7 +112,8 @@ class RfmController extends Controller
         try {
             $rfm->load(['estimator']);
             $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
-            (new RfmCreatedMail($rfm, $opportunity, $notifyEstimator, $notifyPm))->send();
+            $includeCalendarInvite = (bool) Setting::get('rfm_email_calendar_invite', '0');
+            (new RfmCreatedMail($rfm, $opportunity, $notifyEstimator, $notifyPm, $includeCalendarInvite))->send();
         } catch (\Throwable $e) {
             Log::error('[RFM] Email notification failed', [
                 'rfm_id' => $rfm->id,
@@ -284,7 +285,8 @@ class RfmController extends Controller
         if ($notifyEstimator || $notifyPm) {
             try {
                 $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
-                (new RfmUpdatedMail($rfm, $opportunity, $changes, $notifyEstimator, $notifyPm))->send();
+                $includeCalendarInvite = (bool) Setting::get('rfm_email_calendar_invite', '0');
+                (new RfmUpdatedMail($rfm, $opportunity, $changes, $notifyEstimator, $notifyPm, $includeCalendarInvite))->send();
             } catch (\Throwable $e) {
                 Log::error('[RFM] Update email notification failed', [
                     'rfm_id' => $rfm->id,

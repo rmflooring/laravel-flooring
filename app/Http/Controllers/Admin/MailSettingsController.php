@@ -14,12 +14,14 @@ class MailSettingsController extends Controller
     public function index()
     {
         return view('admin.settings.mail', [
-            'mailFromAddress'         => Setting::get('mail_from_address', config('services.microsoft.mail_from_address', 'reception@rmflooring.ca')),
-            'mailFromName'            => Setting::get('mail_from_name', 'RM Flooring Notifications'),
-            'mailReplyTo'             => Setting::get('mail_reply_to', 'noreply@rmflooring.ca'),
+            'mailFromAddress'          => Setting::get('mail_from_address', config('services.microsoft.mail_from_address', 'reception@rmflooring.ca')),
+            'mailFromName'             => Setting::get('mail_from_name', 'RM Flooring Notifications'),
+            'mailReplyTo'              => Setting::get('mail_reply_to', 'noreply@rmflooring.ca'),
             'mailNotificationsEnabled' => Setting::get('mail_notifications_enabled', '1'),
-            'mailLogs'                => MailLog::latest()->take(50)->get(),
-            'users'                   => User::with('microsoftAccount')->orderBy('name')->get(),
+            'rfmEmailCalendarInvite'   => Setting::get('rfm_email_calendar_invite', '0'),
+            'woEmailCalendarInvite'    => Setting::get('wo_email_calendar_invite', '0'),
+            'mailLogs'                 => MailLog::latest()->take(50)->get(),
+            'users'                    => User::with('microsoftAccount')->orderBy('name')->get(),
         ]);
     }
 
@@ -35,6 +37,8 @@ class MailSettingsController extends Controller
         Setting::set('mail_from_name', $request->input('mail_from_name'));
         Setting::set('mail_reply_to', $request->input('mail_reply_to'));
         Setting::set('mail_notifications_enabled', $request->has('mail_notifications_enabled') ? '1' : '0');
+        Setting::set('rfm_email_calendar_invite', $request->has('rfm_email_calendar_invite') ? '1' : '0');
+        Setting::set('wo_email_calendar_invite', $request->has('wo_email_calendar_invite') ? '1' : '0');
 
         return back()->with('success', 'Mail settings saved.');
     }

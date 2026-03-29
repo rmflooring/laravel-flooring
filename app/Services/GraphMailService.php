@@ -63,6 +63,7 @@ class GraphMailService
         ?string $fromAddress = null,
         ?array $attachment = null,
         ?array $cc = null,
+        ?string $icsContent = null,
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -111,13 +112,25 @@ class GraphMailService
                 ])->values()->all();
             }
 
+            $attachments = [];
             if ($attachment) {
-                $message['attachments'] = [[
+                $attachments[] = [
                     '@odata.type'  => '#microsoft.graph.fileAttachment',
                     'name'         => $attachment['filename'],
                     'contentType'  => 'application/pdf',
                     'contentBytes' => $attachment['content'],
-                ]];
+                ];
+            }
+            if ($icsContent) {
+                $attachments[] = [
+                    '@odata.type'  => '#microsoft.graph.fileAttachment',
+                    'name'         => 'invite.ics',
+                    'contentType'  => 'text/calendar; method=REQUEST',
+                    'contentBytes' => base64_encode($icsContent),
+                ];
+            }
+            if (! empty($attachments)) {
+                $message['attachments'] = $attachments;
             }
 
             $response = Http::withToken($token)
@@ -275,6 +288,7 @@ class GraphMailService
         string $type = 'system',
         ?array $attachment = null,
         ?array $cc = null,
+        ?string $icsContent = null,
     ): bool {
         $token = $this->getUserToken($user);
 
@@ -307,13 +321,25 @@ class GraphMailService
                 ])->values()->all();
             }
 
+            $attachments = [];
             if ($attachment) {
-                $message['attachments'] = [[
+                $attachments[] = [
                     '@odata.type'  => '#microsoft.graph.fileAttachment',
                     'name'         => $attachment['filename'],
                     'contentType'  => 'application/pdf',
                     'contentBytes' => $attachment['content'],
-                ]];
+                ];
+            }
+            if ($icsContent) {
+                $attachments[] = [
+                    '@odata.type'  => '#microsoft.graph.fileAttachment',
+                    'name'         => 'invite.ics',
+                    'contentType'  => 'text/calendar; method=REQUEST',
+                    'contentBytes' => base64_encode($icsContent),
+                ];
+            }
+            if (! empty($attachments)) {
+                $message['attachments'] = $attachments;
             }
 
             $response = Http::withToken($token)

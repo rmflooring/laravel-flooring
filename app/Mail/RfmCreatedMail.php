@@ -4,7 +4,9 @@ namespace App\Mail;
 
 use App\Models\Opportunity;
 use App\Models\Rfm;
+use App\Models\Setting;
 use App\Services\GraphMailService;
+use App\Services\ICalService;
 use Illuminate\Support\Facades\Log;
 
 class RfmCreatedMail
@@ -14,6 +16,7 @@ class RfmCreatedMail
         protected Opportunity $opportunity,
         protected bool $notifyEstimator = true,
         protected bool $notifyPm = false,
+        protected bool $includeCalendarInvite = false,
     ) {}
 
     /**
@@ -30,11 +33,28 @@ class RfmCreatedMail
         if ($this->notifyEstimator) {
             $estimator = $this->rfm->estimator;
             if ($estimator && filled($estimator->email)) {
+                $icsContent = null;
+                if ($this->includeCalendarInvite && $this->rfm->scheduled_at) {
+                    $fromAddress    = Setting::get('mail_from_address', config('services.microsoft.mail_from_address', 'reception@rmflooring.ca'));
+                    $fromName       = Setting::get('mail_from_name', 'RM Flooring Notifications');
+                    $estimatorName  = trim($estimator->first_name . ' ' . $estimator->last_name);
+                    $icsContent     = app(ICalService::class)->generate(
+                        uid:            "rfm-{$this->rfm->id}@rmflooring.ca",
+                        title:          $subject,
+                        start:          $this->rfm->scheduled_at->copy(),
+                        end:            $this->rfm->scheduled_at->copy()->addHours(2),
+                        organizerEmail: $fromAddress,
+                        organizerName:  $fromName,
+                        attendees:      [['email' => $estimator->email, 'name' => $estimatorName]],
+                        location:       implode(', ', array_filter([$this->rfm->site_address, $this->rfm->site_city, $this->rfm->site_postal_code])),
+                    );
+                }
                 $sent = $mailer->send(
-                    to:      $estimator->email,
-                    subject: $subject,
-                    body:    $this->buildEstimatorBody(),
-                    type:    'rfm_notification',
+                    to:         $estimator->email,
+                    subject:    $subject,
+                    body:       $this->buildEstimatorBody(),
+                    type:       'rfm_notification',
+                    icsContent: $icsContent,
                 );
                 if ($sent) $success = true;
             } else {

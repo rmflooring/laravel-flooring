@@ -110,6 +110,40 @@
                         </div>
                     </div>
 
+                    {{-- Calendar Invite Toggles --}}
+                    <div class="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                        <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Calendar Invites (.ics)</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Attach a calendar invite to notification emails. Recipients can accept to add the appointment to their calendar.</p>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                            {{-- RFM calendar invite --}}
+                            <div class="flex items-center justify-between px-4 py-3">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">RFM — Estimator Calendar Invite</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Attach a .ics invite to the estimator notification email when an RFM is created or updated.</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="rfm_email_calendar_invite" value="1" class="sr-only peer"
+                                           {{ $rfmEmailCalendarInvite ? 'checked' : '' }}>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            {{-- WO calendar invite --}}
+                            <div class="flex items-center justify-between px-4 py-3">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Work Order — Installer Calendar Invite</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Attach a .ics invite when emailing a work order to the installer (requires a scheduled date on the WO).</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="wo_email_calendar_invite" value="1" class="sr-only peer"
+                                           {{ $woEmailCalendarInvite ? 'checked' : '' }}>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex justify-end pt-2">
                         <button type="submit"
                                 class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700">

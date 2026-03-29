@@ -14,10 +14,12 @@ use App\Models\SaleItem;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
 use App\Models\WorkOrderItemMaterial;
+use App\Models\Setting;
 use App\Services\CalendarTemplateService;
 use App\Services\EmailTemplateService;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
+use App\Services\ICalService;
 use App\Services\PickTicketService;
 use App\Services\SmsService;
 use App\Services\SmsTemplateService;
@@ -488,6 +490,28 @@ class WorkOrderController extends Controller
             'content'  => base64_encode($pdfContent),
         ];
 
+        $icsContent = null;
+        if ((bool) Setting::get('wo_email_calendar_invite', '0') && $workOrder->scheduled_date) {
+            $fromAddress  = Setting::get('mail_from_address', config('services.microsoft.mail_from_address', 'reception@rmflooring.ca'));
+            $fromName     = Setting::get('mail_from_name', 'RM Flooring Notifications');
+            $installer    = $workOrder->installer;
+            $attendees    = [];
+            if ($installer && filled($installer->email)) {
+                $attendees[] = ['email' => $installer->email, 'name' => $installer->company_name ?: $installer->contact_name ?: $installer->email];
+            }
+            $timeString = $workOrder->scheduled_time ?? '08:00';
+            $start      = Carbon::parse($workOrder->scheduled_date->format('Y-m-d') . ' ' . $timeString);
+            $icsContent = app(ICalService::class)->generate(
+                uid:            "wo-{$workOrder->id}@rmflooring.ca",
+                title:          $request->input('subject'),
+                start:          $start,
+                end:            $start->copy()->addHours(4),
+                organizerEmail: $fromAddress,
+                organizerName:  $fromName,
+                attendees:      $attendees,
+            );
+        }
+
         $sent = $mailer->send(
             $request->input('to'),
             $request->input('subject'),
@@ -496,6 +520,7 @@ class WorkOrderController extends Controller
             null,
             $attachment,
             $cc ?: null,
+            $icsContent,
         );
 
         if ($sent) {
