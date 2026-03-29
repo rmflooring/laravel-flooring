@@ -28,7 +28,16 @@ class CustomerReturnController extends Controller
 
         $statuses = CustomerReturn::STATUS_LABELS;
 
-        return view('pages.inventory.rfc.index', compact('rfcs', 'q', 'status', 'statuses'));
+        $trashedRfcs = collect();
+        if (auth()->user()?->hasRole('admin')) {
+            $trashedRfcs = CustomerReturn::onlyTrashed()
+                ->with(['sale'])
+                ->withCount('items')
+                ->orderByDesc('deleted_at')
+                ->get();
+        }
+
+        return view('pages.inventory.rfc.index', compact('rfcs', 'q', 'status', 'statuses', 'trashedRfcs'));
     }
 
     public function create(Request $request): View
@@ -180,5 +189,28 @@ class CustomerReturnController extends Controller
 
         return redirect()->route('pages.inventory.rfc.index')
             ->with('success', "RFC {$rfc->rfc_number} deleted.");
+    }
+
+    public function restore(CustomerReturn $rfc): RedirectResponse
+    {
+        $rfc->restore();
+
+        return redirect()->route('pages.inventory.rfc.index')
+            ->with('success', "RFC {$rfc->rfc_number} restored.");
+    }
+
+    public function forceDestroy(CustomerReturn $rfc): RedirectResponse
+    {
+        $hasReceipts = $rfc->items()->withTrashed()
+            ->whereHas('inventoryReceipt')
+            ->exists();
+
+        abort_if($hasReceipts, 422, "RFC {$rfc->rfc_number} cannot be permanently deleted — it has inventory receipts linked to its items.");
+
+        $rfc->items()->withTrashed()->forceDelete();
+        $rfc->forceDelete();
+
+        return redirect()->route('pages.inventory.rfc.index')
+            ->with('success', "RFC {$rfc->rfc_number} permanently deleted.");
     }
 }

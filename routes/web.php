@@ -759,6 +759,14 @@ Route::prefix('pages')
 				->middleware('role_or_permission:admin|create rfcs')->name('receive');
 			Route::delete('/{rfc}', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'destroy'])
 				->middleware('role_or_permission:admin|create rfcs')->name('destroy');
+
+			Route::post('/{rfc}/restore', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'restore'])
+				->withTrashed()
+				->middleware('role:admin')->name('restore');
+
+			Route::delete('/{rfc}/force', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'forceDestroy'])
+				->withTrashed()
+				->middleware('role:admin')->name('force-destroy');
 		});
 
 		// RTV — Return to Vendor

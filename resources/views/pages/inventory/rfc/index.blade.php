@@ -144,6 +144,72 @@
                 @endif
             </div>
 
+        {{-- Archived RFCs (admin only) --}}
+        @role('admin')
+        @if ($trashedRfcs->isNotEmpty())
+        <div class="bg-white border border-orange-200 rounded-xl shadow-sm">
+            <div class="px-6 py-4 border-b border-orange-100 flex items-center gap-2">
+                <svg class="w-4 h-4 text-orange-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                <h2 class="text-sm font-semibold text-orange-700 uppercase tracking-wide">Archived RFCs</h2>
+                <span class="text-xs text-orange-500 ml-1">Soft-deleted RFCs. Restore to reactivate or permanently delete if no longer needed.</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-700">
+                    <thead class="border-b border-orange-100 bg-orange-50 text-xs text-gray-500 uppercase">
+                        <tr>
+                            <th class="px-5 py-3 font-medium">RFC #</th>
+                            <th class="px-5 py-3 font-medium">Sale</th>
+                            <th class="px-5 py-3 font-medium text-center">Items</th>
+                            <th class="px-5 py-3 font-medium">Deleted</th>
+                            <th class="px-5 py-3 font-medium text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-orange-50">
+                        @foreach ($trashedRfcs as $trfc)
+                            @php
+                                $rfcBlocked = $trfc->items()->withTrashed()->whereHas('inventoryReceipt')->exists();
+                            @endphp
+                            <tr class="hover:bg-orange-50/50">
+                                <td class="px-5 py-3 font-mono font-medium text-gray-900">{{ $trfc->rfc_number }}</td>
+                                <td class="px-5 py-3">
+                                    @if ($trfc->sale)
+                                        <span class="text-gray-600">Sale #{{ $trfc->sale->sale_number }}</span>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-3 text-center text-gray-500">{{ $trfc->items_count }}</td>
+                                <td class="px-5 py-3 text-gray-500 text-xs">{{ $trfc->deleted_at->format('M j, Y') }}</td>
+                                <td class="px-5 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-3">
+                                        <form method="POST" action="{{ route('pages.inventory.rfc.restore', $trfc) }}"
+                                              onsubmit="return confirm('Restore RFC {{ $trfc->rfc_number }}?')">
+                                            @csrf
+                                            <button type="submit" class="text-sm font-medium text-green-600 hover:underline">Restore</button>
+                                        </form>
+                                        @if ($rfcBlocked)
+                                            <span class="text-xs text-gray-400 italic" title="Has inventory receipts linked to items">Cannot delete</span>
+                                        @else
+                                            <form method="POST" action="{{ route('pages.inventory.rfc.force-destroy', $trfc) }}"
+                                                  onsubmit="return confirm('Permanently delete RFC {{ $trfc->rfc_number }}? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-sm font-medium text-red-600 hover:underline">Permanently Delete</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+        @endrole
+
         </div>
     </div>
 </x-app-layout>
