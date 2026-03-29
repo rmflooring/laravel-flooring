@@ -823,18 +823,27 @@
                                     <td class="py-2 pr-4 text-gray-600">{{ ucfirst(str_replace('_', ' ', $two->status)) }}</td>
                                     <td class="py-2 pr-4 text-gray-500">{{ $two->deleted_at->format('M j, Y') }}</td>
                                     <td class="py-2 text-right">
-                                        @if ($woBlocked)
-                                            <span class="text-xs text-gray-400 italic" title="Has processed pick tickets">Cannot delete</span>
-                                        @else
-                                            <form method="POST" action="{{ route('pages.sales.work-orders.force-destroy', [$sale, $two]) }}"
-                                                  onsubmit="return confirm('Permanently delete WO {{ $two->wo_number }}? This cannot be undone.')">
+                                        <div class="flex items-center justify-end gap-3">
+                                            <form method="POST" action="{{ route('pages.sales.work-orders.restore', [$sale, $two]) }}"
+                                                  onsubmit="return confirm('Restore WO {{ $two->wo_number }}?')">
                                                 @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-sm font-medium text-red-600 hover:underline">
-                                                    Permanently Delete
+                                                <button type="submit" class="text-sm font-medium text-green-600 hover:underline">
+                                                    Restore
                                                 </button>
                                             </form>
-                                        @endif
+                                            @if ($woBlocked)
+                                                <span class="text-xs text-gray-400 italic" title="Has processed pick tickets">Cannot delete</span>
+                                            @else
+                                                <form method="POST" action="{{ route('pages.sales.work-orders.force-destroy', [$sale, $two]) }}"
+                                                      onsubmit="return confirm('Permanently delete WO {{ $two->wo_number }}? This cannot be undone.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-sm font-medium text-red-600 hover:underline">
+                                                        Permanently Delete
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
@@ -870,18 +879,27 @@
                                     <td class="py-2 pr-4 text-gray-600">{{ ucfirst($tpo->status) }}</td>
                                     <td class="py-2 pr-4 text-gray-500">{{ $tpo->deleted_at->format('M j, Y') }}</td>
                                     <td class="py-2 text-right">
-                                        @if ($poBlocked)
-                                            <span class="text-xs text-gray-400 italic" title="Inventory has been received against this PO">Cannot delete</span>
-                                        @else
-                                            <form method="POST" action="{{ route('pages.purchase-orders.force-destroy', $tpo) }}"
-                                                  onsubmit="return confirm('Permanently delete PO {{ $tpo->po_number }}? This cannot be undone.')">
+                                        <div class="flex items-center justify-end gap-3">
+                                            <form method="POST" action="{{ route('pages.purchase-orders.restore', $tpo) }}"
+                                                  onsubmit="return confirm('Restore PO {{ $tpo->po_number }}?')">
                                                 @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-sm font-medium text-red-600 hover:underline">
-                                                    Permanently Delete
+                                                <button type="submit" class="text-sm font-medium text-green-600 hover:underline">
+                                                    Restore
                                                 </button>
                                             </form>
-                                        @endif
+                                            @if ($poBlocked)
+                                                <span class="text-xs text-gray-400 italic" title="Inventory has been received against this PO">Cannot delete</span>
+                                            @else
+                                                <form method="POST" action="{{ route('pages.purchase-orders.force-destroy', $tpo) }}"
+                                                      onsubmit="return confirm('Permanently delete PO {{ $tpo->po_number }}? This cannot be undone.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-sm font-medium text-red-600 hover:underline">
+                                                        Permanently Delete
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach

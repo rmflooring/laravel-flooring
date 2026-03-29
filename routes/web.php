@@ -647,6 +647,11 @@ Route::prefix('pages')
 			->name('sales.work-orders.destroy')
 			->middleware('role_or_permission:admin|delete work orders');
 
+		Route::post('sales/{sale}/work-orders/{workOrder}/restore', [\App\Http\Controllers\Pages\WorkOrderController::class, 'restore'])
+			->withTrashed()
+			->name('sales.work-orders.restore')
+			->middleware('role:admin');
+
 		Route::delete('sales/{sale}/work-orders/{workOrder}/force', [\App\Http\Controllers\Pages\WorkOrderController::class, 'forceDestroy'])
 			->withTrashed()
 			->name('sales.work-orders.force-destroy')
@@ -909,6 +914,11 @@ Route::prefix('pages')
 			->withTrashed()
 			->middleware('role:admin')
 			->name('purchase-orders.force-destroy');
+
+		Route::post('purchase-orders/{purchaseOrder}/restore', [PurchaseOrderController::class, 'restore'])
+			->withTrashed()
+			->middleware('role:admin')
+			->name('purchase-orders.restore');
 
         Route::post('job-sites', [JobSiteCustomerController::class, 'store'])
             ->name('job-sites.store');

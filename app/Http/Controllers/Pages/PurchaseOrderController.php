@@ -838,6 +838,23 @@ class PurchaseOrderController extends Controller
     // Force delete (admin only — permanently removes from DB)
     // -------------------------------------------------------------------------
 
+    public function restore(PurchaseOrder $purchaseOrder)
+    {
+        $purchaseOrder->restore();
+
+        $saleId = $purchaseOrder->sale_id;
+
+        if ($saleId) {
+            return redirect()
+                ->route('pages.sales.show', $saleId)
+                ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' restored.');
+        }
+
+        return redirect()
+            ->route('pages.purchase-orders.index')
+            ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' restored.');
+    }
+
     public function forceDestroy(PurchaseOrder $purchaseOrder)
     {
         $saleId   = $purchaseOrder->sale_id;

@@ -449,6 +449,17 @@ class WorkOrderController extends Controller
             ->with('success', 'Work order deleted.');
     }
 
+    public function restore(Sale $sale, WorkOrder $workOrder)
+    {
+        abort_if($workOrder->sale_id !== $sale->id, 404);
+
+        $workOrder->restore();
+
+        return redirect()
+            ->route('pages.sales.show', $sale)
+            ->with('success', 'Work order ' . $workOrder->wo_number . ' restored.');
+    }
+
     public function forceDestroy(Sale $sale, WorkOrder $workOrder)
     {
         abort_if($workOrder->sale_id !== $sale->id, 404);
