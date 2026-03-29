@@ -984,6 +984,7 @@ class PurchaseOrderController extends Controller
             Log::info('[PO] Pickup calendar event created on RM–Warehouse', ['po_id' => $po->id]);
         } catch (\Throwable $e) {
             Log::error('[PO] Pickup calendar event creation failed', ['po_id' => $po->id, 'error' => $e->getMessage()]);
+            session()->flash('warning', 'PO saved, but the pickup calendar event could not be created. Your Microsoft 365 connection may have expired — check Settings → Integrations to reconnect.');
         }
     }
 

@@ -227,25 +227,22 @@ Each changed field is added to `$changes` as `['Field Label' => ['from' => '...'
 ## MS365 Calendar Integration
 
 ### How it works
-When an RFM is **created** (`store`), the controller attempts (best-effort) to:
+On **create** (`store`) and **edit** (`update`), the controller attempts (best-effort) to sync the MS365 calendar event. Three private helpers handle all calendar work:
 
-1. Find a connected `MicrosoftAccount` for the current user
-2. Find the `MicrosoftCalendar` with `group_id = 'b8483c56-fc4b-4734-8011-335b88c7e4ad'` (the "RM–RFM/Measures" calendar)
-3. Build a calendar event:
-   - **Title:** `RFM #[job_no]: [Customer] – [Flooring Types]`
-   - **Start:** `scheduled_at`
-   - **End:** `scheduled_at + 2 hours`
-   - **Location:** full address (street, city, postal code joined by comma)
-   - **Notes:** Estimator name, full address, special instructions
-4. Call `GraphCalendarService::createEvent()` to push to MS365
-5. Call `GraphCalendarService::persistLocalEvent()` to create a local `CalendarEvent` record
-6. Save `microsoft_calendar_id` and `calendar_event_id` back on the RFM
+- `buildRfmEventData(Rfm, Opportunity)` — single source of truth for event payload (title, start, end, location, notes via `CalendarTemplateService`)
+- `syncCalendarCreate(Rfm, Opportunity)` — finds the user's connected account + RFM/Measures calendar, calls `GraphCalendarService::createEvent()` + `persistLocalEvent()`, saves `microsoft_calendar_id` + `calendar_event_id` back on the RFM
+- `syncCalendarUpdate(Rfm, Opportunity)` — if `calendar_event_id` exists: loads `calendarEvent.externalLink`, calls `GraphCalendarService::updateEvent()` (PATCH), updates local `CalendarEvent` record. If no event exists yet, falls through to `syncCalendarCreate()`.
+
+**Event details:**
+- **Title/Notes:** rendered via `CalendarTemplateService` (`rfm_calendar` template)
+- **Start:** `scheduled_at`; **End:** `scheduled_at + 2 hours`
+- **Location:** street, city, postal code joined by comma
 
 ### Important caveats
-- **Edit does NOT sync back to MS365** — editing an RFM updates the DB record but does NOT update the calendar event. Known gap.
-- **Status changes do NOT touch the calendar event** — cancelling an RFM does not cancel the MS365 event.
-- **Calendar is hardcoded by group_id** — if the RFM/Measures calendar is ever recreated, this will silently fail (logged as a warning).
+- **Status changes do NOT touch the calendar event** — cancelling an RFM does not cancel the MS365 event. (Known gap)
+- **Calendar group_id is hardcoded** — `b8483c56-fc4b-4734-8011-335b88c7e4ad` in `syncCalendarCreate()`. If the RFM/Measures calendar is ever recreated, this will silently fail (logged as a warning).
 - All calendar failures are caught and logged — never block the save.
+- On token refresh failure, `GraphCalendarService::ensureAccessToken()` now marks `is_connected = false` + `disconnected_at = now()` on the account before throwing, so future syncs skip cleanly.
 
 ---
 
@@ -270,6 +267,8 @@ When an RFM is **created** (`store`), the controller attempts (best-effort) to:
 - [x] **Mobile photo upload** — `POST /m/rfm/{rfm}/photos` → `mobile.rfms.upload-photos`; uploads to `OpportunityDocument` (same as mobile WO pattern)
 - [x] **"Mobile View" button** on desktop RFM show page header (green, links to mobile page)
 - [x] **`{{rfm_link}}`** tag — resolves to mobile RFM URL; added to `EmailTemplate::TAGS` + `DEFAULTS` (rfm_created, rfm_updated), `SmsTemplate::TAGS` + `DEFAULTS` (rfm_booked, rfm_reminder), `RfmCreatedMail`/`RfmUpdatedMail` estimator bodies, and SMS `$vars` in `RfmController::store()` and `SendSmsReminders`
+- [x] **MS365 calendar sync on edit** — `update()` now calls `syncCalendarUpdate()` which PATCHes the existing event or creates one if missing; event data built via shared `buildRfmEventData()` helper
+- [x] **MS365 token expiry notification** — `GraphCalendarService::ensureAccessToken()` marks account disconnected on refresh failure; persistent amber banner in `app.blade.php` prompts reconnect; yellow flash warning shown on RFM show page if calendar sync fails
 
 ---
 
@@ -288,8 +287,7 @@ When an RFM is **created** (`store`), the controller attempts (best-effort) to:
 ## What Still Needs to Be Done
 
 ### High priority
-1. **Sync MS365 calendar event on edit** — when date, estimator, address, or flooring type changes, update the existing MS365 event via Graph API using `rfm->calendarEvent->external_id`.
-2. **Delete RFM + cancel calendar event** — add a delete route/button and permission. On delete (or status → cancelled), delete or cancel the MS365 event. No `delete rfms` permission exists yet — add to seeder before building the route.
+1. **Delete RFM + cancel calendar event** — add a delete route/button and permission. On delete (or status → cancelled), delete or cancel the MS365 event via `syncCalendarDelete()` (mirrors WO pattern). No `delete rfms` permission exists yet — add to seeder before building the route.
 
 ### Medium priority
 3. **RFM → Estimate link** — from the RFM show page, a shortcut to create an estimate pre-filled with job/customer info.
@@ -305,6 +303,6 @@ When an RFM is **created** (`store`), the controller attempts (best-effort) to:
 - **`flooring_type` is JSON** — was a plain string column, migrated to JSON. The model casts it as `array`. Always treat as array, never string.
 - **Route order matters** — `rfms/create` must be registered before `rfms/{rfm}` in `web.php`. Already correct — don't reorder.
 - **`abort_if` scope check** — every controller method accepting `{rfm}` must include `abort_if($rfm->opportunity_id !== $opportunity->id, 404)`.
-- **Calendar group_id is hardcoded** — `b8483c56-fc4b-4734-8011-335b88c7e4ad` in `RfmController::store()`.
+- **Calendar group_id is hardcoded** — `b8483c56-fc4b-4734-8011-335b88c7e4ad` in `RfmController::syncCalendarCreate()`.
 - **No `delete rfms` permission yet** — add to `PermissionsSeeder` and `RolesSeeder` before building the delete route.
 - **`@json()` + multi-line arrays** — never pass a multi-line PHP array literal directly into `@json()` inside a `<script>` tag. Build the array in a `@php` block first, then pass the variable.

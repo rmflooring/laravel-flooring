@@ -652,6 +652,7 @@ class WorkOrderController extends Controller
                 'wo_id' => $workOrder->id,
                 'error' => $e->getMessage(),
             ]);
+            session()->flash('warning', 'Work order saved, but the calendar event could not be created. Your Microsoft 365 connection may have expired — check Settings → Integrations to reconnect.');
         }
     }
 

@@ -33,6 +33,9 @@ class GraphCalendarService
         );
 
         if (!$response->successful()) {
+            $account->is_connected    = false;
+            $account->disconnected_at = now();
+            $account->save();
             throw new \Exception('Microsoft token refresh failed: ' . $response->body());
         }
 

@@ -38,6 +38,13 @@
                             class="text-green-900 hover:text-green-700 text-sm font-medium dark:text-green-200">✕</button>
                 </div>
             @endif
+            @if (session('warning'))
+                <div class="mb-4 p-4 text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-lg flex items-center justify-between dark:bg-yellow-900/30 dark:text-yellow-200 dark:border-yellow-700">
+                    <div>{{ session('warning') }}</div>
+                    <button type="button" onclick="this.closest('div').remove()"
+                            class="text-yellow-900 hover:text-yellow-700 text-sm font-medium dark:text-yellow-200">✕</button>
+                </div>
+            @endif
 
             <div class="bg-white border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:divide-gray-700">
 

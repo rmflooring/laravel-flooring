@@ -81,6 +81,12 @@
                     <span class="text-sm font-medium">{{ session('success') }}</span>
                 </div>
             @endif
+            @if (session('warning'))
+                <div class="mb-6 flex items-center rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200"
+                     role="alert">
+                    <span class="text-sm font-medium">{{ session('warning') }}</span>
+                </div>
+            @endif
 
             {{-- Opportunity Details (Flowbite card) --}}
             <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">

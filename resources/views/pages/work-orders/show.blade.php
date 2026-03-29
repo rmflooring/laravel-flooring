@@ -102,6 +102,11 @@
                     {{ session('error') }}
                 </div>
             @endif
+            @if (session('warning'))
+                <div class="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200">
+                    {{ session('warning') }}
+                </div>
+            @endif
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 

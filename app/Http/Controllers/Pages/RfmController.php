@@ -103,100 +103,7 @@ class RfmController extends Controller
         ]);
 
         // --- MS365 Calendar Event (best-effort, never blocks the save) ---
-        try {
-            $account = MicrosoftAccount::where('user_id', auth()->id())
-                ->where('is_connected', true)
-                ->first();
-
-            if ($account) {
-                $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-                    ->where('group_id', 'b8483c56-fc4b-4734-8011-335b88c7e4ad')
-                    ->first();
-
-                if ($calendar) {
-                    $rfm->load(['estimator', 'parentCustomer']);
-                    $opportunity->loadMissing(['projectManager']);
-
-                    $customerName = $opportunity->parentCustomer?->company_name
-                        ?: $opportunity->parentCustomer?->name
-                        ?: 'Unknown Customer';
-
-                    $estimatorName = $rfm->estimator
-                        ? trim($rfm->estimator->first_name . ' ' . $rfm->estimator->last_name)
-                        : null;
-
-                    $flooringLabel = implode(' / ', (array) $rfm->flooring_type);
-
-                    $fullAddress = implode(', ', array_filter([
-                        $rfm->site_address,
-                        $rfm->site_city,
-                        $rfm->site_postal_code,
-                    ]));
-
-                    $start = \Carbon\Carbon::parse($rfm->scheduled_at);
-                    $end   = $start->copy()->addHours(2);
-
-                    $pmName = $opportunity->projectManager?->name ?? '';
-                    $vars = [
-                        'customer_name'        => $customerName,
-                        'estimator_name'       => $estimatorName ?? '',
-                        'job_number'           => $opportunity->job_no ?? '',
-                        'flooring_type'        => $flooringLabel,
-                        'site_address'         => $fullAddress,
-                        'special_instructions' => $rfm->special_instructions ?? '',
-                        'pm_name'              => $pmName,
-                        'pm_first_name'        => explode(' ', trim($pmName))[0],
-                    ];
-
-                    $rendered = app(CalendarTemplateService::class)->renderTemplate('rfm_calendar', $vars);
-
-                    $eventData = [
-                        'title'    => $rendered['title'],
-                        'start'    => $start,
-                        'end'      => $end,
-                        'location' => $fullAddress ?: null,
-                        'notes'    => $rendered['notes'],
-                    ];
-
-                    $service     = new GraphCalendarService();
-                    $externalId  = $service->createEvent($account, $calendar, $eventData);
-                    $localEvent  = $service->persistLocalEvent(
-                        $account,
-                        $calendar,
-                        $externalId,
-                        $eventData,
-                        Rfm::class,
-                        $rfm->id
-                    );
-
-                    $rfm->update([
-                        'microsoft_calendar_id' => $calendar->id,
-                        'calendar_event_id'     => $localEvent->id,
-                    ]);
-
-                    Log::info('[RFM] Calendar event created', [
-                        'rfm_id'          => $rfm->id,
-                        'calendar_event_id' => $localEvent->id,
-                        'external_event_id' => $externalId,
-                    ]);
-                } else {
-                    Log::warning('[RFM] RM–RFM/Measures calendar not found for account', [
-                        'rfm_id'     => $rfm->id,
-                        'account_id' => $account->id,
-                    ]);
-                }
-            } else {
-                Log::info('[RFM] No connected Microsoft account for user — skipping calendar event', [
-                    'rfm_id'  => $rfm->id,
-                    'user_id' => auth()->id(),
-                ]);
-            }
-        } catch (\Throwable $e) {
-            Log::error('[RFM] Calendar event creation failed', [
-                'rfm_id'  => $rfm->id,
-                'error'   => $e->getMessage(),
-            ]);
-        }
+        $this->syncCalendarCreate($rfm, $opportunity);
         // --- end calendar ---
 
         // --- Email notification (best-effort, never blocks the save) ---
@@ -440,6 +347,10 @@ class RfmController extends Controller
         }
         // --- end SMS ---
 
+        // --- MS365 Calendar sync (best-effort, never blocks the save) ---
+        $this->syncCalendarUpdate($rfm, $opportunity);
+        // --- end calendar ---
+
         return redirect()
             ->route('pages.opportunities.show', $opportunity->id)
             ->with('success', 'RFM updated.');
@@ -456,5 +367,145 @@ class RfmController extends Controller
         $rfm->update(['status' => $request->input('status')]);
 
         return back()->with('success', 'RFM status updated.');
+    }
+
+    // ── Calendar helpers ─────────────────────────────────────────────
+
+    private function buildRfmEventData(Rfm $rfm, Opportunity $opportunity): array
+    {
+        $rfm->loadMissing(['estimator']);
+        $opportunity->loadMissing(['parentCustomer', 'projectManager']);
+
+        $customerName  = $opportunity->parentCustomer?->company_name
+            ?: $opportunity->parentCustomer?->name
+            ?: 'Unknown Customer';
+        $estimatorName = $rfm->estimator
+            ? trim($rfm->estimator->first_name . ' ' . $rfm->estimator->last_name)
+            : null;
+        $flooringLabel = implode(' / ', (array) $rfm->flooring_type);
+        $fullAddress   = implode(', ', array_filter([
+            $rfm->site_address,
+            $rfm->site_city,
+            $rfm->site_postal_code,
+        ]));
+        $pmName = $opportunity->projectManager?->name ?? '';
+
+        $vars = [
+            'customer_name'        => $customerName,
+            'estimator_name'       => $estimatorName ?? '',
+            'job_number'           => $opportunity->job_no ?? '',
+            'flooring_type'        => $flooringLabel,
+            'site_address'         => $fullAddress,
+            'special_instructions' => $rfm->special_instructions ?? '',
+            'pm_name'              => $pmName,
+            'pm_first_name'        => explode(' ', trim($pmName))[0],
+        ];
+
+        $start    = \Carbon\Carbon::parse($rfm->scheduled_at);
+        $rendered = app(CalendarTemplateService::class)->renderTemplate('rfm_calendar', $vars);
+
+        return [
+            'title'    => $rendered['title'],
+            'start'    => $start,
+            'end'      => $start->copy()->addHours(2),
+            'location' => $fullAddress ?: null,
+            'notes'    => $rendered['notes'],
+        ];
+    }
+
+    private function syncCalendarUpdate(Rfm $rfm, Opportunity $opportunity): void
+    {
+        if (empty($rfm->calendar_event_id)) {
+            // No existing event — try to create one now
+            $this->syncCalendarCreate($rfm, $opportunity);
+            return;
+        }
+
+        try {
+            $rfm->loadMissing(['calendarEvent.externalLink']);
+
+            $link = $rfm->calendarEvent?->externalLink;
+            if (! $link) {
+                Log::warning('[RFM] No ExternalEventLink found for update — skipping', ['rfm_id' => $rfm->id]);
+                return;
+            }
+
+            $account = MicrosoftAccount::find($link->microsoft_account_id);
+            if (! $account) return;
+
+            $eventData = $this->buildRfmEventData($rfm, $opportunity);
+            $service   = new GraphCalendarService();
+            $service->updateEvent($account, $link, $eventData);
+
+            $rfm->calendarEvent?->update([
+                'title'       => $eventData['title'],
+                'starts_at'   => $eventData['start'],
+                'ends_at'     => $eventData['end'],
+                'location'    => $eventData['location'],
+                'description' => $eventData['notes'],
+            ]);
+
+            Log::info('[RFM] Calendar event updated', ['rfm_id' => $rfm->id]);
+        } catch (\Throwable $e) {
+            Log::error('[RFM] Calendar event update failed', [
+                'rfm_id' => $rfm->id,
+                'error'  => $e->getMessage(),
+            ]);
+            session()->flash('warning', 'RFM saved, but the calendar event could not be updated. Your Microsoft 365 connection may have expired — check Settings → Integrations to reconnect.');
+        }
+    }
+
+    private function syncCalendarCreate(Rfm $rfm, Opportunity $opportunity): void
+    {
+        try {
+            $account = MicrosoftAccount::where('user_id', auth()->id())
+                ->where('is_connected', true)
+                ->first();
+
+            if (! $account) {
+                Log::info('[RFM] No connected Microsoft account for user — skipping calendar event', [
+                    'rfm_id'  => $rfm->id,
+                    'user_id' => auth()->id(),
+                ]);
+                return;
+            }
+
+            $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                ->where('group_id', 'b8483c56-fc4b-4734-8011-335b88c7e4ad')
+                ->first();
+
+            if (! $calendar) {
+                Log::warning('[RFM] RM–RFM/Measures calendar not found for account', [
+                    'rfm_id'     => $rfm->id,
+                    'account_id' => $account->id,
+                ]);
+                return;
+            }
+
+            $eventData   = $this->buildRfmEventData($rfm, $opportunity);
+            $service     = new GraphCalendarService();
+            $externalId  = $service->createEvent($account, $calendar, $eventData);
+            $localEvent  = $service->persistLocalEvent(
+                $account,
+                $calendar,
+                $externalId,
+                $eventData,
+                Rfm::class,
+                $rfm->id
+            );
+
+            $rfm->update([
+                'microsoft_calendar_id' => $calendar->id,
+                'calendar_event_id'     => $localEvent->id,
+            ]);
+
+            Log::info('[RFM] Calendar event created', ['rfm_id' => $rfm->id]);
+        } catch (\Throwable $e) {
+            Log::error('[RFM] Calendar event creation failed', [
+                'rfm_id' => $rfm->id,
+                'error'  => $e->getMessage(),
+            ]);
+            session()->flash('warning', 'RFM saved, but the calendar event could not be created. Your Microsoft 365 connection may have expired — check Settings → Integrations to reconnect.');
+        }
     }
 }

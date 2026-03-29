@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-28 (session 38)
+Updated: 2026-03-29 (session 39)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -105,9 +105,11 @@ Full details in `Context/context_rfm.md`.
   - View Job Photos (links to `mobile.opportunity.photos`)
   - "Mobile View" green button added to desktop RFM show page header
 - **`{{rfm_link}}`** tag (2026-03-27): resolves to mobile RFM URL; available in email templates (rfm_created, rfm_updated) and SMS templates (rfm_booked, rfm_reminder); injected into hardcoded mail bodies and all SMS `$vars`
+- **Calendar sync on edit (2026-03-29)**: `RfmController::update()` now calls `syncCalendarUpdate()` — PATCHes existing MS365 event or creates one if missing. Shared `buildRfmEventData()` helper used by both create and update paths. See `context_rfm.md` for full details.
+- **MS365 token expiry notification (2026-03-29)**: `GraphCalendarService::ensureAccessToken()` marks `is_connected = false` + `disconnected_at = now()` on refresh failure. Persistent amber banner in `app.blade.php` shown whenever the user's MS account was once connected but is now disconnected (links to Settings → Integrations). Yellow `session('warning')` flash shown on RFM/WO/PO save if calendar event creation/update fails.
 
 ### RFM open items
-1. Sync MS365 calendar event when RFM is edited
+1. ~~Sync MS365 calendar event when RFM is edited~~ ✓ Done (session 39)
 2. Delete RFM route + cancel/delete calendar event on cancel/delete
 3. RFM → Estimate creation shortcut from the show page
 

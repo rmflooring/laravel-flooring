@@ -28,6 +28,26 @@
 
             <!-- Page Content -->
             <main class="sm:ml-64 p-4 max-w-none">
+            @auth
+                @php
+                    $msDisconnected = \App\Models\MicrosoftAccount::where('user_id', auth()->id())
+                        ->where('is_connected', false)
+                        ->whereNotNull('connected_at')
+                        ->exists();
+                @endphp
+                @if ($msDisconnected)
+                    <div class="mb-4 flex items-center gap-3 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200">
+                        <svg class="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Your Microsoft 365 calendar connection has expired. Calendar events will not be created until you reconnect.</span>
+                        <a href="{{ route('settings.integrations.microsoft.index') }}"
+                           class="ml-auto shrink-0 font-semibold underline hover:no-underline">
+                            Reconnect
+                        </a>
+                    </div>
+                @endif
+            @endauth
     @isset($header)
         <div class="mb-6">
             {{ $header }}
