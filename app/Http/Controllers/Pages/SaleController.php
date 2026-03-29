@@ -94,7 +94,13 @@ class SaleController extends Controller
 		}
 
 		$sales = $query
-            ->withCount(['purchaseOrders', 'workOrders', 'changeOrders'])
+            ->withCount([
+                'purchaseOrders',
+                'workOrders',
+                'changeOrders',
+                'purchaseOrders as all_purchase_orders_count' => fn ($q) => $q->withTrashed(),
+                'workOrders as all_work_orders_count'        => fn ($q) => $q->withTrashed(),
+            ])
             ->with(['changeOrders' => fn($q) => $q->whereIn('status', ['draft', 'sent'])->limit(1)])
             ->paginate(25)->withQueryString();
 
