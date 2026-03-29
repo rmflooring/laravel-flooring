@@ -597,8 +597,13 @@ Route::prefix('pages')
   ->name('sales.update');
 
 		Route::delete('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'destroy'])
-			->middleware('permission:create estimates')
+			->middleware('role_or_permission:admin|delete sales')
 			->name('sales.destroy');
+
+		Route::delete('sales/{sale}/force', [\App\Http\Controllers\Pages\SaleController::class, 'forceDestroy'])
+			->withTrashed()
+			->middleware('role:admin')
+			->name('sales.force-destroy');
 
 		Route::get('sales', [\App\Http\Controllers\Pages\SaleController::class, 'index'])
     ->name('sales.index');

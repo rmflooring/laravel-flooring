@@ -163,9 +163,12 @@ class SaleController extends Controller
         $itemWoStatusMap = $this->buildItemWoStatusMap($sale);
         $pmEmail         = $sale->opportunity?->projectManager?->email;
 
+        $deleteBlockReason = $this->getDeleteBlockReason($sale);
+
         return view('pages.sales.edit', compact(
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
             'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
+            'deleteBlockReason',
         ));
     }
 	
@@ -409,17 +412,39 @@ private function isRowEmpty(array $row, array $keysToCheck): bool
 
 public function destroy(Sale $sale)
 {
-    if ($sale->purchaseOrders()->exists()) {
-        return back()->with('error', 'This sale cannot be deleted because it has purchase orders associated with it.');
-    }
-
-    if ($sale->workOrders()->exists()) {
-        return back()->with('error', 'This sale cannot be deleted because it has work orders associated with it.');
+    if ($blocking = $this->getDeleteBlockReason($sale)) {
+        return back()->with('error', $blocking);
     }
 
     $sale->delete();
 
-    return redirect()->route('pages.sales.index')->with('success', 'Sale #' . $sale->sale_number . ' deleted.');
+    return redirect()->route('pages.sales.index')
+        ->with('success', 'Sale #' . $sale->sale_number . ' deleted.');
+}
+
+public function forceDestroy(Sale $sale)
+{
+    if ($blocking = $this->getDeleteBlockReason($sale)) {
+        return back()->with('error', $blocking);
+    }
+
+    $sale->forceDelete();
+
+    return redirect()->route('pages.sales.index')
+        ->with('success', 'Sale #' . $sale->sale_number . ' permanently deleted.');
+}
+
+private function getDeleteBlockReason(Sale $sale): ?string
+{
+    if ($sale->purchaseOrders()->withTrashed()->exists()) {
+        return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has purchase orders associated with it.';
+    }
+
+    if ($sale->workOrders()->withTrashed()->exists()) {
+        return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has work orders associated with it.';
+    }
+
+    return null;
 }
 
 public function showProfits(Sale $sale)

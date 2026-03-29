@@ -73,6 +73,7 @@ class PermissionsSeeder extends Seeder
             'view estimates',
             'create estimates',
             'edit estimates',
+            'delete sales',
 
             // ===== RFMs =====
             'view rfms',

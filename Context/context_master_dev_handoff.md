@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-29 (session 40)
+Updated: 2026-03-29 (session 41)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -144,9 +144,16 @@ Confirmed sales routes:
 - Index: `with(['sale:id,source_estimate_id'])` eager-loaded; Delete button only shown when `$estimate->sale` is null
 - When a sale is deleted the estimate becomes deletable again
 
-### Delete Sales (session 14, 2026-03-16)
-- `SaleController::destroy()` — blocks if POs exist OR work orders exist; otherwise hard-deletes (sale_rooms + sale_items cascade at DB level)
-- Route: `DELETE pages/sales/{sale}` → `pages.sales.destroy` (middleware: `permission:create estimates`)
+### Delete Sales (session 41, 2026-03-29) — updated from session 14
+- `Sale` model now uses `SoftDeletes`; `deleted_at` added via migration `2026_03_29_121400`
+- `destroy()` — soft delete; blocked if any PO or WO has **ever** been created (`withTrashed()` check)
+- `forceDestroy()` — admin only, permanent delete; same guard applies
+- `getDeleteBlockReason(Sale)` — private shared helper used by both methods + `edit()` to pre-compute block state
+- Routes: `DELETE pages/sales/{sale}` (`delete sales` permission) + `DELETE pages/sales/{sale}/force` (admin, `withTrashed`)
+- Old route was gated on `permission:create estimates` — now properly gated on `role_or_permission:admin|delete sales`
+- `delete sales` permission assigned to admin + manager via migration `2026_03_29_121400`
+- **Delete UI**: trash icon toggle in sale **edit page** header — greyed/disabled with tooltip when blocked; active toggle when safe; inline "Delete Sale #X? Yes · No / Permanent (admin)" strip
+- No delete button on sale show page
 - Index: `withCount(['purchaseOrders', 'workOrders'])`; Delete button only shown when both counts are 0
 - Success redirect to `pages.sales.index` with sale number in message
 

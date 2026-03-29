@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
 class Sale extends Model
 {
+    use SoftDeletes;
+
     // Protect sale_number from mass assignment (non-editable)
     protected $guarded = ['id', 'sale_number'];
 

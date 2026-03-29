@@ -8,7 +8,7 @@
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
 
             {{-- Page Header --}}
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center justify-between mb-6" x-data="{ showDelete: false }">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Edit Sale</h1>
                     <p class="text-sm text-gray-600">Status: <span class="font-semibold">{{ ucwords(str_replace('_', ' ', $sale->status)) }}</span></p>
@@ -20,6 +20,48 @@
 @endif
 
                 <div class="flex items-center gap-2">
+
+                @can('delete sales')
+                @if ($deleteBlockReason)
+                    {{-- Blocked: greyed trash icon with tooltip --}}
+                    <span title="{{ $deleteBlockReason }}"
+                          class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-300 cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </span>
+                @else
+                    {{-- Active trash toggle --}}
+                    <button type="button" @click="showDelete = !showDelete"
+                            :title="showDelete ? 'Cancel delete' : 'Delete this sale'"
+                            :class="showDelete ? 'text-red-600 bg-red-50 border-red-300' : 'text-gray-400 bg-white border-gray-200 hover:border-red-300 hover:text-red-500'"
+                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+
+                    {{-- Inline delete confirmation strip --}}
+                    <div x-show="showDelete" x-cloak
+                         class="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                        <span class="font-medium">Delete Sale #{{ $sale->sale_number }}?</span>
+                        <form method="POST" action="{{ route('pages.sales.destroy', $sale) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="font-semibold underline hover:text-red-900">Yes</button>
+                        </form>
+                        <button type="button" @click="showDelete = false" class="font-semibold underline hover:text-red-900">No</button>
+                        @role('admin')
+                        <span class="text-red-300 mx-1">|</span>
+                        <form method="POST" action="{{ route('pages.sales.force-destroy', $sale) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="font-semibold underline hover:text-red-900" title="Permanently delete — cannot be undone">Permanent</button>
+                        </form>
+                        @endrole
+                    </div>
+                @endif
+                @endcan
 
 <a href="{{ route('pages.sales.show', $sale) }}"
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
