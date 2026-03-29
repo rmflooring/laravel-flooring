@@ -98,7 +98,7 @@
             </form>
 
             {{-- Table --}}
-            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden" x-data="{ showDelete: false }">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
@@ -110,7 +110,21 @@
                                 <th class="px-6 py-3">Status</th>
                                 <th class="px-6 py-3 text-right">Total</th>
                                 <th class="px-6 py-3">Created</th>
-                                <th class="px-6 py-3 text-right">Action</th>
+                                <th class="px-6 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span>Action</span>
+                                        @can('create estimates')
+                                        <button type="button" @click="showDelete = !showDelete"
+                                                :title="showDelete ? 'Hide delete buttons' : 'Show delete buttons'"
+                                                :class="showDelete ? 'text-red-600 bg-red-50 border-red-200' : 'text-gray-400 bg-white border-gray-200'"
+                                                class="inline-flex items-center justify-center w-6 h-6 rounded border transition-colors hover:border-red-300 hover:text-red-500">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                        @endcan
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -160,7 +174,8 @@
                                                 Edit
                                             </a>
                                             @if (! $estimate->sale)
-                                                <form method="POST" action="{{ route('pages.estimates.destroy', $estimate->id) }}"
+                                                <form x-show="showDelete" x-cloak method="POST"
+                                                      action="{{ route('pages.estimates.destroy', $estimate->id) }}"
                                                       onsubmit="return confirm('Delete estimate {{ $estimate->estimate_number }}? This cannot be undone.')">
                                                     @csrf
                                                     @method('DELETE')
