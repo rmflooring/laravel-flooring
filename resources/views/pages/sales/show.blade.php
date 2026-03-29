@@ -786,19 +786,19 @@
 
             {{-- Archived Records (admin only) --}}
             @role('admin')
-            @if ($trashedWorkOrders->isNotEmpty() || $trashedPurchaseOrders->isNotEmpty())
+            @if ($trashedWorkOrders->isNotEmpty() || $trashedPurchaseOrders->isNotEmpty() || $draftRfcs->isNotEmpty())
             <div class="bg-white border border-orange-200 rounded-xl shadow-sm mt-6">
                 <div class="px-6 py-4 border-b border-orange-100 flex items-center gap-2">
                     <svg class="w-4 h-4 text-orange-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
                     <h2 class="text-sm font-semibold text-orange-700 uppercase tracking-wide">Archived Records</h2>
-                    <span class="text-xs text-orange-500 ml-1">These soft-deleted records are blocking sale deletion. Permanently delete them to clear the way.</span>
+                    <span class="text-xs text-orange-500 ml-1">These records are blocking sale deletion. Resolve or remove them to clear the way.</span>
                 </div>
 
                 {{-- Archived Work Orders --}}
                 @if ($trashedWorkOrders->isNotEmpty())
-                <div class="px-6 py-4 {{ $trashedPurchaseOrders->isNotEmpty() ? 'border-b border-orange-100' : '' }}">
+                <div class="px-6 py-4 {{ $draftRfcs->isNotEmpty() || $trashedPurchaseOrders->isNotEmpty() ? 'border-b border-orange-100' : '' }}">
                     <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Work Orders</h3>
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-500 uppercase border-b">
@@ -853,6 +853,36 @@
                 @endif
 
                 {{-- Archived Purchase Orders --}}
+                @if ($draftRfcs->isNotEmpty())
+                <div class="px-6 py-4 {{ $trashedPurchaseOrders->isNotEmpty() ? 'border-b border-orange-100' : '' }}">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Customer Returns (RFCs)</h3>
+                    <p class="text-xs text-gray-500 mb-3">These draft RFCs must be received, cancelled, or deleted before this sale can be deleted.</p>
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-500 uppercase border-b">
+                            <tr>
+                                <th class="pb-2 pr-4">RFC #</th>
+                                <th class="pb-2 pr-4">Created</th>
+                                <th class="pb-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($draftRfcs as $rfc)
+                                <tr>
+                                    <td class="py-2 pr-4 font-medium text-gray-900">{{ $rfc->rfc_number }}</td>
+                                    <td class="py-2 pr-4 text-gray-500">{{ $rfc->created_at->format('M j, Y') }}</td>
+                                    <td class="py-2 text-right">
+                                        <a href="{{ route('pages.inventory.rfc.show', $rfc) }}"
+                                           class="text-sm font-medium text-blue-600 hover:underline">
+                                            View / Manage
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+
                 @if ($trashedPurchaseOrders->isNotEmpty())
                 <div class="px-6 py-4">
                     <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Purchase Orders</h3>

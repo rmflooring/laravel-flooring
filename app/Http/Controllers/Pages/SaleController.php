@@ -138,6 +138,7 @@ class SaleController extends Controller
 
         $trashedWorkOrders    = collect();
         $trashedPurchaseOrders = collect();
+        $draftRfcs            = collect();
         if (auth()->user()?->hasRole('admin')) {
             $trashedWorkOrders = \App\Models\WorkOrder::withTrashed()
                 ->where('sale_id', $sale->id)
@@ -149,11 +150,15 @@ class SaleController extends Controller
                 ->whereNotNull('deleted_at')
                 ->with('vendor')
                 ->get();
+            $draftRfcs = \App\Models\CustomerReturn::withTrashed()
+                ->where('sale_id', $sale->id)
+                ->where('status', 'draft')
+                ->get();
         }
 
 		return view('pages.sales.show', compact(
             'sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
-            'trashedWorkOrders', 'trashedPurchaseOrders',
+            'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs',
         ));
 	}
 
