@@ -263,7 +263,7 @@
     </a>
 
     @can('delete sales')
-    @if ($sale->all_purchase_orders_count === 0 && $sale->all_work_orders_count === 0)
+    @if ($sale->all_purchase_orders_count === 0 && $sale->all_work_orders_count === 0 && $sale->draft_rfcs_count === 0)
         <form x-show="showDelete" x-cloak method="POST"
               action="{{ route('pages.sales.destroy', $sale) }}"
               onsubmit="return confirm('Delete Sale #{{ $sale->sale_number }}?')">
