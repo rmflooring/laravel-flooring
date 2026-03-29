@@ -868,13 +868,26 @@
                         <tbody class="divide-y divide-gray-100">
                             @foreach ($draftRfcs as $rfc)
                                 <tr>
-                                    <td class="py-2 pr-4 font-medium text-gray-900">{{ $rfc->rfc_number }}</td>
+                                    <td class="py-2 pr-4 font-medium text-gray-900">
+                                        {{ $rfc->rfc_number }}
+                                        @if ($rfc->trashed())
+                                            <span class="ml-1 text-xs text-orange-500">(archived)</span>
+                                        @endif
+                                    </td>
                                     <td class="py-2 pr-4 text-gray-500">{{ $rfc->created_at->format('M j, Y') }}</td>
                                     <td class="py-2 text-right">
-                                        <a href="{{ route('pages.inventory.rfc.show', $rfc) }}"
-                                           class="text-sm font-medium text-blue-600 hover:underline">
-                                            View / Manage
-                                        </a>
+                                        @if ($rfc->trashed())
+                                            <a href="{{ route('pages.inventory.rfc.index') }}"
+                                               class="text-sm font-medium text-orange-600 hover:underline"
+                                               title="This RFC is archived — restore or permanently delete it from the RFC archive">
+                                                Go to RFC Archive
+                                            </a>
+                                        @else
+                                            <a href="{{ route('pages.inventory.rfc.show', $rfc) }}"
+                                               class="text-sm font-medium text-blue-600 hover:underline">
+                                                View / Manage
+                                            </a>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
