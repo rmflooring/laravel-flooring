@@ -78,6 +78,7 @@ class PermissionsSeeder extends Seeder
             'view rfms',
             'create rfms',
             'edit rfms',
+            'delete rfms',
 
             // ===== Purchase Orders =====
             'view purchase orders',

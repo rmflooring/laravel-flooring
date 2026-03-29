@@ -29,7 +29,7 @@ class RfmController extends Controller
         $dateFrom     = $request->input('date_from', '');
         $dateTo       = $request->input('date_to', '');
 
-        $rfms = Rfm::with(['opportunity.projectManager', 'parentCustomer', 'estimator'])
+        $rfms = Rfm::with(['opportunity.projectManager', 'parentCustomer', 'jobSiteCustomer', 'estimator'])
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('site_address', 'like', "%{$q}%")
@@ -376,6 +376,38 @@ class RfmController extends Controller
         return back()->with('success', 'RFM status updated.');
     }
 
+    // ── Delete ───────────────────────────────────────────────────────
+
+    public function destroy(Opportunity $opportunity, Rfm $rfm)
+    {
+        abort_if($rfm->opportunity_id !== $opportunity->id, 404);
+
+        $this->syncCalendarDelete($rfm);
+        $rfm->delete();
+
+        return redirect()
+            ->route('pages.opportunities.show', $opportunity->id)
+            ->with('success', 'RFM deleted.');
+    }
+
+    public function forceDestroy(Opportunity $opportunity, Rfm $rfm)
+    {
+        abort_if($rfm->opportunity_id !== $opportunity->id, 404);
+
+        $this->syncCalendarDelete($rfm);
+
+        // Remove the local CalendarEvent record if present
+        if ($rfm->calendar_event_id) {
+            \App\Models\CalendarEvent::find($rfm->calendar_event_id)?->delete();
+        }
+
+        $rfm->forceDelete();
+
+        return redirect()
+            ->route('pages.opportunities.show', $opportunity->id)
+            ->with('success', 'RFM permanently deleted.');
+    }
+
     // ── Calendar helpers ─────────────────────────────────────────────
 
     private function buildRfmEventData(Rfm $rfm, Opportunity $opportunity): array
@@ -459,6 +491,37 @@ class RfmController extends Controller
                 'error'  => $e->getMessage(),
             ]);
             session()->flash('warning', 'RFM saved, but the calendar event could not be updated. Your Microsoft 365 connection may have expired — check Settings → Integrations to reconnect.');
+        }
+    }
+
+    private function syncCalendarDelete(Rfm $rfm): void
+    {
+        if (empty($rfm->calendar_event_id)) {
+            return;
+        }
+
+        try {
+            $rfm->loadMissing(['calendarEvent.externalLink']);
+
+            $link = $rfm->calendarEvent?->externalLink;
+            if (! $link) {
+                return;
+            }
+
+            $account = MicrosoftAccount::find($link->microsoft_account_id);
+            if (! $account) {
+                return;
+            }
+
+            $service = new GraphCalendarService();
+            $service->deleteEvent($account, $link);
+
+            Log::info('[RFM] Calendar event deleted', ['rfm_id' => $rfm->id]);
+        } catch (\Throwable $e) {
+            Log::error('[RFM] Calendar event deletion failed', [
+                'rfm_id' => $rfm->id,
+                'error'  => $e->getMessage(),
+            ]);
         }
     }
 

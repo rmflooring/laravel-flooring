@@ -1115,6 +1115,15 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             Route::patch('rfms/{rfm}/status', [RfmController::class, 'updateStatus'])
                 ->middleware('role_or_permission:admin|edit rfms')
                 ->name('opportunities.rfms.updateStatus');
+
+            Route::delete('rfms/{rfm}', [RfmController::class, 'destroy'])
+                ->middleware('role_or_permission:admin|delete rfms')
+                ->name('opportunities.rfms.destroy');
+
+            Route::delete('rfms/{rfm}/force', [RfmController::class, 'forceDestroy'])
+                ->withTrashed()
+                ->middleware('role:admin')
+                ->name('opportunities.rfms.force-destroy');
         });
 
     });

@@ -3,7 +3,7 @@
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
             {{-- Page Header --}}
-            <div class="mb-6 flex items-start justify-between">
+            <div class="mb-6 flex items-start justify-between" x-data="{ showDelete: false }">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Edit RFM</h1>
                     <p class="text-sm text-gray-500 mt-1">
@@ -11,10 +11,44 @@
                         {{ $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?? '—' }}
                     </p>
                 </div>
-                <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
-                   class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Cancel
-                </a>
+                <div class="flex items-center gap-2">
+                    @can('delete rfms')
+                    {{-- Trash toggle --}}
+                    <button type="button" @click="showDelete = !showDelete"
+                            :title="showDelete ? 'Cancel delete' : 'Delete this RFM'"
+                            :class="showDelete ? 'text-red-600 bg-red-50 border-red-300' : 'text-gray-400 bg-white border-gray-200 hover:border-red-300 hover:text-red-500'"
+                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+
+                    {{-- Inline delete confirmation strip --}}
+                    <div x-show="showDelete" x-cloak
+                         class="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                        <span class="font-medium">Delete this RFM?</span>
+                        <form method="POST" action="{{ route('pages.opportunities.rfms.destroy', [$opportunity->id, $rfm->id]) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="font-semibold underline hover:text-red-900">Yes</button>
+                        </form>
+                        <button type="button" @click="showDelete = false" class="font-semibold underline hover:text-red-900">No</button>
+                        @role('admin')
+                        <span class="text-red-300 mx-1">|</span>
+                        <form method="POST" action="{{ route('pages.opportunities.rfms.force-destroy', [$opportunity->id, $rfm->id]) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="font-semibold underline hover:text-red-900" title="Permanently delete — cannot be undone">Permanent</button>
+                        </form>
+                        @endrole
+                    </div>
+                    @endcan
+
+                    <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
+                       class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </a>
+                </div>
             </div>
 
             {{-- Validation Errors --}}

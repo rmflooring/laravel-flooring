@@ -1,6 +1,6 @@
 # RFM Module Context — RM Flooring / Floor Manager
 
-Updated: 2026-03-13
+Updated: 2026-03-29
 
 ---
 
@@ -64,6 +64,7 @@ One opportunity can have multiple RFMs (e.g. re-schedules, or multiple site visi
 | `calendar_event_id` | FK → calendar_events, nullable | local CalendarEvent record |
 | `created_by` | FK → users, nullable | set automatically on create |
 | `updated_by` | FK → users, nullable | updated automatically on save |
+| `deleted_at` | timestamp, nullable | soft delete column — added migration `2026_03_29` |
 | `created_at` / `updated_at` | timestamps | |
 
 ### Status lifecycle
@@ -91,6 +92,8 @@ All routes are nested under `pages/opportunities/{opportunity}/` and carry the `
 | GET | `pages/opportunities/{opportunity}/rfms/{rfm}/edit` | `pages.opportunities.rfms.edit` | `edit` | `role_or_permission:admin\|edit rfms` |
 | PATCH | `pages/opportunities/{opportunity}/rfms/{rfm}` | `pages.opportunities.rfms.update` | `update` | `role_or_permission:admin\|edit rfms` |
 | PATCH | `pages/opportunities/{opportunity}/rfms/{rfm}/status` | `pages.opportunities.rfms.updateStatus` | `updateStatus` | `role_or_permission:admin\|edit rfms` |
+| DELETE | `pages/opportunities/{opportunity}/rfms/{rfm}` | `pages.opportunities.rfms.destroy` | `destroy` | `role_or_permission:admin\|delete rfms` |
+| DELETE | `pages/opportunities/{opportunity}/rfms/{rfm}/force` | `pages.opportunities.rfms.force-destroy` | `forceDestroy` | `role:admin` (withTrashed) |
 
 **Note:** All RFM controller methods call `abort_if($rfm->opportunity_id !== $opportunity->id, 404)` to scope RFMs to their parent opportunity.
 
@@ -98,13 +101,16 @@ All routes are nested under `pages/opportunities/{opportunity}/` and carry the `
 
 ## Permissions by Role
 
-| Role | view rfms | create rfms | edit rfms |
-|------|:---------:|:-----------:|:---------:|
-| admin | ✓ (bypasses) | ✓ | ✓ |
-| estimator | ✓ | ✓ | ✓ |
-| sales | ✓ | ✓ | — |
-| reception | ✓ | — | — |
-| accounting | ✓ | — | — |
+| Role | view rfms | create rfms | edit rfms | delete rfms |
+|------|:---------:|:-----------:|:---------:|:-----------:|
+| admin | ✓ (bypasses) | ✓ | ✓ | ✓ |
+| manager | ✓ | ✓ | ✓ | ✓ |
+| estimator | ✓ | ✓ | ✓ | ✓ |
+| sales | ✓ | ✓ | — | — |
+| reception | ✓ | — | — | — |
+| accounting | ✓ | — | — | — |
+
+Force delete (permanent) is admin-only regardless of `delete rfms` permission.
 
 ---
 
@@ -141,6 +147,15 @@ Sections (top to bottom, all inside a single `<form>`):
 ### edit.blade.php
 
 > **Form structure:** The entire editable form is a single `<form id="rfm-edit-form">`. This was fixed — previously the address fields were in a read-only section outside the form and were not being submitted.
+
+**Delete UI** (header, Alpine.js `x-data="{ showDelete: false }"`):
+- Small trash icon button sits beside the Cancel button (only visible to users with `delete rfms`)
+- Default state: grey icon, no other UI
+- Click → icon turns red, inline strip appears: `Delete this RFM? Yes · No`
+- Admin users also see `| Permanent` in the strip for force delete
+- **Yes** → soft delete → redirect to opportunity show
+- **Permanent** → force delete → redirect to opportunity show (admin only)
+- No delete button on the show page — all deletion is via the edit page
 
 **Status** (top, outside the main form) — pill buttons that each submit their own mini PATCH form to `updateStatus`.
 
@@ -282,6 +297,12 @@ On **create** (`store`) and **edit** (`update`), the controller attempts (best-e
 - [x] **`{{rfm_link}}`** tag — resolves to mobile RFM URL; added to `EmailTemplate::TAGS` + `DEFAULTS` (rfm_created, rfm_updated), `SmsTemplate::TAGS` + `DEFAULTS` (rfm_booked, rfm_reminder), `RfmCreatedMail`/`RfmUpdatedMail` estimator bodies, and SMS `$vars` in `RfmController::store()` and `SendSmsReminders`
 - [x] **MS365 calendar sync on edit** — `update()` now calls `syncCalendarUpdate()` which PATCHes the existing event or creates one if missing; event data built via shared `buildRfmEventData()` helper
 - [x] **MS365 token expiry notification** — `GraphCalendarService::ensureAccessToken()` marks account disconnected on refresh failure; persistent amber banner in `app.blade.php` prompts reconnect; yellow flash warning shown on RFM show page if calendar sync fails
+- [x] **Soft delete** — `Rfm` model uses `SoftDeletes`; `deleted_at` column added via migration
+- [x] **Delete RFM** — `destroy()` soft-deletes and cancels MS365 calendar event (best-effort via `syncCalendarDelete()`); redirect to opportunity show
+- [x] **Force delete** (admin only) — `forceDestroy()` permanently removes RFM + local `CalendarEvent` record + MS365 event
+- [x] **Delete UI** — trash icon toggle on edit page header; inline "Delete? Yes / No / Permanent" strip; no delete button on show page
+- [x] **RFM index** — delete button in Action column hidden by default; trash icon toggle in column header reveals/hides them (Alpine.js); `delete rfms` permission gated
+- [x] **RFM index** — "Site Address" column renamed "Site Info"; now shows job site customer name (bold) above the address; `jobSiteCustomer` eager-loaded in `index()` query; container widened to `max-w-screen-2xl`
 
 ---
 
@@ -300,7 +321,6 @@ On **create** (`store`) and **edit** (`update`), the controller attempts (best-e
 ## What Still Needs to Be Done
 
 ### High priority
-1. **Delete RFM + cancel calendar event** — add a delete route/button and permission. On delete (or status → cancelled), delete or cancel the MS365 event via `syncCalendarDelete()` (mirrors WO pattern). No `delete rfms` permission exists yet — add to seeder before building the route.
 
 ### Medium priority
 3. **RFM → Estimate link** — from the RFM show page, a shortcut to create an estimate pre-filled with job/customer info.
@@ -317,5 +337,5 @@ On **create** (`store`) and **edit** (`update`), the controller attempts (best-e
 - **Route order matters** — `rfms/create` must be registered before `rfms/{rfm}` in `web.php`. Already correct — don't reorder.
 - **`abort_if` scope check** — every controller method accepting `{rfm}` must include `abort_if($rfm->opportunity_id !== $opportunity->id, 404)`.
 - **Calendar group_id is hardcoded** — `b8483c56-fc4b-4734-8011-335b88c7e4ad` in `RfmController::syncCalendarCreate()`.
-- **No `delete rfms` permission yet** — add to `PermissionsSeeder` and `RolesSeeder` before building the delete route.
+- **Soft-deleted RFMs** — the index query uses `Rfm::with(...)` which automatically excludes soft-deleted records. No `withTrashed()` scoping needed unless building a trash/restore UI.
 - **`@json()` + multi-line arrays** — never pass a multi-line PHP array literal directly into `@json()` inside a `<script>` tag. Build the array in a `@php` block first, then pass the variable.

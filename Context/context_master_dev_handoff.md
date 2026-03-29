@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-29 (session 39)
+Updated: 2026-03-29 (session 40)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -114,8 +114,17 @@ Full details in `Context/context_rfm.md`.
 
 ### RFM open items
 1. ~~Sync MS365 calendar event when RFM is edited~~ ✓ Done (session 39)
-2. Delete RFM route + cancel/delete calendar event on cancel/delete
+2. ~~Delete RFM route + cancel/delete calendar event on delete~~ ✓ Done (session 40)
 3. RFM → Estimate creation shortcut from the show page
+
+### RFM delete (session 40, 2026-03-29)
+- `Rfm` model uses `SoftDeletes`; `deleted_at` added via migration
+- `destroy()` — soft delete, cancels MS365 calendar event via `syncCalendarDelete()` (best-effort)
+- `forceDestroy()` — admin only, permanently removes RFM + local `CalendarEvent` record + MS365 event
+- Routes: `DELETE .../rfms/{rfm}` (`delete rfms` permission) + `DELETE .../rfms/{rfm}/force` (admin, `withTrashed`)
+- **Delete UI**: trash icon toggle on **edit page** header only — grey by default, turns red on click, reveals inline "Delete? Yes / No / Permanent" strip; no delete button on show page
+- **Index page**: delete buttons hidden by default; trash icon toggle in Action column header shows/hides them (Alpine.js `showDelete`); `x-cloak` prevents flash on load
+- **Site Info column** (index): renamed from "Site Address"; now shows job site customer name (bold) + address below; `jobSiteCustomer` eager-loaded in `index()`; container widened to `max-w-screen-2xl`
 
 ---
 
