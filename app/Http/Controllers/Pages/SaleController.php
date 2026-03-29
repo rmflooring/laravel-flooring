@@ -450,6 +450,14 @@ private function getDeleteBlockReason(Sale $sale): ?string
         return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has work orders associated with it.';
     }
 
+    if ($sale->customerReturns()->withTrashed()->exists()) {
+        return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has customer returns (RFCs) associated with it.';
+    }
+
+    if ($sale->inventoryReturns()->withTrashed()->exists()) {
+        return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has vendor returns (RTVs) associated with it.';
+    }
+
     return null;
 }
 
