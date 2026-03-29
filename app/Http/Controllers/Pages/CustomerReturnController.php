@@ -207,7 +207,7 @@ class CustomerReturnController extends Controller
 
         abort_if($hasReceipts, 422, "RFC {$rfc->rfc_number} cannot be permanently deleted — it has inventory receipts linked to its items.");
 
-        $rfc->items()->withTrashed()->forceDelete();
+        $rfc->items()->delete();
         $rfc->forceDelete();
 
         return redirect()->route('pages.inventory.rfc.index')
