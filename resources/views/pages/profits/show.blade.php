@@ -83,7 +83,7 @@
                 }
                 $savedCost = $catalogCost;
             }
-            $qty = (float)($item->quantity ?? 0);
+            $qty = (float)(($item->order_qty ?? 0) ?: ($item->quantity ?? 0));
             return $qty > 0 ? round($qty * $savedCost, 2) : $savedCost;
         })
     );
@@ -203,11 +203,14 @@
                                                         @endif
                                                     </td>
 
+                                                    @php
+														$effectiveQty = (float)(($item->order_qty ?? 0) ?: ($item->quantity ?? 0));
+													@endphp
                                                     <td
 														class="px-3 py-2 text-right border-b"
-														data-qty="{{ (float)($item->quantity ?? 0) }}"
+														data-qty="{{ $effectiveQty }}"
 													>
-														{{ rtrim(rtrim(number_format((float)($item->quantity ?? 0), 2), '0'), '.') }}
+														{{ rtrim(rtrim(number_format($effectiveQty, 2), '0'), '.') }}
 													</td>
 
                                                     <td class="px-3 py-2 border-b">
@@ -256,7 +259,7 @@
 
                                                     @php
     $lineTotal = (float)($item->line_total ?? 0);
-    $qty = (float)($item->quantity ?? 0);
+    $qty = (float)(($item->order_qty ?? 0) ?: ($item->quantity ?? 0));
     $displayCostTotal = $qty > 0 ? round($qty * $displayCost, 2) : $displayCost;
     $displayProfit = $lineTotal - $displayCostTotal;
     $displayMargin = $lineTotal > 0 ? ($displayProfit / $lineTotal) * 100 : 0;
@@ -294,7 +297,7 @@
                 }
                 $savedCost = $catalogCost;
             }
-            $qty = (float)($item->quantity ?? 0);
+            $qty = (float)(($item->order_qty ?? 0) ?: ($item->quantity ?? 0));
             return $qty > 0 ? round($qty * $savedCost, 2) : $savedCost;
         });
         $roomProfitTotal = $roomSellTotal - $roomCostTotal + $roomVendorCredit;
