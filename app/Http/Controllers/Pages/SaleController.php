@@ -430,7 +430,7 @@ public function destroy(Sale $sale)
 
 public function forceDestroy(Sale $sale)
 {
-    if ($blocking = $this->getDeleteBlockReason($sale)) {
+    if ($blocking = $this->getDeleteBlockReason($sale, force: true)) {
         return back()->with('error', $blocking);
     }
 
@@ -440,7 +440,7 @@ public function forceDestroy(Sale $sale)
         ->with('success', 'Sale #' . $sale->sale_number . ' permanently deleted.');
 }
 
-private function getDeleteBlockReason(Sale $sale): ?string
+private function getDeleteBlockReason(Sale $sale, bool $force = false): ?string
 {
     if ($sale->purchaseOrders()->withTrashed()->exists()) {
         return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has purchase orders associated with it.';
@@ -450,8 +450,16 @@ private function getDeleteBlockReason(Sale $sale): ?string
         return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has work orders associated with it.';
     }
 
-    if ($sale->customerReturns()->withTrashed()->where('status', 'draft')->exists()) {
-        return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has open customer returns (RFCs) that have not been received yet.';
+    // For soft delete: only block on open (draft) RFCs.
+    // For force delete: block on ANY RFC — DB has RESTRICT constraint on customer_returns.sale_id.
+    if ($force) {
+        if ($sale->customerReturns()->withTrashed()->exists()) {
+            return 'Sale #' . $sale->sale_number . ' cannot be permanently deleted — it has customer return records (RFCs) associated with it.';
+        }
+    } else {
+        if ($sale->customerReturns()->withTrashed()->where('status', 'draft')->exists()) {
+            return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has open customer returns (RFCs) that have not been received yet.';
+        }
     }
 
     $hasOpenRtvs = \App\Models\InventoryReturn::withTrashed()
