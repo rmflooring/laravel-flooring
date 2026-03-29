@@ -630,6 +630,7 @@ Full details in `Context/context_sms.md`.
 
 ### Changes (session 38, 2026-03-29)
 - **SMS on RFM edit**: `edit()` now passes `smsRfmUpdatedEnabled` + includes `phone` in estimator query; edit blade has SMS Notifications section (estimator + PM checkboxes, both default OFF); phone hint updates on estimator dropdown change — mirrors create form pattern
+- **Disabled state for notification sections (RFM create + edit)**: Both email and SMS notification sections are now always visible. When the respective admin setting is off (`mail_notifications_enabled` / `sms_enabled` + specific type toggle), the section renders shaded (`opacity-50`, `cursor-not-allowed`, all checkboxes disabled) with an amber message: "X notifications are currently disabled. Contact your admin to enable them." Controllers pass `$emailNotificationsEnabled`, `$smsEnabled`; `$smsRfmBookedEnabled` / `$smsRfmUpdatedEnabled` now require both global + specific toggle. Edit blade JS null-guards `notifyEstimatorBox` and `estimatorHint`.
 
 ### Open items
 - Manual on-demand SMS send button on WO show page

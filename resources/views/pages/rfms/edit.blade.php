@@ -228,6 +228,7 @@
                         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Notifications</h2>
                         <p class="text-xs text-gray-400 mb-4">Choose who to notify about this update. The estimator box is auto-checked when key fields change.</p>
 
+                        @if($emailNotificationsEnabled)
                         <div class="space-y-3">
 
                             {{-- Notify Estimator --}}
@@ -266,14 +267,31 @@
                             @endif
 
                         </div>
+                        @else
+                        <div class="flex items-start gap-3 opacity-50 cursor-not-allowed select-none">
+                            <div class="mt-0.5 flex flex-col gap-2">
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" disabled class="w-4 h-4 border-gray-300 rounded">
+                                    <span class="text-sm text-gray-500">Notify estimator about this change</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" disabled class="w-4 h-4 border-gray-300 rounded">
+                                    <span class="text-sm text-gray-500">Notify Project Manager about this change</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs text-amber-600">
+                            Email notifications are currently disabled. Contact your admin to enable them.
+                        </p>
+                        @endif
                     </div>
 
                     {{-- SMS Notifications --}}
-                    @if($smsRfmUpdatedEnabled)
                     <div class="p-6 border-b border-gray-100">
                         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">SMS Notifications</h2>
                         <p class="text-xs text-gray-400 mb-4">Choose who to notify via SMS about this update.</p>
 
+                        @if($smsRfmUpdatedEnabled)
                         <div class="space-y-3">
 
                             {{-- SMS Notify Estimator --}}
@@ -312,8 +330,24 @@
                             @endif
 
                         </div>
+                        @else
+                        <div class="flex items-start gap-3 opacity-50 cursor-not-allowed select-none">
+                            <div class="mt-0.5 flex flex-col gap-2">
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" disabled class="w-4 h-4 border-gray-300 rounded">
+                                    <span class="text-sm text-gray-500">SMS estimator</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" disabled class="w-4 h-4 border-gray-300 rounded">
+                                    <span class="text-sm text-gray-500">SMS Project Manager</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs text-amber-600">
+                            SMS notifications are currently disabled. Contact your admin to enable them.
+                        </p>
+                        @endif
                     </div>
-                    @endif
 
                     {{-- Actions --}}
                     <div class="p-6 flex justify-end gap-3">
@@ -365,11 +399,13 @@
         function updateEstimatorHints() {
             const estimatorId = document.getElementById('estimator_id').value;
 
-            const email = estimatorEmails[estimatorId] || null;
-            if (email) {
-                estimatorHint.textContent = 'Will be sent to: ' + email + '. They will receive an email showing what changed.';
-            } else {
-                estimatorHint.textContent = 'They will receive an email showing what changed.';
+            if (estimatorHint) {
+                const email = estimatorEmails[estimatorId] || null;
+                if (email) {
+                    estimatorHint.textContent = 'Will be sent to: ' + email + '. They will receive an email showing what changed.';
+                } else {
+                    estimatorHint.textContent = 'They will receive an email showing what changed.';
+                }
             }
 
             if (estimatorPhoneHint) {
@@ -385,7 +421,7 @@
         }
 
         function onFieldChange() {
-            if (hasKeyFieldChanged()) {
+            if (notifyEstimatorBox && hasKeyFieldChanged()) {
                 notifyEstimatorBox.checked = true;
             }
             updateEstimatorHints();

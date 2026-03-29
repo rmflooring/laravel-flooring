@@ -125,13 +125,18 @@ Sections (top to bottom, all inside a single `<form>`):
 
 **Special Instructions** — full-width textarea
 
-**Notifications:**
-- "Notify estimator" checkbox — **default ON**
-  - Live JS hint below shows the selected estimator's email (updates on dropdown change)
-  - If estimator has no email on record, hint says so
-- "Notify Project Manager" checkbox — **default OFF**
-  - Shows PM name and email as hint text
-  - Rendered as disabled (greyed out) if no PM with an email is assigned to the opportunity
+**Notifications** (always visible):
+- When `mail_notifications_enabled` is OFF → entire section shaded/disabled with amber message: *"Email notifications are currently disabled. Contact your admin to enable them."*
+- When enabled:
+  - "Notify estimator" checkbox — **default ON**; live JS hint shows selected estimator's email
+  - "Notify Project Manager" checkbox — **default OFF**; shows PM name + email; disabled (greyed) if no PM with email
+
+**SMS Notifications** (always visible):
+- When `sms_enabled` OR `sms_notify_rfm_booked` is OFF → shaded/disabled with amber message
+- When enabled:
+  - "SMS estimator" checkbox — **default ON**; live JS hint shows selected estimator's phone
+  - "SMS Project Manager" checkbox — **default ON** if PM has mobile; disabled (greyed) if no PM mobile
+- Controller `create()` passes `$emailNotificationsEnabled`, `$smsEnabled`, `$smsRfmBookedEnabled`; estimators query includes `phone`
 
 ### edit.blade.php
 
@@ -154,24 +159,22 @@ Sections (top to bottom, all inside a single `<form>`):
 
 **Special Instructions**
 
-**Notifications:**
-- "Notify estimator about this change" checkbox — **default OFF, auto-checked by JS**
-  - JS watches `estimator_id`, `scheduled_at`, `site_address`, `site_city`, `site_postal_code`
-  - Auto-checks this box the moment any of those fields differ from their original saved values
-  - Hint text shows the estimator's email address (updates on dropdown change)
-- "Notify Project Manager about this change" checkbox — **always default OFF**
-  - Staff must manually check this — PM notification is always a deliberate decision
-  - Shows PM name and email as hint text
-  - Rendered as disabled if no PM with an email is assigned
+**Notifications** (always visible):
+- When `mail_notifications_enabled` is OFF → entire section shaded/disabled with amber message
+- When enabled:
+  - "Notify estimator about this change" checkbox — **default OFF, auto-checked by JS**
+    - Watches `estimator_id`, `scheduled_at`, `site_address`, `site_city`, `site_postal_code` for changes
+    - Hint text shows estimator's email (updates on dropdown change)
+  - "Notify Project Manager about this change" checkbox — **always default OFF**
+    - Shows PM name + email; disabled (greyed) if no PM with email
+- JS null-guards `notifyEstimatorBox` and `estimatorHint` — safe when email notifications are disabled
 
-**SMS Notifications** (only shown when `sms_notify_rfm_updated` setting is enabled):
-- "SMS estimator" checkbox — **default OFF**
-  - Hint text shows selected estimator's phone number (updates on dropdown change)
-  - Disabled hint shown if estimator has no phone on record
-- "SMS Project Manager" checkbox — **default OFF**
-  - Shows PM name and mobile number as hint text
-  - Rendered as disabled if no PM with a mobile number is assigned
-- Controller `edit()` passes `smsRfmUpdatedEnabled` to the view; estimators query includes `phone` column
+**SMS Notifications** (always visible):
+- When `sms_enabled` OR `sms_notify_rfm_updated` is OFF → shaded/disabled with amber message
+- When enabled:
+  - "SMS estimator" checkbox — **default OFF**; hint shows estimator's phone
+  - "SMS Project Manager" checkbox — **default OFF**; shows PM mobile; disabled if no PM mobile
+- Controller `edit()` passes `$emailNotificationsEnabled`, `$smsEnabled`, `$smsRfmUpdatedEnabled`
 
 ### show.blade.php
 

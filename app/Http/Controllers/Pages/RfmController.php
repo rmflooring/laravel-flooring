@@ -66,7 +66,9 @@ class RfmController extends Controller
             'opportunity'          => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
             'estimators'           => $estimators,
             'flooringTypes'        => Rfm::FLOORING_TYPES,
-            'smsRfmBookedEnabled'  => (bool) Setting::get('sms_notify_rfm_booked', '0'),
+            'emailNotificationsEnabled' => (bool) Setting::get('mail_notifications_enabled', '1'),
+            'smsEnabled'                => (bool) Setting::get('sms_enabled', '0'),
+            'smsRfmBookedEnabled'       => (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_booked', '0'),
         ]);
     }
 
@@ -205,7 +207,9 @@ class RfmController extends Controller
             'rfm'                  => $rfm,
             'estimators'           => $estimators,
             'flooringTypes'        => Rfm::FLOORING_TYPES,
-            'smsRfmUpdatedEnabled' => (bool) Setting::get('sms_notify_rfm_updated', '0'),
+            'emailNotificationsEnabled' => (bool) Setting::get('mail_notifications_enabled', '1'),
+            'smsEnabled'                => (bool) Setting::get('sms_enabled', '0'),
+            'smsRfmUpdatedEnabled'      => (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_updated', '0'),
         ]);
     }
 
