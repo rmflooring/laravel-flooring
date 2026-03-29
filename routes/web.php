@@ -619,6 +619,11 @@ Route::prefix('pages')
 			->middleware('role:admin')
 			->name('sales.force-destroy');
 
+		Route::post('sales/{sale}/restore', [\App\Http\Controllers\Pages\SaleController::class, 'restore'])
+			->withTrashed()
+			->middleware('role:admin')
+			->name('sales.restore');
+
 		Route::get('sales', [\App\Http\Controllers\Pages\SaleController::class, 'index'])
     ->name('sales.index');
 

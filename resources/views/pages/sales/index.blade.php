@@ -83,6 +83,14 @@
                             Has Change Orders
                         </label>
 
+                        @role('admin')
+                        <label class="flex items-center gap-2 text-sm text-red-700 cursor-pointer select-none">
+                            <input type="checkbox" name="trashed" value="1" @checked($trashed)
+                                   class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            Show Deleted
+                        </label>
+                        @endrole
+
                         <button type="submit"
                                 class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
                             Apply Filters
@@ -180,9 +188,12 @@
 						$invoiced = (float) ($sale->invoiced_total ?? 0);
         @endphp
 
-        <tr class="bg-white border-b hover:bg-gray-50">
+        <tr class="{{ $sale->trashed() ? 'bg-red-50 border-b opacity-75' : 'bg-white border-b hover:bg-gray-50' }}">
             <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                 {{ $sale->sale_number ?? $sale->id }}
+                @if ($sale->trashed())
+                    <div class="text-xs text-red-600 font-medium mt-0.5">Deleted {{ optional($sale->deleted_at)->format('Y-m-d') }}</div>
+                @endif
             </td>
 
             <td class="px-6 py-4">
@@ -265,6 +276,27 @@
 
             <td class="px-6 py-4 text-right">
                 <div class="inline-flex items-center gap-2 justify-end">
+    @if ($sale->trashed())
+        @role('admin')
+        <form method="POST" action="{{ route('pages.sales.restore', $sale) }}"
+              onsubmit="return confirm('Restore Sale #{{ $sale->sale_number }}?')">
+            @csrf
+            <button type="submit"
+                    class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 focus:outline-none focus:ring-4 focus:ring-green-200">
+                Restore
+            </button>
+        </form>
+        <form method="POST" action="{{ route('pages.sales.force-destroy', $sale) }}"
+              onsubmit="return confirm('Permanently delete Sale #{{ $sale->sale_number }}? This cannot be undone.')">
+            @csrf
+            @method('DELETE')
+            <button type="submit"
+                    class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300">
+                Delete Forever
+            </button>
+        </form>
+        @endrole
+    @else
     <a href="{{ route('pages.sales.show', $sale) }}"
        class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
         View
@@ -289,6 +321,7 @@
         </form>
     @endif
     @endcan
+    @endif
 </div>
 
             </td>

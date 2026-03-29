@@ -23,6 +23,7 @@ class SaleController extends Controller
 		$dateFrom = trim((string) $request->get('date_from', ''));
 		$dateTo   = trim((string) $request->get('date_to', ''));
 		$hasCo    = $request->boolean('has_co', false);
+		$trashed  = auth()->user()?->hasRole('admin') && $request->boolean('trashed', false);
 
 		$statusOptions = [
 			'open',
@@ -38,7 +39,9 @@ class SaleController extends Controller
 			'cancelled',
 		];
 
-		$query = Sale::query()->latest('id');
+		$query = $trashed
+			? Sale::onlyTrashed()->latest('deleted_at')
+			: Sale::query()->latest('id');
 
 		// Status filter
 		if ($status !== '') {
@@ -112,6 +115,7 @@ class SaleController extends Controller
 			'dateFrom',
 			'dateTo',
 			'hasCo',
+			'trashed',
 			'statusOptions'
 		));
 	}
@@ -467,6 +471,14 @@ public function forceDestroy(Sale $sale)
 
     return redirect()->route('pages.sales.index')
         ->with('success', 'Sale #' . $sale->sale_number . ' permanently deleted.');
+}
+
+public function restore(Sale $sale)
+{
+    $sale->restore();
+
+    return redirect()->route('pages.sales.index', ['trashed' => 1])
+        ->with('success', 'Sale #' . $sale->sale_number . ' restored.');
 }
 
 private function getDeleteBlockReason(Sale $sale, bool $force = false): ?string
