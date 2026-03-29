@@ -76,11 +76,6 @@ class Sale extends Model
         return $this->hasMany(CustomerReturn::class);
     }
 
-    public function inventoryReturns(): HasMany
-    {
-        return $this->hasMany(InventoryReturn::class);
-    }
-
     public function rooms(): HasMany
     {
         return $this->hasMany(SaleRoom::class)->orderBy('sort_order');

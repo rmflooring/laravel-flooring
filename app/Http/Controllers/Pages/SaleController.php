@@ -454,7 +454,12 @@ private function getDeleteBlockReason(Sale $sale): ?string
         return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has open customer returns (RFCs) that have not been received yet.';
     }
 
-    if ($sale->inventoryReturns()->withTrashed()->whereIn('status', ['draft', 'shipped'])->exists()) {
+    $hasOpenRtvs = \App\Models\InventoryReturn::withTrashed()
+        ->whereIn('status', ['draft', 'shipped'])
+        ->whereHas('purchaseOrder', fn ($q) => $q->withTrashed()->where('sale_id', $sale->id))
+        ->exists();
+
+    if ($hasOpenRtvs) {
         return 'Sale #' . $sale->sale_number . ' cannot be deleted — it has open vendor returns (RTVs) that have not been resolved yet.';
     }
 
