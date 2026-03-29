@@ -1,13 +1,9 @@
 <x-admin-layout>
 
     <div class="py-6">
-	<form method="POST" action="{{ route('pages.sales.update', $sale->id) }}">
-	  @csrf
-	  @method('PUT')
-
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 estimate-normal-container">
 
-            {{-- Page Header --}}
+            {{-- Page Header (outside the edit form — delete forms cannot be nested inside it) --}}
             <div class="flex items-center justify-between mb-6" x-data="{ showDelete: false }">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Edit Sale</h1>
@@ -68,7 +64,7 @@
   ← View Sale
 </a>
 
-<button type="submit"
+<button type="submit" form="sale-edit-form"
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
   Save Sale
 </button>
@@ -112,6 +108,11 @@
 
                 </div>
             </div>
+
+            {{-- Main edit form starts here, after the header, so delete forms above are not nested inside it --}}
+            <form id="sale-edit-form" method="POST" action="{{ route('pages.sales.update', $sale->id) }}">
+            @csrf
+            @method('PUT')
 
             {{-- Sale Header Card --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
