@@ -169,7 +169,7 @@
                     <tbody class="divide-y divide-orange-50">
                         @foreach ($trashedRfcs as $trfc)
                             @php
-                                $rfcBlocked = $trfc->items()->withTrashed()->whereHas('inventoryReceipt')->exists();
+                                $rfcBlocked = $trfc->items()->whereHas('inventoryReceipt')->exists();
                             @endphp
                             <tr class="hover:bg-orange-50/50">
                                 <td class="px-5 py-3 font-mono font-medium text-gray-900">{{ $trfc->rfc_number }}</td>

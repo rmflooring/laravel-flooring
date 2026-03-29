@@ -201,7 +201,7 @@ class CustomerReturnController extends Controller
 
     public function forceDestroy(CustomerReturn $rfc): RedirectResponse
     {
-        $hasReceipts = $rfc->items()->withTrashed()
+        $hasReceipts = $rfc->items()
             ->whereHas('inventoryReceipt')
             ->exists();
 
