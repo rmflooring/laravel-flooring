@@ -127,6 +127,7 @@
 								<th class="px-6 py-3">Source Estimate</th>
 								<th class="px-6 py-3">Customer</th>
 								<th class="px-6 py-3">Job</th>
+								<th class="px-6 py-3">Site Info</th>
 								<th class="px-6 py-3">Status</th>
 								<th class="px-6 py-3">Locked</th>
 								<th class="px-6 py-3 text-right">Revised Contract</th>
@@ -195,6 +196,18 @@
             <td class="px-6 py-4">
                 <div class="font-medium text-gray-900">{{ $sale->job_name ?? '—' }}</div>
                 <div class="text-xs text-gray-500">{{ $sale->job_no ?? '' }}</div>
+            </td>
+
+            <td class="px-6 py-4">
+                @if ($sale->homeowner_name)
+                    <div class="font-medium text-gray-900">{{ $sale->homeowner_name }}</div>
+                @endif
+                @if ($sale->job_address)
+                    <div class="text-xs text-gray-500">{{ $sale->job_address }}</div>
+                @endif
+                @if (!$sale->homeowner_name && !$sale->job_address)
+                    <span class="text-gray-400">—</span>
+                @endif
             </td>
 
             <td class="px-6 py-4">
