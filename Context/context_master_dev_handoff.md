@@ -615,7 +615,8 @@ Full details in `Context/context_sms.md`.
 |------|---------|------------|
 | `wo_scheduled` | WO status → `scheduled` in store() or update() | PM (`projectManager.mobile`), Installer (`installer.mobile`) |
 | `wo_reminder` | `sms:send-reminders` cron | PM, Installer, Homeowner (`job_phone`) |
-| `rfm_booked` | `RfmController::store()` | Estimator (`employee.phone`), PM (`projectManager.mobile`) |
+| `rfm_booked` | `RfmController::store()` | Estimator (`employee.phone`), PM (`projectManager.mobile`), Customer (`parentCustomer.mobile` → `.phone`) |
+| `rfm_updated` | `RfmController::update()` | Estimator, PM, Customer — gated by per-checkbox `sms_notify_estimator` / `sms_notify_pm` in edit form |
 | `rfm_reminder` | `sms:send-reminders` cron | Estimator, PM, Customer (`customer.mobile`) |
 
 ### Admin pages
@@ -627,8 +628,10 @@ Full details in `Context/context_sms.md`.
 - **Customer added to RFM Booked**: `RfmController::store()` now sends to `parentCustomer.mobile` (fallback `.phone`) when `customer` is in `sms_rfm_booked_to`
 - **Toggle save bug fixed**: `SmsSettingsController::update()` used `$request->has()` — always true due to hidden input fields. Fixed to `$request->input(...) === '1'`
 
+### Changes (session 38, 2026-03-29)
+- **SMS on RFM edit**: `edit()` now passes `smsRfmUpdatedEnabled` + includes `phone` in estimator query; edit blade has SMS Notifications section (estimator + PM checkboxes, both default OFF); phone hint updates on estimator dropdown change — mirrors create form pattern
+
 ### Open items
-- Wire RFM updated SMS (when `scheduled_at` changes on edit)
 - Manual on-demand SMS send button on WO show page
 - Consider adding `mobile` to `Employee` model for estimator mobile sends (currently uses `employee.phone`)
 

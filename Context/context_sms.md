@@ -184,6 +184,12 @@ php artisan sms:send-reminders
 ### RFM Booked SMS
 - `RfmController::store()` — fires after email block, gated by `sms_notify_rfm_booked` setting
 - Customer phone: `opportunity.parentCustomer.mobile` → fallback `.phone`
+- Create form shows SMS Notifications section (gated by `smsRfmBookedEnabled` view var) — estimator (default ON) + PM (default ON if mobile set); individual checkboxes `sms_notify_estimator` / `sms_notify_pm` gate each send
+
+### RFM Updated SMS
+- `RfmController::update()` — fires after email block, gated by `sms_notify_rfm_updated` setting
+- Edit form shows SMS Notifications section (gated by `smsRfmUpdatedEnabled` view var) — both default OFF; phone hint updates on estimator dropdown change
+- `sms_notify_estimator` / `sms_notify_pm` checkboxes gate each send; customer send fires unconditionally when `customer` in `sms_rfm_updated_to`
 
 ---
 

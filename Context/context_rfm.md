@@ -164,6 +164,15 @@ Sections (top to bottom, all inside a single `<form>`):
   - Shows PM name and email as hint text
   - Rendered as disabled if no PM with an email is assigned
 
+**SMS Notifications** (only shown when `sms_notify_rfm_updated` setting is enabled):
+- "SMS estimator" checkbox — **default OFF**
+  - Hint text shows selected estimator's phone number (updates on dropdown change)
+  - Disabled hint shown if estimator has no phone on record
+- "SMS Project Manager" checkbox — **default OFF**
+  - Shows PM name and mobile number as hint text
+  - Rendered as disabled if no PM with a mobile number is assigned
+- Controller `edit()` passes `smsRfmUpdatedEnabled` to the view; estimators query includes `phone` column
+
 ### show.blade.php
 
 Read-only view. Includes:
@@ -262,6 +271,7 @@ On **create** (`store`) and **edit** (`update`), the controller attempts (best-e
 - [x] Calendar event modal on RFM show page — estimator name (first + last initial) + date/time, opens Flowbite event details modal
 - [x] Email notifications on **create** — estimator (default ON, detailed internal), PM (default OFF, customer-facing); checkboxes shown in Notifications section
 - [x] Email notifications on **edit** — estimator (auto-checked by JS when key fields change, shows change diff), PM (always OFF by default); both show target email as hint
+- [x] SMS notifications on **edit** — estimator + PM checkboxes (both default OFF); shown only when `sms_notify_rfm_updated` is enabled; phone hint updates on estimator dropdown change
 - [x] `RfmUpdatedMail` — new class, separate subjects and bodies for estimator vs PM
 - [x] **Mobile RFM view** — `GET /m/rfm/{rfm}` → `mobile.rfms.show`; controller `Mobile\RfmController::show()`; view `resources/views/mobile/rfms/show.blade.php`
 - [x] **Mobile photo upload** — `POST /m/rfm/{rfm}/photos` → `mobile.rfms.upload-photos`; uploads to `OpportunityDocument` (same as mobile WO pattern)

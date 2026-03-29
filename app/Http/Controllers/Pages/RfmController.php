@@ -198,13 +198,14 @@ class RfmController extends Controller
     {
         abort_if($rfm->opportunity_id !== $opportunity->id, 404);
 
-        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']);
+        $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']);
 
         return view('pages.rfms.edit', [
-            'opportunity'   => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
-            'rfm'           => $rfm,
-            'estimators'    => $estimators,
-            'flooringTypes' => Rfm::FLOORING_TYPES,
+            'opportunity'          => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
+            'rfm'                  => $rfm,
+            'estimators'           => $estimators,
+            'flooringTypes'        => Rfm::FLOORING_TYPES,
+            'smsRfmUpdatedEnabled' => (bool) Setting::get('sms_notify_rfm_updated', '0'),
         ]);
     }
 

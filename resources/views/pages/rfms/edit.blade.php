@@ -268,6 +268,53 @@
                         </div>
                     </div>
 
+                    {{-- SMS Notifications --}}
+                    @if($smsRfmUpdatedEnabled)
+                    <div class="p-6 border-b border-gray-100">
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">SMS Notifications</h2>
+                        <p class="text-xs text-gray-400 mb-4">Choose who to notify via SMS about this update.</p>
+
+                        <div class="space-y-3">
+
+                            {{-- SMS Notify Estimator --}}
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" name="sms_notify_estimator" value="1"
+                                       class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">SMS estimator</span>
+                                    <p class="text-xs text-gray-400 mt-0.5" id="estimator-phone-hint">
+                                        Select an estimator above to see their phone number.
+                                    </p>
+                                </div>
+                            </label>
+
+                            {{-- SMS Notify PM --}}
+                            @if($opportunity->projectManager && $opportunity->projectManager->mobile)
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" name="sms_notify_pm" value="1"
+                                           class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-700">SMS Project Manager</span>
+                                        <p class="text-xs text-gray-400 mt-0.5">
+                                            {{ $opportunity->projectManager->name }} &mdash; {{ $opportunity->projectManager->mobile }}
+                                        </p>
+                                    </div>
+                                </label>
+                            @else
+                                <div class="flex items-start gap-3 opacity-50 cursor-not-allowed">
+                                    <input type="checkbox" disabled
+                                           class="mt-0.5 w-4 h-4 border-gray-300 rounded">
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-500">SMS Project Manager</span>
+                                        <p class="text-xs text-gray-400 mt-0.5">No PM with a mobile number is assigned to this opportunity.</p>
+                                    </div>
+                                </div>
+                            @endif
+
+                        </div>
+                    </div>
+                    @endif
+
                     {{-- Actions --}}
                     <div class="p-6 flex justify-end gap-3">
                         <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
@@ -288,6 +335,7 @@
 
     @php
         $estimatorEmails = $estimators->mapWithKeys(fn($e) => [$e->id => $e->email])->toArray();
+        $estimatorPhones = $estimators->mapWithKeys(fn($e) => [$e->id => $e->phone])->toArray();
     @endphp
 
     <script>
@@ -301,9 +349,11 @@
         };
 
         const estimatorEmails    = @json($estimatorEmails);
+        const estimatorPhones    = @json($estimatorPhones);
         const watchedFields      = ['estimator_id', 'scheduled_at', 'site_address', 'site_city', 'site_postal_code'];
         const notifyEstimatorBox = document.getElementById('notify_estimator');
         const estimatorHint      = document.getElementById('estimator-notify-hint');
+        const estimatorPhoneHint = document.getElementById('estimator-phone-hint');
 
         function hasKeyFieldChanged() {
             return watchedFields.some(id => {
@@ -312,13 +362,25 @@
             });
         }
 
-        function updateEstimatorHint() {
+        function updateEstimatorHints() {
             const estimatorId = document.getElementById('estimator_id').value;
-            const email       = estimatorEmails[estimatorId] || null;
+
+            const email = estimatorEmails[estimatorId] || null;
             if (email) {
                 estimatorHint.textContent = 'Will be sent to: ' + email + '. They will receive an email showing what changed.';
             } else {
                 estimatorHint.textContent = 'They will receive an email showing what changed.';
+            }
+
+            if (estimatorPhoneHint) {
+                const phone = estimatorPhones[estimatorId] || null;
+                if (phone) {
+                    estimatorPhoneHint.textContent = 'Will be sent to: ' + phone;
+                } else if (estimatorId) {
+                    estimatorPhoneHint.textContent = 'This estimator has no phone number on record.';
+                } else {
+                    estimatorPhoneHint.textContent = 'Select an estimator above to see their phone number.';
+                }
             }
         }
 
@@ -326,7 +388,7 @@
             if (hasKeyFieldChanged()) {
                 notifyEstimatorBox.checked = true;
             }
-            updateEstimatorHint();
+            updateEstimatorHints();
         }
 
         watchedFields.forEach(id => {
@@ -337,6 +399,6 @@
             }
         });
 
-        updateEstimatorHint();
+        updateEstimatorHints();
     </script>
 </x-app-layout>
