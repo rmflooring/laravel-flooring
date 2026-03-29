@@ -928,10 +928,14 @@ public function apiStyles(Request $request)
 {
     abort_unless($estimate->status === 'approved', 422, 'Only approved estimates can be converted to a sale.');
 
-    // Prevent duplicates (1 sale per estimate)
-    $existing = \App\Models\Sale::where('source_estimate_id', $estimate->id)->first();
+    // Prevent duplicates (1 sale per estimate) — include soft-deleted to avoid unique constraint crash
+    $existing = \App\Models\Sale::withTrashed()->where('source_estimate_id', $estimate->id)->first();
     if ($existing) {
-        // NOTE: adjust this route if your sales edit route name differs
+        if ($existing->trashed()) {
+            $existing->restore();
+            return redirect()->route('pages.sales.edit', $existing->id)
+                ->with('success', 'The sale for this estimate was previously deleted and has been restored.');
+        }
         return redirect()->route('pages.sales.edit', $existing->id)
             ->with('info', 'A sale already exists for this estimate.');
     }
