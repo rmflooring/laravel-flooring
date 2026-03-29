@@ -20,6 +20,7 @@ use App\Http\Controllers\Pages\OpportunityMediaController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\CustomerContactController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\VendorRepController;
 use App\Http\Controllers\Admin\InstallerController;
@@ -263,6 +264,19 @@ Route::prefix('admin')
         Route::post('customers/{customer}/deactivate', [CustomerController::class, 'deactivate'])
             ->middleware('role_or_permission:admin|edit customers')
             ->name('customers.deactivate');
+
+        // Customer Contacts
+        Route::post('customers/{customer}/contacts', [CustomerContactController::class, 'store'])
+            ->middleware('role_or_permission:admin|edit customers')
+            ->name('customers.contacts.store');
+
+        Route::put('customers/{customer}/contacts/{contact}', [CustomerContactController::class, 'update'])
+            ->middleware('role_or_permission:admin|edit customers')
+            ->name('customers.contacts.update');
+
+        Route::delete('customers/{customer}/contacts/{contact}', [CustomerContactController::class, 'destroy'])
+            ->middleware('role_or_permission:admin|edit customers')
+            ->name('customers.contacts.destroy');
 
         // Project Managers
         Route::resource('project-managers', ProjectManagerController::class)

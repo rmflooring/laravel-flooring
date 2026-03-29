@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-29 (session 41)
+Updated: 2026-03-29 (session 42)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -314,6 +314,27 @@ Full details in `Context/context_sale_status.md`.
 - Tax Management accordion includes "Tax Overview" as first sub-item (links to `admin.tax.index`)
 - **Document Labels** link added to admin section (see Document Labels CRUD below)
 - See `Context/context_installers.md` for Installers details
+
+---
+
+## Customer Contacts (session 42, 2026-03-29)
+
+- Additional named contacts per customer (e.g. project coordinators, office managers)
+- Model: `app/Models/CustomerContact.php` — fields: `customer_id`, `name`, `title`, `email`, `phone`, `notes`, `created_by`, `updated_by`
+- Migration: `2026_03_29_160000_create_customer_contacts_table`
+- `Customer::contacts()` hasMany, ordered by name
+- Controller: `app/Http/Controllers/Admin/CustomerContactController.php` — store, update, destroy
+- Routes (under admin middleware, gated `edit customers`):
+  - `POST   admin/customers/{customer}/contacts` → `admin.customers.contacts.store`
+  - `PUT    admin/customers/{customer}/contacts/{contact}` → `admin.customers.contacts.update`
+  - `DELETE admin/customers/{customer}/contacts/{contact}` → `admin.customers.contacts.destroy`
+- **Customer show page**: Contacts card between "Customer Details" and Opportunities tables; inline Add form (Alpine `showAdd`); per-row inline Edit/Remove (Alpine `editing`)
+- **Customer edit page**: Same contacts management section below the main form + "Back to Customer" button in header
+- **Email send modals** — all 5 updated (estimate show/edit, sale show/edit, WO show):
+  - When `$customerContacts` has contacts with emails, a "Quick-add from contacts:" chip row appears in the CC section
+  - Clicking a chip adds the email to `ccEmails` (no duplicates); chips show `Name · Title`
+  - `$customerContacts` resolved from `opportunity->parentCustomer->contacts` in each controller
+  - Eager-loaded via `opportunity.parentCustomer.contacts` in: `EstimateController::show/edit`, `SaleController::show/edit`, `WorkOrderController::show`
 
 ---
 

@@ -199,7 +199,7 @@ class WorkOrderController extends Controller
     public function show(Sale $sale, WorkOrder $workOrder)
     {
         abort_if($workOrder->sale_id !== $sale->id, 404);
-        $sale->loadMissing('sourceEstimate');
+        $sale->loadMissing(['sourceEstimate', 'opportunity.parentCustomer.contacts']);
         $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'calendarEvent.externalLink', 'creator']);
 
         // Load the active staging pick ticket for this WO (if any)
@@ -244,8 +244,9 @@ class WorkOrderController extends Controller
         }
 
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($workOrder, $sale);
+        $customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
 
-        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody'));
+        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody', 'customerContacts'));
     }
 
     private function resolveEmailTemplate(WorkOrder $workOrder, Sale $sale): array

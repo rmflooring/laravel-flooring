@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\CustomerContact;
 use App\Models\Opportunity;
 //use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -36,6 +37,11 @@ class Customer extends Model
         'created_by',
         'updated_by',
     ];
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(CustomerContact::class)->orderBy('name');
+    }
 
     // Relationship: this customer has many children
     public function children(): HasMany

@@ -599,6 +599,20 @@
                     {{-- CC Addresses --}}
                     <div x-data="{ ccEmails: [], ccInput: '' }">
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">CC <span class="text-xs text-gray-400 font-normal">(optional)</span></label>
+                        @if($customerContacts->isNotEmpty())
+                        <div class="mb-2">
+                            <p class="text-xs text-gray-500 mb-1.5">Quick-add from contacts:</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach($customerContacts->filter(fn($c) => $c->email) as $contact)
+                                <button type="button"
+                                        @click="if(!ccEmails.includes('{{ $contact->email }}')) { ccEmails.push('{{ $contact->email }}') }"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full border border-gray-300 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors">
+                                    {{ $contact->name }}@if($contact->title) <span class="text-gray-400">&middot; {{ $contact->title }}</span>@endif
+                                </button>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
                         <div class="flex flex-wrap gap-1.5 mb-2" x-show="ccEmails.length > 0">
                             <template x-for="(email, i) in ccEmails" :key="i">
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">

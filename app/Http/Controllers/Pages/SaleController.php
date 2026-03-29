@@ -122,6 +122,7 @@ class SaleController extends Controller
 			'sourceEstimate',
 			'salesperson1Employee',
 			'opportunity.projectManager',
+			'opportunity.parentCustomer.contacts',
 			'rooms' => fn($q) => $q->orderBy('sort_order'),
 			'rooms.items' => fn($q) => $q->where('is_removed', false)->orderBy('sort_order'),
 			'purchaseOrders.vendor',
@@ -132,9 +133,10 @@ class SaleController extends Controller
 			'invoices',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
-		$itemPoStatusMap = $this->buildItemPoStatusMap($sale);
-		$itemWoStatusMap = $this->buildItemWoStatusMap($sale);
-		$pmEmail         = $sale->opportunity?->projectManager?->email;
+		$itemPoStatusMap  = $this->buildItemPoStatusMap($sale);
+		$itemWoStatusMap  = $this->buildItemWoStatusMap($sale);
+		$pmEmail          = $sale->opportunity?->projectManager?->email;
+		$customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
 
         $trashedWorkOrders    = collect();
         $trashedPurchaseOrders = collect();
@@ -158,7 +160,7 @@ class SaleController extends Controller
 
 		return view('pages.sales.show', compact(
             'sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
-            'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs',
+            'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs', 'customerContacts',
         ));
 	}
 
@@ -173,6 +175,7 @@ class SaleController extends Controller
             'sourceEstimate',
             'salesperson1Employee',
             'opportunity.projectManager',
+            'opportunity.parentCustomer.contacts',
             'purchaseOrders.vendor',
             'purchaseOrders.items',
             'workOrders.installer',
@@ -192,14 +195,15 @@ class SaleController extends Controller
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
         $itemPoStatusMap = $this->buildItemPoStatusMap($sale);
         $itemWoStatusMap = $this->buildItemWoStatusMap($sale);
-        $pmEmail         = $sale->opportunity?->projectManager?->email;
+        $pmEmail          = $sale->opportunity?->projectManager?->email;
+        $customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
 
         $deleteBlockReason = $this->getDeleteBlockReason($sale);
 
         return view('pages.sales.edit', compact(
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
             'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
-            'deleteBlockReason',
+            'deleteBlockReason', 'customerContacts',
         ));
     }
 	

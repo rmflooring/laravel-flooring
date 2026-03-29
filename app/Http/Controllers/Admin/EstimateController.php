@@ -334,7 +334,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'salesperson2Employee',
 			'sale',
 			'revisions' => fn($q) => $q->orderBy('revision_no'),
-			'opportunity',
+			'opportunity.parentCustomer.contacts',
 			'parentEstimate',
 		]);
 
@@ -359,7 +359,9 @@ $data['tax_rate_percent'] = $groupPercent;
 		$emailSubject = $templateService->render($template['subject'], $templateVars);
 		$emailBody    = $templateService->render($template['body'], $templateVars);
 
-		return view('pages.estimates.show', compact('estimate', 'emailSubject', 'emailBody'));
+		$customerContacts = $estimate->opportunity?->parentCustomer?->contacts ?? collect();
+
+		return view('pages.estimates.show', compact('estimate', 'emailSubject', 'emailBody', 'customerContacts'));
 	}
 
 	public function edit(Estimate $estimate)
@@ -371,6 +373,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'salesperson1Employee',
 			'salesperson2Employee',
 			'opportunity.projectManager',
+			'opportunity.parentCustomer.contacts',
 			'sale',
 			'parentEstimate',
 		]);
@@ -407,11 +410,12 @@ $data['tax_rate_percent'] = $groupPercent;
 		$emailSubject = $templateService->render($template['subject'], $templateVars);
 		$emailBody    = $templateService->render($template['body'], $templateVars);
 
-		$pmEmail = $estimate->opportunity?->projectManager?->email;
+		$pmEmail          = $estimate->opportunity?->projectManager?->email;
+		$customerContacts = $estimate->opportunity?->parentCustomer?->contacts ?? collect();
 
 		return view('admin.estimates.edit', compact(
 			'estimate', 'taxGroups', 'defaultTaxGroupId', 'employees',
-			'emailSubject', 'emailBody', 'pmEmail',
+			'emailSubject', 'emailBody', 'pmEmail', 'customerContacts',
 		));
 	}
 

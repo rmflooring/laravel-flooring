@@ -207,6 +207,8 @@ public function show(Customer $customer)
         ->latest()
         ->get();
 
+    $customer->load('contacts');
+
     return view('admin.customers.show', compact(
         'customer',
         'opportunitiesAsParent',
@@ -235,6 +237,8 @@ public function edit(Customer $customer)
         'SK' => 'Saskatchewan',
         'YT' => 'Yukon',
     ];
+
+    $customer->load('contacts');
 
     return view('admin.customers.edit', compact('customer', 'parents', 'provinces'));
 }
