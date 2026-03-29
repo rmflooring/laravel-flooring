@@ -843,6 +843,14 @@ class PurchaseOrderController extends Controller
         $saleId   = $purchaseOrder->sale_id;
         $poNumber = $purchaseOrder->po_number;
 
+        $hasReceipts = \DB::table('inventory_receipts')
+            ->where('purchase_order_id', $purchaseOrder->id)
+            ->exists();
+
+        if ($hasReceipts) {
+            return back()->with('error', 'PO ' . $poNumber . ' cannot be permanently deleted — inventory has been received against it.');
+        }
+
         $purchaseOrder->forceDelete();
 
         if ($saleId) {

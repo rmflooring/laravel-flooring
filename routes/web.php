@@ -647,6 +647,11 @@ Route::prefix('pages')
 			->name('sales.work-orders.destroy')
 			->middleware('role_or_permission:admin|delete work orders');
 
+		Route::delete('sales/{sale}/work-orders/{workOrder}/force', [\App\Http\Controllers\Pages\WorkOrderController::class, 'forceDestroy'])
+			->withTrashed()
+			->name('sales.work-orders.force-destroy')
+			->middleware('role:admin');
+
 		Route::get('sales/{sale}/work-orders/{workOrder}/pdf', [\App\Http\Controllers\Pages\WorkOrderController::class, 'previewPdf'])
 			->name('sales.work-orders.pdf')
 			->middleware('role_or_permission:admin|view work orders');

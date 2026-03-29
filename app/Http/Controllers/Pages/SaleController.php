@@ -134,7 +134,26 @@ class SaleController extends Controller
 		$itemPoStatusMap = $this->buildItemPoStatusMap($sale);
 		$itemWoStatusMap = $this->buildItemWoStatusMap($sale);
 		$pmEmail         = $sale->opportunity?->projectManager?->email;
-		return view('pages.sales.show', compact('sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail'));
+
+        $trashedWorkOrders    = collect();
+        $trashedPurchaseOrders = collect();
+        if (auth()->user()?->hasRole('admin')) {
+            $trashedWorkOrders = \App\Models\WorkOrder::withTrashed()
+                ->where('sale_id', $sale->id)
+                ->whereNotNull('deleted_at')
+                ->with('installer')
+                ->get();
+            $trashedPurchaseOrders = \App\Models\PurchaseOrder::withTrashed()
+                ->where('sale_id', $sale->id)
+                ->whereNotNull('deleted_at')
+                ->with('vendor')
+                ->get();
+        }
+
+		return view('pages.sales.show', compact(
+            'sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
+            'trashedWorkOrders', 'trashedPurchaseOrders',
+        ));
 	}
 
     public function edit(Sale $sale)

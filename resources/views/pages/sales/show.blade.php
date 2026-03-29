@@ -784,6 +784,116 @@
             </div>
             @endcan
 
+            {{-- Archived Records (admin only) --}}
+            @role('admin')
+            @if ($trashedWorkOrders->isNotEmpty() || $trashedPurchaseOrders->isNotEmpty())
+            <div class="bg-white border border-orange-200 rounded-xl shadow-sm mt-6">
+                <div class="px-6 py-4 border-b border-orange-100 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-orange-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    <h2 class="text-sm font-semibold text-orange-700 uppercase tracking-wide">Archived Records</h2>
+                    <span class="text-xs text-orange-500 ml-1">These soft-deleted records are blocking sale deletion. Permanently delete them to clear the way.</span>
+                </div>
+
+                {{-- Archived Work Orders --}}
+                @if ($trashedWorkOrders->isNotEmpty())
+                <div class="px-6 py-4 {{ $trashedPurchaseOrders->isNotEmpty() ? 'border-b border-orange-100' : '' }}">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Work Orders</h3>
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-500 uppercase border-b">
+                            <tr>
+                                <th class="pb-2 pr-4">WO #</th>
+                                <th class="pb-2 pr-4">Installer</th>
+                                <th class="pb-2 pr-4">Status at deletion</th>
+                                <th class="pb-2 pr-4">Deleted</th>
+                                <th class="pb-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($trashedWorkOrders as $two)
+                                @php
+                                    $woBlocked = \App\Models\PickTicket::where('work_order_id', $two->id)
+                                        ->whereNotIn('status', ['staged', 'cancelled'])
+                                        ->exists();
+                                @endphp
+                                <tr>
+                                    <td class="py-2 pr-4 font-medium text-gray-900">{{ $two->wo_number }}</td>
+                                    <td class="py-2 pr-4 text-gray-600">{{ $two->installer?->name ?? '—' }}</td>
+                                    <td class="py-2 pr-4 text-gray-600">{{ ucfirst(str_replace('_', ' ', $two->status)) }}</td>
+                                    <td class="py-2 pr-4 text-gray-500">{{ $two->deleted_at->format('M j, Y') }}</td>
+                                    <td class="py-2 text-right">
+                                        @if ($woBlocked)
+                                            <span class="text-xs text-gray-400 italic" title="Has processed pick tickets">Cannot delete</span>
+                                        @else
+                                            <form method="POST" action="{{ route('pages.sales.work-orders.force-destroy', [$sale, $two]) }}"
+                                                  onsubmit="return confirm('Permanently delete WO {{ $two->wo_number }}? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-sm font-medium text-red-600 hover:underline">
+                                                    Permanently Delete
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+
+                {{-- Archived Purchase Orders --}}
+                @if ($trashedPurchaseOrders->isNotEmpty())
+                <div class="px-6 py-4">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Purchase Orders</h3>
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-500 uppercase border-b">
+                            <tr>
+                                <th class="pb-2 pr-4">PO #</th>
+                                <th class="pb-2 pr-4">Vendor</th>
+                                <th class="pb-2 pr-4">Status at deletion</th>
+                                <th class="pb-2 pr-4">Deleted</th>
+                                <th class="pb-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($trashedPurchaseOrders as $tpo)
+                                @php
+                                    $poBlocked = \DB::table('inventory_receipts')
+                                        ->where('purchase_order_id', $tpo->id)
+                                        ->exists();
+                                @endphp
+                                <tr>
+                                    <td class="py-2 pr-4 font-medium text-gray-900">{{ $tpo->po_number }}</td>
+                                    <td class="py-2 pr-4 text-gray-600">{{ $tpo->vendor?->company_name ?? '—' }}</td>
+                                    <td class="py-2 pr-4 text-gray-600">{{ ucfirst($tpo->status) }}</td>
+                                    <td class="py-2 pr-4 text-gray-500">{{ $tpo->deleted_at->format('M j, Y') }}</td>
+                                    <td class="py-2 text-right">
+                                        @if ($poBlocked)
+                                            <span class="text-xs text-gray-400 italic" title="Inventory has been received against this PO">Cannot delete</span>
+                                        @else
+                                            <form method="POST" action="{{ route('pages.purchase-orders.force-destroy', $tpo) }}"
+                                                  onsubmit="return confirm('Permanently delete PO {{ $tpo->po_number }}? This cannot be undone.')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-sm font-medium text-red-600 hover:underline">
+                                                    Permanently Delete
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+
+            </div>
+            @endif
+            @endrole
+
         </div>
     </div>
 

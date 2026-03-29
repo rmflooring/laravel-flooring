@@ -449,6 +449,31 @@ class WorkOrderController extends Controller
             ->with('success', 'Work order deleted.');
     }
 
+    public function forceDestroy(Sale $sale, WorkOrder $workOrder)
+    {
+        abort_if($workOrder->sale_id !== $sale->id, 404);
+
+        $hasProcessedPickTicket = PickTicket::where('work_order_id', $workOrder->id)
+            ->whereNotIn('status', ['staged', 'cancelled'])
+            ->exists();
+
+        if ($hasProcessedPickTicket) {
+            return back()->with('error', 'Work order ' . $workOrder->wo_number . ' cannot be permanently deleted — it has pick tickets that have been processed.');
+        }
+
+        // Cancel any staged pick tickets first
+        PickTicket::where('work_order_id', $workOrder->id)
+            ->whereIn('status', ['staged'])
+            ->update(['status' => 'cancelled']);
+
+        $this->cancelCalendarEvent($workOrder);
+        $workOrder->forceDelete();
+
+        return redirect()
+            ->route('pages.sales.show', $sale)
+            ->with('success', 'Work order ' . $workOrder->wo_number . ' permanently deleted.');
+    }
+
     // ── PDF ───────────────────────────────────────────────────────
 
     public function previewPdf(Sale $sale, WorkOrder $workOrder)
