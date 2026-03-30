@@ -89,7 +89,7 @@
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Labour Items</h2>
-                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Items cannot be added or removed after creation. Adjust quantities and costs only.</p>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Adjust quantities, costs, and notes. Items can be removed — removed items free up their qty for other work orders.</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -99,6 +99,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Qty</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Unit Cost</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
@@ -108,66 +109,97 @@
                                         $max = $maxQtys[$item->id] ?? 9999;
                                         $grandTotal += (float) $item->cost_total;
                                     @endphp
-                                    <tr x-data="woRow({{ $item->id }}, {{ (float)$item->quantity }}, {{ (float)$item->cost_price }})">
+                                    <tr x-data="woRow({{ $item->id }}, {{ (float)$item->quantity }}, {{ (float)$item->cost_price }})"
+                                        :class="pendingDelete ? 'opacity-40' : ''">
                                         <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                            <div class="font-medium">{{ $item->item_name }}</div>
+                                            <div class="font-medium" :class="pendingDelete ? 'line-through text-gray-400' : ''">{{ $item->item_name }}</div>
                                             <div class="text-xs text-gray-400">{{ $item->unit }}</div>
-                                            <textarea name="wo_items[{{ $item->id }}][wo_notes]"
-                                                      rows="2"
-                                                      placeholder="WO notes..."
-                                                      class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('wo_items.' . $item->id . '.wo_notes', $item->wo_notes) }}</textarea>
-                                            {{-- Related Materials --}}
-                                            @php
-                                                $roomMats = $item->saleItem?->room?->items ?? collect();
-                                                $linkedIds = $item->relatedMaterials->pluck('sale_item_id')->toArray();
-                                            @endphp
-                                            @if($roomMats->isNotEmpty())
-                                            <div class="mt-2">
-                                                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Related Materials</p>
-                                                <div class="space-y-1">
-                                                    @foreach($roomMats as $mat)
-                                                        @php
-                                                            $matName = implode(' — ', array_filter([$mat->product_type, $mat->manufacturer, $mat->style, $mat->color_item_number])) ?: 'Material';
-                                                        @endphp
-                                                        <label class="flex items-center gap-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 cursor-pointer hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
-                                                            <input type="checkbox"
-                                                                   name="wo_materials[{{ $item->id }}][]"
-                                                                   value="{{ $mat->id }}"
-                                                                   {{ in_array($mat->id, old('wo_materials.' . $item->id, $linkedIds)) ? 'checked' : '' }}
-                                                                   class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                                            <span class="text-xs text-gray-700 dark:text-gray-300">
-                                                                {{ $matName }}
-                                                                <span class="text-gray-400 ml-1">{{ number_format((float)$mat->quantity, 2) }} {{ $mat->unit }}</span>
-                                                            </span>
-                                                        </label>
-                                                    @endforeach
+                                            <template x-if="!pendingDelete">
+                                                <div>
+                                                    <textarea name="wo_items[{{ $item->id }}][wo_notes]"
+                                                              rows="2"
+                                                              placeholder="WO notes..."
+                                                              class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('wo_items.' . $item->id . '.wo_notes', $item->wo_notes) }}</textarea>
+                                                    {{-- Related Materials --}}
+                                                    @php
+                                                        $roomMats = $item->saleItem?->room?->items ?? collect();
+                                                        $linkedIds = $item->relatedMaterials->pluck('sale_item_id')->toArray();
+                                                    @endphp
+                                                    @if($roomMats->isNotEmpty())
+                                                    <div class="mt-2">
+                                                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Related Materials</p>
+                                                        <div class="space-y-1">
+                                                            @foreach($roomMats as $mat)
+                                                                @php
+                                                                    $matName = implode(' — ', array_filter([$mat->product_type, $mat->manufacturer, $mat->style, $mat->color_item_number])) ?: 'Material';
+                                                                @endphp
+                                                                <label class="flex items-center gap-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 cursor-pointer hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
+                                                                    <input type="checkbox"
+                                                                           name="wo_materials[{{ $item->id }}][]"
+                                                                           value="{{ $mat->id }}"
+                                                                           {{ in_array($mat->id, old('wo_materials.' . $item->id, $linkedIds)) ? 'checked' : '' }}
+                                                                           class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                    <span class="text-xs text-gray-700 dark:text-gray-300">
+                                                                        {{ $matName }}
+                                                                        <span class="text-gray-400 ml-1">{{ number_format((float)$mat->quantity, 2) }} {{ $mat->unit }}</span>
+                                                                    </span>
+                                                                </label>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                    @endif
                                                 </div>
-                                            </div>
-                                            @endif
+                                            </template>
+                                            <template x-if="pendingDelete">
+                                                <input type="hidden" name="wo_items[{{ $item->id }}][delete]" value="1">
+                                            </template>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <input type="number" name="wo_items[{{ $item->id }}][quantity]"
-                                                   x-model="qty"
-                                                   @input="validateQty({{ $max }})"
-                                                   step="0.01" min="0.01"
-                                                   class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                   :class="qtyError ? 'border-red-400' : ''">
-                                            <div class="mt-1 text-xs text-gray-400">max {{ number_format($max, 2) }}</div>
-                                            <p x-show="qtyError" x-text="qtyError" x-cloak class="mt-1 text-xs text-red-500"></p>
+                                            <template x-if="!pendingDelete">
+                                                <div>
+                                                    <input type="number" name="wo_items[{{ $item->id }}][quantity]"
+                                                           x-model="qty"
+                                                           @input="validateQty({{ $max }})"
+                                                           step="0.01" min="0.01"
+                                                           class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                           :class="qtyError ? 'border-red-400' : ''">
+                                                    <div class="mt-1 text-xs text-gray-400">max {{ number_format($max, 2) }}</div>
+                                                    <p x-show="qtyError" x-text="qtyError" x-cloak class="mt-1 text-xs text-red-500"></p>
+                                                </div>
+                                            </template>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <input type="number" name="wo_items[{{ $item->id }}][cost_price]"
-                                                   x-model="cost"
-                                                   step="0.01" min="0"
-                                                   class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                            <template x-if="!pendingDelete">
+                                                <input type="number" name="wo_items[{{ $item->id }}][cost_price]"
+                                                       x-model="cost"
+                                                       step="0.01" min="0"
+                                                       class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                            </template>
                                         </td>
                                         <td class="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white"
+                                            x-show="!pendingDelete"
                                             x-text="'$' + (parseFloat(qty||0) * parseFloat(cost||0)).toFixed(2)">
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <button type="button"
+                                                    x-show="!pendingDelete"
+                                                    @click="pendingDelete = true"
+                                                    title="Remove this item"
+                                                    class="inline-flex items-center rounded-lg border border-red-300 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700">
+                                                Remove
+                                            </button>
+                                            <button type="button"
+                                                    x-show="pendingDelete"
+                                                    x-cloak
+                                                    @click="pendingDelete = false"
+                                                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                                                Undo
+                                            </button>
                                         </td>
                                     </tr>
                                 @endforeach
                                 <tr class="bg-gray-50 dark:bg-gray-700">
-                                    <td colspan="3" class="px-6 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">Grand Total</td>
+                                    <td colspan="4" class="px-6 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">Grand Total</td>
                                     <td class="px-6 py-3 text-right text-sm font-bold text-gray-900 dark:text-white">
                                         ${{ number_format($grandTotal, 2) }}
                                     </td>
@@ -259,9 +291,10 @@
 
     function woRow(id, qty, cost) {
         return {
-            qty:      qty,
-            cost:     cost,
-            qtyError: '',
+            qty:           qty,
+            cost:          cost,
+            qtyError:      '',
+            pendingDelete: false,
             validateQty(max) {
                 const v = parseFloat(this.qty);
                 if (isNaN(v) || v <= 0) this.qtyError = 'Must be > 0';

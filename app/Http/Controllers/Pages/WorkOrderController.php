@@ -343,6 +343,7 @@ class WorkOrderController extends Controller
             'wo_items.*.quantity'   => ['nullable', 'numeric', 'min:0'],
             'wo_items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
             'wo_items.*.wo_notes'   => ['nullable', 'string'],
+            'wo_items.*.delete'     => ['nullable', 'in:1'],
             'wo_materials'          => ['nullable', 'array'],
             'wo_materials.*'        => ['nullable', 'array'],
             'wo_materials.*.*'      => ['nullable', 'integer', 'exists:sale_items,id'],
@@ -355,9 +356,23 @@ class WorkOrderController extends Controller
             }
         }
 
-        // Validate item qtys
+        // Identify items flagged for deletion
+        $deleteItemIds = [];
+        foreach ($workOrder->items as $item) {
+            if ($request->input("wo_items.{$item->id}.delete") === '1') {
+                $deleteItemIds[] = $item->id;
+            }
+        }
+
+        // Guard: must keep at least one item
+        if (count($deleteItemIds) >= $workOrder->items->count()) {
+            return back()->withInput()->withErrors(['wo_items' => 'At least one labour item must remain on the work order.']);
+        }
+
+        // Validate item qtys (only for items not being deleted)
         $maxQtys = $this->maxQtys($workOrder);
         foreach ($workOrder->items as $item) {
+            if (in_array($item->id, $deleteItemIds)) continue;
             $newQty = (float) ($request->input("wo_items.{$item->id}.quantity") ?? $item->quantity);
             $max    = $maxQtys[$item->id] ?? PHP_INT_MAX;
             if ($newQty > $max) {
@@ -377,7 +392,7 @@ class WorkOrderController extends Controller
         $wasCancelled   = $workOrder->status === 'cancelled';
         $beingCancelled = $data['status'] === 'cancelled';
 
-        DB::transaction(function () use ($workOrder, $data, $request) {
+        DB::transaction(function () use ($workOrder, $data, $request, $deleteItemIds) {
             $workOrder->update([
                 'installer_id'   => $data['installer_id'] ?? null,
                 'scheduled_date' => $data['scheduled_date'] ?? null,
@@ -387,6 +402,13 @@ class WorkOrderController extends Controller
             ]);
 
             foreach ($workOrder->items as $item) {
+                // Delete items flagged for removal (frees up qty for other WOs)
+                if (in_array($item->id, $deleteItemIds)) {
+                    $item->relatedMaterials()->delete();
+                    $item->delete();
+                    continue;
+                }
+
                 $newQty    = $request->input("wo_items.{$item->id}.quantity");
                 $newCost   = $request->input("wo_items.{$item->id}.cost_price");
                 $newNotes  = $request->input("wo_items.{$item->id}.wo_notes");
