@@ -339,6 +339,43 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
 
             $saleRoomId = $room->id;
 
+            // ── Snapshot WO links before delete so we can re-link after recreate ──
+            $oldLabourItems = \App\Models\SaleItem::where('sale_id', $sale->id)
+                ->where('sale_room_id', $saleRoomId)
+                ->where('item_type', 'labour')
+                ->get(['id', 'labour_type', 'description']);
+
+            // WO item IDs keyed by old sale_item_id (captured before nullOnDelete fires)
+            $labourWoItemIds = [];
+            if ($oldLabourItems->isNotEmpty()) {
+                \App\Models\WorkOrderItem::whereIn('sale_item_id', $oldLabourItems->pluck('id'))
+                    ->get(['id', 'sale_item_id'])
+                    ->each(function ($woi) use (&$labourWoItemIds) {
+                        $labourWoItemIds[$woi->sale_item_id][] = $woi->id;
+                    });
+            }
+
+            // Material link snapshots before cascade delete
+            $oldMaterialItems = \App\Models\SaleItem::where('sale_id', $sale->id)
+                ->where('sale_room_id', $saleRoomId)
+                ->where('item_type', 'material')
+                ->get(['id', 'product_type', 'manufacturer', 'style', 'color_item_number']);
+
+            $matLinkSnapshots = [];
+            if ($oldMaterialItems->isNotEmpty()) {
+                $matSigMap = $oldMaterialItems->keyBy('id')->map(
+                    fn($m) => implode('|', [$m->product_type, $m->manufacturer, $m->style, $m->color_item_number])
+                );
+                \App\Models\WorkOrderItemMaterial::whereIn('sale_item_id', $oldMaterialItems->pluck('id'))
+                    ->get(['work_order_item_id', 'sale_item_id'])
+                    ->each(function ($link) use (&$matLinkSnapshots, $matSigMap) {
+                        $matLinkSnapshots[] = [
+                            'work_order_item_id' => $link->work_order_item_id,
+                            'signature'          => $matSigMap[$link->sale_item_id] ?? null,
+                        ];
+                    });
+            }
+
             // Replace items for this room
             \App\Models\SaleItem::where('sale_id', $sale->id)
                 ->where('sale_room_id', $saleRoomId)
@@ -418,6 +455,67 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
 
                     'notes'        => $item['notes'] ?? null,
                 ]);
+            }
+
+            // ── Re-link WO items to newly recreated sale items ──────────────────
+            // Labour: restore sale_item_id on work_order_items
+            if (!empty($labourWoItemIds)) {
+                $newLabourItems = \App\Models\SaleItem::where('sale_id', $sale->id)
+                    ->where('sale_room_id', $saleRoomId)
+                    ->where('item_type', 'labour')
+                    ->get(['id', 'labour_type', 'description']);
+
+                $newLabourByKey = $newLabourItems->keyBy(fn($i) => $i->labour_type . '|' . $i->description);
+
+                foreach ($oldLabourItems as $old) {
+                    $key      = $old->labour_type . '|' . $old->description;
+                    $woItemIds = $labourWoItemIds[$old->id] ?? [];
+                    if (empty($woItemIds) || !isset($newLabourByKey[$key])) continue;
+                    \App\Models\WorkOrderItem::whereIn('id', $woItemIds)
+                        ->update(['sale_item_id' => $newLabourByKey[$key]->id]);
+                }
+            }
+
+            // Materials: recreate work_order_item_materials that were cascade-deleted
+            if (!empty($matLinkSnapshots)) {
+                $newMaterialItems = \App\Models\SaleItem::where('sale_id', $sale->id)
+                    ->where('sale_room_id', $saleRoomId)
+                    ->where('item_type', 'material')
+                    ->get(['id', 'product_type', 'manufacturer', 'style', 'color_item_number']);
+
+                $newMatBySignature = $newMaterialItems->keyBy(
+                    fn($m) => implode('|', [$m->product_type, $m->manufacturer, $m->style, $m->color_item_number])
+                );
+
+                foreach ($matLinkSnapshots as $snap) {
+                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    \App\Models\WorkOrderItemMaterial::create([
+                        'work_order_item_id' => $snap['work_order_item_id'],
+                        'sale_item_id'       => $newMatBySignature[$snap['signature']]->id,
+                    ]);
+                }
+            }
+        }
+
+        // ── Retroactive fix: re-link WO items that were nulled by previous saves ─
+        $nullWoItems = \App\Models\WorkOrderItem::whereNull('sale_item_id')
+            ->whereHas('workOrder', fn($q) => $q->where('sale_id', $sale->id)->whereNull('deleted_at'))
+            ->get(['id', 'item_name']);
+
+        if ($nullWoItems->isNotEmpty()) {
+            $allLabour = \App\Models\SaleItem::where('sale_id', $sale->id)
+                ->where('item_type', 'labour')
+                ->get(['id', 'labour_type', 'description']);
+
+            $labourByName = $allLabour->keyBy(
+                fn($i) => implode(' — ', array_filter([$i->labour_type, $i->description]))
+            );
+
+            foreach ($nullWoItems as $woItem) {
+                $match = $labourByName[$woItem->item_name] ?? null;
+                if ($match) {
+                    $woItem->update(['sale_item_id' => $match->id]);
+                }
             }
         }
     });
