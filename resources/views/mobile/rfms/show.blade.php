@@ -10,8 +10,10 @@
         ];
         $statusColor = $statusColors[$rfm->status] ?? 'bg-gray-100 text-gray-800';
 
+        $hasAddr = $rfm->site_address || $rfm->site_address2 || $rfm->site_city || $rfm->site_postal_code;
         $fullAddress = collect([
             $rfm->site_address,
+            $rfm->site_address2,
             $rfm->site_city,
             $rfm->site_postal_code,
         ])->filter()->implode(', ');
@@ -103,7 +105,7 @@
             </div>
         @endif
 
-        @if($fullAddress)
+        @if($hasAddr)
             <div class="flex items-start gap-3">
                 <svg class="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -111,7 +113,13 @@
                 </svg>
                 <a href="https://maps.google.com/?q={{ urlencode($fullAddress) }}"
                    target="_blank"
-                   class="text-sm text-blue-600 dark:text-blue-400 underline">{{ $fullAddress }}</a>
+                   class="text-sm text-blue-600 dark:text-blue-400 underline">
+                    @if($rfm->site_address)<div>{{ $rfm->site_address }}</div>@endif
+                    @if($rfm->site_address2)<div>{{ $rfm->site_address2 }}</div>@endif
+                    @if($rfm->site_city || $rfm->site_province || $rfm->site_postal_code)
+                        <div>{{ implode(', ', array_filter([$rfm->site_city, $rfm->site_province, $rfm->site_postal_code])) }}</div>
+                    @endif
+                </a>
             </div>
         @endif
     </div>
