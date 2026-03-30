@@ -43,6 +43,8 @@
                         onclick="openPhoto(this)">
                     <img src="{{ $doc->url }}"
                          alt="{{ $doc->original_name }}"
+                         loading="lazy"
+                         decoding="async"
                          class="h-full w-full object-cover">
                     <div class="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1">
                         <p class="text-[10px] text-white truncate">{{ $doc->creator?->name ?? 'Unknown' }}</p>

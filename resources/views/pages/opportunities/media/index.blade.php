@@ -248,6 +248,8 @@
                         @else
                             <img src="{{ $url }}"
                                  alt="{{ $doc->original_name }}"
+                                 loading="lazy"
+                                 decoding="async"
                                  class="h-full w-full object-cover group-hover:scale-105 transition-transform">
                         @endif
 

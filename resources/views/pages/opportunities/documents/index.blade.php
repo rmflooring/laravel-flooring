@@ -342,6 +342,8 @@
                                         @if($isImage)
                                             <img src="{{ $docUrl }}"
                                                  alt="{{ $doc->original_name }}"
+                                                 loading="lazy"
+                                                 decoding="async"
                                                  class="h-10 w-10 rounded object-cover shrink-0 cursor-pointer"
                                                  @if(!$doc->trashed()) onclick="openDocImageViewer('{{ $docUrl }}', '{{ addslashes($doc->original_name) }}')" @endif>
                                         @elseif($isVideo)
