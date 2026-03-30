@@ -41,6 +41,11 @@ class Sale extends Model
         });
     }
 
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(SalePayment::class)->orderBy('payment_date');
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class)->orderByDesc('created_at');

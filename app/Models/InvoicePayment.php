@@ -27,6 +27,11 @@ class InvoicePayment extends Model
         return $this->belongsTo(Invoice::class);
     }
 
+    public function salePayment(): BelongsTo
+    {
+        return $this->belongsTo(SalePayment::class);
+    }
+
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');

@@ -202,16 +202,26 @@
                     @foreach($invoice->payments as $payment)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                             <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $payment->payment_date->format('M j, Y') }}</td>
-                            <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $payment->method_label }}</td>
+                            <td class="px-5 py-3 text-gray-700 dark:text-gray-300">
+                                {{ $payment->method_label }}
+                                @if($payment->sale_payment_id)
+                                    <span class="ml-1.5 inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Deposit</span>
+                                @endif
+                            </td>
                             <td class="px-5 py-3 text-gray-500">{{ $payment->reference_number ?: '—' }}</td>
                             <td class="px-5 py-3 text-gray-500">{{ $payment->notes ?: '—' }}</td>
                             <td class="px-5 py-3 text-right font-semibold text-green-700 dark:text-green-400">${{ number_format((float)$payment->amount, 2) }}</td>
                             <td class="px-5 py-3 text-right">
-                                <form action="{{ route('pages.sales.invoices.payments.destroy', [$sale, $invoice, $payment]) }}" method="POST"
-                                    onsubmit="return confirm('Remove this payment?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="text-xs text-red-500 hover:underline">Remove</button>
-                                </form>
+                                @if(! $payment->sale_payment_id)
+                                    <form action="{{ route('pages.sales.invoices.payments.destroy', [$sale, $invoice, $payment]) }}" method="POST"
+                                        onsubmit="return confirm('Remove this payment?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-xs text-red-500 hover:underline">Remove</button>
+                                    </form>
+                                @else
+                                    <a href="{{ route('pages.sales.show', $sale) }}#deposits"
+                                       class="text-xs text-gray-400 hover:underline" title="Manage from the sale page">From sale</a>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

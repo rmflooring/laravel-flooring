@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\Invoice;
+use App\Models\InvoicePayment;
 use App\Models\InvoiceRoom;
 use App\Models\InvoiceItem;
 use App\Models\Sale;
+use App\Models\SalePayment;
 use App\Models\SaleRoom;
 use Illuminate\Support\Collection;
 
@@ -99,7 +101,48 @@ class InvoiceService
 
         $this->syncSaleInvoiceStatus($sale);
 
+        // Apply any unallocated sale deposits to this invoice
+        $this->applyDepositsToInvoice($invoice, $sale);
+
         return $invoice->fresh();
+    }
+
+    /**
+     * Apply any unallocated sale deposits to the given invoice as invoice payments.
+     * A deposit is "unallocated" if it has no invoice_payment linked to a non-voided invoice.
+     */
+    public function applyDepositsToInvoice(Invoice $invoice, Sale $sale): void
+    {
+        // IDs of deposits already applied to a non-voided invoice for this sale
+        $appliedIds = \DB::table('invoice_payments')
+            ->join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
+            ->where('invoices.sale_id', $sale->id)
+            ->whereNotIn('invoices.status', ['voided'])
+            ->whereNotNull('invoice_payments.sale_payment_id')
+            ->pluck('invoice_payments.sale_payment_id')
+            ->toArray();
+
+        $pendingDeposits = SalePayment::where('sale_id', $sale->id)
+            ->when(! empty($appliedIds), fn ($q) => $q->whereNotIn('id', $appliedIds))
+            ->orderBy('payment_date')
+            ->get();
+
+        foreach ($pendingDeposits as $deposit) {
+            InvoicePayment::create([
+                'invoice_id'       => $invoice->id,
+                'sale_payment_id'  => $deposit->id,
+                'amount'           => $deposit->amount,
+                'payment_date'     => $deposit->payment_date,
+                'payment_method'   => $deposit->payment_method,
+                'reference_number' => $deposit->reference_number,
+                'notes'            => $deposit->notes ?: 'Deposit',
+                'recorded_by'      => $deposit->recorded_by,
+            ]);
+        }
+
+        if ($pendingDeposits->isNotEmpty()) {
+            $this->recalculateAfterPayment($invoice);
+        }
     }
 
     /**

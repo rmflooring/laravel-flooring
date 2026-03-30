@@ -759,6 +759,15 @@ Route::prefix('pages')
 			->name('sales.invoices.payments.destroy')
 			->middleware('role_or_permission:admin|edit invoices');
 
+		// Sale Deposits
+		Route::post('sales/{sale}/deposits', [\App\Http\Controllers\Pages\SaleController::class, 'storeDeposit'])
+			->name('sales.deposits.store')
+			->middleware('role_or_permission:admin|edit estimates');
+
+		Route::delete('sales/{sale}/deposits/{deposit}', [\App\Http\Controllers\Pages\SaleController::class, 'destroyDeposit'])
+			->name('sales.deposits.destroy')
+			->middleware('role_or_permission:admin|edit estimates');
+
 		// Inventory Records
 		Route::get('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'index'])
 			->middleware('role_or_permission:admin|view purchase orders')

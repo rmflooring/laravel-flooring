@@ -127,6 +127,7 @@ class SaleController extends Controller
 			'salesperson1Employee',
 			'opportunity.projectManager',
 			'opportunity.parentCustomer.contacts',
+			'opportunity.jobSiteCustomer',
 			'rooms' => fn($q) => $q->orderBy('sort_order'),
 			'rooms.items' => fn($q) => $q->where('is_removed', false)->orderBy('sort_order'),
 			'purchaseOrders.vendor',
@@ -135,6 +136,7 @@ class SaleController extends Controller
 			'workOrders.items',
 			'changeOrders',
 			'invoices',
+			'deposits.payerCustomer',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		$itemPoStatusMap  = $this->buildItemPoStatusMap($sale);
@@ -162,9 +164,23 @@ class SaleController extends Controller
                 ->get();
         }
 
+        // Build payer options for the deposit modal (deduplicate if parent == job site)
+        $parentCustomer  = $sale->opportunity?->parentCustomer;
+        $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+        $depositPayerOptions = collect();
+        if ($parentCustomer) {
+            $depositPayerOptions->push(['type' => 'parent', 'customer' => $parentCustomer]);
+        }
+        if ($jobSiteCustomer && $jobSiteCustomer->id !== $parentCustomer?->id) {
+            $depositPayerOptions->push(['type' => 'job_site', 'customer' => $jobSiteCustomer]);
+        }
+
+        $depositPaymentMethods = \App\Models\SalePayment::PAYMENT_METHODS;
+
 		return view('pages.sales.show', compact(
             'sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs', 'customerContacts',
+            'depositPayerOptions', 'depositPaymentMethods',
         ));
 	}
 
@@ -585,6 +601,45 @@ public function showProfits(Sale $sale)
         $sale->update(['status' => 'sent']);
 
         return back()->with('success', 'Sale emailed to ' . $request->input('to') . ' and status updated to Sent.');
+    }
+
+    // -------------------------------------------------------------------------
+    // Deposits
+    // -------------------------------------------------------------------------
+
+    public function storeDeposit(Request $request, Sale $sale)
+    {
+        $data = $request->validate([
+            'payer_type'       => ['nullable', 'in:parent,job_site'],
+            'payer_customer_id'=> ['nullable', 'exists:customers,id'],
+            'amount'           => ['required', 'numeric', 'min:0.01'],
+            'payment_date'     => ['required', 'date'],
+            'payment_method'   => ['required', 'in:' . implode(',', array_keys(\App\Models\SalePayment::PAYMENT_METHODS))],
+            'reference_number' => ['nullable', 'string', 'max:100'],
+            'notes'            => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $data['sale_id']     = $sale->id;
+        $data['recorded_by'] = auth()->id();
+
+        \App\Models\SalePayment::create($data);
+
+        return back()->with('success', 'Deposit of $' . number_format($data['amount'], 2) . ' recorded.');
+    }
+
+    public function destroyDeposit(Sale $sale, \App\Models\SalePayment $deposit)
+    {
+        if ($deposit->sale_id !== $sale->id) {
+            abort(403);
+        }
+
+        if ($deposit->is_applied) {
+            return back()->with('error', 'This deposit has been applied to an invoice and cannot be removed. Void the invoice first.');
+        }
+
+        $deposit->delete();
+
+        return back()->with('success', 'Deposit removed.');
     }
 
     private function resolveEmailTemplate(Sale $sale): array

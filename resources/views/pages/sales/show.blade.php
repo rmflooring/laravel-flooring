@@ -784,6 +784,93 @@
             </div>
             @endcan
 
+            {{-- Deposits Section --}}
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Deposits</h3>
+                        @php $totalDeposits = $sale->deposits->sum('amount'); @endphp
+                        @if($totalDeposits > 0)
+                            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                ${{ number_format($totalDeposits, 2) }} received
+                            </span>
+                        @endif
+                    </div>
+                    @can('edit estimates')
+                        <button type="button" onclick="document.getElementById('add-deposit-modal').classList.remove('hidden')"
+                            class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">+ Add Deposit</button>
+                    @endcan
+                </div>
+
+                @if($sale->deposits->isEmpty())
+                    <div class="px-6 py-6 text-sm text-gray-400 dark:text-gray-500">No deposits recorded yet.</div>
+                @else
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs uppercase text-gray-500 bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <th class="px-5 py-2 text-left">Date</th>
+                                <th class="px-5 py-2 text-left">Payer</th>
+                                <th class="px-5 py-2 text-left">Method</th>
+                                <th class="px-5 py-2 text-left">Reference</th>
+                                <th class="px-5 py-2 text-left">Notes</th>
+                                <th class="px-5 py-2 text-left">Status</th>
+                                <th class="px-5 py-2 text-right">Amount</th>
+                                <th class="px-5 py-2 w-16"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($sale->deposits as $deposit)
+                                @php $appliedInvoice = $deposit->applied_invoice; @endphp
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $deposit->payment_date->format('M j, Y') }}</td>
+                                    <td class="px-5 py-3 text-gray-700 dark:text-gray-300">
+                                        {{ $deposit->payerCustomer?->company_name ?: $deposit->payerCustomer?->customer_name ?: '—' }}
+                                        @if($deposit->payer_type)
+                                            <span class="ml-1 text-xs text-gray-400">({{ $deposit->payer_label }})</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $deposit->method_label }}</td>
+                                    <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $deposit->reference_number ?: '—' }}</td>
+                                    <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $deposit->notes ?: '—' }}</td>
+                                    <td class="px-5 py-3">
+                                        @if($appliedInvoice)
+                                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                                Applied to
+                                                <a href="{{ route('pages.sales.invoices.show', [$sale, $appliedInvoice]) }}"
+                                                   class="underline">{{ $appliedInvoice->invoice_number }}</a>
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300">
+                                                Pending
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-5 py-3 text-right font-semibold text-green-700 dark:text-green-400">${{ number_format((float)$deposit->amount, 2) }}</td>
+                                    <td class="px-5 py-3 text-right">
+                                        @if(! $appliedInvoice)
+                                            @can('edit estimates')
+                                                <form action="{{ route('pages.sales.deposits.destroy', [$sale, $deposit]) }}" method="POST"
+                                                    onsubmit="return confirm('Remove this deposit?')">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="text-xs text-red-500 hover:underline">Remove</button>
+                                                </form>
+                                            @endcan
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-gray-50 dark:bg-gray-700 text-sm font-semibold">
+                                <td colspan="6" class="px-5 py-3 text-right text-gray-700 dark:text-gray-300">Total Deposits</td>
+                                <td class="px-5 py-3 text-right text-green-700 dark:text-green-400">${{ number_format($totalDeposits, 2) }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                @endif
+            </div>
+
             {{-- Archived Records (admin only) --}}
             @role('admin')
             @if ($trashedWorkOrders->isNotEmpty() || $trashedPurchaseOrders->isNotEmpty() || $draftRfcs->isNotEmpty())
@@ -1119,5 +1206,111 @@
         </form>
     </div>
 </div>
+
+{{-- Add Deposit Modal --}}
+<div id="add-deposit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Record Deposit</h2>
+            <button type="button" onclick="document.getElementById('add-deposit-modal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <form action="{{ route('pages.sales.deposits.store', $sale) }}" method="POST">
+            @csrf
+            <div class="px-6 py-5 space-y-4">
+
+                {{-- Payer --}}
+                @if($depositPayerOptions->isNotEmpty())
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid by</label>
+                        <select name="payer_type" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            onchange="updatePayerCustomer(this)">
+                            <option value="">— Select payer —</option>
+                            @foreach($depositPayerOptions as $opt)
+                                <option value="{{ $opt['type'] }}" data-customer-id="{{ $opt['customer']->id }}">
+                                    {{ $opt['customer']->company_name ?: $opt['customer']->customer_name }}
+                                    ({{ $opt['type'] === 'parent' ? 'Parent Customer' : 'Job Site' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="payer_customer_id" id="payer_customer_id_input">
+                    </div>
+                @endif
+
+                {{-- Amount + Date --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                            <input type="number" name="amount" step="0.01" min="0.01" required
+                                class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-7 pr-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                placeholder="0.00">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date <span class="text-red-500">*</span></label>
+                        <input type="date" name="payment_date" required value="{{ date('Y-m-d') }}"
+                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </div>
+
+                {{-- Method + Reference --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Method <span class="text-red-500">*</span></label>
+                        <select name="payment_method" required
+                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            @foreach($depositPaymentMethods as $key => $label)
+                                <option value="{{ $key }}" {{ $key === 'e-transfer' ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reference #</label>
+                        <input type="text" name="reference_number" maxlength="100"
+                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            placeholder="Cheque #, transaction ID…">
+                    </div>
+                </div>
+
+                {{-- Notes --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                    <input type="text" name="notes" maxlength="500"
+                        class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Optional note…">
+                </div>
+
+                <p class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2">
+                    This deposit will automatically be applied as a payment when the next invoice is created for this sale.
+                </p>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                <button type="button" onclick="document.getElementById('add-deposit-modal').classList.add('hidden')"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-5 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">
+                    Record Deposit
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function updatePayerCustomer(select) {
+    const opt = select.options[select.selectedIndex];
+    document.getElementById('payer_customer_id_input').value = opt.dataset.customerId || '';
+}
+</script>
 
 </x-admin-layout>
