@@ -68,7 +68,9 @@
         'cancelled' => 'status-cancelled',
     ][$rfm->status] ?? 'status-pending';
 
-    $address = implode(', ', array_filter([$rfm->site_address, $rfm->site_city, $rfm->site_postal_code]));
+    $addressLines = array_filter([$rfm->site_address, $rfm->site_address2]);
+    $cityLine     = implode(', ', array_filter([$rfm->site_city, $rfm->site_province, $rfm->site_postal_code]));
+    $address      = implode(', ', array_filter([$rfm->site_address, $rfm->site_address2, $rfm->site_city, $rfm->site_province, $rfm->site_postal_code]));
 @endphp
 
 {{-- ── Header ──────────────────────────────────────────────────────── --}}
@@ -142,7 +144,16 @@
 
         <div class="info-block">
             <div class="info-label">Site Address</div>
-            <div class="info-value">{{ $address ?: '—' }}</div>
+            @if($address)
+                @foreach($addressLines as $line)
+                    <div class="info-value">{{ $line }}</div>
+                @endforeach
+                @if($cityLine)
+                    <div class="info-value">{{ $cityLine }}</div>
+                @endif
+            @else
+                <div class="info-value">—</div>
+            @endif
         </div>
 
         @if($jobSite)

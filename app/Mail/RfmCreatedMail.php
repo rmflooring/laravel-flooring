@@ -46,7 +46,7 @@ class RfmCreatedMail
                         organizerEmail: $fromAddress,
                         organizerName:  $fromName,
                         attendees:      [['email' => $estimator->email, 'name' => $estimatorName]],
-                        location:       implode(', ', array_filter([$this->rfm->site_address, $this->rfm->site_city, $this->rfm->site_postal_code])),
+                        location:       implode(', ', array_filter([$this->rfm->site_address, $this->rfm->site_address2, $this->rfm->site_city, $this->rfm->site_province, $this->rfm->site_postal_code])),
                     );
                 }
                 $sent = $mailer->send(
@@ -128,7 +128,9 @@ class RfmCreatedMail
 
         $address = implode(', ', array_filter([
             $rfm->site_address,
+            $rfm->site_address2,
             $rfm->site_city,
+            $rfm->site_province,
             $rfm->site_postal_code,
         ])) ?: '—';
 
@@ -186,7 +188,9 @@ class RfmCreatedMail
 
         $address = implode(', ', array_filter([
             $rfm->site_address,
+            $rfm->site_address2,
             $rfm->site_city,
+            $rfm->site_province,
             $rfm->site_postal_code,
         ])) ?: '—';
 

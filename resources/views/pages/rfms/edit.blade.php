@@ -156,7 +156,19 @@
                                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="site_address2" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Address 2 <span class="text-gray-400 font-normal">(Suite, Unit, etc.)</span>
+                                    </label>
+                                    <input type="text" id="site_address2" name="site_address2"
+                                           value="{{ old('site_address2', $rfm->site_address2) }}"
+                                           placeholder="Suite 100"
+                                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_address2') border-red-500 @enderror">
+                                    @error('site_address2')
+                                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="grid grid-cols-3 gap-3">
                                     <div>
                                         <label for="site_city" class="block text-sm font-medium text-gray-700 mb-1">City</label>
                                         <input type="text" id="site_city" name="site_city"
@@ -164,6 +176,16 @@
                                                placeholder="City"
                                                class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_city') border-red-500 @enderror">
                                         @error('site_city')
+                                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label for="site_province" class="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                                        <input type="text" id="site_province" name="site_province"
+                                               value="{{ old('site_province', $rfm->site_province) }}"
+                                               placeholder="BC"
+                                               class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm @error('site_province') border-red-500 @enderror">
+                                        @error('site_province')
                                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                         @enderror
                                     </div>
@@ -412,13 +434,15 @@
             estimator_id:    '{{ $rfm->estimator_id }}',
             scheduled_at:    '{{ $rfm->scheduled_at->format('Y-m-d\TH:i') }}',
             site_address:    @json($rfm->site_address ?? ''),
+            site_address2:   @json($rfm->site_address2 ?? ''),
             site_city:       @json($rfm->site_city ?? ''),
+            site_province:   @json($rfm->site_province ?? ''),
             site_postal_code:@json($rfm->site_postal_code ?? ''),
         };
 
         const estimatorEmails    = @json($estimatorEmails);
         const estimatorPhones    = @json($estimatorPhones);
-        const watchedFields      = ['estimator_id', 'scheduled_at', 'site_address', 'site_city', 'site_postal_code'];
+        const watchedFields      = ['estimator_id', 'scheduled_at', 'site_address', 'site_address2', 'site_city', 'site_province', 'site_postal_code'];
         const notifyEstimatorBox = document.getElementById('notify_estimator');
         const estimatorHint      = document.getElementById('estimator-notify-hint');
         const estimatorPhoneHint = document.getElementById('estimator-phone-hint');

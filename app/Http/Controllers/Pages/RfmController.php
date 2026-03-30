@@ -81,7 +81,9 @@ class RfmController extends Controller
             'flooring_type.*'     => ['string', 'in:' . implode(',', Rfm::FLOORING_TYPES)],
             'scheduled_at'        => ['required', 'date'],
             'site_address'        => ['nullable', 'string', 'max:500'],
+            'site_address2'       => ['nullable', 'string', 'max:500'],
             'site_city'           => ['nullable', 'string', 'max:255'],
+            'site_province'       => ['nullable', 'string', 'max:100'],
             'site_postal_code'    => ['nullable', 'string', 'max:20'],
             'special_instructions'=> ['nullable', 'string'],
         ]);
@@ -99,7 +101,9 @@ class RfmController extends Controller
             'flooring_type'       => $data['flooring_type'],
             'scheduled_at'        => $data['scheduled_at'],
             'site_address'        => $data['site_address'] ?? null,
+            'site_address2'       => $data['site_address2'] ?? null,
             'site_city'           => $data['site_city'] ?? null,
+            'site_province'       => $data['site_province'] ?? null,
             'site_postal_code'    => $data['site_postal_code'] ?? null,
             'special_instructions'=> $data['special_instructions'] ?? null,
             'status'              => 'pending',
@@ -136,7 +140,7 @@ class RfmController extends Controller
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
                 $fullAddress   = implode(', ', array_filter([
-                    $rfm->site_address, $rfm->site_city, $rfm->site_postal_code,
+                    $rfm->site_address, $rfm->site_address2, $rfm->site_city, $rfm->site_province, $rfm->site_postal_code,
                 ]));
                 $scheduled     = \Carbon\Carbon::parse($rfm->scheduled_at);
 
@@ -240,7 +244,9 @@ class RfmController extends Controller
             'flooring_type.*'     => ['string', 'in:' . implode(',', Rfm::FLOORING_TYPES)],
             'scheduled_at'        => ['required', 'date'],
             'site_address'        => ['nullable', 'string', 'max:500'],
+            'site_address2'       => ['nullable', 'string', 'max:500'],
             'site_city'           => ['nullable', 'string', 'max:255'],
+            'site_province'       => ['nullable', 'string', 'max:100'],
             'site_postal_code'    => ['nullable', 'string', 'max:20'],
             'special_instructions'=> ['nullable', 'string'],
         ]);
@@ -256,6 +262,7 @@ class RfmController extends Controller
         $oldAddress    = $rfm->site_address ?? '';
         $oldCity       = $rfm->site_city ?? '';
         $oldPostal     = $rfm->site_postal_code ?? '';
+        $oldProvince   = $rfm->site_province ?? '';
 
         $rfm->update($data);
 
@@ -292,6 +299,11 @@ class RfmController extends Controller
             $changes['City'] = ['from' => $oldCity ?: '—', 'to' => $newCity ?: '—'];
         }
 
+        $newProvince = $data['site_province'] ?? '';
+        if ($oldProvince !== $newProvince) {
+            $changes['Province'] = ['from' => $oldProvince ?: '—', 'to' => $newProvince ?: '—'];
+        }
+
         $newPostal = $data['site_postal_code'] ?? '';
         if ($oldPostal !== $newPostal) {
             $changes['Postal Code'] = ['from' => $oldPostal ?: '—', 'to' => $newPostal ?: '—'];
@@ -325,7 +337,7 @@ class RfmController extends Controller
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
                 $fullAddress   = implode(', ', array_filter([
-                    $rfm->site_address, $rfm->site_city, $rfm->site_postal_code,
+                    $rfm->site_address, $rfm->site_address2, $rfm->site_city, $rfm->site_province, $rfm->site_postal_code,
                 ]));
                 $scheduled     = \Carbon\Carbon::parse($rfm->scheduled_at);
 
@@ -440,7 +452,9 @@ class RfmController extends Controller
         $flooringLabel = implode(' / ', (array) $rfm->flooring_type);
         $fullAddress   = implode(', ', array_filter([
             $rfm->site_address,
+            $rfm->site_address2,
             $rfm->site_city,
+            $rfm->site_province,
             $rfm->site_postal_code,
         ]));
         $pmName = $opportunity->projectManager?->name ?? '';

@@ -128,8 +128,11 @@
                                         @if($rfm->site_address)
                                             <div>{{ $rfm->site_address }}</div>
                                         @endif
-                                        @if($rfm->site_city || $rfm->site_postal_code)
-                                            <div>{{ implode(', ', array_filter([$rfm->site_city, $rfm->site_postal_code])) }}</div>
+                                        @if($rfm->site_address2)
+                                            <div>{{ $rfm->site_address2 }}</div>
+                                        @endif
+                                        @if($rfm->site_city || $rfm->site_province || $rfm->site_postal_code)
+                                            <div>{{ implode(', ', array_filter([$rfm->site_city, $rfm->site_province, $rfm->site_postal_code])) }}</div>
                                         @endif
                                     </div>
                                 @endif
