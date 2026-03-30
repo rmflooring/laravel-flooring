@@ -150,15 +150,15 @@
         <label class="inline-flex items-center gap-2 text-sm font-medium text-blue-800 cursor-pointer">
             <input type="checkbox"
                    @change="toggleAll($event.target.checked)"
-                   :checked="selected.length > 0 && selected.length === totalTiles"
-                   :indeterminate="selected.length > 0 && selected.length < totalTiles"
+                   :checked="selectedCount > 0 && selectedCount === totalTiles"
+                   :indeterminate="selectedCount > 0 && selectedCount < totalTiles"
                    class="w-4 h-4 text-blue-600 border-gray-300 rounded">
             Select All
         </label>
-        <span class="text-sm text-blue-700" x-text="selected.length + ' selected'"></span>
+        <span class="text-sm text-blue-700" x-text="selectedCount + ' selected'"></span>
     </div>
 
-    <div class="flex items-center gap-2" x-show="selected.length > 0">
+    <div class="flex items-center gap-2" x-show="selectedCount > 0">
         {{-- Soft delete (archive) --}}
         <form method="POST"
               action="{{ route('pages.opportunities.documents.bulkDestroy', $opportunity) }}"
@@ -166,7 +166,7 @@
             @csrf
             @method('DELETE')
             <input type="hidden" name="redirect_to" value="media">
-            <template x-for="id in selected" :key="id">
+            <template x-for="id in getSelectedIds()" :key="id">
                 <input type="hidden" name="ids[]" :value="id">
             </template>
             <button type="submit"
@@ -186,7 +186,7 @@
             @csrf
             @method('DELETE')
             <input type="hidden" name="redirect_to" value="media">
-            <template x-for="id in selected" :key="id">
+            <template x-for="id in getSelectedIds()" :key="id">
                 <input type="hidden" name="ids[]" :value="id">
             </template>
             <button type="submit"
@@ -223,11 +223,11 @@
                                value="{{ $doc->id }}"
                                class="media-item-checkbox w-5 h-5 rounded border-2 border-white text-blue-600 shadow cursor-pointer"
                                @change="toggleItem($event.target.value, $event.target.checked)"
-                               :checked="selected.includes('{{ $doc->id }}')">
+                               :checked="isSelected('{{ $doc->id }}')">
                     </div>
 
                     {{-- Selected overlay --}}
-                    <div x-show="selectMode && selected.includes('{{ $doc->id }}')"
+                    <div x-show="selectMode && isSelected('{{ $doc->id }}')"
                          class="absolute inset-0 rounded-lg ring-2 ring-blue-500 bg-blue-500/10 z-10 pointer-events-none"></div>
 
                     <button type="button"
@@ -362,49 +362,64 @@
 function mediaGallery() {
     return {
         selectMode: false,
-        selected: [],
+        selectedMap: {},   // { "id": true } — O(1) lookup instead of array.includes()
+        selectedCount: 0,
         totalTiles: 0,
 
         init() {
             this.totalTiles = document.querySelectorAll('.media-item-checkbox').length;
         },
 
+        isSelected(id) {
+            return !!this.selectedMap[String(id)];
+        },
+
+        getSelectedIds() {
+            return Object.keys(this.selectedMap);
+        },
+
         toggleSelectMode() {
             this.selectMode = !this.selectMode;
-            if (!this.selectMode) this.selected = [];
+            if (!this.selectMode) {
+                this.selectedMap = {};
+                this.selectedCount = 0;
+            }
         },
 
         toggleItem(id, checked) {
             id = String(id);
-            if (checked === undefined) {
-                // toggle
-                checked = !this.selected.includes(id);
-            }
+            if (checked === undefined) checked = !this.selectedMap[id];
+            const map = { ...this.selectedMap };
             if (checked) {
-                if (!this.selected.includes(id)) this.selected.push(id);
+                map[id] = true;
             } else {
-                this.selected = this.selected.filter(s => s !== id);
+                delete map[id];
             }
+            this.selectedMap = map;
+            this.selectedCount = Object.keys(map).length;
         },
 
         toggleAll(checked) {
             if (checked) {
-                this.selected = Array.from(document.querySelectorAll('.media-item-checkbox'))
-                    .map(cb => cb.value);
+                const map = {};
+                document.querySelectorAll('.media-item-checkbox').forEach(cb => { map[cb.value] = true; });
+                this.selectedMap = map;
+                this.selectedCount = Object.keys(map).length;
             } else {
-                this.selected = [];
+                this.selectedMap = {};
+                this.selectedCount = 0;
             }
         },
 
         submitBulk(form) {
-            if (this.selected.length === 0) return;
-            if (!confirm(`Archive ${this.selected.length} photo(s)? They can be restored from the Documents page.`)) return;
+            if (this.selectedCount === 0) return;
+            if (!confirm(`Archive ${this.selectedCount} photo(s)? They can be restored from the Documents page.`)) return;
             form.submit();
         },
 
         confirmForceDelete(form) {
-            if (this.selected.length === 0) return;
-            if (!confirm(`Permanently delete ${this.selected.length} photo(s)? This cannot be undone.`)) return;
+            if (this.selectedCount === 0) return;
+            if (!confirm(`Permanently delete ${this.selectedCount} photo(s)? This cannot be undone.`)) return;
             form.submit();
         },
     };
