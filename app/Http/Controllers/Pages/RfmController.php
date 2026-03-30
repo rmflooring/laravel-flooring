@@ -15,6 +15,7 @@ use App\Services\CalendarTemplateService;
 use App\Services\GraphCalendarService;
 use App\Services\SmsService;
 use App\Services\SmsTemplateService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -194,6 +195,21 @@ class RfmController extends Controller
         return view('pages.rfms.show', [
             'opportunity' => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
             'rfm'         => $rfm,
+        ]);
+    }
+
+    public function pdf(Opportunity $opportunity, Rfm $rfm)
+    {
+        abort_if($rfm->opportunity_id !== $opportunity->id, 404);
+
+        $rfm->load(['estimator', 'parentCustomer', 'jobSiteCustomer', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer', 'opportunity.projectManager']);
+
+        $pdf      = Pdf::loadView('pdf.rfm', compact('rfm'));
+        $filename = 'RFM-' . ($opportunity->job_no ? $opportunity->job_no . '-' : '') . $rfm->id . '.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
         ]);
     }
 

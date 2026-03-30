@@ -1160,6 +1160,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->middleware('role_or_permission:admin|view rfms')
                 ->name('opportunities.rfms.show');
 
+            Route::get('rfms/{rfm}/pdf', [RfmController::class, 'pdf'])
+                ->middleware('role_or_permission:admin|view rfms')
+                ->name('opportunities.rfms.pdf');
+
             Route::get('rfms/{rfm}/edit', [RfmController::class, 'edit'])
                 ->middleware('role_or_permission:admin|edit rfms')
                 ->name('opportunities.rfms.edit');
