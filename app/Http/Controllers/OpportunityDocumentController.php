@@ -7,6 +7,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Models\OpportunityDocumentLabel;
 use App\Models\Sale;
+use App\Services\DocumentStorageService;
 use App\Services\DocumentTemplateService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -148,7 +149,7 @@ public function index(Opportunity $opportunity, Request $request)
 
                 $fileDesc = $descriptions[$i] ?? $globalDesc;
 
-                $disk = 'public';
+                $disk = DocumentStorageService::disk();
                 $path = $file->store("opportunities/{$opportunity->id}", $disk);
 
                 \Log::info('[docs] stored file', [
@@ -402,12 +403,13 @@ public function index(Opportunity $opportunity, Request $request)
         $filename  = "doc_{$slug}_{$timestamp}.pdf";
         $path      = "opportunities/{$opportunity->id}/{$filename}";
 
-        Storage::disk('public')->put($path, $pdfContent);
+        $disk = DocumentStorageService::disk();
+        Storage::disk($disk)->put($path, $pdfContent);
 
         $doc = OpportunityDocument::create([
             'opportunity_id' => $opportunity->id,
             'template_id'    => $template->id,
-            'disk'           => 'public',
+            'disk'           => $disk,
             'path'           => $path,
             'original_name'  => $template->name . '.pdf',
             'stored_name'    => $filename,

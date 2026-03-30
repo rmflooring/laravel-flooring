@@ -167,6 +167,13 @@ Route::prefix('admin')
             Route::post('/settings/sms/test', [\App\Http\Controllers\Admin\SmsSettingsController::class, 'testSend'])
                 ->name('settings.sms.test');
 
+            Route::get('/settings/storage', [\App\Http\Controllers\Admin\StorageSettingsController::class, 'index'])
+                ->name('settings.storage');
+            Route::put('/settings/storage', [\App\Http\Controllers\Admin\StorageSettingsController::class, 'update'])
+                ->name('settings.storage.update');
+            Route::post('/settings/storage/test', [\App\Http\Controllers\Admin\StorageSettingsController::class, 'test'])
+                ->name('settings.storage.test');
+
             Route::get('/settings/sms-templates', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'index'])
                 ->name('settings.sms-templates.index');
             Route::post('/settings/sms-templates/{type}', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'save'])

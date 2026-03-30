@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Models\WorkOrder;
+use App\Services\DocumentStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -40,11 +41,12 @@ class WorkOrderController extends Controller
 
         foreach ($request->file('files', []) as $file) {
             $mime = $file->getMimeType() ?? '';
-            $path = $file->store("opportunities/{$opportunity->id}", 'public');
+            $disk = DocumentStorageService::disk();
+            $path = $file->store("opportunities/{$opportunity->id}", $disk);
 
             OpportunityDocument::create([
                 'opportunity_id' => $opportunity->id,
-                'disk'           => 'public',
+                'disk'           => $disk,
                 'path'           => $path,
                 'original_name'  => $file->getClientOriginalName(),
                 'stored_name'    => basename($path),
