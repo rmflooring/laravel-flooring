@@ -94,7 +94,7 @@
         </div>
 
         {{-- Settings form --}}
-        <form method="POST" action="{{ route('settings.storage.update') }}">
+        <form method="POST" action="{{ route('admin.settings.storage.update') }}">
             @csrf
             @method('PUT')
 
@@ -276,7 +276,7 @@
                 </button>
 
                 <span x-show="driver !== 'local'" x-cloak>
-                    <form method="POST" action="{{ route('settings.storage.test') }}" class="inline">
+                    <form method="POST" action="{{ route('admin.settings.storage.test') }}" class="inline">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
