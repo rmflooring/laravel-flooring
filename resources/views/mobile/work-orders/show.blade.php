@@ -232,12 +232,11 @@
     {{-- Add Photos card --}}
     @if($sale && $sale->opportunity_id)
     <div class="rounded-xl border border-emerald-200 bg-white dark:border-emerald-800 dark:bg-gray-800 shadow-sm overflow-hidden">
-        <form method="POST" action="{{ route('mobile.work-orders.upload-photos', $workOrder) }}"
-              enctype="multipart/form-data" id="photo-upload-form">
+        <form id="photo-upload-form" enctype="multipart/form-data">
             @csrf
 
-            {{-- Tap target --}}
-            <button type="button" onclick="document.getElementById('photo-file-input').click()"
+            <button type="button" id="photo-pick-btn"
+                    onclick="document.getElementById('photo-file-input').click()"
                     class="w-full flex items-center gap-4 px-5 py-4 active:scale-95 transition-transform text-left">
                 <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
                     <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -259,14 +258,32 @@
                    class="hidden"
                    onchange="handlePhotoSelection(this)">
 
-            {{-- Submit row — revealed after files selected --}}
+            {{-- Submit + progress area --}}
             <div id="photo-submit-area" style="display:none"
-                 class="border-t border-gray-100 dark:border-gray-700 px-5 py-3 flex items-center justify-between gap-3">
-                <span id="photo-count-label" class="text-sm text-gray-600 dark:text-gray-300"></span>
-                <button type="submit"
-                        class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-lg">
-                    Upload
-                </button>
+                 class="border-t border-gray-100 dark:border-gray-700 px-5 py-4 space-y-3">
+
+                {{-- Count + upload button row --}}
+                <div class="flex items-center justify-between gap-3">
+                    <span id="photo-count-label" class="text-sm text-gray-600 dark:text-gray-300"></span>
+                    <button type="button" id="photo-upload-btn"
+                            onclick="startMobileUpload()"
+                            class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-lg">
+                        Upload
+                    </button>
+                </div>
+
+                {{-- Progress bar (hidden until upload starts) --}}
+                <div id="photo-progress-wrap" style="display:none">
+                    <div class="mb-1.5 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span id="photo-progress-label">Uploading…</span>
+                        <span id="photo-progress-pct">0%</span>
+                    </div>
+                    <div class="h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div id="photo-progress-bar"
+                             class="h-3 rounded-full bg-emerald-500 transition-all duration-150"
+                             style="width: 0%"></div>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
@@ -364,23 +381,100 @@
     @endauth
 
     <script>
+    var _uploadUrl = '{{ route('mobile.work-orders.upload-photos', $workOrder) }}';
+    var _csrfToken = '{{ csrf_token() }}';
+
     function handlePhotoSelection(input) {
         var count = input.files.length;
         if (count === 0) return;
         var label = count + ' photo' + (count !== 1 ? 's' : '') + ' selected';
         document.getElementById('photo-count-label').textContent = label;
         document.getElementById('photo-upload-label').textContent = label + ' — ready to upload';
-        document.getElementById('photo-submit-area').style.display = 'flex';
+        document.getElementById('photo-submit-area').style.display = 'block';
     }
 
-    // Reset upload form when returning via browser back button (bfcache restore)
-    window.addEventListener('pageshow', function (e) {
-        var form = document.getElementById('photo-upload-form');
-        if (form) {
-            form.reset();
-            document.getElementById('photo-submit-area').style.display = 'none';
-            document.getElementById('photo-upload-label').textContent = 'Tap to take or choose photos';
+    function startMobileUpload() {
+        var input = document.getElementById('photo-file-input');
+        if (!input.files.length) return;
+
+        var fd = new FormData();
+        fd.append('_token', _csrfToken);
+        for (var i = 0; i < input.files.length; i++) {
+            fd.append('files[]', input.files[i]);
         }
+
+        var progressWrap  = document.getElementById('photo-progress-wrap');
+        var progressBar   = document.getElementById('photo-progress-bar');
+        var progressPct   = document.getElementById('photo-progress-pct');
+        var progressLabel = document.getElementById('photo-progress-label');
+        var uploadBtn     = document.getElementById('photo-upload-btn');
+        var pickBtn       = document.getElementById('photo-pick-btn');
+
+        progressWrap.style.display = 'block';
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Uploading…';
+        pickBtn.disabled = true;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', _uploadUrl);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('X-CSRF-TOKEN', _csrfToken);
+
+        xhr.upload.addEventListener('progress', function (e) {
+            if (!e.lengthComputable) return;
+            var pct = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = pct + '%';
+            progressPct.textContent = pct + '%';
+            progressLabel.textContent = 'Uploading ' + input.files.length + ' photo' + (input.files.length !== 1 ? 's' : '') + '…';
+        });
+
+        xhr.addEventListener('load', function () {
+            var data = null;
+            try { data = JSON.parse(xhr.responseText); } catch (e) {}
+
+            if (data && data.success) {
+                progressBar.style.width = '100%';
+                progressPct.textContent = '100%';
+                progressLabel.textContent = (data.count || input.files.length) + ' photo' + ((data.count || input.files.length) !== 1 ? 's' : '') + ' uploaded!';
+                setTimeout(function () { window.location.href = data.redirect; }, 800);
+            } else {
+                var msg = (data && data.message) || 'Upload failed (HTTP ' + xhr.status + ').';
+                progressLabel.textContent = msg;
+                progressBar.style.backgroundColor = '#ef4444';
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Retry';
+                pickBtn.disabled = false;
+            }
+        });
+
+        xhr.addEventListener('error', function () {
+            progressLabel.textContent = 'Upload failed — network error.';
+            progressBar.style.backgroundColor = '#ef4444';
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Retry';
+            pickBtn.disabled = false;
+        });
+
+        xhr.send(fd);
+    }
+
+    // Reset form on bfcache restore (browser back button)
+    window.addEventListener('pageshow', function () {
+        var input = document.getElementById('photo-file-input');
+        if (input) input.value = '';
+        var submitArea = document.getElementById('photo-submit-area');
+        if (submitArea) submitArea.style.display = 'none';
+        var progressWrap = document.getElementById('photo-progress-wrap');
+        if (progressWrap) progressWrap.style.display = 'none';
+        var bar = document.getElementById('photo-progress-bar');
+        if (bar) { bar.style.width = '0%'; bar.style.backgroundColor = ''; }
+        var lbl = document.getElementById('photo-upload-label');
+        if (lbl) lbl.textContent = 'Tap to take or choose photos';
+        var btn = document.getElementById('photo-upload-btn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Upload'; }
+        var pick = document.getElementById('photo-pick-btn');
+        if (pick) pick.disabled = false;
     });
     </script>
 

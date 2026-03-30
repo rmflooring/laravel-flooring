@@ -66,8 +66,13 @@ class WorkOrderController extends Controller
             'user_id'        => $userId,
         ]);
 
-        return redirect()
-            ->route('mobile.opportunity.photos', $opportunity)
+        $photosUrl = route('mobile.opportunity.photos', $opportunity);
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'redirect' => $photosUrl, 'count' => $count]);
+        }
+
+        return redirect()->to($photosUrl)
             ->with('success', $count . ' photo' . ($count !== 1 ? 's' : '') . ' uploaded.');
     }
 }
