@@ -514,7 +514,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
             foreach ($nullWoItems as $woItem) {
                 $match = $labourByName[$woItem->item_name] ?? null;
                 if ($match) {
-                    $woItem->update(['sale_item_id' => $match->id]);
+                    \App\Models\WorkOrderItem::where('id', $woItem->id)
+                        ->update(['sale_item_id' => $match->id]);
                 }
             }
         }
