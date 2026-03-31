@@ -63,13 +63,17 @@ class RfmController extends Controller
     {
         $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']);
 
+        $smsRfmBookedEnabled     = (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_booked', '0');
+        $smsRfmBookedToCustomer  = $smsRfmBookedEnabled && in_array('customer', array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm'))));
+
         return view('pages.rfms.create', [
-            'opportunity'          => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
-            'estimators'           => $estimators,
-            'flooringTypes'        => Rfm::FLOORING_TYPES,
+            'opportunity'               => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
+            'estimators'                => $estimators,
+            'flooringTypes'             => Rfm::FLOORING_TYPES,
             'emailNotificationsEnabled' => (bool) Setting::get('mail_notifications_enabled', '1'),
             'smsEnabled'                => (bool) Setting::get('sms_enabled', '0'),
-            'smsRfmBookedEnabled'       => (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_booked', '0'),
+            'smsRfmBookedEnabled'       => $smsRfmBookedEnabled,
+            'smsRfmBookedToCustomer'    => $smsRfmBookedToCustomer,
         ]);
     }
 
@@ -92,6 +96,7 @@ class RfmController extends Controller
         $notifyPm           = $request->boolean('notify_pm', false);
         $smsNotifyEstimator = $request->boolean('sms_notify_estimator', false);
         $smsNotifyPm        = $request->boolean('sms_notify_pm', false);
+        $smsNotifyCustomer  = $request->boolean('sms_notify_customer', false);
 
         $rfm = Rfm::create([
             'opportunity_id'      => $opportunity->id,
@@ -170,7 +175,7 @@ class RfmController extends Controller
                     $sms->send($pm->mobile, $body, 'rfm_booked', $rfm);
                 }
 
-                if (in_array('customer', $recipients)) {
+                if ($smsNotifyCustomer && in_array('customer', $recipients)) {
                     $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
                     if ($phone) {
                         $sms->send($phone, $body, 'rfm_booked', $rfm);
@@ -223,14 +228,18 @@ class RfmController extends Controller
 
         $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']);
 
+        $smsRfmUpdatedEnabled    = (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_updated', '0');
+        $smsRfmUpdatedToCustomer = $smsRfmUpdatedEnabled && in_array('customer', array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm'))));
+
         return view('pages.rfms.edit', [
-            'opportunity'          => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
-            'rfm'                  => $rfm,
-            'estimators'           => $estimators,
-            'flooringTypes'        => Rfm::FLOORING_TYPES,
+            'opportunity'               => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
+            'rfm'                       => $rfm,
+            'estimators'                => $estimators,
+            'flooringTypes'             => Rfm::FLOORING_TYPES,
             'emailNotificationsEnabled' => (bool) Setting::get('mail_notifications_enabled', '1'),
             'smsEnabled'                => (bool) Setting::get('sms_enabled', '0'),
-            'smsRfmUpdatedEnabled'      => (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_updated', '0'),
+            'smsRfmUpdatedEnabled'      => $smsRfmUpdatedEnabled,
+            'smsRfmUpdatedToCustomer'   => $smsRfmUpdatedToCustomer,
         ]);
     }
 
@@ -251,8 +260,9 @@ class RfmController extends Controller
             'special_instructions'=> ['nullable', 'string'],
         ]);
 
-        $notifyEstimator = $request->boolean('notify_estimator', false);
-        $notifyPm        = $request->boolean('notify_pm', false);
+        $notifyEstimator   = $request->boolean('notify_estimator', false);
+        $notifyPm          = $request->boolean('notify_pm', false);
+        $smsNotifyCustomer = $request->boolean('sms_notify_customer', false);
 
         // Snapshot values before save for change detection
         $oldEstimatorName = $rfm->estimator
@@ -367,7 +377,7 @@ class RfmController extends Controller
                     $sms->send($pm->mobile, $body, 'rfm_updated', $rfm);
                 }
 
-                if (in_array('customer', $recipients)) {
+                if ($smsNotifyCustomer && in_array('customer', $recipients)) {
                     $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
                     if ($phone) {
                         $sms->send($phone, $body, 'rfm_updated', $rfm);

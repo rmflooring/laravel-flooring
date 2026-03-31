@@ -310,6 +310,32 @@
                                 </div>
                             @endif
 
+                            {{-- SMS Notify Customer --}}
+                            @if($smsRfmBookedToCustomer)
+                                @php
+                                    $customerPhone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
+                                    $customerLabel = $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?: 'Customer';
+                                @endphp
+                                @if($customerPhone)
+                                    <label class="flex items-start gap-3 cursor-pointer">
+                                        <input type="checkbox" name="sms_notify_customer" value="1" checked
+                                               class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-700">SMS Customer</span>
+                                            <p class="text-xs text-gray-400 mt-0.5">{{ $customerLabel }} &mdash; {{ $customerPhone }}</p>
+                                        </div>
+                                    </label>
+                                @else
+                                    <div class="flex items-start gap-3 opacity-50 cursor-not-allowed">
+                                        <input type="checkbox" disabled class="mt-0.5 w-4 h-4 border-gray-300 rounded">
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500">SMS Customer</span>
+                                            <p class="text-xs text-gray-400 mt-0.5">No phone number on file for this customer.</p>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endif
+
                         </div>
                         @else
                         <div class="flex items-start gap-3 opacity-50 cursor-not-allowed select-none">
@@ -321,6 +347,10 @@
                                 <div class="flex items-center gap-3">
                                     <input type="checkbox" disabled class="w-4 h-4 border-gray-300 rounded">
                                     <span class="text-sm text-gray-500">SMS Project Manager</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" disabled class="w-4 h-4 border-gray-300 rounded">
+                                    <span class="text-sm text-gray-500">SMS Customer</span>
                                 </div>
                             </div>
                         </div>
