@@ -173,6 +173,33 @@ class FlooringSignOffController extends Controller
         return back()->with('success', 'Sign-off saved.');
     }
 
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    public function destroy(Opportunity $opportunity, FlooringSignOff $signOff)
+    {
+        $this->assertBelongs($opportunity, $signOff);
+        $signOff->delete();
+
+        return redirect()
+            ->route('pages.opportunities.documents.index', $opportunity->id)
+            ->with('success', 'Sign-off archived.');
+    }
+
+    public function forceDestroy(Opportunity $opportunity, $signOffId)
+    {
+        $signOff = FlooringSignOff::withTrashed()
+            ->where('opportunity_id', $opportunity->id)
+            ->where('id', $signOffId)
+            ->firstOrFail();
+
+        $signOff->items()->delete();
+        $signOff->forceDelete();
+
+        return redirect()
+            ->route('pages.opportunities.documents.index', $opportunity->id)
+            ->with('success', 'Sign-off permanently deleted.');
+    }
+
     // ── PDF ───────────────────────────────────────────────────────────────────
 
     public function pdf(Opportunity $opportunity, FlooringSignOff $signOff)

@@ -366,6 +366,18 @@ Route::prefix('admin')
                 'destroy' => 'vendor_reps.destroy',
             ]);
 
+        // Flooring Sign-Off Conditions
+        Route::resource('flooring-conditions', \App\Http\Controllers\Admin\FlooringSignOffConditionController::class)
+            ->middleware('role_or_permission:admin')
+            ->names([
+                'index'   => 'flooring-conditions.index',
+                'store'   => 'flooring-conditions.store',
+                'edit'    => 'flooring-conditions.edit',
+                'update'  => 'flooring-conditions.update',
+                'destroy' => 'flooring-conditions.destroy',
+            ])
+            ->except(['show', 'create']);
+
         // Document Templates
         Route::resource('document-templates', \App\Http\Controllers\Admin\DocumentTemplateController::class)
             ->middleware('role_or_permission:admin')
@@ -1163,6 +1175,22 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
 
             Route::get('documents/{document}/reprint', [OpportunityDocumentController::class, 'reprint'])
                 ->name('opportunities.documents.reprint');
+
+            // Flooring Sign-Off routes
+            Route::get('sign-offs/create', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'create'])
+                ->name('opportunities.sign-offs.create');
+            Route::post('sign-offs', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'store'])
+                ->name('opportunities.sign-offs.store');
+            Route::get('sign-offs/{signOff}', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'show'])
+                ->name('opportunities.sign-offs.show');
+            Route::put('sign-offs/{signOff}', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'update'])
+                ->name('opportunities.sign-offs.update');
+            Route::get('sign-offs/{signOff}/pdf', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'pdf'])
+                ->name('opportunities.sign-offs.pdf');
+            Route::delete('sign-offs/{signOff}', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'destroy'])
+                ->name('opportunities.sign-offs.destroy');
+            Route::delete('sign-offs/{signOff}/force', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'forceDestroy'])
+                ->name('opportunities.sign-offs.forceDestroy');
 
             // RFM routes
             Route::get('rfms/create', [RfmController::class, 'create'])

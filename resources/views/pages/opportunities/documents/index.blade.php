@@ -515,12 +515,15 @@
         </div>
         <div class="divide-y divide-gray-100 dark:divide-gray-700">
             @foreach ($signOffs as $signOff)
-            <div class="flex items-center justify-between px-4 py-3">
+            <div class="flex items-center justify-between px-4 py-3 {{ $signOff->trashed() ? 'opacity-50' : '' }}">
                 <div class="min-w-0">
                     <p class="text-sm font-medium text-gray-900 dark:text-white">
                         Sign-Off #{{ $signOff->id }}
                         @if ($signOff->sale)
                             — Sale #{{ $signOff->sale->sale_number }}{{ $signOff->sale->job_name ? ' · ' . $signOff->sale->job_name : '' }}
+                        @endif
+                        @if ($signOff->trashed())
+                            <span class="ml-1 inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Archived</span>
                         @endif
                     </p>
                     <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
@@ -534,15 +537,40 @@
                     </p>
                 </div>
                 <div class="ml-4 flex shrink-0 items-center gap-2">
-                    <a href="{{ route('pages.opportunities.sign-offs.show', [$opportunity->id, $signOff->id]) }}"
-                       class="inline-flex items-center rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                        Edit / View
-                    </a>
-                    <a href="{{ route('pages.opportunities.sign-offs.pdf', [$opportunity->id, $signOff->id]) }}"
-                       target="_blank"
-                       class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600">
-                        PDF
-                    </a>
+                    @if (!$signOff->trashed())
+                        <a href="{{ route('pages.opportunities.sign-offs.show', [$opportunity->id, $signOff->id]) }}"
+                           class="inline-flex items-center rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                            Edit / View
+                        </a>
+                        <a href="{{ route('pages.opportunities.sign-offs.pdf', [$opportunity->id, $signOff->id]) }}"
+                           target="_blank"
+                           class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600">
+                            PDF
+                        </a>
+                        <form method="POST"
+                              action="{{ route('pages.opportunities.sign-offs.destroy', [$opportunity->id, $signOff->id]) }}"
+                              onsubmit="return confirm('Archive this sign-off?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:bg-gray-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-gray-600">
+                                Archive
+                            </button>
+                        </form>
+                    @else
+                        @if (auth()->user()?->hasRole('admin'))
+                            <form method="POST"
+                                  action="{{ route('pages.opportunities.sign-offs.forceDestroy', [$opportunity->id, $signOff->id]) }}"
+                                  onsubmit="return confirm('Permanently delete this sign-off? This cannot be undone.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        class="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 dark:focus:ring-red-800">
+                                    Delete Permanently
+                                </button>
+                            </form>
+                        @endif
+                    @endif
                 </div>
             </div>
             @endforeach

@@ -90,7 +90,8 @@ public function index(Opportunity $opportunity, Request $request)
         ->orderByDesc('id')
         ->get(['id', 'sale_number', 'job_name']);
 
-    $signOffs = FlooringSignOff::where('opportunity_id', $opportunity->id)
+    $signOffs = FlooringSignOff::withTrashed()
+        ->where('opportunity_id', $opportunity->id)
         ->with('sale:id,sale_number,job_name')
         ->latest()
         ->get();

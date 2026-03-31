@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FlooringSignOff extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'opportunity_id', 'sale_id', 'status', 'date',
         'customer_name', 'job_no', 'job_site_name',
