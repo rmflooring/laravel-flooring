@@ -45,7 +45,7 @@ class FlooringSignOffController extends Controller
         $rooms = $sale->rooms
             ->map(fn ($room) => [
                 'room'  => $room,
-                'items' => $room->items->where('type', 'material')->values(),
+                'items' => $room->items->where('item_type', 'material')->values(),
             ])
             ->filter(fn ($r) => $r['items']->isNotEmpty())
             ->values();
