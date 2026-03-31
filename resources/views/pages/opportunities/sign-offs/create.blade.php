@@ -26,6 +26,17 @@
             </div>
         @endif
 
+        @if ($errors->any())
+            <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-gray-800 dark:text-red-400">
+                <p class="font-semibold mb-1">Please fix the following errors:</p>
+                <ul class="list-disc list-inside space-y-1">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('pages.opportunities.sign-offs.store', $opportunity->id) }}">
             @csrf
             <input type="hidden" name="sale_id" value="{{ $sale->id }}">
@@ -101,17 +112,22 @@
                                 </p>
                                 <div class="space-y-2">
                                     @foreach ($items as $item)
-                                        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/50">
+                                        @php
+                                            $desc = trim(($item->manufacturer ? $item->manufacturer . ' — ' : '') . ($item->style ?? $item->description ?? ''));
+                                        @endphp
+                                        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/50"
+                                               data-item-id="{{ $item->id }}">
                                             <input type="checkbox"
-                                                   name="item_select[{{ $item->id }}]"
-                                                   value="1"
+                                                   data-toggle-item="{{ $item->id }}"
                                                    checked
                                                    class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
-                                            {{-- Hidden fields for this item --}}
-                                            <input type="hidden" name="_items[{{ $item->id }}][room_name]"           value="{{ $room->name }}">
-                                            <input type="hidden" name="_items[{{ $item->id }}][product_description]" value="{{ trim(($item->manufacturer ? $item->manufacturer . ' — ' : '') . ($item->style ?? $item->description ?? '')) }}">
-                                            <input type="hidden" name="_items[{{ $item->id }}][qty]"                 value="{{ $item->quantity ?? 0 }}">
-                                            <input type="hidden" name="_items[{{ $item->id }}][unit]"                value="{{ $item->unit ?? '' }}">
+                                            {{-- Submitted under items[{id}] — disabled when unchecked --}}
+                                            <span class="item-fields-{{ $item->id }}">
+                                                <input type="hidden" name="items[{{ $item->id }}][room_name]"           value="{{ $room->name }}">
+                                                <input type="hidden" name="items[{{ $item->id }}][product_description]" value="{{ $desc }}">
+                                                <input type="hidden" name="items[{{ $item->id }}][qty]"                 value="{{ $item->quantity ?? 0 }}">
+                                                <input type="hidden" name="items[{{ $item->id }}][unit]"                value="{{ $item->unit ?? '' }}">
+                                            </span>
                                             <div class="min-w-0 flex-1">
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
                                                     {{ $item->style ?? $item->description ?? '(No description)' }}
@@ -145,42 +161,22 @@
     </div>
 
     <script>
-    // When a checkbox is unchecked, disable the hidden fields so they don't submit
-    document.querySelectorAll('input[name^="item_select["]').forEach(function(cb) {
-        const itemId = cb.name.match(/\[(\d+)\]/)[1];
-        const hiddens = document.querySelectorAll(`input[name^="_items[${itemId}]"]`);
-
+    document.querySelectorAll('[data-toggle-item]').forEach(function(cb) {
+        const id = cb.dataset.toggleItem;
         function toggle() {
-            hiddens.forEach(h => h.disabled = !cb.checked);
+            document.querySelectorAll('.item-fields-' + id + ' input').forEach(function(h) {
+                h.disabled = !cb.checked;
+            });
         }
-        toggle();
         cb.addEventListener('change', toggle);
     });
 
-    // On form submit, build items[] from enabled hidden fields
     document.querySelector('form').addEventListener('submit', function(e) {
-        const checked = document.querySelectorAll('input[name^="item_select["]:checked');
-        if (checked.length === 0) {
+        const anyChecked = document.querySelector('[data-toggle-item]:checked');
+        if (!anyChecked) {
             e.preventDefault();
             alert('Please select at least one item.');
-            return;
         }
-        // Remap _items[id][field] → items[][field] (sequential array)
-        let idx = 0;
-        checked.forEach(function(cb) {
-            const itemId = cb.name.match(/\[(\d+)\]/)[1];
-            ['room_name','product_description','qty','unit'].forEach(function(field) {
-                const hidden = document.querySelector(`input[name="_items[${itemId}][${field}]"]`);
-                if (hidden) {
-                    const clone = document.createElement('input');
-                    clone.type = 'hidden';
-                    clone.name = `items[${idx}][${field}]`;
-                    clone.value = hidden.value;
-                    document.querySelector('form').appendChild(clone);
-                }
-            });
-            idx++;
-        });
     });
     </script>
 </x-app-layout>
