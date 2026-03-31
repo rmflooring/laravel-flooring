@@ -108,7 +108,7 @@
                             @php $room = $roomGroup['room']; $items = $roomGroup['items']; @endphp
                             <div class="px-4 py-3">
                                 <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
-                                    {{ $room->name }}
+                                    {{ $room->room_name }}
                                 </p>
                                 <div class="space-y-2">
                                     @foreach ($items as $item)
@@ -123,7 +123,7 @@
                                                    class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
                                             {{-- Submitted under items[{id}] — disabled when unchecked --}}
                                             <span class="item-fields-{{ $item->id }}">
-                                                <input type="hidden" name="items[{{ $item->id }}][room_name]"           value="{{ $room->name }}">
+                                                <input type="hidden" name="items[{{ $item->id }}][room_name]"           value="{{ $room->room_name }}">
                                                 <input type="hidden" name="items[{{ $item->id }}][product_description]" value="{{ $desc }}">
                                                 <input type="hidden" name="items[{{ $item->id }}][qty]"                 value="{{ $item->quantity ?? 0 }}">
                                                 <input type="hidden" name="items[{{ $item->id }}][unit]"                value="{{ $item->unit ?? '' }}">
