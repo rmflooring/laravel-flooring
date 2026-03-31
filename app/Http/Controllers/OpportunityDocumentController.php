@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DocumentTemplate;
+use App\Models\FlooringSignOff;
 use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Models\OpportunityDocumentLabel;
@@ -83,11 +84,16 @@ public function index(Opportunity $opportunity, Request $request)
     $activeTemplates = DocumentTemplate::where('is_active', true)
         ->orderBy('sort_order')
         ->orderBy('name')
-        ->get(['id', 'name', 'description', 'needs_sale']);
+        ->get(['id', 'name', 'description', 'needs_sale', 'special_flow']);
 
     $opportunitySales = $opportunity->sales()
         ->orderByDesc('id')
         ->get(['id', 'sale_number', 'job_name']);
+
+    $signOffs = FlooringSignOff::where('opportunity_id', $opportunity->id)
+        ->with('sale:id,sale_number,job_name')
+        ->latest()
+        ->get();
 
     return view('pages.opportunities.documents.index', [
         'opportunity'      => $opportunity,
@@ -101,6 +107,7 @@ public function index(Opportunity $opportunity, Request $request)
         'counts'           => $counts,
         'activeTemplates'  => $activeTemplates,
         'opportunitySales' => $opportunitySales,
+        'signOffs'         => $signOffs,
     ]);
 }
 
@@ -407,6 +414,18 @@ public function index(Opportunity $opportunity, Request $request)
         ]);
 
         $template = DocumentTemplate::findOrFail($request->template_id);
+
+        // Special flows bypass normal PDF generation
+        if ($template->special_flow === 'flooring_sign_off') {
+            $request->validate(['sale_id' => ['required', 'exists:sales,id']]);
+            $sale = Sale::findOrFail($request->sale_id);
+            abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 403);
+
+            return redirect()->route('pages.opportunities.sign-offs.create', [
+                'opportunity' => $opportunity->id,
+                'sale_id'     => $request->sale_id,
+            ]);
+        }
 
         $sale = null;
         if ($template->needs_sale) {

@@ -13,6 +13,7 @@ class DocumentTemplate extends Model
         'description',
         'body',
         'needs_sale',
+        'special_flow',
         'is_active',
         'sort_order',
         'created_by',

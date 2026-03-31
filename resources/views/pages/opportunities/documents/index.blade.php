@@ -505,6 +505,52 @@
             </div>
         </div>
 
+    {{-- ============================================================ --}}
+    {{-- Flooring Sign-Offs Section                                   --}}
+    {{-- ============================================================ --}}
+    @if ($signOffs->isNotEmpty())
+    <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Flooring Selection Sign-Offs</h3>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            @foreach ($signOffs as $signOff)
+            <div class="flex items-center justify-between px-4 py-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                        Sign-Off #{{ $signOff->id }}
+                        @if ($signOff->sale)
+                            — Sale #{{ $signOff->sale->sale_number }}{{ $signOff->sale->job_name ? ' · ' . $signOff->sale->job_name : '' }}
+                        @endif
+                    </p>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        {{ $signOff->date?->format('M j, Y') }}
+                        &nbsp;·&nbsp;
+                        <span @class([
+                            'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium',
+                            'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' => $signOff->status === 'draft',
+                            'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' => $signOff->status === 'finalized',
+                        ])>{{ ucfirst($signOff->status) }}</span>
+                    </p>
+                </div>
+                <div class="ml-4 flex shrink-0 items-center gap-2">
+                    <a href="{{ route('pages.opportunities.sign-offs.show', [$opportunity->id, $signOff->id]) }}"
+                       class="inline-flex items-center rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                        Edit / View
+                    </a>
+                    <a href="{{ route('pages.opportunities.sign-offs.pdf', [$opportunity->id, $signOff->id]) }}"
+                       target="_blank"
+                       class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600">
+                        PDF
+                    </a>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+    {{-- ============================================================ --}}
+
     </div>
 
     {{-- ============================================================ --}}
@@ -523,11 +569,13 @@
                  x-data="{
                      templateId: '',
                      needsSale: false,
-                     templates: {{ $activeTemplates->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'description' => $t->description, 'needs_sale' => (bool) $t->needs_sale])->toJson() }},
+                     specialFlow: '',
+                     templates: {{ $activeTemplates->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'description' => $t->description, 'needs_sale' => (bool) $t->needs_sale, 'special_flow' => $t->special_flow])->toJson() }},
                      selectTemplate(id) {
                          this.templateId = id;
                          const t = this.templates.find(t => t.id == id);
-                         this.needsSale = t ? t.needs_sale : false;
+                         this.needsSale = t ? (t.needs_sale || t.special_flow === 'flooring_sign_off') : false;
+                         this.specialFlow = t ? (t.special_flow ?? '') : '';
                      }
                  }">
 
@@ -602,8 +650,8 @@
                             Cancel
                         </button>
                         <button type="submit"
-                                class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 dark:bg-emerald-600 dark:hover:bg-emerald-700 dark:focus:ring-emerald-800">
-                            Generate PDF
+                                class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 dark:bg-emerald-600 dark:hover:bg-emerald-700 dark:focus:ring-emerald-800"
+                                x-text="specialFlow === 'flooring_sign_off' ? 'Next →' : 'Generate PDF'">
                         </button>
                     </div>
                 </form>
