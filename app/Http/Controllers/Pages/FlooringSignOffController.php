@@ -72,8 +72,6 @@ class FlooringSignOffController extends Controller
             'items'            => ['required', 'array', 'min:1'],
             'items.*.room_name'           => ['required', 'string'],
             'items.*.product_description' => ['nullable', 'string'],
-            'items.*.qty'                 => ['required', 'numeric', 'min:0'],
-            'items.*.unit'                => ['nullable', 'string', 'max:50'],
         ]);
 
         $signOff = FlooringSignOff::create([
@@ -145,8 +143,6 @@ class FlooringSignOffController extends Controller
             'items'            => ['nullable', 'array'],
             'items.*.room_name'           => ['required_with:items', 'string'],
             'items.*.product_description' => ['nullable', 'string'],
-            'items.*.qty'                 => ['required_with:items', 'numeric', 'min:0'],
-            'items.*.unit'                => ['nullable', 'string', 'max:50'],
         ]);
 
         $signOff->update([

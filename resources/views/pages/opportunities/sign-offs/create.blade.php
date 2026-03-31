@@ -125,15 +125,10 @@
                                             <span class="item-fields-{{ $item->id }}">
                                                 <input type="hidden" name="items[{{ $item->id }}][room_name]"           value="{{ $room->room_name }}">
                                                 <input type="hidden" name="items[{{ $item->id }}][product_description]" value="{{ $desc }}">
-                                                <input type="hidden" name="items[{{ $item->id }}][qty]"                 value="{{ $item->quantity ?? 0 }}">
-                                                <input type="hidden" name="items[{{ $item->id }}][unit]"                value="{{ $item->unit ?? '' }}">
                                             </span>
                                             <div class="min-w-0 flex-1">
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
                                                     {{ $item->style ?? $item->description ?? '(No description)' }}
-                                                </p>
-                                                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                                    Qty: {{ $item->quantity ?? 0 }} {{ $item->unit ?? '' }}
                                                 </p>
                                             </div>
                                         </label>

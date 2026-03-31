@@ -160,29 +160,25 @@
     @php $grouped = $signOff->items->groupBy('room_name'); @endphp
     @if ($grouped->isEmpty())
         <table class="items-table"><tbody>
-            <tr><td colspan="3" style="text-align:center;color:#888;padding:10px;">No items.</td></tr>
+            <tr><td style="text-align:center;color:#888;padding:10px;">No items.</td></tr>
         </tbody></table>
     @else
         @foreach ($grouped as $roomName => $roomItems)
         <table class="items-table" style="margin-bottom:0;">
             <thead>
                 <tr>
-                    <th colspan="3" style="background:#1d4ed8;color:#fff;font-size:10px;padding:4px 8px;text-align:left;">
+                    <th style="background:#1d4ed8;color:#fff;font-size:10px;padding:4px 8px;text-align:left;">
                         {{ $roomName }}
                     </th>
                 </tr>
                 <tr>
                     <th class="col-desc">Product / Description</th>
-                    <th class="col-qty">Qty</th>
-                    <th class="col-unit">Unit</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($roomItems as $item)
                 <tr>
                     <td class="col-desc">{{ $item->product_description }}</td>
-                    <td class="col-qty">{{ $item->qty }}</td>
-                    <td class="col-unit">{{ $item->unit }}</td>
                 </tr>
                 @endforeach
             </tbody>
