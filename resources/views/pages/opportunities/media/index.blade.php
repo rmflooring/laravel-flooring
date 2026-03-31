@@ -209,7 +209,8 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             @foreach ($media as $doc)
                 @php
-                    $url = parse_url($doc->url, PHP_URL_PATH) ?: $doc->url;
+                    $url          = parse_url($doc->url, PHP_URL_PATH) ?: $doc->url;
+                    $thumbUrl     = $doc->thumbnail_path ? (parse_url($doc->thumbnailUrl, PHP_URL_PATH) ?: $doc->thumbnailUrl) : $url;
                     $isVideo      = str_starts_with($doc->mime_type ?? '', 'video/');
                     $uploaderName = $doc->creator?->name ?? 'Unknown';
                     $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
@@ -246,7 +247,7 @@
                                 <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/80 border border-gray-200">▶</div>
                             </div>
                         @else
-                            <img src="{{ $url }}"
+                            <img src="{{ $thumbUrl }}"
                                  alt="{{ $doc->original_name }}"
                                  loading="lazy"
                                  decoding="async"

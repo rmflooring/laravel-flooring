@@ -14,6 +14,7 @@ class OpportunityDocument extends Model
         'opportunity_id',
         'disk',
         'path',
+        'thumbnail_path',
         'original_name',
         'stored_name',
         'mime_type',
@@ -32,6 +33,14 @@ class OpportunityDocument extends Model
     public function getUrlAttribute(): string
     {
         return Storage::disk($this->disk)->url($this->path);
+    }
+
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        if (! $this->thumbnail_path) {
+            return null;
+        }
+        return Storage::disk($this->disk)->url($this->thumbnail_path);
     }
 
     public function opportunity()

@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class OpportunityDocumentController extends Controller
 {
@@ -159,10 +161,31 @@ public function index(Opportunity $opportunity, Request $request)
                     'original'       => $file->getClientOriginalName(),
                 ]);
 
+                // Generate thumbnail for images (skip SVG and video)
+                $thumbnailPath = null;
+                $isThumbableImage = str_starts_with($mime, 'image/') && $ext !== 'svg';
+                if ($isThumbableImage) {
+                    try {
+                        $manager = new ImageManager(new Driver());
+                        $image   = $manager->read($file->getRealPath());
+                        $image->scaleDown(width: 600);
+                        $thumbContents = (string) $image->toJpeg(quality: 80);
+                        $thumbnailPath = "opportunities/{$opportunity->id}/thumb_" . pathinfo(basename($path), PATHINFO_FILENAME) . '.jpg';
+                        Storage::disk($disk)->put($thumbnailPath, $thumbContents);
+                    } catch (\Throwable $e) {
+                        \Log::warning('[docs] thumbnail generation failed', [
+                            'path'    => $path,
+                            'message' => $e->getMessage(),
+                        ]);
+                        $thumbnailPath = null;
+                    }
+                }
+
                 OpportunityDocument::create([
                     'opportunity_id' => $opportunity->id,
                     'disk'           => $disk,
                     'path'           => $path,
+                    'thumbnail_path' => $thumbnailPath,
                     'original_name'  => $file->getClientOriginalName(),
                     'stored_name'    => basename($path),
                     'mime_type'      => $mime,
@@ -323,6 +346,9 @@ public function index(Opportunity $opportunity, Request $request)
 			if ($doc->disk && $doc->path) {
 				Storage::disk($doc->disk)->delete($doc->path);
 			}
+			if ($doc->disk && $doc->thumbnail_path) {
+				Storage::disk($doc->disk)->delete($doc->thumbnail_path);
+			}
 
 			$doc->forceDelete();
 		}
@@ -353,6 +379,9 @@ public function index(Opportunity $opportunity, Request $request)
         // Remove the physical file too:
         if ($doc->disk && $doc->path) {
             Storage::disk($doc->disk)->delete($doc->path);
+        }
+        if ($doc->disk && $doc->thumbnail_path) {
+            Storage::disk($doc->disk)->delete($doc->thumbnail_path);
         }
 
         $doc->forceDelete();
