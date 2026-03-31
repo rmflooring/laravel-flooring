@@ -176,7 +176,7 @@ class RfmController extends Controller
                     $sms->send($pm->mobile, $body, 'rfm_booked', $rfm);
                 }
 
-                if ($smsNotifyCustomer && in_array('customer', $recipients)) {
+                if ($smsNotifyCustomer && in_array('customer', $recipients) && !$opportunity->parentCustomer?->sms_opted_out) {
                     $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
                     if ($phone) {
                         $sms->send($phone, $bodyCustomer, 'rfm_booked_customer', $rfm);
@@ -379,7 +379,7 @@ class RfmController extends Controller
                     $sms->send($pm->mobile, $body, 'rfm_updated', $rfm);
                 }
 
-                if ($smsNotifyCustomer && in_array('customer', $recipients)) {
+                if ($smsNotifyCustomer && in_array('customer', $recipients) && !$opportunity->parentCustomer?->sms_opted_out) {
                     $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
                     if ($phone) {
                         $sms->send($phone, $bodyCustomer, 'rfm_updated_customer', $rfm);

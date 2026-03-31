@@ -45,6 +45,21 @@
                             </div>
 
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">SMS Notifications</label>
+                                @if($customer->sms_opted_out)
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                            Opted Out{{ $customer->sms_opted_out_at ? ' on ' . $customer->sms_opted_out_at->format('M j, Y') : '' }}
+                                        </span>
+                                        <span class="text-xs text-gray-400">Use the toggle on the customer page to re-enable.</span>
+                                    </div>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Active</span>
+                                @endif
+                            </div>
+
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Parent Customer</label>
                                 <select name="parent_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     <option value="">None (Top Level)</option>

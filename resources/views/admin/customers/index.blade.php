@@ -88,6 +88,9 @@
 
                                         <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->phone ?? $customer->mobile ?? '-' }}
+                                            @if($customer->sms_opted_out)
+                                                <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-600" title="SMS Opted Out">SMS off</span>
+                                            @endif
                                         </td>
 
                                         <td class="px-4 py-3 whitespace-nowrap">

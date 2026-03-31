@@ -25,6 +25,29 @@
                     @endif
                 </div>
                 <div class="flex items-center gap-3">
+                    {{-- SMS opt-out toggle --}}
+                    @can('edit customers')
+                    <form method="POST" action="{{ route('admin.customers.sms-opt-out.toggle', $customer) }}">
+                        @csrf
+                        @method('PATCH')
+                        @if($customer->sms_opted_out)
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 border border-red-200"
+                                    title="Customer has opted out — click to re-enable SMS">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                SMS Opted Out
+                            </button>
+                        @else
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg bg-white text-gray-600 hover:bg-gray-50 border border-gray-300"
+                                    title="Click to manually opt this customer out of SMS"
+                                    onclick="return confirm('Mark this customer as SMS opted out?')">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                SMS Active
+                            </button>
+                        @endif
+                    </form>
+                    @endcan
                     <a href="{{ route('admin.customers.edit', $customer) }}"
                        class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-4 py-2">
                         Edit Customer
@@ -57,6 +80,12 @@
                     <div>
                         <p class="text-gray-500">Phone</p>
                         <p class="font-medium text-gray-900">{{ $customer->phone ?? $customer->mobile ?? '—' }}</p>
+                        @if($customer->sms_opted_out)
+                            <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                SMS Opted Out{{ $customer->sms_opted_out_at ? ' · ' . $customer->sms_opted_out_at->format('M j, Y') : '' }}
+                            </span>
+                        @endif
                     </div>
                     <div>
                         <p class="text-gray-500">Email</p>

@@ -14,6 +14,11 @@ class Customer extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'sms_opted_out'    => 'boolean',
+        'sms_opted_out_at' => 'datetime',
+    ];
+
     protected $fillable = [
         'parent_id',
         'name',
@@ -21,6 +26,8 @@ class Customer extends Model
         'email',
         'phone',
         'mobile',
+        'sms_opted_out',
+        'sms_opted_out_at',
         'address',
         'address2',
         'city',

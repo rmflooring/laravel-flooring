@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TwilioSmsWebhookController;
 use App\Http\Controllers\MicrosoftCalendarConnectController;
 use App\Http\Controllers\Pages\Settings\Integrations\MicrosoftIntegrationController;
 use App\Http\Controllers\UserCalendarPreferenceController;
@@ -59,6 +60,11 @@ use App\Http\Controllers\Pages\WorkOrderController;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Twilio inbound SMS webhook — no auth, no CSRF
+Route::post('/webhook/twilio/sms', [TwilioSmsWebhookController::class, 'handle'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('webhook.twilio.sms');
 
 // Dashboard (authenticated)
 Route::get('/dashboard', function () {
@@ -271,6 +277,10 @@ Route::prefix('admin')
         Route::post('customers/{customer}/deactivate', [CustomerController::class, 'deactivate'])
             ->middleware('role_or_permission:admin|edit customers')
             ->name('customers.deactivate');
+
+        Route::patch('customers/{customer}/sms-opt-out', [CustomerController::class, 'toggleSmsOptOut'])
+            ->middleware('role_or_permission:admin|edit customers')
+            ->name('customers.sms-opt-out.toggle');
 
         // Customer Contacts
         Route::post('customers/{customer}/contacts', [CustomerContactController::class, 'store'])

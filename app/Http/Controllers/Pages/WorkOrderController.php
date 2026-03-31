@@ -821,7 +821,7 @@ class WorkOrderController extends Controller
         }
 
         try {
-            $workOrder->loadMissing(['installer', 'sale.opportunity.projectManager', 'sale.sourceEstimate']);
+            $workOrder->loadMissing(['installer', 'sale.opportunity.projectManager', 'sale.opportunity.parentCustomer', 'sale.sourceEstimate']);
 
             $sale        = $workOrder->sale;
             $installer   = $workOrder->installer;
@@ -859,7 +859,7 @@ class WorkOrderController extends Controller
                 $sms->send($installer->mobile, $body, 'wo_scheduled', $workOrder);
             }
 
-            if (in_array('homeowner', $recipients)) {
+            if (in_array('homeowner', $recipients) && !$sale?->opportunity?->parentCustomer?->sms_opted_out) {
                 $phone = $sale?->job_phone ?? $sale?->sourceEstimate?->homeowner_phone ?? null;
                 if ($phone) {
                     $sms->send($phone, $bodyCustomer, 'wo_scheduled_customer', $workOrder);

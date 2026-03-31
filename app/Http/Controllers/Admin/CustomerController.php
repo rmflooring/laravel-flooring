@@ -303,4 +303,17 @@ public function deactivate(Customer $customer)
         ->with('success', 'Customer has been marked as inactive.');
 }
 
+public function toggleSmsOptOut(Customer $customer)
+{
+    if ($customer->sms_opted_out) {
+        $customer->update(['sms_opted_out' => false, 'sms_opted_out_at' => null]);
+        $message = 'SMS notifications re-enabled for this customer.';
+    } else {
+        $customer->update(['sms_opted_out' => true, 'sms_opted_out_at' => now()]);
+        $message = 'Customer marked as SMS opted out.';
+    }
+
+    return back()->with('success', $message);
+}
+
 }

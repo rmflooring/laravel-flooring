@@ -31,7 +31,7 @@ class SendSmsReminders extends Command
         if (Setting::get('sms_notify_wo_reminder')) {
             $recipients = array_filter(explode(',', Setting::get('sms_wo_reminder_to', 'pm,installer')));
 
-            $workOrders = WorkOrder::with(['installer', 'sale.opportunity.projectManager'])
+            $workOrders = WorkOrder::with(['installer', 'sale.opportunity.projectManager', 'sale.opportunity.parentCustomer'])
                 ->whereDate('scheduled_date', $tomorrow)
                 ->whereIn('status', ['scheduled', 'in_progress'])
                 ->whereNull('sms_reminder_sent_at')
@@ -72,7 +72,7 @@ class SendSmsReminders extends Command
                         $sent = true;
                     }
 
-                    if (in_array('homeowner', $recipients)) {
+                    if (in_array('homeowner', $recipients) && !$sale?->opportunity?->parentCustomer?->sms_opted_out) {
                         $phone = $sale?->job_phone ?? $sale?->sourceEstimate?->homeowner_phone ?? null;
                         if ($phone) {
                             $sms->send($phone, $bodyCustomer, 'wo_reminder_customer', $wo);
@@ -148,7 +148,7 @@ class SendSmsReminders extends Command
                         $sent = true;
                     }
 
-                    if (in_array('customer', $recipients)) {
+                    if (in_array('customer', $recipients) && !$rfm->parentCustomer?->sms_opted_out) {
                         $phone = $rfm->parentCustomer?->mobile ?? $rfm->parentCustomer?->phone ?? null;
                         if ($phone) {
                             $sms->send($phone, $bodyCustomer, 'rfm_reminder_customer', $rfm);

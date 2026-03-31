@@ -388,10 +388,19 @@
                             {{-- SMS Notify Customer --}}
                             @if($smsRfmUpdatedToCustomer)
                                 @php
-                                    $customerPhone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
-                                    $customerLabel = $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?: 'Customer';
+                                    $customerPhone    = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
+                                    $customerLabel    = $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?: 'Customer';
+                                    $customerOptedOut = (bool) ($opportunity->parentCustomer?->sms_opted_out);
                                 @endphp
-                                @if($customerPhone)
+                                @if($customerOptedOut)
+                                    <div class="flex items-start gap-3 opacity-50 cursor-not-allowed">
+                                        <input type="checkbox" disabled class="mt-0.5 w-4 h-4 border-gray-300 rounded">
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500">SMS Customer</span>
+                                            <p class="text-xs text-red-500 mt-0.5">{{ $customerLabel }} has opted out of SMS notifications.</p>
+                                        </div>
+                                    </div>
+                                @elseif($customerPhone)
                                     <label class="flex items-start gap-3 cursor-pointer">
                                         <input type="checkbox" name="sms_notify_customer" value="1"
                                                class="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
