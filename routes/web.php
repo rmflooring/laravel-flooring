@@ -366,15 +366,15 @@ Route::prefix('admin')
                 'destroy' => 'vendor_reps.destroy',
             ]);
 
-        // Flooring Sign-Off Conditions
-        Route::resource('flooring-conditions', \App\Http\Controllers\Admin\FlooringSignOffConditionController::class)
+        // General Conditions (used in sign-offs, estimates, sales, etc.)
+        Route::resource('conditions', \App\Http\Controllers\Admin\ConditionController::class)
             ->middleware('role_or_permission:admin')
             ->names([
-                'index'   => 'flooring-conditions.index',
-                'store'   => 'flooring-conditions.store',
-                'edit'    => 'flooring-conditions.edit',
-                'update'  => 'flooring-conditions.update',
-                'destroy' => 'flooring-conditions.destroy',
+                'index'   => 'conditions.index',
+                'store'   => 'conditions.store',
+                'edit'    => 'conditions.edit',
+                'update'  => 'conditions.update',
+                'destroy' => 'conditions.destroy',
             ])
             ->except(['show', 'create']);
 

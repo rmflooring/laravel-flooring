@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\FlooringSignOff;
-use App\Models\FlooringSignOffCondition;
+use App\Models\Condition;
 use App\Models\FlooringSignOffItem;
 use App\Models\Opportunity;
 use App\Models\Sale;
@@ -110,7 +110,7 @@ class FlooringSignOffController extends Controller
         $this->assertBelongs($opportunity, $signOff);
 
         $signOff->load('items', 'condition', 'sale');
-        $conditions = FlooringSignOffCondition::where('is_active', true)
+        $conditions = Condition::where('is_active', true)
             ->orderBy('sort_order')
             ->get();
 

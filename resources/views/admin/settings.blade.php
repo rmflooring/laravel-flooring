@@ -70,8 +70,8 @@
                         <a href="{{ route('admin.document-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Document Templates
                         </a>
-                        <a href="{{ route('admin.flooring-conditions.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
-                            Sign-Off Conditions
+                        <a href="{{ route('admin.conditions.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Conditions
                         </a>
                         <a href="{{ route('admin.settings.storage') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Storage Settings

@@ -41,6 +41,6 @@ class FlooringSignOff extends Model
 
     public function condition()
     {
-        return $this->belongsTo(FlooringSignOffCondition::class, 'condition_id');
+        return $this->belongsTo(Condition::class, 'condition_id');
     }
 }
