@@ -136,7 +136,7 @@ class FlooringSignOffController extends Controller
             'job_site_phone'   => ['nullable', 'string', 'max:50'],
             'job_site_email'   => ['nullable', 'string', 'max:255'],
             'pm_name'          => ['nullable', 'string', 'max:255'],
-            'condition_id'     => ['nullable', 'exists:flooring_sign_off_conditions,id'],
+            'condition_id'     => ['nullable', 'exists:conditions,id'],
             'condition_text'   => ['nullable', 'string'],
             'status'           => ['nullable', 'string', 'in:draft,finalized'],
             'items'            => ['nullable', 'array'],
