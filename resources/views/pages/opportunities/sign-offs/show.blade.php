@@ -125,45 +125,74 @@
             <div class="mb-5 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800" id="items-card">
                 <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                     <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Flooring Items</h2>
-                    <button type="button" onclick="addItemRow()"
-                            class="inline-flex items-center gap-1 rounded-lg border border-emerald-600 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-900/20">
-                        + Add Row
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="addRoomRow()"
+                                class="inline-flex items-center gap-1 rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-900/20">
+                            + Add Room
+                        </button>
+                        <button type="button" onclick="addItemRow()"
+                                class="inline-flex items-center gap-1 rounded-lg border border-emerald-600 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-900/20">
+                            + Add Item
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
-                                <th class="px-4 py-2 text-left font-medium w-1/4">Room</th>
                                 <th class="px-4 py-2 text-left font-medium">Product / Description</th>
                                 <th class="px-4 py-2 text-left font-medium w-20">Qty</th>
                                 <th class="px-4 py-2 text-left font-medium w-24">Unit</th>
                                 <th class="px-4 py-2 w-10"></th>
                             </tr>
                         </thead>
-                        <tbody id="items-tbody" class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @foreach ($signOff->items as $i => $item)
-                            <tr class="item-row">
-                                <td class="px-4 py-2">
-                                    <input type="text" name="items[{{ $i }}][room_name]" value="{{ $item->room_name }}"
-                                           class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" required>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="text" name="items[{{ $i }}][product_description]" value="{{ $item->product_description }}"
-                                           class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="number" name="items[{{ $i }}][qty]" value="{{ $item->qty }}" step="0.01" min="0"
-                                           class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" required>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="text" name="items[{{ $i }}][unit]" value="{{ $item->unit }}"
-                                           class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                                </td>
-                                <td class="px-4 py-2 text-center">
-                                    <button type="button" onclick="removeRow(this)" class="text-red-500 hover:text-red-700 text-lg leading-none">&times;</button>
-                                </td>
-                            </tr>
+                        <tbody id="items-tbody">
+                            @php
+                                $grouped = $signOff->items->groupBy('room_name');
+                                $i = 0;
+                            @endphp
+                            @foreach ($grouped as $roomName => $roomItems)
+                                {{-- Room header row --}}
+                                <tr class="room-header-row bg-blue-50 dark:bg-blue-900/30">
+                                    <td colspan="4" class="px-4 py-2">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>
+                                            </svg>
+                                            <input type="text"
+                                                   data-room-label
+                                                   value="{{ $roomName }}"
+                                                   placeholder="Room name"
+                                                   class="flex-1 rounded border-blue-200 bg-blue-50 text-sm font-semibold text-blue-800 focus:border-blue-500 focus:ring-blue-500 dark:border-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+                                            <button type="button" onclick="removeRoomRow(this)"
+                                                    class="text-red-400 hover:text-red-600 text-xs font-medium whitespace-nowrap">
+                                                Remove Room
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {{-- Items in this room --}}
+                                @foreach ($roomItems as $item)
+                                <tr class="item-row border-t border-gray-100 dark:border-gray-700">
+                                    <td class="px-4 py-2">
+                                        <input type="hidden" name="items[{{ $i }}][room_name]" value="{{ $roomName }}" class="room-name-hidden">
+                                        <input type="text" name="items[{{ $i }}][product_description]" value="{{ $item->product_description }}"
+                                               class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <input type="number" name="items[{{ $i }}][qty]" value="{{ $item->qty }}" step="0.01" min="0"
+                                               class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" required>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <input type="text" name="items[{{ $i }}][unit]" value="{{ $item->unit }}"
+                                               class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                    </td>
+                                    <td class="px-4 py-2 text-center">
+                                        <button type="button" onclick="removeRow(this)" class="text-red-500 hover:text-red-700 text-lg leading-none">&times;</button>
+                                    </td>
+                                </tr>
+                                @php $i++ @endphp
+                                @endforeach
                             @endforeach
                         </tbody>
                     </table>
@@ -254,17 +283,40 @@
     <script>
     let itemRowIndex = {{ $signOff->items->count() }};
 
+    // When a room label input changes, sync all hidden room_name inputs in that group
+    document.getElementById('items-tbody').addEventListener('input', function(e) {
+        if (e.target.matches('[data-room-label]')) {
+            const headerRow = e.target.closest('tr');
+            let row = headerRow.nextElementSibling;
+            while (row && row.classList.contains('item-row')) {
+                const hidden = row.querySelector('.room-name-hidden');
+                if (hidden) hidden.value = e.target.value;
+                row = row.nextElementSibling;
+            }
+        }
+    });
+
+    function getCurrentRoomName() {
+        // Find the last room header label value
+        const headers = document.querySelectorAll('[data-room-label]');
+        if (headers.length === 0) return '';
+        return headers[headers.length - 1].value;
+    }
+
+    function getLastRoomHeaderRow() {
+        const headers = document.querySelectorAll('#items-tbody tr.room-header-row');
+        return headers.length ? headers[headers.length - 1] : null;
+    }
+
     function addItemRow() {
-        const tbody = document.getElementById('items-tbody');
-        const idx   = itemRowIndex++;
-        const tr    = document.createElement('tr');
-        tr.className = 'item-row';
+        const tbody  = document.getElementById('items-tbody');
+        const idx    = itemRowIndex++;
+        const room   = getCurrentRoomName();
+        const tr     = document.createElement('tr');
+        tr.className = 'item-row border-t border-gray-100 dark:border-gray-700';
         tr.innerHTML = `
             <td class="px-4 py-2">
-                <input type="text" name="items[${idx}][room_name]" placeholder="Room"
-                       class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" required>
-            </td>
-            <td class="px-4 py-2">
+                <input type="hidden" name="items[${idx}][room_name]" value="${room.replace(/"/g,'&quot;')}" class="room-name-hidden">
                 <input type="text" name="items[${idx}][product_description]" placeholder="Product / Description"
                        class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             </td>
@@ -283,8 +335,43 @@
         tbody.appendChild(tr);
     }
 
+    function addRoomRow() {
+        const tbody = document.getElementById('items-tbody');
+        const tr    = document.createElement('tr');
+        tr.className = 'room-header-row bg-blue-50 dark:bg-blue-900/30';
+        tr.innerHTML = `
+            <td colspan="4" class="px-4 py-2">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>
+                    </svg>
+                    <input type="text" data-room-label value="" placeholder="Room name"
+                           class="flex-1 rounded border-blue-200 bg-blue-50 text-sm font-semibold text-blue-800 focus:border-blue-500 focus:ring-blue-500 dark:border-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+                    <button type="button" onclick="removeRoomRow(this)"
+                            class="text-red-400 hover:text-red-600 text-xs font-medium whitespace-nowrap">
+                        Remove Room
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        tr.querySelector('[data-room-label]').focus();
+    }
+
     function removeRow(btn) {
         btn.closest('tr').remove();
+    }
+
+    function removeRoomRow(btn) {
+        const headerRow = btn.closest('tr');
+        // Remove all following item-rows that belong to this room header
+        let next = headerRow.nextElementSibling;
+        while (next && next.classList.contains('item-row')) {
+            const toRemove = next;
+            next = next.nextElementSibling;
+            toRemove.remove();
+        }
+        headerRow.remove();
     }
     </script>
 </x-app-layout>

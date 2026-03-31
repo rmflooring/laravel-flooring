@@ -62,10 +62,9 @@
             vertical-align: top;
         }
         .items-table tr:nth-child(even) td { background: #f8fafc; }
-        .col-room { width: 22%; }
         .col-desc { }
-        .col-qty  { width: 10%; text-align: center; }
-        .col-unit { width: 12%; text-align: center; }
+        .col-qty  { width: 12%; text-align: center; }
+        .col-unit { width: 14%; text-align: center; }
 
         /* ── Conditions ──────────────────────────────────────────── */
         .conditions-box {
@@ -156,32 +155,41 @@
         @endif
     </table>
 
-    {{-- Items --}}
+    {{-- Items grouped by room --}}
     <div class="section-title">Flooring Selection</div>
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th class="col-room">Room</th>
-                <th class="col-desc">Product / Description</th>
-                <th class="col-qty">Qty</th>
-                <th class="col-unit">Unit</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($signOff->items as $item)
-            <tr>
-                <td class="col-room">{{ $item->room_name }}</td>
-                <td class="col-desc">{{ $item->product_description }}</td>
-                <td class="col-qty">{{ $item->qty }}</td>
-                <td class="col-unit">{{ $item->unit }}</td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="4" style="text-align:center; color:#888; padding:10px;">No items.</td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
+    @php $grouped = $signOff->items->groupBy('room_name'); @endphp
+    @if ($grouped->isEmpty())
+        <table class="items-table"><tbody>
+            <tr><td colspan="3" style="text-align:center;color:#888;padding:10px;">No items.</td></tr>
+        </tbody></table>
+    @else
+        @foreach ($grouped as $roomName => $roomItems)
+        <table class="items-table" style="margin-bottom:0;">
+            <thead>
+                <tr>
+                    <th colspan="3" style="background:#1d4ed8;color:#fff;font-size:10px;padding:4px 8px;text-align:left;">
+                        {{ $roomName }}
+                    </th>
+                </tr>
+                <tr>
+                    <th class="col-desc">Product / Description</th>
+                    <th class="col-qty">Qty</th>
+                    <th class="col-unit">Unit</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($roomItems as $item)
+                <tr>
+                    <td class="col-desc">{{ $item->product_description }}</td>
+                    <td class="col-qty">{{ $item->qty }}</td>
+                    <td class="col-unit">{{ $item->unit }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        <div style="height:6px;"></div>
+        @endforeach
+    @endif
 
     {{-- Conditions --}}
     @if ($signOff->condition_text)
