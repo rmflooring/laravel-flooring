@@ -162,10 +162,11 @@ class RfmController extends Controller
                     'rfm_link'             => route('mobile.rfms.show', $rfm->id),
                 ];
 
-                $recipients = array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm')));
-                $sms        = new SmsService();
-                $tpl        = new SmsTemplateService();
-                $body       = $tpl->renderTemplate('rfm_booked', $vars);
+                $recipients   = array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm')));
+                $sms          = new SmsService();
+                $tpl          = new SmsTemplateService();
+                $body         = $tpl->renderTemplate('rfm_booked', $vars);
+                $bodyCustomer = $tpl->renderTemplate('rfm_booked_customer', $vars);
 
                 if ($smsNotifyEstimator && in_array('estimator', $recipients) && $estimator?->phone) {
                     $sms->send($estimator->phone, $body, 'rfm_booked', $rfm);
@@ -178,7 +179,7 @@ class RfmController extends Controller
                 if ($smsNotifyCustomer && in_array('customer', $recipients)) {
                     $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
                     if ($phone) {
-                        $sms->send($phone, $body, 'rfm_booked', $rfm);
+                        $sms->send($phone, $bodyCustomer, 'rfm_booked_customer', $rfm);
                     }
                 }
             } catch (\Throwable $e) {
@@ -364,10 +365,11 @@ class RfmController extends Controller
                     'rfm_link'             => route('mobile.rfms.show', $rfm->id),
                 ];
 
-                $recipients = array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm')));
-                $sms        = new SmsService();
-                $tpl        = new SmsTemplateService();
-                $body       = $tpl->renderTemplate('rfm_updated', $vars);
+                $recipients   = array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm')));
+                $sms          = new SmsService();
+                $tpl          = new SmsTemplateService();
+                $body         = $tpl->renderTemplate('rfm_updated', $vars);
+                $bodyCustomer = $tpl->renderTemplate('rfm_updated_customer', $vars);
 
                 if (in_array('estimator', $recipients) && $estimator?->phone) {
                     $sms->send($estimator->phone, $body, 'rfm_updated', $rfm);
@@ -380,7 +382,7 @@ class RfmController extends Controller
                 if ($smsNotifyCustomer && in_array('customer', $recipients)) {
                     $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
                     if ($phone) {
-                        $sms->send($phone, $body, 'rfm_updated', $rfm);
+                        $sms->send($phone, $bodyCustomer, 'rfm_updated_customer', $rfm);
                     }
                 }
             } catch (\Throwable $e) {

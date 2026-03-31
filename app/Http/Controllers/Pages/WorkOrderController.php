@@ -845,10 +845,11 @@ class WorkOrderController extends Controller
                 'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
             ];
 
-            $recipients = array_filter(explode(',', \App\Models\Setting::get('sms_wo_scheduled_to', 'pm,installer')));
-            $sms        = new SmsService();
-            $tpl        = new SmsTemplateService();
-            $body       = $tpl->renderTemplate('wo_scheduled', $vars);
+            $recipients   = array_filter(explode(',', \App\Models\Setting::get('sms_wo_scheduled_to', 'pm,installer')));
+            $sms          = new SmsService();
+            $tpl          = new SmsTemplateService();
+            $body         = $tpl->renderTemplate('wo_scheduled', $vars);
+            $bodyCustomer = $tpl->renderTemplate('wo_scheduled_customer', $vars);
 
             if (in_array('pm', $recipients) && $pm?->mobile) {
                 $sms->send($pm->mobile, $body, 'wo_scheduled', $workOrder);
@@ -861,7 +862,7 @@ class WorkOrderController extends Controller
             if (in_array('homeowner', $recipients)) {
                 $phone = $sale?->job_phone ?? $sale?->sourceEstimate?->homeowner_phone ?? null;
                 if ($phone) {
-                    $sms->send($phone, $body, 'wo_scheduled', $workOrder);
+                    $sms->send($phone, $bodyCustomer, 'wo_scheduled_customer', $workOrder);
                 }
             }
         } catch (\Throwable $e) {

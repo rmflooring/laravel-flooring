@@ -58,7 +58,8 @@ class SendSmsReminders extends Command
                         'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
                     ];
 
-                    $body = $tpl->renderTemplate('wo_reminder', $vars);
+                    $body         = $tpl->renderTemplate('wo_reminder', $vars);
+                    $bodyCustomer = $tpl->renderTemplate('wo_reminder_customer', $vars);
                     $sent = false;
 
                     if (in_array('pm', $recipients) && $pm?->mobile) {
@@ -74,7 +75,7 @@ class SendSmsReminders extends Command
                     if (in_array('homeowner', $recipients)) {
                         $phone = $sale?->job_phone ?? $sale?->sourceEstimate?->homeowner_phone ?? null;
                         if ($phone) {
-                            $sms->send($phone, $body, 'wo_reminder', $wo);
+                            $sms->send($phone, $bodyCustomer, 'wo_reminder_customer', $wo);
                             $sent = true;
                         }
                     }
@@ -133,7 +134,8 @@ class SendSmsReminders extends Command
                         'rfm_link'             => route('mobile.rfms.show', $rfm->id),
                     ];
 
-                    $body = $tpl->renderTemplate('rfm_reminder', $vars);
+                    $body         = $tpl->renderTemplate('rfm_reminder', $vars);
+                    $bodyCustomer = $tpl->renderTemplate('rfm_reminder_customer', $vars);
                     $sent = false;
 
                     if (in_array('estimator', $recipients) && $estimator?->phone) {
@@ -149,7 +151,7 @@ class SendSmsReminders extends Command
                     if (in_array('customer', $recipients)) {
                         $phone = $rfm->parentCustomer?->mobile ?? $rfm->parentCustomer?->phone ?? null;
                         if ($phone) {
-                            $sms->send($phone, $body, 'rfm_reminder', $rfm);
+                            $sms->send($phone, $bodyCustomer, 'rfm_reminder_customer', $rfm);
                             $sent = true;
                         }
                     }
