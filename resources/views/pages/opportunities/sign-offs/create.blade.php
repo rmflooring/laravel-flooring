@@ -125,11 +125,15 @@
                                             <span class="item-fields-{{ $item->id }}">
                                                 <input type="hidden" name="items[{{ $item->id }}][room_name]"           value="{{ $room->room_name }}">
                                                 <input type="hidden" name="items[{{ $item->id }}][product_description]" value="{{ $desc }}">
+                                                <input type="hidden" name="items[{{ $item->id }}][color_item_number]"   value="{{ $item->color_item_number ?? '' }}">
                                             </span>
                                             <div class="min-w-0 flex-1">
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
                                                     {{ $item->style ?? $item->description ?? '(No description)' }}
                                                 </p>
+                                                @if ($item->color_item_number)
+                                                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $item->color_item_number }}</p>
+                                                @endif
                                             </div>
                                         </label>
                                     @endforeach

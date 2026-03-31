@@ -141,6 +141,7 @@
                         <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
                                 <th class="px-4 py-2 text-left font-medium">Product / Description</th>
+                                <th class="px-4 py-2 text-left font-medium w-40">Colour / Item #</th>
                                 <th class="px-4 py-2 w-10"></th>
                             </tr>
                         </thead>
@@ -152,7 +153,7 @@
                             @foreach ($grouped as $roomName => $roomItems)
                                 {{-- Room header row --}}
                                 <tr class="room-header-row bg-blue-50 dark:bg-blue-900/30">
-                                    <td colspan="2" class="px-4 py-2">
+                                    <td colspan="3" class="px-4 py-2">
                                         <div class="flex items-center gap-2">
                                             <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>
@@ -175,6 +176,10 @@
                                     <td class="px-4 py-2">
                                         <input type="hidden" name="items[{{ $i }}][room_name]" value="{{ $roomName }}" class="room-name-hidden">
                                         <input type="text" name="items[{{ $i }}][product_description]" value="{{ $item->product_description }}"
+                                               class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <input type="text" name="items[{{ $i }}][color_item_number]" value="{{ $item->color_item_number }}"
                                                class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                     </td>
                                     <td class="px-4 py-2 text-center">
@@ -310,6 +315,10 @@
                 <input type="text" name="items[${idx}][product_description]" placeholder="Product / Description"
                        class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             </td>
+            <td class="px-4 py-2">
+                <input type="text" name="items[${idx}][color_item_number]" placeholder="Colour / Item #"
+                       class="block w-full rounded border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            </td>
             <td class="px-4 py-2 text-center">
                 <button type="button" onclick="removeRow(this)" class="text-red-500 hover:text-red-700 text-lg leading-none">&times;</button>
             </td>
@@ -322,7 +331,7 @@
         const tr    = document.createElement('tr');
         tr.className = 'room-header-row bg-blue-50 dark:bg-blue-900/30';
         tr.innerHTML = `
-            <td colspan="2" class="px-4 py-2">
+            <td colspan="3" class="px-4 py-2">
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>

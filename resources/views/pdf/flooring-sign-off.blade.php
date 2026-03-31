@@ -62,9 +62,8 @@
             vertical-align: top;
         }
         .items-table tr:nth-child(even) td { background: #f8fafc; }
-        .col-desc { }
-        .col-qty  { width: 12%; text-align: center; }
-        .col-unit { width: 14%; text-align: center; }
+        .col-desc  { }
+        .col-color { width: 28%; }
 
         /* ── Conditions ──────────────────────────────────────────── */
         .conditions-box {
@@ -160,7 +159,7 @@
     @php $grouped = $signOff->items->groupBy('room_name'); @endphp
     @if ($grouped->isEmpty())
         <table class="items-table"><tbody>
-            <tr><td style="text-align:center;color:#888;padding:10px;">No items.</td></tr>
+            <tr><td colspan="2" style="text-align:center;color:#888;padding:10px;">No items.</td></tr>
         </tbody></table>
     @else
         @foreach ($grouped as $roomName => $roomItems)
@@ -173,12 +172,14 @@
                 </tr>
                 <tr>
                     <th class="col-desc">Product / Description</th>
+                    <th class="col-color">Colour / Item #</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($roomItems as $item)
                 <tr>
                     <td class="col-desc">{{ $item->product_description }}</td>
+                    <td class="col-color">{{ $item->color_item_number }}</td>
                 </tr>
                 @endforeach
             </tbody>

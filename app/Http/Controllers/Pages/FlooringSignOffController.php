@@ -93,6 +93,7 @@ class FlooringSignOffController extends Controller
                 'sign_off_id'         => $signOff->id,
                 'room_name'           => $itemData['room_name'],
                 'product_description' => $itemData['product_description'] ?? '',
+                'color_item_number'   => $itemData['color_item_number'] ?? null,
                 'sort_order'          => $index,
             ]);
         }
@@ -164,6 +165,7 @@ class FlooringSignOffController extends Controller
                 'sign_off_id'         => $signOff->id,
                 'room_name'           => $itemData['room_name'],
                 'product_description' => $itemData['product_description'] ?? '',
+                'color_item_number'   => $itemData['color_item_number'] ?? null,
                 'sort_order'          => $index,
             ]);
         }

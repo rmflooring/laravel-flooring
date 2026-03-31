@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class FlooringSignOffItem extends Model
 {
     protected $fillable = [
-        'sign_off_id', 'room_name', 'product_description', 'qty', 'unit', 'sort_order',
+        'sign_off_id', 'room_name', 'product_description', 'color_item_number', 'qty', 'unit', 'sort_order',
     ];
 
     public function signOff()
