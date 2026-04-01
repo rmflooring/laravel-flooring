@@ -335,9 +335,9 @@
                 @php
                     // Display total: revised -> locked -> current
                     $displayTotal = $sale->revised_contract_total
-                        ?? $sale->locked_grand_total
-                        ?? $sale->grand_total
-                        ?? 0;
+                        ?: ($sale->locked_grand_total
+                        ?: ($sale->grand_total
+                        ?: 0));
 
                     $locked = !is_null($sale->locked_at);
 
