@@ -128,7 +128,7 @@ class GraphMailService
                     cc:         $cc ?? [],
                 );
                 $response = Http::withToken($token)
-                    ->withBody($mime, 'text/plain')
+                    ->withBody(base64_encode($mime), 'text/plain')
                     ->post("https://graph.microsoft.com/v1.0/users/{$from}/sendMail");
             } else {
                 $attachments = [];
@@ -408,7 +408,7 @@ class GraphMailService
                     cc:         $cc ?? [],
                 );
                 $response = Http::withToken($token)
-                    ->withBody($mime, 'text/plain')
+                    ->withBody(base64_encode($mime), 'text/plain')
                     ->post('https://graph.microsoft.com/v1.0/me/sendMail');
             } else {
                 $attachments = [];
