@@ -24,6 +24,10 @@ class SaleController extends Controller
 		$dateTo   = trim((string) $request->get('date_to', ''));
 		$hasCo    = $request->boolean('has_co', false);
 		$trashed  = auth()->user()?->hasRole('admin') && $request->boolean('trashed', false);
+		$sort     = trim((string) $request->get('sort', ''));
+		$dir      = strtolower($request->get('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+		$allowedSorts = ['sale_number', 'customer_name', 'job_name', 'job_no', 'status', 'created_at'];
 
 		$statusOptions = [
 			'open',
@@ -41,7 +45,7 @@ class SaleController extends Controller
 
 		$query = $trashed
 			? Sale::onlyTrashed()->latest('deleted_at')
-			: Sale::query()->latest('id');
+			: Sale::query();
 
 		// Status filter
 		if ($status !== '') {
@@ -96,6 +100,14 @@ class SaleController extends Controller
 			});
 		}
 
+		if (!$trashed) {
+			if ($sort && in_array($sort, $allowedSorts, true)) {
+				$query->orderBy($sort, $dir);
+			} else {
+				$query->latest('id');
+			}
+		}
+
 		$sales = $query
             ->withCount([
                 'purchaseOrders',
@@ -116,7 +128,9 @@ class SaleController extends Controller
 			'dateTo',
 			'hasCo',
 			'trashed',
-			'statusOptions'
+			'statusOptions',
+			'sort',
+			'dir',
 		));
 	}
 	

@@ -303,6 +303,7 @@ On **create** (`store`) and **edit** (`update`), the controller attempts (best-e
 - [x] **Delete UI** — trash icon toggle on edit page header; inline "Delete? Yes / No / Permanent" strip; no delete button on show page
 - [x] **RFM index** — delete button in Action column hidden by default; trash icon toggle in column header reveals/hides them (Alpine.js); `delete rfms` permission gated
 - [x] **RFM index** — "Site Address" column renamed "Site Info"; now shows job site customer name (bold) above the address; `jobSiteCustomer` eager-loaded in `index()` query; container widened to `max-w-screen-2xl`
+- [x] **RFM index column sorting** — clickable sortable headers via `?sort=field&dir=asc|desc`; sortable columns: `customer_name` (via `leftJoin` on `customers`, uses `COALESCE(NULLIF(company_name,''),name)`), `scheduled_at`, `status`, `site_city`; default order: `scheduled_at DESC`; uses shared `admin.partials.sort-link` partial (▲/▼ indicators, preserves all filters via `withQueryString()`); non-relational filters prefixed with `rfms.` to avoid ambiguous column errors with the join
 
 ---
 

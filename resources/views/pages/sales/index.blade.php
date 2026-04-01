@@ -131,16 +131,26 @@
                     <table class="w-full text-sm text-left text-gray-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
 							<tr>
-								<th class="px-6 py-3">Sale #</th>
+								<th class="px-6 py-3">
+									@include('admin.partials.sort-link', ['label' => 'Sale #', 'field' => 'sale_number'])
+								</th>
 								<th class="px-6 py-3">Source Estimate</th>
-								<th class="px-6 py-3">Customer</th>
-								<th class="px-6 py-3">Job</th>
+								<th class="px-6 py-3">
+									@include('admin.partials.sort-link', ['label' => 'Customer', 'field' => 'customer_name'])
+								</th>
+								<th class="px-6 py-3">
+									@include('admin.partials.sort-link', ['label' => 'Job', 'field' => 'job_name'])
+								</th>
 								<th class="px-6 py-3 min-w-[200px]">Site Info</th>
-								<th class="px-6 py-3">Status</th>
+								<th class="px-6 py-3">
+									@include('admin.partials.sort-link', ['label' => 'Status', 'field' => 'status'])
+								</th>
 								<th class="px-6 py-3">Locked</th>
 								<th class="px-6 py-3 text-right">Revised Contract</th>
 								<th class="px-6 py-3 text-right">Invoiced</th>
-								<th class="px-6 py-3">Created</th>
+								<th class="px-6 py-3">
+									@include('admin.partials.sort-link', ['label' => 'Created', 'field' => 'created_at'])
+								</th>
 								<th class="px-6 py-3 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <span>Action</span>

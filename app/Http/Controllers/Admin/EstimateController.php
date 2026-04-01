@@ -24,8 +24,15 @@ class EstimateController extends Controller
     $status   = $request->query('status', '');
     $dateFrom = $request->query('date_from', '');
     $dateTo   = $request->query('date_to', '');
+    $sort     = $request->query('sort', '');
+    $dir      = strtolower($request->query('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
-    $estimates = Estimate::query()
+    $allowedSorts = [
+        'estimate_number', 'customer_name', 'job_name', 'job_no',
+        'pm_name', 'status', 'grand_total', 'created_at',
+    ];
+
+    $estimatesQuery = Estimate::query()
         ->with(['sale:id,source_estimate_id'])
         ->when($q !== '', function ($query) use ($q) {
             $query->where(function ($sub) use ($q) {
@@ -38,10 +45,15 @@ class EstimateController extends Controller
         })
         ->when($status !== '', fn($query) => $query->where('status', $status))
         ->when($dateFrom !== '', fn($query) => $query->whereDate('created_at', '>=', $dateFrom))
-        ->when($dateTo !== '', fn($query) => $query->whereDate('created_at', '<=', $dateTo))
-        ->orderByDesc('id')
-        ->paginate(15)
-        ->withQueryString();
+        ->when($dateTo !== '', fn($query) => $query->whereDate('created_at', '<=', $dateTo));
+
+    if ($sort && in_array($sort, $allowedSorts, true)) {
+        $estimatesQuery->orderBy($sort, $dir);
+    } else {
+        $estimatesQuery->orderByDesc('id');
+    }
+
+    $estimates = $estimatesQuery->paginate(15)->withQueryString();
 
     // NOTE: your statuses are lowercase in validation: draft,sent,approved,rejected
     $statusOptions = ['draft', 'sent', 'approved', 'rejected'];
@@ -52,7 +64,9 @@ class EstimateController extends Controller
         'q',
         'status',
         'dateFrom',
-        'dateTo' , 
+        'dateTo',
+        'sort',
+        'dir',
     ));
 }
 	

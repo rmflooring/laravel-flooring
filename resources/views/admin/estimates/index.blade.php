@@ -103,13 +103,27 @@
                     <table class="w-full text-sm text-left text-gray-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
                             <tr>
-                                <th class="px-6 py-3">Estimate #</th>
-                                <th class="px-6 py-3">Customer</th>
-                                <th class="px-6 py-3">Job</th>
-                                <th class="px-6 py-3">PM</th>
-                                <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3 text-right">Total</th>
-                                <th class="px-6 py-3">Created</th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Estimate #', 'field' => 'estimate_number'])
+                                </th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Customer', 'field' => 'customer_name'])
+                                </th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Job', 'field' => 'job_name'])
+                                </th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'PM', 'field' => 'pm_name'])
+                                </th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Status', 'field' => 'status'])
+                                </th>
+                                <th class="px-6 py-3 text-right">
+                                    @include('admin.partials.sort-link', ['label' => 'Total', 'field' => 'grand_total'])
+                                </th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Created', 'field' => 'created_at'])
+                                </th>
                                 <th class="px-6 py-3 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <span>Action</span>

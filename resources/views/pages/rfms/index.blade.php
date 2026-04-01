@@ -122,13 +122,21 @@
                     <table class="w-full text-sm text-left text-gray-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 border-b">
                             <tr>
-                                <th class="px-6 py-3">Customer</th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Customer', 'field' => 'customer_name'])
+                                </th>
                                 <th class="px-6 py-3">Job</th>
-                                <th class="px-6 py-3">Site Info</th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Site Info', 'field' => 'site_city'])
+                                </th>
                                 <th class="px-6 py-3">Flooring</th>
                                 <th class="px-6 py-3">Estimator</th>
-                                <th class="px-6 py-3">Scheduled</th>
-                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Scheduled', 'field' => 'scheduled_at'])
+                                </th>
+                                <th class="px-6 py-3">
+                                    @include('admin.partials.sort-link', ['label' => 'Status', 'field' => 'status'])
+                                </th>
                                 <th class="px-6 py-3 text-center">Calendar</th>
                                 <th class="px-6 py-3 text-right">
                                     <div class="flex items-center justify-end gap-2">
