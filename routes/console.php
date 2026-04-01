@@ -17,6 +17,12 @@ Schedule::command('sms:send-reminders')
     ->name('sms-send-reminders')
     ->withoutOverlapping();
 
+// Check if estimators have accepted their RFM calendar invites → mark confirmed
+Schedule::command('rfm:check-confirmations')
+    ->everyTenMinutes()
+    ->name('rfm-check-confirmations')
+    ->withoutOverlapping();
+
 Schedule::call(function () {
     $users = \App\Models\User::whereHas('microsoftAccount', function ($q) {
         $q->where('is_connected', 1);

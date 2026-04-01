@@ -203,6 +203,47 @@ class GraphCalendarService
     }
 
     /**
+     * Fetch the attendee list for an existing event and return their response statuses.
+     *
+     * Returns an array keyed by lowercase email address:
+     *   ['estimator@rmflooring.ca' => 'accepted', ...]
+     *
+     * Possible response values from Graph API:
+     *   none, notResponded, tentativelyAccepted, accepted, declined, organizer
+     */
+    public function getEventAttendees(MicrosoftAccount $account, \App\Models\ExternalEventLink $link): array
+    {
+        $accessToken = $this->ensureAccessToken($account);
+
+        $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+            ->where('calendar_id', $link->external_calendar_id)
+            ->first();
+
+        $url = ($calendar && ! empty($calendar->group_id))
+            ? "https://graph.microsoft.com/v1.0/groups/{$calendar->group_id}/events/{$link->external_event_id}?\$select=attendees"
+            : "https://graph.microsoft.com/v1.0/me/events/{$link->external_event_id}?\$select=attendees";
+
+        $response = Http::withToken($accessToken)->acceptJson()->get($url);
+
+        if (! $response->successful()) {
+            throw new \Exception(
+                "Graph API getEventAttendees failed (HTTP {$response->status()}): " . $response->body()
+            );
+        }
+
+        $result = [];
+        foreach ($response->json('attendees', []) as $attendee) {
+            $email    = strtolower($attendee['emailAddress']['address'] ?? '');
+            $response = strtolower($attendee['status']['response'] ?? 'none');
+            if ($email) {
+                $result[$email] = $response;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Create a local CalendarEvent + ExternalEventLink and return the CalendarEvent.
      */
     public function persistLocalEvent(
