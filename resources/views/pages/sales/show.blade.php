@@ -14,6 +14,16 @@
                 </div>
 
                 <div class="flex items-center gap-2">
+                    @if($sale->opportunity_id)
+                    <a href="{{ route('pages.opportunities.show', $sale->opportunity_id) }}"
+                       title="Back to Opportunity"
+                       class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 focus:outline-none focus:ring-4 focus:ring-indigo-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+                        </svg>
+                        Opportunity
+                    </a>
+                    @endif
                     <a href="{{ route('pages.sales.index') }}"
                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
                         Back
