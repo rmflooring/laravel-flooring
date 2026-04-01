@@ -141,8 +141,8 @@ class RfmController extends Controller
                 $estimator       = $rfm->estimator;
                 $pm              = $opportunity->projectManager;
                 $jobSiteCustomer = $opportunity->jobSiteCustomer;
-                $customerName    = $opportunity->parentCustomer?->company_name
-                    ?: $opportunity->parentCustomer?->name
+                $customerName    = $jobSiteCustomer?->company_name
+                    ?: $jobSiteCustomer?->name
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
                 $fullAddress   = implode(', ', array_filter([
@@ -345,8 +345,8 @@ class RfmController extends Controller
                 $estimator       = $rfm->estimator;
                 $pm              = $opportunity->projectManager;
                 $jobSiteCustomer = $opportunity->jobSiteCustomer;
-                $customerName    = $opportunity->parentCustomer?->company_name
-                    ?: $opportunity->parentCustomer?->name
+                $customerName    = $jobSiteCustomer?->company_name
+                    ?: $jobSiteCustomer?->name
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
                 $fullAddress   = implode(', ', array_filter([

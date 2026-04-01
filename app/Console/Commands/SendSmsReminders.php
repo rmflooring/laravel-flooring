@@ -111,8 +111,8 @@ class SendSmsReminders extends Command
                     $estimator       = $rfm->estimator;
                     $pm              = $rfm->opportunity?->projectManager;
                     $jobSiteCustomer = $rfm->jobSiteCustomer;
-                    $customerName    = $rfm->parentCustomer?->company_name
-                        ?: $rfm->parentCustomer?->name
+                    $customerName    = $jobSiteCustomer?->company_name
+                        ?: $jobSiteCustomer?->name
                         ?: 'Customer';
                     $fullAddress  = implode(', ', array_filter([
                         $rfm->site_address, $rfm->site_city, $rfm->site_postal_code,
