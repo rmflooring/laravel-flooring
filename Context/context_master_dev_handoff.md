@@ -116,6 +116,7 @@ Full details in `Context/context_rfm.md`.
 1. ~~Sync MS365 calendar event when RFM is edited~~ ✓ Done (session 39)
 2. ~~Delete RFM route + cancel/delete calendar event on delete~~ ✓ Done (session 40)
 3. RFM → Estimate creation shortcut from the show page
+4. **Auto-confirm RFM on calendar invite acceptance** — when estimator accepts the calendar invite, RFM status should automatically change from `pending` → `confirmed`. Requires Microsoft Graph change notifications (webhooks): subscribe to the estimator's calendar, listen for `created`/`updated` events matching the RFM event UID (`rfm-{id}@rmflooring.ca`), check `responseStatus.response === 'accepted'`, then update `rfm.status`. Needs a publicly accessible webhook endpoint + subscription renewal (Graph subscriptions expire max 3 days for calendar resources).
 
 ### RFM delete (session 40, 2026-03-29)
 - `Rfm` model uses `SoftDeletes`; `deleted_at` added via migration
