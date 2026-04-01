@@ -100,7 +100,7 @@ class SendSmsReminders extends Command
         if (Setting::get('sms_notify_rfm_reminder')) {
             $recipients = array_filter(explode(',', Setting::get('sms_rfm_reminder_to', 'estimator,pm')));
 
-            $rfms = Rfm::with(['estimator', 'parentCustomer', 'opportunity.projectManager'])
+            $rfms = Rfm::with(['estimator', 'parentCustomer', 'jobSiteCustomer', 'opportunity.projectManager'])
                 ->whereDate('scheduled_at', $tomorrow)
                 ->whereIn('status', ['pending', 'confirmed'])
                 ->whereNull('sms_reminder_sent_at')
@@ -108,9 +108,10 @@ class SendSmsReminders extends Command
 
             foreach ($rfms as $rfm) {
                 try {
-                    $estimator    = $rfm->estimator;
-                    $pm           = $rfm->opportunity?->projectManager;
-                    $customerName = $rfm->parentCustomer?->company_name
+                    $estimator       = $rfm->estimator;
+                    $pm              = $rfm->opportunity?->projectManager;
+                    $jobSiteCustomer = $rfm->jobSiteCustomer;
+                    $customerName    = $rfm->parentCustomer?->company_name
                         ?: $rfm->parentCustomer?->name
                         ?: 'Customer';
                     $fullAddress  = implode(', ', array_filter([
@@ -148,8 +149,8 @@ class SendSmsReminders extends Command
                         $sent = true;
                     }
 
-                    if (in_array('customer', $recipients) && !$rfm->parentCustomer?->sms_opted_out) {
-                        $phone = $rfm->parentCustomer?->mobile ?? $rfm->parentCustomer?->phone ?? null;
+                    if (in_array('customer', $recipients) && !$jobSiteCustomer?->sms_opted_out) {
+                        $phone = $jobSiteCustomer?->mobile ?? $jobSiteCustomer?->phone ?? null;
                         if ($phone) {
                             $sms->send($phone, $bodyCustomer, 'rfm_reminder_customer', $rfm);
                             $sent = true;

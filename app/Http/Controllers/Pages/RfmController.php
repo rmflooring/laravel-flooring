@@ -136,11 +136,12 @@ class RfmController extends Controller
         if (Setting::get('sms_notify_rfm_booked')) {
             try {
                 $rfm->loadMissing(['estimator']);
-                $opportunity->loadMissing(['parentCustomer', 'projectManager']);
+                $opportunity->loadMissing(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
 
-                $estimator     = $rfm->estimator;
-                $pm            = $opportunity->projectManager;
-                $customerName  = $opportunity->parentCustomer?->company_name
+                $estimator       = $rfm->estimator;
+                $pm              = $opportunity->projectManager;
+                $jobSiteCustomer = $opportunity->jobSiteCustomer;
+                $customerName    = $opportunity->parentCustomer?->company_name
                     ?: $opportunity->parentCustomer?->name
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
@@ -176,8 +177,8 @@ class RfmController extends Controller
                     $sms->send($pm->mobile, $body, 'rfm_booked', $rfm);
                 }
 
-                if ($smsNotifyCustomer && in_array('customer', $recipients) && !$opportunity->parentCustomer?->sms_opted_out) {
-                    $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
+                if ($smsNotifyCustomer && in_array('customer', $recipients) && !$jobSiteCustomer?->sms_opted_out) {
+                    $phone = $jobSiteCustomer?->mobile ?? $jobSiteCustomer?->phone ?? null;
                     if ($phone) {
                         $sms->send($phone, $bodyCustomer, 'rfm_booked_customer', $rfm);
                     }
@@ -339,11 +340,12 @@ class RfmController extends Controller
         if (Setting::get('sms_notify_rfm_updated')) {
             try {
                 $rfm->loadMissing(['estimator']);
-                $opportunity->loadMissing(['parentCustomer', 'projectManager']);
+                $opportunity->loadMissing(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
 
-                $estimator     = $rfm->estimator;
-                $pm            = $opportunity->projectManager;
-                $customerName  = $opportunity->parentCustomer?->company_name
+                $estimator       = $rfm->estimator;
+                $pm              = $opportunity->projectManager;
+                $jobSiteCustomer = $opportunity->jobSiteCustomer;
+                $customerName    = $opportunity->parentCustomer?->company_name
                     ?: $opportunity->parentCustomer?->name
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
@@ -379,8 +381,8 @@ class RfmController extends Controller
                     $sms->send($pm->mobile, $body, 'rfm_updated', $rfm);
                 }
 
-                if ($smsNotifyCustomer && in_array('customer', $recipients) && !$opportunity->parentCustomer?->sms_opted_out) {
-                    $phone = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
+                if ($smsNotifyCustomer && in_array('customer', $recipients) && !$jobSiteCustomer?->sms_opted_out) {
+                    $phone = $jobSiteCustomer?->mobile ?? $jobSiteCustomer?->phone ?? null;
                     if ($phone) {
                         $sms->send($phone, $bodyCustomer, 'rfm_updated_customer', $rfm);
                     }
