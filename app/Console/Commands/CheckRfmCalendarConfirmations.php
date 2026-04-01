@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\MicrosoftAccount;
 use App\Models\Rfm;
-use App\Services\GraphCalendarService;
+use App\Models\Setting;
+use App\Services\GraphMailService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -15,60 +15,86 @@ class CheckRfmCalendarConfirmations extends Command
 
     public function handle(): void
     {
-        // Pending RFMs that have a calendar event synced to MS365
-        $rfms = Rfm::with(['estimator', 'calendarEvent.externalLink'])
-            ->where('status', 'pending')
+        $pendingRfms = Rfm::where('status', 'pending')
             ->whereNotNull('calendar_event_id')
             ->get();
 
-        if ($rfms->isEmpty()) {
+        if ($pendingRfms->isEmpty()) {
             $this->info('No pending RFMs with calendar events — nothing to check.');
             return;
         }
 
-        $service   = new GraphCalendarService();
+        $fromEmail = Setting::get('mail_from_address', 'reception@rmflooring.ca');
+        $mailer    = app(GraphMailService::class);
+
+        // Only look at messages received since the earliest pending RFM was created
+        $since = $pendingRfms->min('created_at')?->subDay()->utc()->format('Y-m-d\TH:i:s\Z');
+
+        try {
+            $messages = $mailer->getUnreadMessages($fromEmail, 100, $since);
+        } catch (\Throwable $e) {
+            Log::error('[RFM Confirmations] Failed to fetch inbox', ['error' => $e->getMessage()]);
+            $this->error('Could not read inbox: ' . $e->getMessage());
+            return;
+        }
+
+        // Only bother fetching MIME for messages that look like calendar accepts
+        $candidates = array_filter(
+            $messages,
+            fn($m) => stripos($m['subject'] ?? '', 'accepted') !== false
+        );
+
+        if (empty($candidates)) {
+            $this->info('No accepted calendar replies in inbox.');
+            return;
+        }
+
+        // Index pending RFMs by ID for quick lookup
+        $rfmMap    = $pendingRfms->keyBy('id');
         $confirmed = 0;
 
-        foreach ($rfms as $rfm) {
-            $link = $rfm->calendarEvent?->externalLink;
-
-            if (! $link) {
-                continue;
-            }
-
-            $account = MicrosoftAccount::find($link->microsoft_account_id);
-            if (! $account) {
-                continue;
-            }
-
-            // Estimator email — we only care about their response
-            $estimatorEmail = strtolower(trim($rfm->estimator?->email ?? ''));
-
+        foreach ($candidates as $message) {
             try {
-                $attendees = $service->getEventAttendees($account, $link);
+                $mime = $mailer->getMessageMime($fromEmail, $message['id']);
 
-                $response = $attendees[$estimatorEmail] ?? null;
-
-                if ($response === 'accepted') {
-                    $rfm->update(['status' => 'confirmed']);
-                    $confirmed++;
-
-                    Log::info('[RFM Confirmations] RFM confirmed via calendar accept', [
-                        'rfm_id'          => $rfm->id,
-                        'estimator_email' => $estimatorEmail,
-                    ]);
-
-                    $this->info("RFM #{$rfm->id} confirmed (estimator accepted).");
+                // Find our RFM UID — e.g. "rfm-4@rmflooring.ca"
+                if (! preg_match('/UID[;:][^\r\n]*rfm-(\d+)@rmflooring\.ca/i', $mime, $uidMatch)) {
+                    continue;
                 }
-            } catch (\Throwable $e) {
-                Log::warning('[RFM Confirmations] Failed to check attendees', [
-                    'rfm_id' => $rfm->id,
-                    'error'  => $e->getMessage(),
+
+                $rfmId = (int) $uidMatch[1];
+                $rfm   = $rfmMap->get($rfmId);
+
+                if (! $rfm) {
+                    continue; // Already confirmed/cancelled, or not a pending RFM we manage
+                }
+
+                // Verify the reply actually says ACCEPTED (not tentative/declined)
+                if (! preg_match('/PARTSTAT=ACCEPTED/i', $mime)) {
+                    continue;
+                }
+
+                $rfm->update(['status' => 'confirmed']);
+                $mailer->markMessageRead($fromEmail, $message['id']);
+
+                $confirmed++;
+
+                Log::info('[RFM Confirmations] RFM confirmed via inbox reply', [
+                    'rfm_id'  => $rfmId,
+                    'subject' => $message['subject'],
                 ]);
-                $this->warn("RFM #{$rfm->id} skipped: " . $e->getMessage());
+
+                $this->info("RFM #{$rfmId} confirmed (estimator accepted invite).");
+
+            } catch (\Throwable $e) {
+                Log::warning('[RFM Confirmations] Error processing message', [
+                    'message_id' => $message['id'] ?? '?',
+                    'error'      => $e->getMessage(),
+                ]);
+                $this->warn('Skipped message: ' . $e->getMessage());
             }
         }
 
-        $this->info("Done — {$confirmed} RFM(s) confirmed out of {$rfms->count()} checked.");
+        $this->info("Done — {$confirmed} RFM(s) confirmed.");
     }
 }

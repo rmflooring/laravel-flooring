@@ -221,6 +221,56 @@ class GraphMailService
     }
 
     // =========================================================================
+    // Inbox helpers (used for calendar reply detection)
+    // =========================================================================
+
+    /**
+     * Fetch unread messages from a mailbox.
+     * Returns an array of { id, subject, receivedDateTime }.
+     */
+    public function getUnreadMessages(string $userEmail, int $top = 50, ?string $since = null): array
+    {
+        $token  = $this->getAppToken();
+        $filter = 'isRead eq false';
+        if ($since) {
+            $filter .= " and receivedDateTime ge {$since}";
+        }
+        $response = Http::withToken($token)->acceptJson()->get(
+            "https://graph.microsoft.com/v1.0/users/{$userEmail}/messages",
+            [
+                '$select'  => 'id,subject,receivedDateTime',
+                '$filter'  => $filter,
+                '$orderby' => 'receivedDateTime desc',
+                '$top'     => $top,
+            ]
+        );
+        return $response->json('value', []);
+    }
+
+    /**
+     * Fetch the raw MIME content of a specific message.
+     */
+    public function getMessageMime(string $userEmail, string $messageId): string
+    {
+        $token = $this->getAppToken();
+        return Http::withToken($token)
+            ->get("https://graph.microsoft.com/v1.0/users/{$userEmail}/messages/{$messageId}/\$value")
+            ->body();
+    }
+
+    /**
+     * Mark a message as read.
+     */
+    public function markMessageRead(string $userEmail, string $messageId): void
+    {
+        $token = $this->getAppToken();
+        Http::withToken($token)->acceptJson()->patch(
+            "https://graph.microsoft.com/v1.0/users/{$userEmail}/messages/{$messageId}",
+            ['isRead' => true]
+        );
+    }
+
+    // =========================================================================
     // Helpers
     // =========================================================================
 
