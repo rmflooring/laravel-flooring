@@ -212,39 +212,53 @@ $accessToken = $account->access_token;
                     $group = $groupResp->json();
                     $groupName = $group['displayName'] ?? null;
 
-                    // Fetch the group calendar
+                    // Fetch the group calendar to get its calendar_id
                     $groupCalResp = Http::withToken($accessToken)
                         ->acceptJson()
                         ->get('https://graph.microsoft.com/v1.0/groups/' . $groupId . '/calendar');
 
-                    if (!$groupCalResp->successful()) {
-                        continue;
-                    }
+                    $groupCalendarId = $groupCalResp->successful() ? ($groupCalResp->json()['id'] ?? null) : null;
 
-                    $groupCalendar = $groupCalResp->json();
-                    if (empty($groupCalendar['id'])) {
-                        continue;
-                    }
+                    $resolvedName = $groupName
+                        ?: ($group['mail'] ?? null)
+                        ?: ($groupCalResp->json()['name'] ?? 'Group Calendar');
 
-                    $existingEnabled = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-                        ->where('calendar_id', $groupCalendar['id'])
-                        ->value('is_enabled');
+                    // Prefer to update an existing record in this priority:
+                    // 1. Already has this group_id (re-discover after migration)
+                    // 2. Personal subscription with matching name (first discover)
+                    // 3. Matching calendar_id from the group calendar endpoint
+                    // This preserves is_enabled state instead of resetting to false.
+                    $existing = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                        ->where('group_id', $groupId)
+                        ->first()
+                        ?? MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                            ->whereNull('group_id')
+                            ->where('name', $resolvedName)
+                            ->first()
+                        ?? ($groupCalendarId
+                            ? MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                                ->where('calendar_id', $groupCalendarId)
+                                ->first()
+                            : null);
 
-                    MicrosoftCalendar::updateOrCreate(
-                        [
+                    if ($existing) {
+                        $existing->group_id   = $groupId;
+                        $existing->name       = $resolvedName;
+                        $existing->is_primary = false;
+                        if ($groupCalendarId) {
+                            $existing->calendar_id = $groupCalendarId;
+                        }
+                        $existing->save();
+                    } else {
+                        MicrosoftCalendar::create([
                             'microsoft_account_id' => $account->id,
-                            'calendar_id'          => $groupCalendar['id'],
-                        ],
-                        [
-                            // Prefer group display name; fallback to mail; fallback generic
-                            'group_id'   => $groupId,
-							'name'       => $groupName
-                                ?: ($group['mail'] ?? null)
-                                ?: ($groupCalendar['name'] ?? 'Group Calendar'),
-                            'is_primary' => false,
-                            'is_enabled' => is_null($existingEnabled) ? false : (bool)$existingEnabled,
-                        ]
-                    );
+                            'calendar_id'          => $groupCalendarId ?? $groupId,
+                            'group_id'             => $groupId,
+                            'name'                 => $resolvedName,
+                            'is_primary'           => false,
+                            'is_enabled'           => false,
+                        ]);
+                    }
                 } catch (\Throwable $e) {
                     continue;
                 }
