@@ -112,33 +112,44 @@ class GraphMailService
                 ])->values()->all();
             }
 
-            $attachments = [];
-            if ($attachment) {
-                $attachments[] = [
-                    '@odata.type'  => '#microsoft.graph.fileAttachment',
-                    'name'         => $attachment['filename'],
-                    'contentType'  => 'application/pdf',
-                    'contentBytes' => $attachment['content'],
-                ];
-            }
             if ($icsContent) {
-                $attachments[] = [
-                    '@odata.type'  => '#microsoft.graph.fileAttachment',
-                    'name'         => 'invite.ics',
-                    'contentType'  => 'text/calendar; method=REQUEST',
-                    'contentBytes' => base64_encode($icsContent),
-                ];
+                // Use raw MIME so Exchange processes this as a meeting request
+                // (Accept / Decline buttons). Graph API JSON sendMail never
+                // triggers Exchange's meeting scheduler regardless of ICS attachment.
+                $mime = $this->buildMimeWithCalendar(
+                    from:       $from,
+                    fromName:   $fromName,
+                    to:         (array) $to,
+                    replyTo:    $replyTo,
+                    subject:    $subject,
+                    body:       $body,
+                    icsContent: $icsContent,
+                    attachment: $attachment,
+                    cc:         $cc ?? [],
+                );
+                $response = Http::withToken($token)
+                    ->withBody($mime, 'text/plain')
+                    ->post("https://graph.microsoft.com/v1.0/users/{$from}/sendMail");
+            } else {
+                $attachments = [];
+                if ($attachment) {
+                    $attachments[] = [
+                        '@odata.type'  => '#microsoft.graph.fileAttachment',
+                        'name'         => $attachment['filename'],
+                        'contentType'  => 'application/pdf',
+                        'contentBytes' => $attachment['content'],
+                    ];
+                }
+                if (! empty($attachments)) {
+                    $message['attachments'] = $attachments;
+                }
+                $response = Http::withToken($token)
+                    ->acceptJson()
+                    ->post("https://graph.microsoft.com/v1.0/users/{$from}/sendMail", [
+                        'message'         => $message,
+                        'saveToSentItems' => true,
+                    ]);
             }
-            if (! empty($attachments)) {
-                $message['attachments'] = $attachments;
-            }
-
-            $response = Http::withToken($token)
-                ->acceptJson()
-                ->post("https://graph.microsoft.com/v1.0/users/{$from}/sendMail", [
-                    'message'         => $message,
-                    'saveToSentItems' => true,
-                ]);
 
             if ($response->successful()) {
                 Log::info('[GraphMail] Track 1 email sent', [
@@ -207,6 +218,69 @@ class GraphMailService
 
             return false;
         }
+    }
+
+    // =========================================================================
+    // Helpers
+    // =========================================================================
+
+    /**
+     * Build a raw RFC 2822 MIME message where the ICS is an inline
+     * text/calendar part. Exchange/Outlook renders Accept / Decline buttons
+     * when the calendar part is inline — a fileAttachment never triggers this.
+     */
+    private function buildMimeWithCalendar(
+        string $from,
+        string $fromName,
+        array  $to,
+        string $replyTo,
+        string $subject,
+        string $body,
+        string $icsContent,
+        ?array $attachment = null,
+        array  $cc = [],
+    ): string {
+        $boundary = 'RMF' . strtoupper(bin2hex(random_bytes(8)));
+
+        $mime  = "MIME-Version: 1.0\r\n";
+        $mime .= "From: {$fromName} <{$from}>\r\n";
+        $mime .= "To: " . implode(', ', $to) . "\r\n";
+        if (! empty($cc)) {
+            $mime .= "Cc: " . implode(', ', $cc) . "\r\n";
+        }
+        $mime .= "Reply-To: {$replyTo}\r\n";
+        $mime .= "Subject: {$subject}\r\n";
+        $mime .= "Content-Type: multipart/mixed; boundary=\"{$boundary}\"\r\n";
+        $mime .= "\r\n";
+
+        // Plain-text body
+        $mime .= "--{$boundary}\r\n";
+        $mime .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $mime .= "Content-Transfer-Encoding: base64\r\n";
+        $mime .= "\r\n";
+        $mime .= chunk_split(base64_encode($body), 76, "\r\n");
+
+        // Inline calendar part — what makes Accept/Decline appear
+        $mime .= "--{$boundary}\r\n";
+        $mime .= "Content-Type: text/calendar; method=REQUEST; charset=UTF-8\r\n";
+        $mime .= "Content-Transfer-Encoding: base64\r\n";
+        $mime .= "Content-Disposition: attachment; filename=\"invite.ics\"\r\n";
+        $mime .= "\r\n";
+        $mime .= chunk_split(base64_encode($icsContent), 76, "\r\n");
+
+        // Optional PDF attachment
+        if ($attachment) {
+            $mime .= "--{$boundary}\r\n";
+            $mime .= "Content-Type: application/pdf\r\n";
+            $mime .= "Content-Transfer-Encoding: base64\r\n";
+            $mime .= "Content-Disposition: attachment; filename=\"{$attachment['filename']}\"\r\n";
+            $mime .= "\r\n";
+            $mime .= chunk_split($attachment['content'], 76, "\r\n");
+        }
+
+        $mime .= "--{$boundary}--\r\n";
+
+        return $mime;
     }
 
     // =========================================================================
@@ -321,33 +395,41 @@ class GraphMailService
                 ])->values()->all();
             }
 
-            $attachments = [];
-            if ($attachment) {
-                $attachments[] = [
-                    '@odata.type'  => '#microsoft.graph.fileAttachment',
-                    'name'         => $attachment['filename'],
-                    'contentType'  => 'application/pdf',
-                    'contentBytes' => $attachment['content'],
-                ];
-            }
             if ($icsContent) {
-                $attachments[] = [
-                    '@odata.type'  => '#microsoft.graph.fileAttachment',
-                    'name'         => 'invite.ics',
-                    'contentType'  => 'text/calendar; method=REQUEST',
-                    'contentBytes' => base64_encode($icsContent),
-                ];
+                $mime = $this->buildMimeWithCalendar(
+                    from:       $senderEmail,
+                    fromName:   $senderEmail,
+                    to:         (array) $to,
+                    replyTo:    $senderEmail,
+                    subject:    $subject,
+                    body:       $body,
+                    icsContent: $icsContent,
+                    attachment: $attachment,
+                    cc:         $cc ?? [],
+                );
+                $response = Http::withToken($token)
+                    ->withBody($mime, 'text/plain')
+                    ->post('https://graph.microsoft.com/v1.0/me/sendMail');
+            } else {
+                $attachments = [];
+                if ($attachment) {
+                    $attachments[] = [
+                        '@odata.type'  => '#microsoft.graph.fileAttachment',
+                        'name'         => $attachment['filename'],
+                        'contentType'  => 'application/pdf',
+                        'contentBytes' => $attachment['content'],
+                    ];
+                }
+                if (! empty($attachments)) {
+                    $message['attachments'] = $attachments;
+                }
+                $response = Http::withToken($token)
+                    ->acceptJson()
+                    ->post('https://graph.microsoft.com/v1.0/me/sendMail', [
+                        'message'         => $message,
+                        'saveToSentItems' => true,
+                    ]);
             }
-            if (! empty($attachments)) {
-                $message['attachments'] = $attachments;
-            }
-
-            $response = Http::withToken($token)
-                ->acceptJson()
-                ->post('https://graph.microsoft.com/v1.0/me/sendMail', [
-                    'message'         => $message,
-                    'saveToSentItems' => true,
-                ]);
 
             if ($response->successful()) {
                 Log::info('[GraphMail] Track 2 email sent', [
