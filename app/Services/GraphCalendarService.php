@@ -90,6 +90,13 @@ class GraphCalendarService
             $payload['location'] = ['displayName' => $eventData['location']];
         }
 
+        if (!empty($eventData['attendees'])) {
+            $payload['attendees'] = array_map(fn($a) => [
+                'emailAddress' => ['address' => $a['email'], 'name' => $a['name'] ?? $a['email']],
+                'type'         => 'required',
+            ], $eventData['attendees']);
+        }
+
         $url = !empty($calendar->group_id)
             ? "https://graph.microsoft.com/v1.0/groups/{$calendar->group_id}/events"
             : "https://graph.microsoft.com/v1.0/me/calendars/{$calendar->calendar_id}/events";
@@ -140,6 +147,13 @@ class GraphCalendarService
 
         if (array_key_exists('location', $eventData)) {
             $payload['location'] = ['displayName' => $eventData['location'] ?? ''];
+        }
+
+        if (!empty($eventData['attendees'])) {
+            $payload['attendees'] = array_map(fn($a) => [
+                'emailAddress' => ['address' => $a['email'], 'name' => $a['name'] ?? $a['email']],
+                'type'         => 'required',
+            ], $eventData['attendees']);
         }
 
         $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)

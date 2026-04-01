@@ -501,12 +501,21 @@ class RfmController extends Controller
         $start    = \Carbon\Carbon::parse($rfm->scheduled_at);
         $rendered = app(CalendarTemplateService::class)->renderTemplate('rfm_calendar', $vars);
 
+        $attendees = [];
+        if ($rfm->estimator && !empty($rfm->estimator->email)) {
+            $attendees[] = [
+                'name'  => $estimatorName,
+                'email' => $rfm->estimator->email,
+            ];
+        }
+
         return [
-            'title'    => $rendered['title'],
-            'start'    => $start,
-            'end'      => $start->copy()->addHours(2),
-            'location' => $fullAddress ?: null,
-            'notes'    => $rendered['notes'],
+            'title'     => $rendered['title'],
+            'start'     => $start,
+            'end'       => $start->copy()->addHours(2),
+            'location'  => $fullAddress ?: null,
+            'notes'     => $rendered['notes'],
+            'attendees' => $attendees,
         ];
     }
 
