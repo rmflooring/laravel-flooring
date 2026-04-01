@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-03-29 (session 42)
+Updated: 2026-04-01 (session 43)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -262,8 +262,10 @@ Full details in `Context/context-calendar.md`.
 
 - **Sync duplicate entry bug:** `syncNow()` `updateOrCreate` was searching by 4 keys; unique constraint is on `(provider, external_event_id)` only → fixed lookup keys.
 - **Group calendar 404 (multi-user):** Users who subscribe to RM group calendars in Outlook but are NOT M365 group members get personal-subscription records with `group_id = null`; sync used the wrong `me/calendars/{id}` endpoint → 404. Fix: `discoverCalendars` cleans up personal-subscription duplicates when the same account already has a group record for that name. For non-member accounts, group records are copied from any account that has `group_id` set so the correct `groups/{group_id}/calendar/events` endpoint is used.
-- **Known RM group IDs:** Team RM `451694e6`, RFM/Measures `b8483c56`, Installations `a6890136`, Warehouse `4bfd495c`.
-- **If a user gets 404 on group calendars:** Ensure their Azure AD account is a member of the relevant M365 groups, then re-run Discover.
+- **Known RM group IDs (full GUIDs):** Team RM `451694e6-e1d4-4b5b-9c11-6cee3c9c8ca9`, RFM/Measures `b8483c56-fc4b-4734-8011-335b88c7e4ad`, Installations `a6890136-56b9-42fc-ac2b-8e05c98c0e8c`, Warehouse `4bfd495c-4df2-4eaa-9d8c-987c4ef23b02`.
+- **If a user gets 404 on group calendars:** Re-run Discover — it will stamp `group_id` onto existing enabled records in-place. If Discover doesn't fix it, check Azure AD group membership then re-discover.
+- **Server migration 404 fix (session 43, 2026-04-01):** After migrating to rmserver2, all `microsoft_calendars` records had `group_id = null` because `discoverCalendars` keyed `updateOrCreate` on the group's `calendar_id` (which differs from the personal-subscription `calendar_id` in `me/calendars`), creating new disabled records instead of updating existing enabled ones. Fixed `discoverCalendars` to resolve existing records by priority: (1) matching `group_id`, (2) name-match on personal subscription records, (3) `calendar_id` match — then updates in-place, preserving `is_enabled`. DB was patched manually via tinker before the code fix was deployed.
+- **New server path:** `/var/www/myapp` (was `/var/www/fm.rmflooring.ca/laravel/` on rmserver); DB name unchanged (`fm_laravel`).
 
 ---
 

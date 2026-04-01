@@ -29,7 +29,7 @@ npm run dev
 composer run setup
 ```
 
-**Live server**: `/var/www/fm.rmflooring.ca/laravel/` on `rmserveradmin@rmserver`
+**Live server**: `/var/www/myapp` on `rmserver2admin@rmserver2`
 **Database**: MariaDB, database name `fm_laravel`
 
 ## Architecture
