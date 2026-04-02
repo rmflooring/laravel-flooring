@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-02 (session 45)
+Updated: 2026-04-02 (session 46)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -14,30 +14,16 @@ Updated: 2026-04-02 (session 45)
 
 ## File Storage
 
-### Current setup (live server)
-- **Driver**: Local Server (default Laravel `public` disk)
-- **Physical location**: NFS mount on WD My Cloud NAS (`RMF-NAS1`)
-- **NFS share**: `192.168.1.143:/nfs/app_storage` → mounted at `/mnt/nas_storage` on `rmserver2`
-- **Symlink**: `storage/app/public` → `/mnt/nas_storage` (Laravel sees it as local disk)
-- **fstab entry**: `192.168.1.143:/nfs/app_storage  /mnt/nas_storage  nfs  defaults,_netdev  0  0`
-- **NAS real path**: `/mnt/HD/HD_a2/app_storage` (symlinked from `/nfs/app_storage`)
-- **Permissions**: `777` set on NAS side (root squash cannot be disabled in WD My Cloud UI)
+Full details: `Context/context_storage.md`
 
-### How it works
-Laravel writes to `storage/app/public/` as normal. That path is a symlink to the NFS mount, so all files land on the NAS transparently. No app-level driver change needed — stays on `local` in Admin → Settings → Storage.
-
-### Admin UI awareness
-`StorageSettingsController::index()` detects if `storage/app/public` is a symlink and passes the target path as `$localSymlink` to the view. The storage settings page shows a purple info banner when a symlink is detected, so admins know files are going to external storage.
-
-### Admin Storage Settings page
-- Route: `admin.settings.storage.*`
-- Controller: `app/Http/Controllers/Admin/StorageSettingsController.php`
-- View: `resources/views/admin/settings/storage.blade.php`
-- Supports: Local, S3/cloud, SFTP drivers (switchable via UI)
-- **Bug fixed**: Test Connection form was nested inside Save form (invalid HTML) — moved outside, now works correctly
-
-### DocumentStorageService
-`app/Services/DocumentStorageService::disk()` — returns the active disk name. For S3/SFTP drivers it registers a `documents` disk at runtime from DB settings. For local it returns `'public'`.
+### Summary
+- **Primary**: NFS-mounted WD My Cloud NAS (`192.168.1.143:/nfs/app_storage` → `/mnt/nas_storage`)
+- **Symlink**: `storage/app/public` → `/mnt/nas_storage` — Laravel uses `public` disk, unaware of NFS
+- **Mirror**: All uploads auto-mirrored to `richard@rmflooring.ca` OneDrive via queued `MirrorFileToOneDrive` job
+- **Folder naming**: `opportunities/{JobSiteName} - {job_no}/` — method: `Opportunity::storageFolderName()`
+- **Health monitoring**: `nas:check-health` runs every 5 min, red banner + email alert if NAS goes offline
+- **Queue worker**: `laravel-queue.service` systemd service (must be running for OneDrive mirror to work)
+- **PHP config**: `/etc/php/8.3/fpm/php.ini` — adjust `upload_max_filesize` / `post_max_size` for large uploads
 
 ---
 
@@ -52,7 +38,7 @@ Current core modules:
 - Purchase Orders — see `Context/context_purchase_orders.md`
 - Installers — see `Context/context_installers.md`
 - **Installer Portal** (mobile) — see `Context/context_installer_portal.md`
-- Documents / Media
+- Documents / Media — see `Context/context_storage.md`
 - Calendar (MS365 integration)
 - Email system (Track 1 + Track 2) — see `Context/context_graph_mail.md`
 - Email Templates (per-user + admin system) — see `Context/context_email_templates.md`
