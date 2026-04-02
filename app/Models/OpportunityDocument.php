@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\MirrorFileToOneDrive;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
@@ -9,6 +10,19 @@ use Illuminate\Support\Facades\Storage;
 class OpportunityDocument extends Model
 {
     use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        // After a new document is created, queue a background OneDrive mirror
+        static::created(function (self $doc) {
+            if ($doc->path) {
+                MirrorFileToOneDrive::dispatch($doc->disk, $doc->path);
+            }
+            if ($doc->thumbnail_path) {
+                MirrorFileToOneDrive::dispatch($doc->disk, $doc->thumbnail_path);
+            }
+        });
+    }
 
     protected $fillable = [
         'opportunity_id',
