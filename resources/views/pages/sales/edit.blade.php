@@ -239,6 +239,14 @@
                                         placeholder="Phone Number">
                                 </div>
 
+                                <div>
+                                    <label class="block mb-1 text-sm font-medium text-gray-700">Mobile</label>
+                                    <input type="text" name="homeowner_mobile"
+                                            value="{{ old('homeowner_mobile', $sale->job_mobile ?? '') }}"
+                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                        placeholder="Mobile Number">
+                                </div>
+
                                 <div class="md:col-span-2">
                                     <label class="block mb-1 text-sm font-medium text-gray-700">Email</label>
                                     <input type="email" name="homeowner_email"

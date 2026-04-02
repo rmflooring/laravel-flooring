@@ -1,6 +1,6 @@
 # Email Templates System — RM Flooring / Floor Manager
 
-Updated: 2026-03-13
+Updated: 2026-04-02
 
 ---
 
@@ -36,40 +36,51 @@ Templates support `{{merge_tags}}` that are resolved at send time with live reco
 |------|-------|--------|
 | `estimate` | Estimate | Active — wired to estimate send flow |
 | `sale` | Sale | Active — wired to sale send flow |
-| `work_order` | Work Order | Stubbed — no WO module yet |
-| `purchase_order` | Purchase Order | Stubbed — no PO module yet |
-| `invoice` | Invoice | Stubbed — no invoice module yet |
+| `work_order` | Work Order | Active — wired to WO send flow |
+| `purchase_order` | Purchase Order | Stubbed — no PO email template rendering yet |
+| `invoice` | Invoice | Stubbed — no invoice email template rendering yet |
 
 ### Admin-only (system notifications)
 
 | Type | Label | Notes |
 |------|-------|-------|
-| `rfm_created` | RFM Created | Not yet wired — RFM uses hardcoded Mail classes |
-| `rfm_updated` | RFM Updated | Not yet wired |
+| `rfm_created_estimator` | RFM Created — Estimator | Fully wired to `RfmCreatedMail` |
+| `rfm_created_pm` | RFM Created — PM | Fully wired to `RfmCreatedMail` |
+| `rfm_updated_estimator` | RFM Updated — Estimator | Fully wired to `RfmUpdatedMail` (changes diff auto-prepended) |
+| `rfm_updated_pm` | RFM Updated — PM | Fully wired to `RfmUpdatedMail` |
+
+> Note: The old `rfm_created` and `rfm_updated` types were replaced with the 4 types above. Both `RfmCreatedMail` and `RfmUpdatedMail` now use `EmailTemplateService` — no more hardcoded bodies. The "what changed" diff block is automatically prepended to the estimator body for updated emails.
 
 ---
 
 ## Available Merge Tags
 
 ### estimate
-`{{customer_name}}`, `{{estimate_number}}`, `{{grand_total}}`, `{{job_name}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{salesperson_name}}`, `{{sender_name}}`, `{{sender_email}}`
+`{{customer_name}}`, `{{estimate_number}}`, `{{grand_total}}`, `{{job_name}}`, `{{job_no}}`, `{{job_address}}`, `{{job_phone}}`, `{{job_mobile}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{salesperson_name}}`, `{{sender_name}}`, `{{sender_email}}`
 
 ### sale
-`{{customer_name}}`, `{{sale_number}}`, `{{grand_total}}`, `{{job_name}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{salesperson_name}}`, `{{sender_name}}`, `{{sender_email}}`
+`{{customer_name}}`, `{{sale_number}}`, `{{grand_total}}`, `{{job_name}}`, `{{job_no}}`, `{{job_address}}`, `{{job_phone}}`, `{{job_mobile}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{salesperson_name}}`, `{{sender_name}}`, `{{sender_email}}`
 
 ### work_order
-`{{customer_name}}`, `{{wo_number}}`, `{{job_name}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{sender_name}}`, `{{sender_email}}`
+`{{customer_name}}`, `{{wo_number}}`, `{{job_name}}`, `{{job_no}}`, `{{job_address}}`, `{{job_phone}}`, `{{job_mobile}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{sender_name}}`, `{{sender_email}}`, `{{wo_link}}`
 
 ### purchase_order
-`{{customer_name}}`, `{{po_number}}`, `{{job_name}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{sender_name}}`, `{{sender_email}}`
+`{{customer_name}}`, `{{po_number}}`, `{{job_name}}`, `{{job_no}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{sender_name}}`, `{{sender_email}}`
 
 ### invoice
-`{{customer_name}}`, `{{invoice_number}}`, `{{grand_total}}`, `{{job_name}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{sender_name}}`, `{{sender_email}}`
+`{{customer_name}}`, `{{invoice_number}}`, `{{grand_total}}`, `{{job_name}}`, `{{job_no}}`, `{{job_address}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{sender_name}}`, `{{sender_email}}`
 
-### rfm_created / rfm_updated
-`{{customer_name}}`, `{{rfm_date}}`, `{{rfm_time}}`, `{{job_address}}`, `{{estimator_name}}`, `{{pm_name}}`, `{{special_instructions}}`, `{{rfm_link}}`
+### rfm_created_estimator / rfm_updated_estimator
+`{{customer_name}}`, `{{job_no}}`, `{{job_site}}`, `{{rfm_date}}`, `{{rfm_time}}`, `{{job_address}}`, `{{job_phone}}`, `{{job_mobile}}`, `{{flooring_type}}`, `{{special_instructions}}`, `{{estimator_name}}`, `{{estimator_first_name}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{rfm_link}}`
 
-- `{{rfm_link}}` — resolves to the mobile RFM URL (`/m/rfm/{id}`); tapping it opens the mobile RFM page for the estimator
+### rfm_created_pm / rfm_updated_pm
+`{{customer_name}}`, `{{job_no}}`, `{{job_site}}`, `{{rfm_date}}`, `{{rfm_time}}`, `{{job_address}}`, `{{job_phone}}`, `{{job_mobile}}`, `{{special_instructions}}`, `{{estimator_name}}`, `{{estimator_first_name}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{rfm_link}}`
+
+**RFM-specific tag notes:**
+- `{{job_site}}` — `opportunity->jobSiteCustomer` company name or name
+- `{{job_phone}}` / `{{job_mobile}}` — from `opportunity->jobSiteCustomer->phone` / `->mobile`
+- `{{rfm_link}}` — mobile RFM URL (`/m/rfm/{id}`)
+- `{{flooring_type}}` — comma-joined flooring type labels from the RFM
 
 ---
 
@@ -80,7 +91,18 @@ Templates support `{{merge_tags}}` that are resolved at send time with live reco
 - `{{sender_name}}` / `{{sender_email}}` — the logged-in user's name and email
 - `{{salesperson_name}}` — `salesperson_1_employee` first + last name, falls back to sender
 - Sale `{{customer_name}}` — reads from `sourceEstimate->homeowner_name` first
-- Sale `to` address — reads from `sourceEstimate->homeowner_email` (no homeowner fields on Sale directly)
+- `{{job_phone}}` / `{{job_mobile}}` on estimates — from `homeowner_phone` / `homeowner_mobile`
+- `{{job_phone}}` / `{{job_mobile}}` on sales/WOs — from `sale->job_phone` / `sale->job_mobile`
+
+---
+
+## Jobsite Contact Fields
+
+Estimates store: `homeowner_phone`, `homeowner_mobile`, `homeowner_email`
+Sales store: `job_phone`, `job_mobile`, `job_email`
+
+The estimate create form pre-fills phone/mobile from `opportunity->jobSiteCustomer->phone/mobile`.
+The sale edit form uses `name="homeowner_phone"` / `name="homeowner_mobile"` which map to `job_phone` / `job_mobile` on save.
 
 ---
 
@@ -89,12 +111,14 @@ Templates support `{{merge_tags}}` that are resolved at send time with live reco
 **`app/Services/EmailTemplateService.php`**
 
 ```php
-// Get user's saved template or built-in default
+// Get saved template (user or system) or fall back to built-in default
 $templateService->getTemplate(?User $user, string $type): array  // ['subject' => ..., 'body' => ...]
 
 // Replace {{tags}} with values
 $templateService->render(string $template, array $vars): string
 ```
+
+Pass `null` for `$user` to get system/admin templates (rfm types).
 
 ---
 
@@ -108,7 +132,6 @@ $templateService->render(string $template, array $vars): string
 - Shows **Custom** badge if user has a saved template, **Default** badge if using built-in
 - Available tags listed with click-to-copy
 - Save Template / Reset to Default actions
-- Accessible from sidebar dropdown → **Email Templates**
 
 **Routes:**
 ```
@@ -125,9 +148,8 @@ DELETE /settings/email-templates/{type}   pages.settings.email-templates.reset
 **Controller:** `app/Http/Controllers/Admin/AdminEmailTemplateController.php`
 **View:** `resources/views/admin/settings/email-templates.blade.php`
 
-- Tabbed interface — RFM Created, RFM Updated
+- 4 tabs: RFM Created (Estimator), RFM Created (PM), RFM Updated (Estimator), RFM Updated (PM)
 - Same Save / Reset pattern as user page
-- Linked from `/admin/settings` → **System Email Templates**
 
 **Routes:**
 ```
@@ -140,72 +162,47 @@ DELETE /admin/settings/email-templates/{type}   admin.settings.email-templates.r
 
 ## Estimate Send Flow
 
-**Route:** `POST /pages/estimates/{estimate}/send-email` → `pages.estimates.send-email`
-**Controller method:** `EstimateController::sendEmail()`
+**Route:** `POST /pages/estimates/{estimate}/send-email`
+**Controller method:** `EstimateController::sendEmail()` + `edit()` / `show()`
 
-### Flow
-1. Staff clicks **Send Email** button (purple) on the estimate edit or show page
-2. Alpine.js modal opens with:
-   - **To** — quick-select buttons: Job Site email, PM email (if present), Custom text input
-   - **CC** — add/remove multiple CC addresses as pills (optional)
-   - Subject and Body pre-filled from user's saved template
-3. Staff can adjust any field before sending
-4. On submit:
-   - Track 2 attempted if `user->microsoftAccount->mail_connected`
-   - Falls back to Track 1 shared mailbox on failure or if not connected
-   - Estimate `status` updated to `sent` on success
-5. Flash success/error on redirect back
-
-### Tag vars resolved in `EstimateController::edit()`
-```php
-'customer_name'   => homeowner_name ?: customer_name
-'estimate_number' => estimate_number
-'grand_total'     => formatted with $ and 2 decimal places
-'job_name'        => job_name
-'job_address'     => job_address
-'pm_name'         => pm_name
-'pm_first_name'   => first word of pm_name
-'salesperson_name'=> salesperson1Employee full name ?: auth user name
-'sender_name'     => auth()->user()->name
-'sender_email'    => auth()->user()->email
-```
+Tag vars include `job_phone` and `job_mobile` (from `homeowner_phone` / `homeowner_mobile`).
 
 ---
 
 ## Sale Send Flow
 
-**Route:** `POST /pages/sales/{sale}/send-email` → `pages.sales.send-email`
+**Route:** `POST /pages/sales/{sale}/send-email`
 **Controller method:** `SaleController::sendEmail()` + private `resolveEmailTemplate()`
 
-### Flow
-Same modal/fallback/CC pattern as estimates. Available on both:
-- **Edit page:** `resources/views/pages/sales/edit.blade.php`
-- **Show page:** `resources/views/pages/sales/show.blade.php`
+Tag vars include `job_phone` and `job_mobile` (from `sale->job_phone` / `sale->job_mobile`).
 
-**To** field quick-select: Job Site email (`sale->job_email` fallback to `sourceEstimate->homeowner_email`), PM email (`sale->opportunity->projectManager->email`), Custom.
-`SaleController::show()` and `edit()` both eager-load `opportunity.projectManager` and pass `$pmEmail` to the view.
+---
 
-Sale status is **not** changed on send (sale statuses are workflow states: open, scheduled, etc.).
+## Work Order Send Flow
 
-### Tag vars resolved in `SaleController::resolveEmailTemplate()`
-```php
-'customer_name'   => sourceEstimate->homeowner_name ?: customer_name
-'sale_number'     => sale_number
-'grand_total'     => formatted
-'job_name'        => job_name
-'job_address'     => job_address
-'pm_name'         => pm_name
-'pm_first_name'   => first word of pm_name
-'salesperson_name'=> salesperson1Employee full name ?: auth user name
-'sender_name'     => auth()->user()->name
-'sender_email'    => auth()->user()->email
-```
+**Route:** `POST /pages/work-orders/{workOrder}/send-email`
+**Controller method:** `WorkOrderController::sendEmail()` + private `resolveEmailTemplate()`
+
+Tag vars include `job_phone` and `job_mobile` (from `sale->job_phone` / `sale->job_mobile`).
+
+---
+
+## RFM Email Flow
+
+**Mailable classes:** `app/Mail/RfmCreatedMail.php`, `app/Mail/RfmUpdatedMail.php`
+
+Both classes use `EmailTemplateService` with separate template types per recipient:
+- `RfmCreatedMail` → `rfm_created_estimator` (estimator), `rfm_created_pm` (PM)
+- `RfmUpdatedMail` → `rfm_updated_estimator` (estimator), `rfm_updated_pm` (PM)
+
+`RfmUpdatedMail` automatically prepends the "what changed" diff block before the rendered estimator body when `$changes` is non-empty.
+
+Both share a `buildVars()` helper that resolves all tags from the `$rfm` and `$opportunity` objects.
 
 ---
 
 ## Open Items
 
-1. **Wire RFM templates** — `rfm_created` / `rfm_updated` admin templates not yet connected to the `RfmController` send logic (currently uses hardcoded `RfmCreatedMail` / `RfmUpdatedMail` classes). `{{rfm_link}}` IS resolved in the hardcoded bodies already.
-2. **Work Order / PO / Invoice send flows** — template types stubbed, send UI not built (modules don't exist yet)
-3. **HTML email bodies** — all sends are currently plain text; future improvement is branded HTML templates
-4. **Per-user test send** — available at `/admin/settings/mail` Track 2 section (green **Send Test** button per connected user)
+1. **PO / Invoice send flows** — template types stubbed, no template rendering wired yet
+2. **HTML email bodies** — all sends are currently plain text; future improvement is branded HTML templates
+3. **Per-user test send** — available at `/admin/settings/mail` Track 2 section

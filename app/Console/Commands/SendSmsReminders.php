@@ -48,6 +48,8 @@ class SendSmsReminders extends Command
                         'sale_number'          => $sale?->sale_number ?? '',
                         'customer_name'        => $sale?->homeowner_name ?? $sale?->job_name ?? '',
                         'job_address'          => $sale?->job_address ?? '',
+                        'job_phone'            => $sale?->job_phone ?? '',
+                        'job_mobile'           => $sale?->job_mobile ?? '',
                         'scheduled_date'       => Carbon::parse($wo->scheduled_date)->format('M j, Y'),
                         'scheduled_time'       => $wo->scheduled_time
                             ? Carbon::createFromFormat('H:i', $wo->scheduled_time)->format('g:ia')

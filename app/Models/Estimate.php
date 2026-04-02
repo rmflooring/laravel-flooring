@@ -25,6 +25,7 @@ class Estimate extends Model
 		
 		'homeowner_name',
 		'homeowner_phone',
+		'homeowner_mobile',
 		'homeowner_email',
 
         'notes',

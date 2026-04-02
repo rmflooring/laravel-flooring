@@ -24,13 +24,15 @@ class SmsTemplate extends Model
     public const TAGS = [
         'wo_scheduled' => [
             '{{wo_number}}', '{{sale_number}}', '{{customer_name}}',
-            '{{job_address}}', '{{scheduled_date}}', '{{scheduled_time}}',
+            '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{scheduled_date}}', '{{scheduled_time}}',
             '{{installer_name}}', '{{installer_first_name}}',
             '{{pm_name}}', '{{pm_first_name}}',
         ],
         'wo_reminder' => [
             '{{wo_number}}', '{{sale_number}}', '{{customer_name}}',
-            '{{job_address}}', '{{scheduled_date}}', '{{scheduled_time}}',
+            '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{scheduled_date}}', '{{scheduled_time}}',
             '{{installer_name}}', '{{installer_first_name}}',
             '{{pm_name}}', '{{pm_first_name}}',
         ],
@@ -57,11 +59,13 @@ class SmsTemplate extends Model
         ],
         'wo_scheduled_customer' => [
             '{{customer_name}}', '{{scheduled_date}}', '{{scheduled_time}}',
-            '{{job_address}}', '{{installer_name}}', '{{wo_number}}',
+            '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{installer_name}}', '{{wo_number}}',
         ],
         'wo_reminder_customer' => [
             '{{customer_name}}', '{{scheduled_date}}', '{{scheduled_time}}',
-            '{{job_address}}', '{{installer_name}}', '{{wo_number}}',
+            '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{installer_name}}', '{{wo_number}}',
         ],
         'rfm_booked_customer' => [
             '{{customer_name}}', '{{rfm_date}}', '{{rfm_time}}',
