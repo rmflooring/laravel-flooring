@@ -7,6 +7,39 @@
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure where uploaded documents and photos are stored.</p>
     </div>
 
+    {{-- NAS health status --}}
+    @php
+        $nasStatus      = \App\Models\Setting::get('nas_status', 'unknown');
+        $nasLastChecked = \App\Models\Setting::get('nas_last_checked');
+    @endphp
+    <div class="mb-6 flex items-center gap-3 rounded-lg border px-4 py-3
+        {{ $nasStatus === 'online'  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' : '' }}
+        {{ $nasStatus === 'offline' ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20' : '' }}
+        {{ $nasStatus === 'unknown' ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800' : '' }}">
+        @if($nasStatus === 'online')
+            <svg class="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-green-800 dark:text-green-200">NAS Storage is online</p>
+                @if($nasLastChecked)<p class="text-xs text-green-700 dark:text-green-300">Last checked: {{ $nasLastChecked }}</p>@endif
+            </div>
+        @elseif($nasStatus === 'offline')
+            <svg class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-red-800 dark:text-red-200">NAS Storage is OFFLINE</p>
+                @if($nasLastChecked)<p class="text-xs text-red-700 dark:text-red-300">Last checked: {{ $nasLastChecked }}</p>@endif
+            </div>
+        @else
+            <svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+            </svg>
+            <p class="text-sm text-gray-600 dark:text-gray-400">NAS status unknown — health check has not run yet.</p>
+        @endif
+    </div>
+
     {{-- Flash --}}
     @if (session('success'))
         <div class="mb-4 flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-900/20">

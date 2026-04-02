@@ -10,6 +10,12 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// NAS health check — runs every 5 minutes, alerts richard@rmflooring.ca on status change
+Schedule::command('nas:check-health')
+    ->everyFiveMinutes()
+    ->name('nas-check-health')
+    ->withoutOverlapping();
+
 // SMS day-before reminders — runs daily at the configured time (default 4pm)
 Schedule::command('sms:send-reminders')
     ->dailyAt(\App\Models\Setting::get('sms_reminder_time', '16:00'))
