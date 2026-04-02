@@ -1292,6 +1292,9 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
         ->middleware('role_or_permission:admin|view work orders')
         ->name('work-orders.upload-photos');
 
+    Route::get('opportunity/{opportunity}', [\App\Http\Controllers\Mobile\OpportunityController::class, 'show'])
+        ->name('opportunity.show');
+
     Route::get('opportunity/{opportunity}/photos', [\App\Http\Controllers\Mobile\PhotoGalleryController::class, 'show'])
         ->name('opportunity.photos');
 

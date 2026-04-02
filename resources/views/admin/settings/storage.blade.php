@@ -265,8 +265,8 @@
                 </div>
             </div>
 
-            {{-- Save / Test buttons --}}
-            <div class="mt-4 flex items-center gap-3">
+            {{-- Save button --}}
+            <div class="mt-4">
                 <button type="submit"
                         class="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -274,21 +274,22 @@
                     </svg>
                     Save Settings
                 </button>
-
-                <span x-show="driver !== 'local'" x-cloak>
-                    <form method="POST" action="{{ route('admin.settings.storage.test') }}" class="inline">
-                        @csrf
-                        <button type="submit"
-                                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .23 2.71-1.158 2.71H4.956c-1.389 0-2.158-1.71-1.158-2.71L5 14.5"/>
-                            </svg>
-                            Test Connection
-                        </button>
-                    </form>
-                </span>
             </div>
         </form>
+
+        {{-- Test Connection form — must be outside the save form (nested forms are invalid HTML) --}}
+        <div x-show="driver !== 'local'" x-cloak class="mt-2">
+            <form method="POST" action="{{ route('admin.settings.storage.test') }}">
+                @csrf
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .23 2.71-1.158 2.71H4.956c-1.389 0-2.158-1.71-1.158-2.71L5 14.5"/>
+                    </svg>
+                    Test Connection
+                </button>
+            </form>
+        </div>
 
         {{-- Info: existing files --}}
         <div class="mt-6 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/50">

@@ -60,7 +60,7 @@
     @endif
 
     {{-- Back to Opportunity --}}
-    <a href="{{ route('pages.opportunities.show', $opportunity->id) }}"
+    <a href="{{ route('mobile.opportunity.show', $opportunity->id) }}"
        class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
