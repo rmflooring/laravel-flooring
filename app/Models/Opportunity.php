@@ -103,4 +103,28 @@ class Opportunity extends Model
         return $this->hasMany(PurchaseOrder::class)->orderByDesc('created_at');
     }
 
+    /**
+     * Returns the storage folder name for this opportunity's uploaded files.
+     * Format: "{JobSiteName} - {job_no}"  e.g. "Sandra_Cokinass - 26-0001"
+     * Falls back to "{JobSiteName} - {id}" if no job_no, or "opportunity-{id}" if no site name.
+     */
+    public function storageFolderName(): string
+    {
+        $siteName = $this->jobSiteCustomer?->name;
+        $jobNo    = $this->job_no;
+
+        $sanitize = fn(string $str): string =>
+            preg_replace('/[\/\\\\:*?"<>|]+/', '', str_replace(' ', '_', trim($str)));
+
+        if ($siteName && $jobNo) {
+            return $sanitize($siteName) . ' - ' . $sanitize($jobNo);
+        }
+
+        if ($siteName) {
+            return $sanitize($siteName) . ' - ' . $this->id;
+        }
+
+        return 'opportunity-' . $this->id;
+    }
+
 }

@@ -160,7 +160,7 @@ public function index(Opportunity $opportunity, Request $request)
                 $fileDesc = $descriptions[$i] ?? $globalDesc;
 
                 $disk = DocumentStorageService::disk();
-                $path = $file->store("opportunities/{$opportunity->id}", $disk);
+                $path = $file->store("opportunities/{$opportunity->storageFolderName()}", $disk);
 
                 \Log::info('[docs] stored file', [
                     'opportunity_id' => $opportunity->id,
@@ -178,7 +178,7 @@ public function index(Opportunity $opportunity, Request $request)
                         $image   = $manager->read($file->getRealPath());
                         $image->scaleDown(width: 600);
                         $thumbContents = (string) $image->toJpeg(quality: 80);
-                        $thumbnailPath = "opportunities/{$opportunity->id}/thumb_" . pathinfo(basename($path), PATHINFO_FILENAME) . '.jpg';
+                        $thumbnailPath = "opportunities/{$opportunity->storageFolderName()}/thumb_" . pathinfo(basename($path), PATHINFO_FILENAME) . '.jpg';
                         Storage::disk($disk)->put($thumbnailPath, $thumbContents);
                     } catch (\Throwable $e) {
                         \Log::warning('[docs] thumbnail generation failed', [
@@ -450,7 +450,7 @@ public function index(Opportunity $opportunity, Request $request)
         $slug      = Str::slug($template->name);
         $timestamp = now()->format('Ymd_His');
         $filename  = "doc_{$slug}_{$timestamp}.pdf";
-        $path      = "opportunities/{$opportunity->id}/{$filename}";
+        $path      = "opportunities/{$opportunity->storageFolderName()}/{$filename}";
 
         $disk = DocumentStorageService::disk();
         Storage::disk($disk)->put($path, $pdfContent);

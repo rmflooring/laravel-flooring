@@ -60,7 +60,7 @@ class GenerateMediaThumbnails extends Command
                     $image->scaleDown(width: 600);
                     $thumbContents = (string) $image->toJpeg(quality: 80);
 
-                    $thumbPath = 'opportunities/' . $doc->opportunity_id
+                    $thumbPath = dirname($doc->path)
                         . '/thumb_' . pathinfo(basename($doc->path), PATHINFO_FILENAME) . '.jpg';
 
                     Storage::disk($doc->disk)->put($thumbPath, $thumbContents);

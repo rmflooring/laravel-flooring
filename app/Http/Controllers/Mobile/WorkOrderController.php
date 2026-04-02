@@ -42,7 +42,7 @@ class WorkOrderController extends Controller
         foreach ($request->file('files', []) as $file) {
             $mime = $file->getMimeType() ?? '';
             $disk = DocumentStorageService::disk();
-            $path = $file->store("opportunities/{$opportunity->id}", $disk);
+            $path = $file->store("opportunities/{$opportunity->storageFolderName()}", $disk);
 
             OpportunityDocument::create([
                 'opportunity_id' => $opportunity->id,
