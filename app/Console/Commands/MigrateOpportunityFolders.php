@@ -87,10 +87,10 @@ class MigrateOpportunityFolders extends Command
                 }
 
                 if ($changed && ! $dryRun) {
-                    $doc->withoutTimestamps()->update([
+                    OpportunityDocument::withoutTimestamps(fn() => $doc->update([
                         'path'           => $newPath,
                         'thumbnail_path' => $newThumbPath,
-                    ]);
+                    ]));
                 }
 
                 $moved++;
