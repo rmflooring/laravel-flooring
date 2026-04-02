@@ -103,6 +103,20 @@
 
             {{-- Local — no config needed --}}
             <div x-show="driver === 'local'" x-cloak>
+                @if($localSymlink)
+                <div class="mb-3 flex items-start gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 dark:border-purple-800 dark:bg-purple-900/20">
+                    <svg class="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"/>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-semibold text-purple-800 dark:text-purple-200">Files are being stored on a NAS / external mount</p>
+                        <p class="mt-0.5 text-xs text-purple-700 dark:text-purple-300">
+                            <code class="rounded bg-purple-100 px-1 dark:bg-purple-900/40">storage/app/public</code> is a symlink pointing to
+                            <code class="rounded bg-purple-100 px-1 dark:bg-purple-900/40">{{ $localSymlink }}</code>
+                        </p>
+                    </div>
+                </div>
+                @endif
                 <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-900/20">
                     <p class="text-sm text-blue-800 dark:text-blue-200">
                         Files will be stored in <code class="rounded bg-blue-100 px-1 dark:bg-blue-900/40">storage/app/public/opportunities/</code> on this server and served via the <code class="rounded bg-blue-100 px-1 dark:bg-blue-900/40">/storage</code> symlink. No additional configuration required.

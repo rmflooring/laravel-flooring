@@ -12,8 +12,12 @@ class StorageSettingsController extends Controller
 {
     public function index()
     {
+        $publicPath    = storage_path('app/public');
+        $localSymlink  = is_link($publicPath) ? readlink($publicPath) : null;
+
         return view('admin.settings.storage', [
             'driver'      => Setting::get('storage_driver', 'local'),
+            'localSymlink' => $localSymlink,
             // S3
             's3Key'       => Setting::get('storage_s3_key', ''),
             's3SecretSet' => (bool) Setting::get('storage_s3_secret'),

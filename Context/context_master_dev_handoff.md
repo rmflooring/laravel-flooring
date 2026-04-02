@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-02 (session 44)
+Updated: 2026-04-02 (session 45)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -9,6 +9,35 @@ Updated: 2026-04-02 (session 44)
 - Do not guess routes, schema, file paths, or controller methods.
 - Verify with route:list / logs / schema before changing architecture.
 - Keep context files updated after meaningful progress.
+
+---
+
+## File Storage
+
+### Current setup (live server)
+- **Driver**: Local Server (default Laravel `public` disk)
+- **Physical location**: NFS mount on WD My Cloud NAS (`RMF-NAS1`)
+- **NFS share**: `192.168.1.143:/nfs/app_storage` → mounted at `/mnt/nas_storage` on `rmserver2`
+- **Symlink**: `storage/app/public` → `/mnt/nas_storage` (Laravel sees it as local disk)
+- **fstab entry**: `192.168.1.143:/nfs/app_storage  /mnt/nas_storage  nfs  defaults,_netdev  0  0`
+- **NAS real path**: `/mnt/HD/HD_a2/app_storage` (symlinked from `/nfs/app_storage`)
+- **Permissions**: `777` set on NAS side (root squash cannot be disabled in WD My Cloud UI)
+
+### How it works
+Laravel writes to `storage/app/public/` as normal. That path is a symlink to the NFS mount, so all files land on the NAS transparently. No app-level driver change needed — stays on `local` in Admin → Settings → Storage.
+
+### Admin UI awareness
+`StorageSettingsController::index()` detects if `storage/app/public` is a symlink and passes the target path as `$localSymlink` to the view. The storage settings page shows a purple info banner when a symlink is detected, so admins know files are going to external storage.
+
+### Admin Storage Settings page
+- Route: `admin.settings.storage.*`
+- Controller: `app/Http/Controllers/Admin/StorageSettingsController.php`
+- View: `resources/views/admin/settings/storage.blade.php`
+- Supports: Local, S3/cloud, SFTP drivers (switchable via UI)
+- **Bug fixed**: Test Connection form was nested inside Save form (invalid HTML) — moved outside, now works correctly
+
+### DocumentStorageService
+`app/Services/DocumentStorageService::disk()` — returns the active disk name. For S3/SFTP drivers it registers a `documents` disk at runtime from DB settings. For local it returns `'public'`.
 
 ---
 
