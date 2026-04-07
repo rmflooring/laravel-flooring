@@ -417,6 +417,24 @@ Route::prefix('admin')
             ])
             ->only(['index', 'store', 'edit', 'update', 'destroy']);
 
+        // Accounts Payable — Bills
+        Route::middleware('role_or_permission:admin|view bills')->group(function () {
+            Route::get('bills/aging', [\App\Http\Controllers\Admin\BillController::class, 'aging'])
+                ->name('bills.aging');
+            Route::resource('bills', \App\Http\Controllers\Admin\BillController::class)
+                ->names([
+                    'index'   => 'bills.index',
+                    'create'  => 'bills.create',
+                    'store'   => 'bills.store',
+                    'show'    => 'bills.show',
+                    'edit'    => 'bills.edit',
+                    'update'  => 'bills.update',
+                    'destroy' => 'bills.destroy',
+                ]);
+            Route::post('bills/{bill}/void', [\App\Http\Controllers\Admin\BillController::class, 'void'])
+                ->name('bills.void');
+        });
+
         // Installers
         Route::resource('installers', InstallerController::class)
             ->middleware('role_or_permission:admin|view installers')

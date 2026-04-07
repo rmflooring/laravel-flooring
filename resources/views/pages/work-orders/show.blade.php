@@ -77,6 +77,27 @@
                     </button>
                     @endcan
 
+                    {{-- AP: Record / View Bill --}}
+                    @can('view bills')
+                    @if ($linkedBill)
+                        <a href="{{ route('admin.bills.show', $linkedBill) }}"
+                           class="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 dark:border-green-700 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75"/>
+                            </svg>
+                            Bill #{{ $linkedBill->reference_number }}
+                        </a>
+                    @elseif (auth()->user()->can('create bills'))
+                        <a href="{{ route('admin.bills.create', ['work_order' => $workOrder->id]) }}"
+                           class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"/>
+                            </svg>
+                            Record Bill
+                        </a>
+                    @endif
+                    @endcan
+
                     @can('delete work orders')
                     <form method="POST" action="{{ route('pages.sales.work-orders.destroy', [$sale, $workOrder]) }}"
                           onsubmit="return confirm('Delete this work order?')">

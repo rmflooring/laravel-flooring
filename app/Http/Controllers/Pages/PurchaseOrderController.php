@@ -485,8 +485,12 @@ class PurchaseOrderController extends Controller
 
         $total = (clone $base)->count();
 
+        $linkedBill = \App\Models\Bill::where('purchase_order_id', $purchaseOrder->id)
+            ->whereNull('deleted_at')
+            ->first();
+
         return view('pages.purchase-orders.show', compact(
-            'purchaseOrder', 'prev', 'next', 'position', 'total'
+            'purchaseOrder', 'prev', 'next', 'position', 'total', 'linkedBill'
         ));
     }
 

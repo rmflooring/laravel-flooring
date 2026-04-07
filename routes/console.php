@@ -23,6 +23,13 @@ Schedule::command('sms:send-reminders')
     ->name('sms-send-reminders')
     ->withoutOverlapping();
 
+// AP: flip pending bills past their due date to overdue — runs daily at 8am
+Schedule::command('bills:mark-overdue')
+    ->dailyAt('08:00')
+    ->timezone('America/Vancouver')
+    ->name('bills-mark-overdue')
+    ->withoutOverlapping();
+
 // Check if estimators have accepted their RFM calendar invites → mark confirmed
 Schedule::command('rfm:check-confirmations')
     ->everyTenMinutes()

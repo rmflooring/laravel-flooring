@@ -802,6 +802,69 @@ Desktop lightbox (`resources/views/pages/opportunities/media/index.blade.php`) n
 
 ---
 
+## Accounts Payable module (session 48, 2026-04-07)
+
+### Overview
+AP tracks vendor invoices (tied to POs) and installer invoices (tied to WOs). No payment recording yet (QBO integration planned).
+
+### Data Model
+- `bills` — `bill_type` (vendor|installer), `vendor_id`, `installer_id`, `purchase_order_id`, `work_order_id`, `payment_term_id`, `reference_number` (their invoice #, user-typed), `bill_date`, `due_date`, `status` (draft|pending|approved|overdue|voided), `subtotal`, `gst_rate`, `pst_rate`, `gst_amount`, `pst_amount`, `tax_amount`, `grand_total`, `voided_at`, `void_reason`; soft deletes
+- `bill_items` — `bill_id`, `purchase_order_item_id` (nullable), `work_order_item_id` (nullable), `item_name`, `quantity`, `unit`, `unit_cost`, `line_total`, `sort_order`
+
+### Models
+- `app/Models/Bill.php` — `STATUSES`, `STATUS_COLORS` constants; `payee_name`, `days_overdue`, `aging_bucket` accessors; `recalculateTotals()` helper
+- `app/Models/BillItem.php` — auto-calculates `line_total` on save
+
+### Routes (admin.bills.*)
+- `GET  admin/bills` → `admin.bills.index` (payables dashboard)
+- `GET  admin/bills/aging` → `admin.bills.aging`
+- `GET  admin/bills/create?purchase_order={id}` → pre-fills from PO
+- `GET  admin/bills/create?work_order={id}` → pre-fills from WO
+- `POST admin/bills` → `admin.bills.store`
+- `GET  admin/bills/{bill}` → `admin.bills.show`
+- `GET  admin/bills/{bill}/edit` → `admin.bills.edit`
+- `PUT  admin/bills/{bill}` → `admin.bills.update`
+- `POST admin/bills/{bill}/void` → `admin.bills.void`
+- `DELETE admin/bills/{bill}` → `admin.bills.destroy`
+
+### Controller
+- `app/Http/Controllers/Admin/BillController.php`
+- `create()` — accepts `?purchase_order` and `?work_order` query params to pre-fill line items
+- `store()` — computes `due_date` from payment term days if not supplied; rates stored as decimal (5% → 0.05)
+- `void()` — stamps `voided_at` + optional `void_reason`
+- `aging()` — groups bills by payee into buckets: current / 1-30 / 31-60 / 61-90 / 90+
+
+### Views (`resources/views/admin/bills/`)
+- `index.blade.php` — stat cards (outstanding, overdue, due this week) + filter bar + table
+- `create.blade.php` — pre-fills from PO/WO items; Alpine.js live totals; payment term → auto-suggest due date
+- `show.blade.php` — details, line items, totals; Mark Approved button; Void modal
+- `edit.blade.php` — same form as create, pre-filled
+- `aging.blade.php` — aging table grouped by payee + summary chips
+
+### Entry Points
+- PO show page: "Record Bill" button (or "Bill #XXX" link if already billed) — gated `view bills`
+- WO show page: same pattern — gated `view bills`
+- Sidebar: "Accounts Payable" accordion (Bills / Payables + AP Aging) — gated `@can('view bills')`
+
+### Permissions
+- `view bills`, `create bills`, `edit bills`, `delete bills` — admin gets all; coordinator gets view/create/edit
+- Migration: `2026_04_07_100001_add_bill_permissions`
+
+### Scheduler
+- `bills:mark-overdue` command — flips pending bills past due_date to `overdue`; runs daily at 08:00 Vancouver
+
+### QBO-ready design
+- `reference_number` = vendor's invoice # → QBO `DocNumber`
+- `bill_date` → `TxnDate`, `due_date` → `DueDate`, `vendor_id` → `VendorRef`
+- Tax stored as GST + PST separately (QBO supports line-level tax codes)
+
+### Open items
+- Payment recording (when QBO integration is built)
+- Index page for all invoices across bills
+- PDF generation for bills
+
+---
+
 ## Key file locations
 
 | What | Where |

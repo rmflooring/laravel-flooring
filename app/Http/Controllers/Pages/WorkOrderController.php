@@ -245,8 +245,11 @@ class WorkOrderController extends Controller
 
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($workOrder, $sale);
         $customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
+        $linkedBill = \App\Models\Bill::where('work_order_id', $workOrder->id)
+            ->whereNull('deleted_at')
+            ->first();
 
-        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody', 'customerContacts'));
+        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody', 'customerContacts', 'linkedBill'));
     }
 
     private function resolveEmailTemplate(WorkOrder $workOrder, Sale $sale): array
