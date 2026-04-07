@@ -27,7 +27,7 @@ class OpportunityMediaController extends Controller
             $mediaQuery->where('created_by', $uploadedBy);
         }
 
-        $media = $mediaQuery->paginate(60)->withQueryString();
+        $media = $mediaQuery->paginate(30)->withQueryString();
 
         // Build uploader list from all media for this opportunity (unfiltered, for the dropdown)
         $uploaderIds = $opportunity->documents()

@@ -215,7 +215,7 @@
                     $uploaderName = $doc->creator?->name ?? 'Unknown';
                     $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
                 @endphp
-                <div class="relative group aspect-square">
+                <div class="relative group aspect-square" style="content-visibility:auto;contain-intrinsic-size:200px 200px">
                     {{-- Selection checkbox (shown in select mode) --}}
                     <div x-show="selectMode"
                          class="absolute top-1.5 left-1.5 z-10"
@@ -251,7 +251,7 @@
                                  alt="{{ $doc->original_name }}"
                                  loading="lazy"
                                  decoding="async"
-                                 class="h-full w-full object-cover group-hover:scale-105 transition-transform">
+                                 class="h-full w-full object-cover">
                         @endif
 
                         <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1">
