@@ -466,6 +466,16 @@ document.addEventListener('DOMContentLoaded', () => {
         viewport.style.cursor = lbScale > 1 ? 'grab' : '';
     }
 
+    function preloadAdjacent(index) {
+        [index - 1, index + 1].forEach(i => {
+            if (i < 0 || i >= tiles.length) return;
+            const t = tiles[i];
+            if (t.dataset.mediaType !== 'image') return;
+            const pre = new Image();
+            pre.src = t.dataset.mediaUrl;
+        });
+    }
+
     function openModal(index) {
         if (index < 0 || index >= tiles.length) return;
         currentIndex = index;
@@ -486,6 +496,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try { vidEl.pause(); } catch (e) {}
 
         resetTransform();
+        imgEl.style.willChange = 'transform';
+        preloadAdjacent(index);
 
         if (type === 'video') {
             imgEl.classList.add('hidden');
@@ -508,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
         document.documentElement.classList.remove('overflow-hidden');
+        imgEl.style.willChange = '';
 
         // clear sources
         imgEl.src = '';
@@ -584,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: false });
 
     // Mouse drag — pan when zoomed
-    let isDragging = false, dragStart = null, transStart = null;
+    let isDragging = false, dragStart = null, transStart = null, rafId = null;
 
     viewport.addEventListener('mousedown', (e) => {
         if (lbScale <= 1 || imgEl.classList.contains('hidden')) return;
@@ -596,15 +609,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        lbTX = transStart.x + (e.clientX - dragStart.x);
-        lbTY = transStart.y + (e.clientY - dragStart.y);
-        imgEl.style.transform = `translate(${lbTX}px, ${lbTY}px) scale(${lbScale})`;
+        if (!isDragging || rafId) return;
+        const cx = e.clientX, cy = e.clientY;
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            lbTX = transStart.x + (cx - dragStart.x);
+            lbTY = transStart.y + (cy - dragStart.y);
+            imgEl.style.transform = `translate(${lbTX}px, ${lbTY}px) scale(${lbScale})`;
+        });
     });
 
     document.addEventListener('mouseup', () => {
         if (!isDragging) return;
         isDragging = false;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
         viewport.style.cursor = lbScale > 1 ? 'grab' : '';
     });
 

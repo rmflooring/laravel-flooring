@@ -15,7 +15,7 @@ class OpportunityMediaController extends Controller
 
         $mediaQuery = $opportunity->documents()
             ->withTrashed()
-            ->with(['label', 'creator'])
+            ->with(['creator'])
             ->where('category', 'media')
             ->orderByDesc('created_at');
 
