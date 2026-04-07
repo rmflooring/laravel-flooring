@@ -17,10 +17,33 @@ class OpportunityController extends Controller
     {
         $sort = $request->input('sort', 'updated_desc');
         switch ($sort) {
-            case 'updated_asc': $query->orderBy('updated_at', 'asc'); break;
-            case 'job_no_asc':  $query->orderBy('job_no', 'asc'); break;
-            case 'job_no_desc': $query->orderBy('job_no', 'desc'); break;
-            default:            $query->orderBy('updated_at', 'desc'); break;
+            case 'updated_asc':  $query->orderBy('opportunities.updated_at', 'asc'); break;
+            case 'job_no_asc':   $query->orderBy('opportunities.job_no', 'asc'); break;
+            case 'job_no_desc':  $query->orderBy('opportunities.job_no', 'desc'); break;
+            case 'status_asc':   $query->orderBy('opportunities.status', 'asc'); break;
+            case 'status_desc':  $query->orderBy('opportunities.status', 'desc'); break;
+            case 'parent_asc':
+            case 'parent_desc':
+                $dir = $sort === 'parent_asc' ? 'asc' : 'desc';
+                $query->select('opportunities.*')
+                      ->leftJoin('customers as parent_c', 'parent_c.id', '=', 'opportunities.parent_customer_id')
+                      ->orderByRaw("COALESCE(NULLIF(parent_c.company_name, ''), parent_c.name) {$dir}");
+                break;
+            case 'job_site_asc':
+            case 'job_site_desc':
+                $dir = $sort === 'job_site_asc' ? 'asc' : 'desc';
+                $query->select('opportunities.*')
+                      ->leftJoin('customers as job_site_c', 'job_site_c.id', '=', 'opportunities.job_site_customer_id')
+                      ->orderByRaw("COALESCE(NULLIF(job_site_c.company_name, ''), job_site_c.name) {$dir}");
+                break;
+            case 'pm_asc':
+            case 'pm_desc':
+                $dir = $sort === 'pm_asc' ? 'asc' : 'desc';
+                $query->select('opportunities.*')
+                      ->leftJoin('project_managers as pm_sort', 'pm_sort.id', '=', 'opportunities.project_manager_id')
+                      ->orderBy('pm_sort.name', $dir);
+                break;
+            default:             $query->orderBy('opportunities.updated_at', 'desc'); break;
         }
 
         if ($request->filled('project_manager_id')) {

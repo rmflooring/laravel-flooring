@@ -77,18 +77,19 @@
     <label class="block text-sm font-medium text-gray-700 mb-1">Sort</label>
     <select name="sort"
             class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
-        <option value="updated_desc" {{ request('sort', 'updated_desc') === 'updated_desc' ? 'selected' : '' }}>
-            Updated (newest)
-        </option>
-        <option value="updated_asc" {{ request('sort', 'updated_desc') === 'updated_asc' ? 'selected' : '' }}>
-            Updated (oldest)
-        </option>
-        <option value="job_no_asc" {{ request('sort', 'updated_desc') === 'job_no_asc' ? 'selected' : '' }}>
-            Job # (A → Z)
-        </option>
-        <option value="job_no_desc" {{ request('sort', 'updated_desc') === 'job_no_desc' ? 'selected' : '' }}>
-            Job # (Z → A)
-        </option>
+        @php $s = request('sort', 'updated_desc'); @endphp
+        <option value="updated_desc"   {{ $s === 'updated_desc'   ? 'selected' : '' }}>Updated (newest)</option>
+        <option value="updated_asc"    {{ $s === 'updated_asc'    ? 'selected' : '' }}>Updated (oldest)</option>
+        <option value="job_no_asc"     {{ $s === 'job_no_asc'     ? 'selected' : '' }}>Job # (A → Z)</option>
+        <option value="job_no_desc"    {{ $s === 'job_no_desc'    ? 'selected' : '' }}>Job # (Z → A)</option>
+        <option value="parent_asc"     {{ $s === 'parent_asc'     ? 'selected' : '' }}>Parent (A → Z)</option>
+        <option value="parent_desc"    {{ $s === 'parent_desc'    ? 'selected' : '' }}>Parent (Z → A)</option>
+        <option value="job_site_asc"   {{ $s === 'job_site_asc'   ? 'selected' : '' }}>Job Site (A → Z)</option>
+        <option value="job_site_desc"  {{ $s === 'job_site_desc'  ? 'selected' : '' }}>Job Site (Z → A)</option>
+        <option value="pm_asc"         {{ $s === 'pm_asc'         ? 'selected' : '' }}>PM (A → Z)</option>
+        <option value="pm_desc"        {{ $s === 'pm_desc'        ? 'selected' : '' }}>PM (Z → A)</option>
+        <option value="status_asc"     {{ $s === 'status_asc'     ? 'selected' : '' }}>Status (A → Z)</option>
+        <option value="status_desc"    {{ $s === 'status_desc'    ? 'selected' : '' }}>Status (Z → A)</option>
     </select>
 </div>
 						{{-- Project Manager --}}
@@ -136,18 +137,54 @@
 
                 @php
                     $qs = http_build_query(request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'sort']));
+
+                    $currentSort   = request('sort', 'updated_desc');
+                    $filterParams  = request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id']);
+
+                    $colSorts = [
+                        'job_no'   => ['asc' => 'job_no_asc',    'desc' => 'job_no_desc'],
+                        'parent'   => ['asc' => 'parent_asc',    'desc' => 'parent_desc'],
+                        'job_site' => ['asc' => 'job_site_asc',  'desc' => 'job_site_desc'],
+                        'pm'       => ['asc' => 'pm_asc',         'desc' => 'pm_desc'],
+                        'status'   => ['asc' => 'status_asc',     'desc' => 'status_desc'],
+                        'updated'  => ['asc' => 'updated_asc',    'desc' => 'updated_desc'],
+                    ];
+
+                    $sortLink = function($col) use ($currentSort, $filterParams, $colSorts) {
+                        $sorts = $colSorts[$col];
+                        $next  = ($currentSort === $sorts['asc']) ? $sorts['desc'] : $sorts['asc'];
+                        return route('pages.opportunities.index', array_merge($filterParams, ['sort' => $next]));
+                    };
+
+                    $sortArrow = function($col) use ($currentSort, $colSorts) {
+                        if ($currentSort === $colSorts[$col]['asc'])  return ' ↑';
+                        if ($currentSort === $colSorts[$col]['desc']) return ' ↓';
+                        return '';
+                    };
                 @endphp
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-700">
                             <tr>
-                                <th class="text-left font-semibold px-4 md:px-6 py-3">Job #</th>
-                                <th class="text-left font-semibold px-4 md:px-6 py-3">Parent Customer</th>
-                                <th class="text-left font-semibold px-4 md:px-6 py-3">Job Site</th>
-                                <th class="text-left font-semibold px-4 md:px-6 py-3">PM</th>
-                                <th class="text-left font-semibold px-4 md:px-6 py-3">Status</th>
-                                <th class="text-left font-semibold px-4 md:px-6 py-3">Updated</th>
+                                <th class="text-left font-semibold px-4 md:px-6 py-3">
+                                    <a href="{{ $sortLink('job_no') }}" class="hover:text-blue-600 whitespace-nowrap">Job #{{ $sortArrow('job_no') }}</a>
+                                </th>
+                                <th class="text-left font-semibold px-4 md:px-6 py-3">
+                                    <a href="{{ $sortLink('parent') }}" class="hover:text-blue-600 whitespace-nowrap">Parent Customer{{ $sortArrow('parent') }}</a>
+                                </th>
+                                <th class="text-left font-semibold px-4 md:px-6 py-3">
+                                    <a href="{{ $sortLink('job_site') }}" class="hover:text-blue-600 whitespace-nowrap">Job Site{{ $sortArrow('job_site') }}</a>
+                                </th>
+                                <th class="text-left font-semibold px-4 md:px-6 py-3">
+                                    <a href="{{ $sortLink('pm') }}" class="hover:text-blue-600 whitespace-nowrap">PM{{ $sortArrow('pm') }}</a>
+                                </th>
+                                <th class="text-left font-semibold px-4 md:px-6 py-3">
+                                    <a href="{{ $sortLink('status') }}" class="hover:text-blue-600 whitespace-nowrap">Status{{ $sortArrow('status') }}</a>
+                                </th>
+                                <th class="text-left font-semibold px-4 md:px-6 py-3">
+                                    <a href="{{ $sortLink('updated') }}" class="hover:text-blue-600 whitespace-nowrap">Updated{{ $sortArrow('updated') }}</a>
+                                </th>
                                 <th class="text-right font-semibold px-4 md:px-6 py-3">Action</th>
                             </tr>
                         </thead>
