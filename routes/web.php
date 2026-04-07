@@ -58,7 +58,9 @@ use App\Http\Controllers\Pages\WorkOrderController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 });
 
 // Twilio inbound SMS webhook — no auth, no CSRF
