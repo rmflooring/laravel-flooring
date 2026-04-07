@@ -766,7 +766,28 @@ Full details in `Context/context_sms.md`.
 
 ---
 
-## Media gallery — zoom & pan (session 47, 2026-04-07)
+## Media gallery — performance & zoom (session 47, 2026-04-07)
+
+### Thumbnail generation fix
+- Intervention Image v4.0.0 on server uses `decodeBinary()`/`decodePath()` (not `read()`) and `encodeUsingMediaType()` (not `toJpeg()`)
+- Upload controller and `media:generate-thumbnails` command were silently failing — every uploaded photo was served at full resolution (4–8MB iPhone photos) as gallery thumbnails
+- Fixed API calls in `OpportunityDocumentController` and `GenerateMediaThumbnails`
+- 178 existing images backfilled via `sudo -u www-data php artisan media:generate-thumbnails`
+- **Root cause of gallery slowness** — not NFS, not Alpine.js, not nginx
+
+### nginx caching (fm.rmflooring.ca)
+- Added `/storage/` location block: `sendfile off`, `expires 30d`, `Cache-Control: public, immutable`
+- Repeat visits now load gallery thumbnails from browser cache instantly
+
+### JS/rendering improvements
+- Removed per-tile Alpine.js bindings (120+ reactive expressions) — replaced with CSS attribute selector + plain JS event delegation
+- `window._gallery` reference allows plain JS to sync selection state into Alpine component
+- Removed `group-hover:scale-105 transition-transform` (was creating 60 GPU compositing layers)
+- Removed `content-visibility:auto` (caused 8-second main-thread freeze on tab resume)
+- Pagination reduced from 60 → 30 items per page
+- Added zoom/pan to lightbox: mouse wheel zoom, click-drag pan, double-click toggle, pinch/double-tap on touch
+
+### Media gallery — zoom & pan
 
 Desktop lightbox (`resources/views/pages/opportunities/media/index.blade.php`) now supports zoom and pan on images:
 - **Mouse wheel** — zoom in/out (12% per tick, max 8×); resets to fit at scale 1
