@@ -65,7 +65,7 @@ class GenerateMediaThumbnails extends Command
 
                     Storage::disk($doc->disk)->put($thumbPath, $thumbContents);
 
-                    $doc->withoutTimestamps()->update(['thumbnail_path' => $thumbPath]);
+                    \App\Models\OpportunityDocument::withoutTimestamps(fn () => $doc->update(['thumbnail_path' => $thumbPath]));
 
                     $generated++;
                 } catch (\Throwable $e) {
