@@ -766,6 +766,21 @@ Full details in `Context/context_sms.md`.
 
 ---
 
+## Media gallery — zoom & pan (session 47, 2026-04-07)
+
+Desktop lightbox (`resources/views/pages/opportunities/media/index.blade.php`) now supports zoom and pan on images:
+- **Mouse wheel** — zoom in/out (12% per tick, max 8×); resets to fit at scale 1
+- **Click + drag** — pan the image when zoomed; cursor changes to grab hand as a hint
+- **Double-click** — toggles between fit (1×) and 2.5× zoom
+- **Pinch** (touch screen) — pinch-to-zoom, max 8×
+- **One-finger drag** (touch, zoomed) — pan; at 1× reverts to swipe-to-navigate
+- **Double-tap** (touch) — toggles fit ↔ 2.5×
+- Zoom resets automatically when navigating to next/prev/first/last photo
+- Videos are excluded from zoom (wheel/dblclick do nothing when a video is open)
+- All state lives in three vars: `lbScale`, `lbTX`, `lbTY`; helpers `resetTransform()` + `applyTransform()`
+
+---
+
 ## Key file locations
 
 | What | Where |

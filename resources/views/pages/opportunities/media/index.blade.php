@@ -452,6 +452,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentIndex = -1;
 
+    // Zoom / pan state
+    let lbScale = 1, lbTX = 0, lbTY = 0;
+
+    function resetTransform() {
+        lbScale = 1; lbTX = 0; lbTY = 0;
+        imgEl.style.transform = '';
+        viewport.style.cursor = '';
+    }
+
+    function applyTransform() {
+        imgEl.style.transform = `translate(${lbTX}px, ${lbTY}px) scale(${lbScale})`;
+        viewport.style.cursor = lbScale > 1 ? 'grab' : '';
+    }
+
     function openModal(index) {
         if (index < 0 || index >= tiles.length) return;
         currentIndex = index;
@@ -470,6 +484,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // stop any previous video
         try { vidEl.pause(); } catch (e) {}
+
+        resetTransform();
 
         if (type === 'video') {
             imgEl.classList.add('hidden');
@@ -548,25 +564,111 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'End') goLast();
     });
 
-    // Basic swipe for mobile (left/right)
+    // Zoom + pan + swipe
     const viewport = document.getElementById('lightboxViewport');
-    let startX = null;
+
+    function getTouchDist(e) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Mouse wheel — zoom in/out
+    viewport.addEventListener('wheel', (e) => {
+        if (imgEl.classList.contains('hidden')) return;
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+        lbScale = Math.max(1, Math.min(8, lbScale * factor));
+        if (lbScale === 1) { lbTX = 0; lbTY = 0; }
+        applyTransform();
+    }, { passive: false });
+
+    // Mouse drag — pan when zoomed
+    let isDragging = false, dragStart = null, transStart = null;
+
+    viewport.addEventListener('mousedown', (e) => {
+        if (lbScale <= 1 || imgEl.classList.contains('hidden')) return;
+        isDragging = true;
+        dragStart  = { x: e.clientX, y: e.clientY };
+        transStart = { x: lbTX, y: lbTY };
+        viewport.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        lbTX = transStart.x + (e.clientX - dragStart.x);
+        lbTY = transStart.y + (e.clientY - dragStart.y);
+        imgEl.style.transform = `translate(${lbTX}px, ${lbTY}px) scale(${lbScale})`;
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        viewport.style.cursor = lbScale > 1 ? 'grab' : '';
+    });
+
+    // Double-click — toggle fit ↔ 2.5×
+    viewport.addEventListener('dblclick', () => {
+        if (imgEl.classList.contains('hidden')) return;
+        if (lbScale > 1) { resetTransform(); } else { lbScale = 2.5; applyTransform(); }
+    });
+
+    // Touch — pinch zoom + drag pan + swipe nav (swipe only when not zoomed)
+    let swipeStartX = null, pinchDist = null;
+    let touchDragStart = null, touchTransStart = null, touchPointCount = 0;
+    let lastTapTime = 0;
 
     viewport.addEventListener('touchstart', (e) => {
-        if (!e.touches || e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
+        touchPointCount = e.touches.length;
+        if (e.touches.length === 2) {
+            pinchDist   = getTouchDist(e);
+            swipeStartX = null;
+        } else if (e.touches.length === 1) {
+            const now = Date.now();
+            if (now - lastTapTime < 300) {
+                if (lbScale > 1) { resetTransform(); } else { lbScale = 2.5; applyTransform(); }
+                lastTapTime = 0;
+                return;
+            }
+            lastTapTime = now;
+            if (lbScale > 1) {
+                touchDragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                touchTransStart = { x: lbTX, y: lbTY };
+            } else {
+                swipeStartX = e.touches[0].clientX;
+            }
+        }
     }, { passive: true });
 
-    viewport.addEventListener('touchend', (e) => {
-        if (startX === null) return;
-        const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : startX;
-        const diff = endX - startX;
-        startX = null;
+    viewport.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            const dist = getTouchDist(e);
+            if (pinchDist) {
+                lbScale = Math.max(1, Math.min(8, lbScale * dist / pinchDist));
+                if (lbScale === 1) { lbTX = 0; lbTY = 0; }
+                applyTransform();
+            }
+            pinchDist = dist;
+        } else if (e.touches.length === 1 && lbScale > 1 && touchDragStart) {
+            e.preventDefault();
+            lbTX = touchTransStart.x + (e.touches[0].clientX - touchDragStart.x);
+            lbTY = touchTransStart.y + (e.touches[0].clientY - touchDragStart.y);
+            imgEl.style.transform = `translate(${lbTX}px, ${lbTY}px) scale(${lbScale})`;
+        }
+    }, { passive: false });
 
-        // threshold
-        if (Math.abs(diff) < 40) return;
-        if (diff < 0) goNext();
-        else goPrev();
+    viewport.addEventListener('touchend', (e) => {
+        pinchDist      = null;
+        touchDragStart = null;
+        if (touchPointCount === 1 && lbScale <= 1 && swipeStartX !== null) {
+            const endX = e.changedTouches[0]?.clientX ?? swipeStartX;
+            const diff = endX - swipeStartX;
+            swipeStartX = null;
+            if (Math.abs(diff) >= 40) { diff < 0 ? goNext() : goPrev(); }
+        }
+        swipeStartX = null;
     }, { passive: true });
 
     // =========================================================
