@@ -671,8 +671,12 @@ public function showProfits(Sale $sale)
 
     public function previewPdf(Sale $sale)
     {
+        $format = in_array(request('format'), ['detailed', 'simple', 'room_totals'])
+            ? request('format')
+            : 'detailed';
+
         $sale->loadMissing(['rooms.items', 'sourceEstimate']);
-        $pdf = Pdf::loadView('pdf.sale', compact('sale'));
+        $pdf = Pdf::loadView('pdf.sale', compact('sale', 'format'));
         $filename = 'Sale-' . ($sale->sale_number ?? $sale->id) . '.pdf';
         return response($pdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
@@ -683,19 +687,21 @@ public function showProfits(Sale $sale)
     public function sendEmail(Request $request, Sale $sale)
     {
         $request->validate([
-            'to'      => ['required', 'email'],
-            'subject' => ['required', 'string', 'max:255'],
-            'body'    => ['required', 'string'],
-            'cc'      => ['nullable', 'array'],
-            'cc.*'    => ['nullable', 'email'],
+            'to'         => ['required', 'email'],
+            'subject'    => ['required', 'string', 'max:255'],
+            'body'       => ['required', 'string'],
+            'cc'         => ['nullable', 'array'],
+            'cc.*'       => ['nullable', 'email'],
+            'pdf_format' => ['nullable', 'in:detailed,simple,room_totals'],
         ]);
 
+        $format = $request->input('pdf_format', 'detailed');
         $user   = auth()->user();
         $mailer = app(GraphMailService::class);
         $cc     = array_filter($request->input('cc', []));
 
         $sale->loadMissing(['rooms.items', 'sourceEstimate']);
-        $pdfContent = Pdf::loadView('pdf.sale', compact('sale'))->output();
+        $pdfContent = Pdf::loadView('pdf.sale', compact('sale', 'format'))->output();
         $attachment = [
             'filename' => 'Sale-' . ($sale->sale_number ?? $sale->id) . '.pdf',
             'content'  => base64_encode($pdfContent),

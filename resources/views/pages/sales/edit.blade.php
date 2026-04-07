@@ -83,13 +83,33 @@
   class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800 focus:outline-none focus:ring-4 focus:ring-purple-300">
   Send Email
 </button>
-<a href="{{ route('pages.sales.pdf', $sale) }}" target="_blank"
-   class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"/>
-    </svg>
-    Print
-</a>
+<div class="relative" x-data="{ pdfOpen: false }">
+    <button type="button" @click="pdfOpen = !pdfOpen" @click.outside="pdfOpen = false"
+            class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"/>
+        </svg>
+        Print PDF
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+    </button>
+    <div x-show="pdfOpen" x-cloak
+         class="absolute left-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+        <a href="{{ route('pages.sales.pdf', $sale) }}" target="_blank"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            Detailed — full pricing
+        </a>
+        <a href="{{ route('pages.sales.pdf', $sale) }}?format=simple" target="_blank"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            Simple — descriptions only
+        </a>
+        <a href="{{ route('pages.sales.pdf', $sale) }}?format=room_totals" target="_blank"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            Room Totals — totals per room
+        </a>
+    </div>
+</div>
 @can('create purchase orders')
 @if($sale->status === 'approved')
 <a href="{{ route('pages.sales.purchase-orders.create', $sale) }}"
@@ -2249,6 +2269,7 @@
         toEmail: '{{ $homeownerEmail }}',
         customTo: '',
         selected: '{{ $homeownerEmail ? 'jobsite' : 'custom' }}',
+        pdfFormat: 'detailed',
         get finalTo() { return this.selected === 'custom' ? this.customTo : this.toEmail; },
         select(val, email) { this.selected = val; this.toEmail = email; }
      }"
@@ -2368,8 +2389,19 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">PDF Format</label>
+                    <select name="pdf_format" x-model="pdfFormat"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                        <option value="detailed">Detailed — full line-by-line pricing</option>
+                        <option value="simple">Simple — descriptions only, grand total</option>
+                        <option value="room_totals">Room Totals — descriptions with room subtotals</option>
+                    </select>
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Attachment</label>
-                    <a href="{{ route('pages.sales.pdf', $sale) }}" target="_blank"
+                    <a :href="'{{ route('pages.sales.pdf', $sale) }}' + (pdfFormat !== 'detailed' ? '?format=' + pdfFormat : '')"
+                       target="_blank"
                        class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors">
                         <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>

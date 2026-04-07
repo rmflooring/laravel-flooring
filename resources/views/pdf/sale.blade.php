@@ -148,6 +148,8 @@
 </head>
 <body>
 
+    @php $format = $format ?? 'detailed'; @endphp
+
     {{-- Branding --}}
     @php
         use App\Models\Setting;
@@ -244,111 +246,183 @@
     {{-- Rooms --}}
     @foreach ($sale->rooms as $room)
         @php
-            $materials = $room->items->where('item_type', 'material')->where('is_removed', false);
-            $labour    = $room->items->where('item_type', 'labour')->where('is_removed', false);
-            $freight   = $room->items->where('item_type', 'freight')->where('is_removed', false);
-            $roomTotal = $room->items->where('is_removed', false)->sum('line_total');
+            $materials       = $room->items->where('item_type', 'material')->where('is_removed', false);
+            $labour          = $room->items->where('item_type', 'labour')->where('is_removed', false);
+            $freight         = $room->items->where('item_type', 'freight')->where('is_removed', false);
+            $roomTotal       = $room->items->where('is_removed', false)->sum('line_total');
+            $showRoomTotal   = in_array($format, ['detailed', 'room_totals']);
+            $showLinePricing = $format === 'detailed';
         @endphp
 
         <div class="room">
             <div class="room-header clearfix">
                 {{ $room->room_name ?: 'Unnamed Room' }}
-                <span class="room-header-right">${{ number_format($roomTotal, 2) }}</span>
+                @if ($showRoomTotal)
+                    <span class="room-header-right">${{ number_format($roomTotal, 2) }}</span>
+                @endif
             </div>
 
             @if ($materials->isNotEmpty())
                 <div class="section-label">Materials</div>
-                <table class="items-table">
-                    <thead>
-                        <tr>
-                            <th>Product Type</th>
-                            <th>Manufacturer</th>
-                            <th>Style</th>
-                            <th>Colour / Item #</th>
-                            <th class="right">Qty</th>
-                            <th>Unit</th>
-                            <th class="right">Price</th>
-                            <th class="right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($materials as $item)
+                @if ($showLinePricing)
+                    <table class="items-table">
+                        <thead>
                             <tr>
-                                <td>{{ $item->product_type ?: '—' }}</td>
-                                <td>{{ $item->manufacturer ?: '—' }}</td>
-                                <td>{{ $item->style ?: '—' }}</td>
-                                <td>{{ $item->color_item_number ?: '—' }}</td>
-                                <td class="right">{{ $item->quantity }}</td>
-                                <td>{{ $item->unit ?: '—' }}</td>
-                                <td class="right">${{ number_format($item->sell_price, 2) }}</td>
-                                <td class="right">${{ number_format($item->line_total, 2) }}</td>
+                                <th>Product Type</th>
+                                <th>Manufacturer</th>
+                                <th>Style</th>
+                                <th>Colour / Item #</th>
+                                <th class="right">Qty</th>
+                                <th>Unit</th>
+                                <th class="right">Price</th>
+                                <th class="right">Total</th>
                             </tr>
-                            @if ($item->notes)
-                                <tr class="note-row"><td colspan="8">{{ $item->notes }}</td></tr>
-                            @endif
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($materials as $item)
+                                <tr>
+                                    <td>{{ $item->product_type ?: '—' }}</td>
+                                    <td>{{ $item->manufacturer ?: '—' }}</td>
+                                    <td>{{ $item->style ?: '—' }}</td>
+                                    <td>{{ $item->color_item_number ?: '—' }}</td>
+                                    <td class="right">{{ $item->quantity }}</td>
+                                    <td>{{ $item->unit ?: '—' }}</td>
+                                    <td class="right">${{ number_format($item->sell_price, 2) }}</td>
+                                    <td class="right">${{ number_format($item->line_total, 2) }}</td>
+                                </tr>
+                                @if ($item->notes)
+                                    <tr class="note-row"><td colspan="8">{{ $item->notes }}</td></tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Product Type</th>
+                                <th>Manufacturer</th>
+                                <th>Style</th>
+                                <th>Colour / Item #</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($materials as $item)
+                                <tr>
+                                    <td>{{ $item->product_type ?: '—' }}</td>
+                                    <td>{{ $item->manufacturer ?: '—' }}</td>
+                                    <td>{{ $item->style ?: '—' }}</td>
+                                    <td>{{ $item->color_item_number ?: '—' }}</td>
+                                </tr>
+                                @if ($item->notes)
+                                    <tr class="note-row"><td colspan="4">{{ $item->notes }}</td></tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
             @endif
 
             @if ($labour->isNotEmpty())
                 <div class="section-label">Labour</div>
-                <table class="items-table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th class="right">Qty</th>
-                            <th>Unit</th>
-                            <th class="right">Price</th>
-                            <th class="right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($labour as $item)
+                @if ($showLinePricing)
+                    <table class="items-table">
+                        <thead>
                             <tr>
-                                <td>{{ $item->labour_type ?: '—' }}</td>
-                                <td>{{ $item->description ?: '—' }}</td>
-                                <td class="right">{{ $item->quantity }}</td>
-                                <td>{{ $item->unit ?: '—' }}</td>
-                                <td class="right">${{ number_format($item->sell_price, 2) }}</td>
-                                <td class="right">${{ number_format($item->line_total, 2) }}</td>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th class="right">Qty</th>
+                                <th>Unit</th>
+                                <th class="right">Price</th>
+                                <th class="right">Total</th>
                             </tr>
-                            @if ($item->notes)
-                                <tr class="note-row"><td colspan="6">{{ $item->notes }}</td></tr>
-                            @endif
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($labour as $item)
+                                <tr>
+                                    <td>{{ $item->labour_type ?: '—' }}</td>
+                                    <td>{{ $item->description ?: '—' }}</td>
+                                    <td class="right">{{ $item->quantity }}</td>
+                                    <td>{{ $item->unit ?: '—' }}</td>
+                                    <td class="right">${{ number_format($item->sell_price, 2) }}</td>
+                                    <td class="right">${{ number_format($item->line_total, 2) }}</td>
+                                </tr>
+                                @if ($item->notes)
+                                    <tr class="note-row"><td colspan="6">{{ $item->notes }}</td></tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($labour as $item)
+                                <tr>
+                                    <td>{{ $item->labour_type ?: '—' }}</td>
+                                    <td>{{ $item->description ?: '—' }}</td>
+                                </tr>
+                                @if ($item->notes)
+                                    <tr class="note-row"><td colspan="2">{{ $item->notes }}</td></tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
             @endif
 
             @if ($freight->isNotEmpty())
                 <div class="section-label">Freight</div>
-                <table class="items-table">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th class="right">Qty</th>
-                            <th>Unit</th>
-                            <th class="right">Price</th>
-                            <th class="right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($freight as $item)
+                @if ($showLinePricing)
+                    <table class="items-table">
+                        <thead>
                             <tr>
-                                <td>{{ $item->freight_description ?: '—' }}</td>
-                                <td class="right">{{ $item->quantity }}</td>
-                                <td>{{ $item->unit ?: '—' }}</td>
-                                <td class="right">${{ number_format($item->sell_price, 2) }}</td>
-                                <td class="right">${{ number_format($item->line_total, 2) }}</td>
+                                <th>Description</th>
+                                <th class="right">Qty</th>
+                                <th>Unit</th>
+                                <th class="right">Price</th>
+                                <th class="right">Total</th>
                             </tr>
-                            @if ($item->notes)
-                                <tr class="note-row"><td colspan="5">{{ $item->notes }}</td></tr>
-                            @endif
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($freight as $item)
+                                <tr>
+                                    <td>{{ $item->freight_description ?: '—' }}</td>
+                                    <td class="right">{{ $item->quantity }}</td>
+                                    <td>{{ $item->unit ?: '—' }}</td>
+                                    <td class="right">${{ number_format($item->sell_price, 2) }}</td>
+                                    <td class="right">${{ number_format($item->line_total, 2) }}</td>
+                                </tr>
+                                @if ($item->notes)
+                                    <tr class="note-row"><td colspan="5">{{ $item->notes }}</td></tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($freight as $item)
+                                <tr>
+                                    <td>{{ $item->freight_description ?: '—' }}</td>
+                                </tr>
+                                @if ($item->notes)
+                                    <tr class="note-row"><td>{{ $item->notes }}</td></tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
             @endif
 
         </div>
@@ -364,19 +438,21 @@
     {{-- Totals --}}
     <div class="totals-wrapper">
         <table class="totals-table">
-            <tr>
-                <td class="label">Materials</td>
-                <td class="amount">${{ number_format($sale->subtotal_materials, 2) }}</td>
-            </tr>
-            <tr>
-                <td class="label">Labour</td>
-                <td class="amount">${{ number_format($sale->subtotal_labour, 2) }}</td>
-            </tr>
-            <tr>
-                <td class="label">Freight</td>
-                <td class="amount">${{ number_format($sale->subtotal_freight, 2) }}</td>
-            </tr>
-            <tr class="divider">
+            @if ($format === 'detailed')
+                <tr>
+                    <td class="label">Materials</td>
+                    <td class="amount">${{ number_format($sale->subtotal_materials, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Labour</td>
+                    <td class="amount">${{ number_format($sale->subtotal_labour, 2) }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Freight</td>
+                    <td class="amount">${{ number_format($sale->subtotal_freight, 2) }}</td>
+                </tr>
+            @endif
+            <tr class="{{ $format === 'detailed' ? 'divider' : '' }}">
                 <td class="label">Subtotal</td>
                 <td class="amount">${{ number_format($sale->pretax_total, 2) }}</td>
             </tr>

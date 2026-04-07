@@ -1193,8 +1193,12 @@ public function makeRevision(Estimate $estimate)
 
     public function previewPdf(Estimate $estimate)
     {
+        $format = in_array(request('format'), ['detailed', 'simple', 'room_totals'])
+            ? request('format')
+            : 'detailed';
+
         $estimate->loadMissing(['rooms.items']);
-        $pdf = Pdf::loadView('pdf.estimate', compact('estimate'));
+        $pdf = Pdf::loadView('pdf.estimate', compact('estimate', 'format'));
         $filename = 'Estimate-' . ($estimate->estimate_number ?? $estimate->id) . '.pdf';
         return response($pdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
@@ -1205,19 +1209,21 @@ public function makeRevision(Estimate $estimate)
     public function sendEmail(Request $request, Estimate $estimate)
     {
         $request->validate([
-            'to'      => ['required', 'email'],
-            'subject' => ['required', 'string', 'max:255'],
-            'body'    => ['required', 'string'],
-            'cc'      => ['nullable', 'array'],
-            'cc.*'    => ['nullable', 'email'],
+            'to'         => ['required', 'email'],
+            'subject'    => ['required', 'string', 'max:255'],
+            'body'       => ['required', 'string'],
+            'cc'         => ['nullable', 'array'],
+            'cc.*'       => ['nullable', 'email'],
+            'pdf_format' => ['nullable', 'in:detailed,simple,room_totals'],
         ]);
 
+        $format = $request->input('pdf_format', 'detailed');
         $user   = auth()->user();
         $mailer = app(GraphMailService::class);
         $cc     = array_filter($request->input('cc', []));
 
         $estimate->loadMissing(['rooms.items']);
-        $pdfContent = Pdf::loadView('pdf.estimate', compact('estimate'))->output();
+        $pdfContent = Pdf::loadView('pdf.estimate', compact('estimate', 'format'))->output();
         $attachment = [
             'filename' => 'Estimate-' . ($estimate->estimate_number ?? $estimate->id) . '.pdf',
             'content'  => base64_encode($pdfContent),
