@@ -175,9 +175,9 @@ public function index(Opportunity $opportunity, Request $request)
                 if ($isThumbableImage) {
                     try {
                         $manager = new ImageManager(new Driver());
-                        $image   = $manager->read($file->getRealPath());
+                        $image   = $manager->decodePath($file->getRealPath());
                         $image->scaleDown(width: 600);
-                        $thumbContents = (string) $image->toJpeg(quality: 80);
+                        $thumbContents = (string) $image->encodeUsingMediaType('image/jpeg', quality: 80);
                         $thumbnailPath = "opportunities/{$opportunity->storageFolderName()}/thumb_" . pathinfo(basename($path), PATHINFO_FILENAME) . '.jpg';
                         Storage::disk($disk)->put($thumbnailPath, $thumbContents);
                     } catch (\Throwable $e) {

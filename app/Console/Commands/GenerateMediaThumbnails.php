@@ -56,9 +56,9 @@ class GenerateMediaThumbnails extends Command
                         continue;
                     }
 
-                    $image = $manager->read($contents);
+                    $image = $manager->decodeBinary($contents);
                     $image->scaleDown(width: 600);
-                    $thumbContents = (string) $image->toJpeg(quality: 80);
+                    $thumbContents = (string) $image->encodeUsingMediaType('image/jpeg', quality: 80);
 
                     $thumbPath = dirname($doc->path)
                         . '/thumb_' . pathinfo(basename($doc->path), PATHINFO_FILENAME) . '.jpg';
