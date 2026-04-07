@@ -215,21 +215,17 @@
                     $uploaderName = $doc->creator?->name ?? 'Unknown';
                     $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
                 @endphp
-                <div class="relative group aspect-square" style="content-visibility:auto;contain-intrinsic-size:200px 200px">
-                    {{-- Selection checkbox (shown in select mode) --}}
-                    <div x-show="selectMode"
-                         class="absolute top-1.5 left-1.5 z-10"
-                         @click.stop>
+                <div class="relative group aspect-square">
+                    {{-- Selection checkbox (shown in select mode via CSS) --}}
+                    <div class="tile-check-wrap absolute top-1.5 left-1.5 z-10"
+                         onclick="event.stopPropagation()">
                         <input type="checkbox"
                                value="{{ $doc->id }}"
-                               class="media-item-checkbox w-5 h-5 rounded border-2 border-white text-blue-600 shadow cursor-pointer"
-                               @change="toggleItem($event.target.value, $event.target.checked)"
-                               :checked="isSelected('{{ $doc->id }}')">
+                               class="media-item-checkbox w-5 h-5 rounded border-2 border-white text-blue-600 shadow cursor-pointer">
                     </div>
 
-                    {{-- Selected overlay --}}
-                    <div x-show="selectMode && isSelected('{{ $doc->id }}')"
-                         class="absolute inset-0 rounded-lg ring-2 ring-blue-500 bg-blue-500/10 z-10 pointer-events-none"></div>
+                    {{-- Selected overlay (shown by JS when selected) --}}
+                    <div class="tile-selected-overlay absolute inset-0 rounded-lg ring-2 ring-blue-500 bg-blue-500/10 z-10 pointer-events-none"></div>
 
                     <button type="button"
                             class="w-full h-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -238,7 +234,7 @@
                             data-uploader="{{ $uploaderName }}"
                             data-uploaded-at="{{ $uploadedAt }}"
                             data-filename="{{ $doc->original_name }}"
-                            @click="selectMode ? toggleItem('{{ $doc->id }}') : null">
+                            data-doc-id="{{ $doc->id }}">
                         @if ($isVideo)
                             <video class="h-full w-full object-cover" muted playsinline preload="metadata">
                                 <source src="{{ $url }}">
@@ -273,6 +269,13 @@
 
 
     </div>
+
+<style>
+.tile-check-wrap { display: none; }
+[data-select-mode="true"] .tile-check-wrap { display: block; }
+.tile-selected-overlay { display: none; }
+[data-select-mode="true"] .tile-selected-overlay.is-selected { display: block; }
+</style>
 
 {{-- Lightbox Modal --}}
 <div id="mediaLightbox"
@@ -369,6 +372,7 @@ function mediaGallery() {
 
         init() {
             this.totalTiles = document.querySelectorAll('.media-item-checkbox').length;
+            window._gallery = this;
         },
 
         isSelected(id) {
@@ -384,6 +388,8 @@ function mediaGallery() {
             if (!this.selectMode) {
                 this.selectedMap = {};
                 this.selectedCount = 0;
+                document.querySelectorAll('.media-item-checkbox').forEach(cb => { cb.checked = false; });
+                document.querySelectorAll('.tile-selected-overlay').forEach(el => { el.classList.remove('is-selected'); });
             }
         },
 
@@ -391,11 +397,7 @@ function mediaGallery() {
             id = String(id);
             if (checked === undefined) checked = !this.selectedMap[id];
             const map = { ...this.selectedMap };
-            if (checked) {
-                map[id] = true;
-            } else {
-                delete map[id];
-            }
+            if (checked) { map[id] = true; } else { delete map[id]; }
             this.selectedMap = map;
             this.selectedCount = Object.keys(map).length;
         },
@@ -403,10 +405,16 @@ function mediaGallery() {
         toggleAll(checked) {
             if (checked) {
                 const map = {};
-                document.querySelectorAll('.media-item-checkbox').forEach(cb => { map[cb.value] = true; });
+                document.querySelectorAll('.media-item-checkbox').forEach(cb => {
+                    map[cb.value] = true;
+                    cb.checked = true;
+                });
+                document.querySelectorAll('.tile-selected-overlay').forEach(el => { el.classList.add('is-selected'); });
                 this.selectedMap = map;
                 this.selectedCount = Object.keys(map).length;
             } else {
+                document.querySelectorAll('.media-item-checkbox').forEach(cb => { cb.checked = false; });
+                document.querySelectorAll('.tile-selected-overlay').forEach(el => { el.classList.remove('is-selected'); });
                 this.selectedMap = {};
                 this.selectedCount = 0;
             }
@@ -541,12 +549,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function goFirst() { if (tiles.length) openModal(0); }
     function goLast()  { if (tiles.length) openModal(tiles.length - 1); }
 
-    // Tile clicks — skip lightbox when in select mode
+    // Checkbox change — update overlay + sync to Alpine
+    document.addEventListener('change', (e) => {
+        const cb = e.target;
+        if (!cb.classList.contains('media-item-checkbox')) return;
+        const overlay = cb.closest('.relative')?.querySelector('.tile-selected-overlay');
+        if (overlay) overlay.classList.toggle('is-selected', cb.checked);
+        window._gallery?.toggleItem(cb.value, cb.checked);
+    });
+
+    // Tile clicks — open lightbox or toggle selection
     const galleryRoot = document.querySelector('[data-select-mode]') ?? document.querySelector('[x-data]');
     tiles.forEach((tile, idx) => {
-        tile.addEventListener('click', () => {
-            if (galleryRoot?.dataset.selectMode === 'true') return;
-            openModal(idx);
+        tile.addEventListener('click', (e) => {
+            if (galleryRoot?.dataset.selectMode !== 'true') {
+                openModal(idx);
+                return;
+            }
+            // In select mode: clicking the button toggles the checkbox
+            if (e.target.classList.contains('media-item-checkbox')) return;
+            const cb = tile.closest('.relative')?.querySelector('.media-item-checkbox');
+            if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }
         });
     });
 
