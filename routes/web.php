@@ -42,6 +42,7 @@ use App\Http\Controllers\Admin\GLAccountController;
 use App\Http\Controllers\Admin\ProductTypeController;
 use App\Http\Controllers\Admin\ProductLineController;
 use App\Http\Controllers\Admin\ProductStyleController;
+use App\Http\Controllers\Admin\ProductStylePhotoController;
 use App\Http\Controllers\Admin\ProductCatalogController;
 
 use App\Http\Controllers\Admin\EstimateController;
@@ -531,6 +532,17 @@ Route::prefix('admin')
         Route::post('product-lines/{product_line}/product-styles/{style}/duplicate', [ProductStyleController::class, 'duplicate'])
             ->middleware('role_or_permission:admin|view product styles')
             ->name('product_styles.duplicate');
+
+        // Style photos
+        Route::post('product-lines/{product_line}/product-styles/{style}/photos', [ProductStylePhotoController::class, 'store'])
+            ->middleware('role_or_permission:admin|edit product styles')
+            ->name('product_styles.photos.store');
+        Route::delete('product-lines/{product_line}/product-styles/{style}/photos/{photo}', [ProductStylePhotoController::class, 'destroy'])
+            ->middleware('role_or_permission:admin|edit product styles')
+            ->name('product_styles.photos.destroy');
+        Route::post('product-lines/{product_line}/product-styles/{style}/photos/{photo}/primary', [ProductStylePhotoController::class, 'setPrimary'])
+            ->middleware('role_or_permission:admin|edit product styles')
+            ->name('product_styles.photos.primary');
     });
 
 /*
@@ -1251,9 +1263,50 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->name('opportunities.rfms.force-destroy');
         });
 
-    });
+    // ── Samples ────────────────────────────────────────────────────────────────
+    // Static routes MUST come before wildcard {sample} routes
+    Route::get('samples', [\App\Http\Controllers\Pages\SampleController::class, 'index'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.index');
 
-	
+    Route::get('samples/styles/search', [\App\Http\Controllers\Pages\SampleController::class, 'searchStyles'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.styles.search');
+
+    Route::get('samples/create', [\App\Http\Controllers\Pages\SampleController::class, 'create'])
+        ->middleware('role_or_permission:admin|create samples')
+        ->name('samples.create');
+
+    Route::post('samples', [\App\Http\Controllers\Pages\SampleController::class, 'store'])
+        ->middleware('role_or_permission:admin|create samples')
+        ->name('samples.store');
+
+    // Wildcard {sample} routes after all static routes
+    Route::get('samples/{sample}', [\App\Http\Controllers\Pages\SampleController::class, 'show'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.show');
+
+    Route::get('samples/{sample}/label', [\App\Http\Controllers\Pages\SampleController::class, 'label'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.label');
+
+    Route::get('samples/{sample}/edit', [\App\Http\Controllers\Pages\SampleController::class, 'edit'])
+        ->middleware('role_or_permission:admin|edit samples')
+        ->name('samples.edit');
+
+    Route::put('samples/{sample}', [\App\Http\Controllers\Pages\SampleController::class, 'update'])
+        ->middleware('role_or_permission:admin|edit samples')
+        ->name('samples.update');
+
+    Route::delete('samples/{sample}', [\App\Http\Controllers\Pages\SampleController::class, 'destroy'])
+        ->middleware('role_or_permission:admin|delete samples')
+        ->name('samples.destroy');
+
+    Route::post('samples/{sample}/checkouts/{checkout}/return', [\App\Http\Controllers\Pages\SampleController::class, 'returnCheckout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkouts.return');
+
+    }); // end pages group
 
 
 // Profile routes (authenticated)
@@ -1325,6 +1378,18 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
     Route::post('rfm/{rfm}/photos', [\App\Http\Controllers\Mobile\RfmController::class, 'uploadPhotos'])
         ->middleware('role_or_permission:admin|view rfms')
         ->name('rfms.upload-photos');
+
+    Route::get('sample/{sampleId}', [\App\Http\Controllers\Mobile\SampleController::class, 'show'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.show');
+
+    Route::get('sample/{sampleId}/checkout', [\App\Http\Controllers\Mobile\SampleController::class, 'checkout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkout');
+
+    Route::post('sample/{sampleId}/checkout', [\App\Http\Controllers\Mobile\SampleController::class, 'storeCheckout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkout.store');
 });
 
 // ─── Installer portal ──────────────────────────────────────────────────────────

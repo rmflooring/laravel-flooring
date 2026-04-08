@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\ProductLine;
 
 class ProductStyle extends Model
@@ -59,6 +60,21 @@ class ProductStyle extends Model
     public function saleItems()
     {
         return $this->hasMany(\App\Models\SaleItem::class, 'product_style_id');
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ProductStylePhoto::class)->orderBy('sort_order');
+    }
+
+    public function primaryPhoto(): HasMany
+    {
+        return $this->hasMany(ProductStylePhoto::class)->where('is_primary', true)->limit(1);
+    }
+
+    public function samples(): HasMany
+    {
+        return $this->hasMany(Sample::class);
     }
 
     public function hasActivity(): bool

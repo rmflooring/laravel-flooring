@@ -198,6 +198,32 @@
                             @endforeach
                         </div>
 
+                        {{-- Sample Overdue Reminders --}}
+                        <div class="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-4">
+                            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Sample Overdue Reminders</h2>
+
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Sample Overdue SMS Reminders</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Send an SMS to customers when their sample is overdue, and again every N days thereafter.</p>
+                                </div>
+                                <label class="inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="sample_sms_reminders_enabled" value="0">
+                                    <input type="checkbox" name="sample_sms_reminders_enabled" value="1"
+                                        class="sr-only peer"
+                                        {{ $sampleSmsReminders ? 'checked' : '' }}>
+                                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div>
+                                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Re-remind every (days)</label>
+                                <input type="number" name="sample_reminder_days" value="{{ $sampleReminderDays }}" min="1" max="30"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <p class="mt-1 text-xs text-gray-500">After the first reminder, send follow-ups every this many days. Shared with email reminders.</p>
+                            </div>
+                        </div>
+
                         <div class="mt-4 flex justify-end">
                             <button type="submit"
                                 class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 rounded-lg dark:bg-blue-600 dark:hover:bg-blue-700">

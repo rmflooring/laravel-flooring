@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use App\Models\ProductStyle;
+use App\Observers\ProductStyleObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,5 +26,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function ($user, $ability) {
             return method_exists($user, 'hasRole') && $user->hasRole('admin') ? true : null;
         });
+
+        ProductStyle::observe(ProductStyleObserver::class);
     }
 }

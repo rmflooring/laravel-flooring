@@ -73,7 +73,7 @@ class ProductStyleController extends Controller
 
     public function edit(ProductLine $product_line, $styleId)
     {
-        $style = $product_line->productStyles()->findOrFail($styleId);
+        $style = $product_line->productStyles()->with('photos')->findOrFail($styleId);
 
         return redirect()
             ->route('admin.product_styles.index', $product_line)

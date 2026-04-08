@@ -19,7 +19,8 @@ class MailSettingsController extends Controller
             'mailReplyTo'              => Setting::get('mail_reply_to', 'noreply@rmflooring.ca'),
             'mailNotificationsEnabled' => Setting::get('mail_notifications_enabled', '1'),
             'rfmEmailCalendarInvite'   => Setting::get('rfm_email_calendar_invite', '0'),
-            'woEmailCalendarInvite'    => Setting::get('wo_email_calendar_invite', '0'),
+            'woEmailCalendarInvite'        => Setting::get('wo_email_calendar_invite', '0'),
+            'sampleEmailReminders'         => Setting::get('sample_email_reminders_enabled', '1'),
             'mailLogs'                 => MailLog::latest()->take(50)->get(),
             'users'                    => User::with('microsoftAccount')->orderBy('name')->get(),
         ]);
@@ -39,6 +40,7 @@ class MailSettingsController extends Controller
         Setting::set('mail_notifications_enabled', $request->has('mail_notifications_enabled') ? '1' : '0');
         Setting::set('rfm_email_calendar_invite', $request->has('rfm_email_calendar_invite') ? '1' : '0');
         Setting::set('wo_email_calendar_invite', $request->has('wo_email_calendar_invite') ? '1' : '0');
+        Setting::set('sample_email_reminders_enabled', $request->has('sample_email_reminders_enabled') ? '1' : '0');
 
         return back()->with('success', 'Mail settings saved.');
     }

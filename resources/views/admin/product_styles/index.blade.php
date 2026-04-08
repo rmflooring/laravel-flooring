@@ -471,6 +471,78 @@
                         </button>
                     </div>
                 </form>
+
+                {{-- Photos section (edit mode only) --}}
+                @if(session('editStyle'))
+                    @php $editStyle = session('editStyle'); $photos = $editStyle->photos ?? collect(); @endphp
+                    <div class="border-t border-gray-200 dark:border-gray-600 p-4 md:p-5" data-photos-section>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">
+                                Photos
+                                <span class="ml-1 text-xs font-normal text-gray-500">({{ $photos->count() }}/3)</span>
+                            </h4>
+                        </div>
+
+                        @if(session('photo_error'))
+                            <p class="mb-3 text-xs text-red-600 dark:text-red-400">{{ session('photo_error') }}</p>
+                        @endif
+
+                        {{-- Existing photos --}}
+                        @if($photos->count() > 0)
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                @foreach($photos->sortBy('sort_order') as $photo)
+                                    <div class="relative group w-24 h-24">
+                                        <img src="{{ $photo->url }}" alt="Style photo"
+                                             class="w-24 h-24 object-cover rounded-lg border-2 {{ $photo->is_primary ? 'border-blue-500' : 'border-gray-200 dark:border-gray-600' }}">
+                                        @if($photo->is_primary)
+                                            <span class="absolute top-1 left-1 px-1 py-0.5 text-[10px] font-semibold bg-blue-600 text-white rounded">Primary</span>
+                                        @endif
+                                        <div class="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-lg">
+                                            @if(!$photo->is_primary)
+                                                <form method="POST" action="{{ route('admin.product_styles.photos.primary', [$product_line, $editStyle->id, $photo]) }}">
+                                                    @csrf
+                                                    <button type="submit" class="text-xs text-white bg-blue-600 hover:bg-blue-700 rounded px-2 py-0.5">
+                                                        Set Primary
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            <form method="POST" action="{{ route('admin.product_styles.photos.destroy', [$product_line, $editStyle->id, $photo]) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        onclick="return confirm('Delete this photo?')"
+                                                        class="text-xs text-white bg-red-600 hover:bg-red-700 rounded px-2 py-0.5">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        {{-- Upload form --}}
+                        @if($photos->count() < 3)
+                            <form method="POST"
+                                  action="{{ route('admin.product_styles.photos.store', [$product_line, $editStyle->id]) }}"
+                                  enctype="multipart/form-data"
+                                  class="flex items-center gap-3">
+                                @csrf
+                                <input type="file" name="photo" accept="image/jpeg,image/png,image/webp"
+                                       class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400 dark:file:bg-gray-700 dark:file:text-gray-300"
+                                       required>
+                                <button type="submit"
+                                        class="shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-lg dark:bg-blue-600 dark:hover:bg-blue-700">
+                                    Upload
+                                </button>
+                            </form>
+                            <p class="mt-1 text-xs text-gray-400">JPG, PNG or WebP · max 5 MB · up to 3 photos</p>
+                        @else
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Maximum 3 photos reached. Delete one to upload another.</p>
+                        @endif
+                    </div>
+                @endif
+
             </div>
         </div>
     </div>
@@ -479,7 +551,16 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('add-style-modal');
-        if (modal) modal.classList.remove('hidden');
+        if (modal) {
+            modal.classList.remove('hidden');
+            @if(session('photo_tab'))
+            // Scroll to photos section after a photo action
+            setTimeout(() => {
+                const photos = modal.querySelector('[data-photos-section]');
+                if (photos) photos.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+            @endif
+        }
     });
     </script>
     @endif

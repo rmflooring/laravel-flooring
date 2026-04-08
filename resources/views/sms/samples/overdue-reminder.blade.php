@@ -1,0 +1,1 @@
+{{ $company_name }}: Hi {{ $customer_name }}, your flooring sample ({{ $sample_id }} – {{ $product_name }}) was due back on {{ $due_back_date }} and is now {{ $days_overdue }} day(s) overdue. Please return it to our showroom.@if ($showroom_phone) Call us at {{ $showroom_phone }}.@endif Thanks!

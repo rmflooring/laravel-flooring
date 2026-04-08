@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-02 (session 46)
+Updated: 2026-04-08 (session 49)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -49,6 +49,8 @@ Current core modules:
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 - **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
+- **Sample Tracking** — showroom sample checkout system (see section below)
+- **Accounts Payable** — vendor/installer bills + aging (see section below)
 
 ---
 
@@ -865,6 +867,117 @@ AP tracks vendor invoices (tied to POs) and installer invoices (tied to WOs). No
 
 ---
 
+## Product Style Photos (session 49, 2026-04-08)
+
+Photos attached to product styles — used on sample show page and mobile scan page (NOT on labels).
+
+### Data Model
+- `product_style_photos` — `product_style_id` FK, `file_path`, `is_primary` (bool), `sort_order`, `uploaded_by` FK
+
+### Model
+- `app/Models/ProductStylePhoto.php` — `BelongsTo ProductStyle`, `url` accessor via `Storage::disk('public')->url()`
+- `ProductStyle` model: added `photos()` hasMany + `primaryPhoto()` hasMany with `limit(1)`
+
+### Controller
+- `app/Http/Controllers/Admin/ProductStylePhotoController.php` — `store()`, `destroy()`, `setPrimary()`
+  - `store()`: validates image (jpg/png/webp, max 5MB), enforces 3-photo limit, stores to `product-style-photos/{style_id}/` on `public` disk (NAS), auto-sets first upload as primary
+  - `destroy()`: deletes file from storage, auto-promotes next photo to primary if deleted photo was primary
+  - `setPrimary()`: clears all `is_primary`, sets new primary
+
+### Routes (under admin group, gated `edit product styles`)
+- `POST   admin/product-lines/{line}/product-styles/{style}/photos` → `admin.product_styles.photos.store`
+- `DELETE admin/product-lines/{line}/product-styles/{style}/photos/{photo}` → `admin.product_styles.photos.destroy`
+- `POST   admin/product-lines/{line}/product-styles/{style}/photos/{photo}/primary` → `admin.product_styles.photos.primary`
+
+### UI
+- Photo management lives inside the edit style modal (`resources/views/admin/product_styles/index.blade.php`), below the Save button
+- Shown only in edit mode (not add mode)
+- Thumbnail grid (3-up max); blue border on primary photo; "Primary" badge
+- Hover overlay reveals "Set Primary" and "Delete" buttons (separate forms)
+- Upload form with file picker (hidden when at 3 photos); after any photo action the modal auto-reopens at the photos section
+- `ProductStyleController::edit()` eager-loads `with('photos')` on the style before redirecting back
+
+---
+
+## Sample Tracking Module (session 49, 2026-04-08)
+
+Showroom sample tracking — checkout, return, overdue reminders.
+
+### Data Model
+- `product_style_photos` — see Product Style Photos section above
+- `samples` — `sample_id` (unique, e.g. `SMP-0001`), `product_style_id` FK, `status` enum (active/checked_out/discontinued/retired/lost), `quantity`, `location`, `display_price` (nullable override), `notes`, `received_at`, `discontinued_at`; SoftDeletes
+- `sample_checkouts` — `sample_id` FK, `checkout_type` enum (customer/staff), `customer_id` nullable FK, `customer_name`, `customer_phone`, `customer_email`, `user_id` nullable FK, `destination`, `qty_checked_out`, `checked_out_by` FK, `checked_out_at`, `due_back_at`, `returned_at`, `return_notes`, `reminders_sent`, `last_reminder_at`
+
+### Models
+- `app/Models/Sample.php` — auto-generates `SMP-0001` IDs in `booted()`, `STATUSES`/`STATUS_COLORS` constants, `available_qty` accessor (qty − active checkout sum), `effective_price` accessor (display_price ?? productStyle->sell_price), `overdue` scope; SoftDeletes
+- `app/Models/SampleCheckout.php` — defaults `checked_out_at=now()` and `due_back_at=today+5days` in `booted()`, `is_returned`/`is_overdue`/`days_overdue`/`borrower_name` accessors
+
+### Observer
+- `app/Observers/ProductStyleObserver.php` — watches `updated`, when `status` changes to `'discontinued'` bulk-updates all linked samples (skips retired/lost/discontinued already)
+- Registered in `AppServiceProvider::boot()` via `ProductStyle::observe(ProductStyleObserver::class)`
+
+### Controllers
+- `app/Http/Controllers/Pages/SampleController.php` — `index()` (search/status/location/overdue filters, paginate 30), `create()`, `store()`, `show()`, `edit()`, `update()`, `destroy()` (blocked if active checkouts), `label()` (DomPDF PDF), `returnCheckout()`, `searchStyles()` (AJAX typeahead)
+- `app/Http/Controllers/Mobile/SampleController.php` — `show(string $sampleId)` (by human ID, not DB id), `checkout()`, `storeCheckout()` (auto-fills customer contact, flips status on full checkout)
+
+### Routes
+```
+pages.samples.index              GET   pages/samples
+pages.samples.styles.search      GET   pages/samples/styles/search
+pages.samples.create             GET   pages/samples/create
+pages.samples.store              POST  pages/samples
+pages.samples.show               GET   pages/samples/{sample}
+pages.samples.label              GET   pages/samples/{sample}/label
+pages.samples.edit               GET   pages/samples/{sample}/edit
+pages.samples.update             PUT   pages/samples/{sample}
+pages.samples.destroy            DELETE pages/samples/{sample}
+pages.samples.checkouts.return   POST  pages/samples/{sample}/checkouts/{checkout}/return
+mobile.samples.show              GET   m/sample/{sampleId}
+mobile.samples.checkout          GET   m/sample/{sampleId}/checkout
+mobile.samples.checkout.store    POST  m/sample/{sampleId}/checkout
+```
+
+### Permissions
+- `view samples` — admin, coordinator, sales, reception, estimator
+- `create samples`, `edit samples` — admin, coordinator
+- `delete samples` — admin
+- `manage sample checkouts` — admin, coordinator, sales, reception
+
+### Views
+- `resources/views/pages/samples/index.blade.php` — filter bar, table with status/overdue badges, qty/available (green/red), price
+- `resources/views/pages/samples/create.blade.php` — Alpine.js typeahead to `searchStyles`, style preview card, qty/price/location/notes
+- `resources/views/pages/samples/show.blade.php` — product details, photos grid, active checkouts + return form, history; label print dropdown (5371/5388), QR/mobile link
+- `resources/views/pages/samples/edit.blade.php` — product read-only, status dropdown, qty, price override, location, received_at, notes
+- `resources/views/mobile/samples/show.blade.php` — `<x-mobile-layout>`, primary photo, identity/pricing/availability chips, Check Out button
+- `resources/views/mobile/samples/checkout.blade.php` — Alpine.js checkout form; Customer/Staff toggle; customer dropdown with auto-fill; staff user dropdown; qty + due date
+- `resources/views/pdf/sample-label.blade.php` — two layouts: 5371 (3.5"×2", horizontal) and 5388 (3"×5", vertical); QR as SVG base64; logo as data URI
+
+### Label Printing
+- DomPDF custom paper sizes: `5371 = [0,0,252,144]` pts, `5388 = [0,0,216,360]` pts
+- QR code generated by `simplesoftwareio/simple-qrcode` pointing to `mobile.samples.show` URL (uses `{sampleId}` string, not DB id — stable even if DB record changes)
+- Format selected at print time via dropdown on sample show page
+
+### Overdue Reminders
+- Command: `app/Console/Commands/SendSampleReminders.php`
+  - Queries overdue customer checkouts (`due_back_at < today`, `returned_at null`)
+  - First reminder: `reminders_sent = 0`; follow-up: `last_reminder_at <= now() − sample_reminder_days`
+  - Sends email via `GraphMailService::send()` (Track 1) + SMS via `SmsService::send()`
+  - Increments `reminders_sent`, stamps `last_reminder_at`
+- Scheduler: `samples:send-reminders` daily at 09:00 Vancouver (`routes/console.php`)
+- Email template: `resources/views/emails/samples/overdue-reminder.blade.php`
+- SMS template: `resources/views/sms/samples/overdue-reminder.blade.php`
+
+### Admin Settings
+- `app_settings` keys: `sample_email_reminders_enabled` (1/0), `sample_sms_reminders_enabled` (1/0), `sample_reminder_days` (int, default 3), `sample_checkout_days` (int, default 5)
+- Mail settings page (`/admin/settings/mail`): "Sample Overdue Reminders" toggle — `$sampleEmailReminders` var
+- SMS settings page (`/admin/settings/sms`): "Sample Overdue SMS Reminders" toggle + "Re-remind every N days" input
+- Sidebar: Samples link (tag icon) between Sales and Customers, gated `@can('view samples')`
+
+### Open Items
+- End-to-end test (create → label → mobile scan → checkout → return → reminder command)
+
+---
+
 ## Key file locations
 
 | What | Where |
@@ -917,6 +1030,16 @@ AP tracks vendor invoices (tied to POs) and installer invoices (tied to WOs). No
 | Invoice PDF | `resources/views/pdf/invoice.blade.php` |
 | Payment terms controller (admin) | `app/Http/Controllers/Admin/PaymentTermController.php` |
 | Payment terms views (admin) | `resources/views/admin/payment-terms/` |
+| Sample controller (pages) | `app/Http/Controllers/Pages/SampleController.php` |
+| Sample controller (mobile) | `app/Http/Controllers/Mobile/SampleController.php` |
+| Sample views (pages) | `resources/views/pages/samples/` |
+| Sample views (mobile) | `resources/views/mobile/samples/` |
+| Sample label PDF | `resources/views/pdf/sample-label.blade.php` |
+| Sample models | `app/Models/Sample.php`, `app/Models/SampleCheckout.php` |
+| Sample overdue command | `app/Console/Commands/SendSampleReminders.php` |
+| Product style photo controller | `app/Http/Controllers/Admin/ProductStylePhotoController.php` |
+| Product style photo model | `app/Models/ProductStylePhoto.php` |
+| Product style observer | `app/Observers/ProductStyleObserver.php` |
 
 ---
 
@@ -1192,6 +1315,9 @@ Two global JS scripts auto-format inputs on blur, loaded via `resources/views/la
 
 **To continue customers module work:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to continue working on the Customers module. One step at a time.
+
+**To continue Samples module work:**
+> Read CLAUDE.md and Context/context_master_dev_handoff.md. I want to continue working on the Sample Tracking module. One step at a time.
 
 **To start a fresh feature:**
 > Read CLAUDE.md and Context/context_master_dev_handoff.md, then tell me the current state of the system before we begin.

@@ -23,6 +23,13 @@ Schedule::command('sms:send-reminders')
     ->name('sms-send-reminders')
     ->withoutOverlapping();
 
+// Sample overdue reminders — runs daily at 9am, emails + SMS customers with overdue samples
+Schedule::command('samples:send-reminders')
+    ->dailyAt('09:00')
+    ->timezone('America/Vancouver')
+    ->name('samples-send-reminders')
+    ->withoutOverlapping();
+
 // AP: flip pending bills past their due date to overdue — runs daily at 8am
 Schedule::command('bills:mark-overdue')
     ->dailyAt('08:00')
