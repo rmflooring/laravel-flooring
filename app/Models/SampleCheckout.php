@@ -41,6 +41,11 @@ class SampleCheckout extends Model
         return $this->belongsTo(Sample::class);
     }
 
+    public function sampleSet(): BelongsTo
+    {
+        return $this->belongsTo(SampleSet::class);
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
@@ -76,6 +81,17 @@ class SampleCheckout extends Model
             return 0;
         }
         return (int) $this->due_back_at->diffInDays(now());
+    }
+
+    /**
+     * Display label for the checked-out item (sample ID or set ID).
+     */
+    public function getSubjectLabelAttribute(): string
+    {
+        if ($this->sampleSet) {
+            return $this->sampleSet->set_id;
+        }
+        return $this->sample?->sample_id ?? '—';
     }
 
     /**

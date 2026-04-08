@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Sample;
 use App\Models\SampleCheckout;
+use App\Models\SampleSet;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -18,6 +19,15 @@ class SampleController extends Controller
 
     public function show(string $sampleId)
     {
+        // Support both SMP-xxxx (individual) and SET-xxxx (set) IDs
+        if (str_starts_with($sampleId, 'SET-')) {
+            $sampleSet = SampleSet::where('set_id', $sampleId)
+                ->with(['productLine', 'items.productStyle', 'activeCheckout'])
+                ->firstOrFail();
+
+            return view('mobile.samples.show-set', compact('sampleSet'));
+        }
+
         $sample = Sample::where('sample_id', $sampleId)
             ->with([
                 'productStyle.productLine',

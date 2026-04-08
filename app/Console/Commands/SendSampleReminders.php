@@ -40,7 +40,10 @@ class SendSampleReminders extends Command
         $overdueDate    = now()->toDateString();
         $reminderCutoff = now()->subDays($reminderDays);
 
-        $checkouts = SampleCheckout::with(['sample.productStyle', 'sample.productStyle.productLine'])
+        $checkouts = SampleCheckout::with([
+                'sample.productStyle.productLine',
+                'sampleSet.productLine',
+            ])
             ->where('checkout_type', 'customer')
             ->whereNotNull('due_back_at')
             ->where('due_back_at', '<', $overdueDate)
@@ -61,13 +64,19 @@ class SendSampleReminders extends Command
         $sent   = 0;
 
         foreach ($checkouts as $checkout) {
-            $sample  = $checkout->sample;
-            $product = $sample->productStyle;
-            $line    = $product->productLine;
+            // Determine subject label and product name for both individual + set checkouts
+            if ($checkout->sampleSet) {
+                $subjectId   = $checkout->sampleSet->set_id;
+                $productName = $checkout->sampleSet->name ?? $checkout->sampleSet->productLine->name;
+            } else {
+                $sample      = $checkout->sample;
+                $subjectId   = $sample->sample_id;
+                $productName = $sample->productStyle->name;
+            }
 
             $vars = [
-                'sample_id'        => $sample->sample_id,
-                'product_name'     => $product->name,
+                'sample_id'        => $subjectId,
+                'product_name'     => $productName,
                 'customer_name'    => $checkout->borrower_name,
                 'checked_out_date' => $checkout->checked_out_at->format('M j, Y'),
                 'due_back_date'    => $checkout->due_back_at->format('M j, Y'),
@@ -82,7 +91,7 @@ class SendSampleReminders extends Command
             // ── Email reminder ─────────────────────────────────────
             if ($emailEnabled && $globalMail && $checkout->customer_email) {
                 try {
-                    $subject  = "[{$companyName}] Sample {$sample->sample_id} is overdue";
+                    $subject  = "[{$companyName}] Sample {$subjectId} is overdue";
                     $body     = view('emails.samples.overdue-reminder', $vars)->render();
 
                     $mailer->send(
@@ -93,7 +102,7 @@ class SendSampleReminders extends Command
                     );
 
                     $anySent = true;
-                    $this->line("  Email → {$checkout->customer_email} ({$sample->sample_id})");
+                    $this->line("  Email → {$checkout->customer_email} ({$subjectId})");
                 } catch (\Throwable $e) {
                     Log::error('[Sample Reminder] Email failed', [
                         'checkout_id' => $checkout->id,
@@ -113,7 +122,7 @@ class SendSampleReminders extends Command
                     $sms->send($checkout->customer_phone, $body, 'sample_overdue_reminder');
 
                     $anySent = true;
-                    $this->line("  SMS → {$checkout->customer_phone} ({$sample->sample_id})");
+                    $this->line("  SMS → {$checkout->customer_phone} ({$subjectId})");
                 } catch (\Throwable $e) {
                     Log::error('[Sample Reminder] SMS failed', [
                         'checkout_id' => $checkout->id,

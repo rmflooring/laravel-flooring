@@ -8,6 +8,7 @@ use App\Models\ProductLine;
 use App\Models\ProductStyle;
 use App\Models\Sample;
 use App\Models\SampleCheckout;
+use App\Models\SampleSet;
 use App\Models\Setting;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -24,50 +25,91 @@ class SampleController extends Controller
 
     public function index(Request $request)
     {
-        $query = Sample::with(['productStyle.productLine', 'activeCheckouts'])
-            ->withCount('activeCheckouts');
+        $type     = $request->input('type', 'all'); // all | individual | set
+        $search   = $request->input('search', '');
+        $status   = $request->input('status', '');
+        $location = $request->input('location', '');
+        $overdue  = $request->boolean('overdue');
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('sample_id', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%")
-                  ->orWhereHas('productStyle', function ($s) use ($search) {
-                      $s->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%")
-                        ->orWhere('color', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('productStyle.productLine', function ($pl) use ($search) {
-                      $pl->where('name', 'like', "%{$search}%")
-                         ->orWhere('manufacturer', 'like', "%{$search}%");
-                  });
-            });
+        // ── Individual samples ────────────────────────────────────────────────
+        $samples = collect();
+        if ($type !== 'set') {
+            $q = Sample::with(['productStyle.productLine', 'activeCheckouts'])
+                ->withCount('activeCheckouts');
+
+            if ($search) {
+                $q->where(function ($sq) use ($search) {
+                    $sq->where('sample_id', 'like', "%{$search}%")
+                       ->orWhere('location', 'like', "%{$search}%")
+                       ->orWhereHas('productStyle', fn ($s) =>
+                           $s->where('name', 'like', "%{$search}%")
+                             ->orWhere('sku', 'like', "%{$search}%")
+                             ->orWhere('color', 'like', "%{$search}%"))
+                       ->orWhereHas('productStyle.productLine', fn ($pl) =>
+                           $pl->where('name', 'like', "%{$search}%")
+                              ->orWhere('manufacturer', 'like', "%{$search}%"));
+                });
+            }
+            if ($status) {
+                $q->where('status', $status);
+            }
+            if ($location) {
+                $q->where('location', 'like', "%{$location}%");
+            }
+            if ($overdue) {
+                $q->whereHas('activeCheckouts', fn ($q) =>
+                    $q->whereNotNull('due_back_at')->where('due_back_at', '<', now()->toDateString()));
+            }
+
+            $samples = $type === 'individual'
+                ? $q->orderBy('sample_id')->paginate(30)->withQueryString()
+                : $q->orderBy('sample_id')->get();
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        // ── Sample sets ───────────────────────────────────────────────────────
+        $sampleSets = collect();
+        if ($type !== 'individual') {
+            $sq = SampleSet::with(['productLine', 'activeCheckout', 'items'])
+                ->withCount('items');
+
+            if ($search) {
+                $sq->where(function ($q) use ($search) {
+                    $q->where('set_id', 'like', "%{$search}%")
+                      ->orWhere('name', 'like', "%{$search}%")
+                      ->orWhere('location', 'like', "%{$search}%")
+                      ->orWhereHas('productLine', fn ($pl) =>
+                          $pl->where('name', 'like', "%{$search}%")
+                             ->orWhere('manufacturer', 'like', "%{$search}%"));
+                });
+            }
+            if ($status) {
+                $sq->where('status', $status);
+            }
+            if ($location) {
+                $sq->where('location', 'like', "%{$location}%");
+            }
+            if ($overdue) {
+                $sq->overdue();
+            }
+
+            $sampleSets = $type === 'set'
+                ? $sq->orderBy('set_id')->paginate(30)->withQueryString()
+                : $sq->orderBy('set_id')->get();
         }
 
-        if ($request->boolean('overdue')) {
-            $query->whereHas('activeCheckouts', function ($q) {
-                $q->whereNotNull('due_back_at')->where('due_back_at', '<', now()->toDateString());
-            });
-        }
+        $locations = Sample::whereNotNull('location')->distinct()->orderBy('location')->pluck('location')
+            ->merge(SampleSet::whereNotNull('location')->distinct()->orderBy('location')->pluck('location'))
+            ->unique()->sort()->values();
 
-        if ($request->filled('location')) {
-            $query->where('location', 'like', '%' . $request->location . '%');
-        }
-
-        $samples = $query->orderBy('sample_id')->paginate(30)->withQueryString();
-
-        $locations = Sample::whereNotNull('location')
-            ->distinct()->orderBy('location')->pluck('location');
+        $filters = $request->only('search', 'status', 'overdue', 'location', 'type');
 
         return view('pages.samples.index', [
-            'samples'   => $samples,
-            'statuses'  => Sample::STATUSES,
-            'locations' => $locations,
-            'filters'   => $request->only('search', 'status', 'overdue', 'location'),
+            'samples'    => $samples,
+            'sampleSets' => $sampleSets,
+            'type'       => $type,
+            'statuses'   => Sample::STATUSES,
+            'locations'  => $locations,
+            'filters'    => $filters,
         ]);
     }
 

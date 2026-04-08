@@ -1306,6 +1306,43 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         ->middleware('role_or_permission:admin|manage sample checkouts')
         ->name('samples.checkouts.return');
 
+    // ── Sample Sets — static routes FIRST, wildcards after ────────────────────
+    Route::get('sample-sets/create', [\App\Http\Controllers\Pages\SampleSetController::class, 'create'])
+        ->middleware('role_or_permission:admin|create samples')
+        ->name('sample-sets.create');
+
+    Route::get('sample-sets/styles-by-line/{productLine}', [\App\Http\Controllers\Pages\SampleSetController::class, 'stylesByLine'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('sample-sets.styles-by-line');
+
+    Route::post('sample-sets', [\App\Http\Controllers\Pages\SampleSetController::class, 'store'])
+        ->middleware('role_or_permission:admin|create samples')
+        ->name('sample-sets.store');
+
+    Route::get('sample-sets/{sampleSet}', [\App\Http\Controllers\Pages\SampleSetController::class, 'show'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('sample-sets.show');
+
+    Route::get('sample-sets/{sampleSet}/edit', [\App\Http\Controllers\Pages\SampleSetController::class, 'edit'])
+        ->middleware('role_or_permission:admin|edit samples')
+        ->name('sample-sets.edit');
+
+    Route::put('sample-sets/{sampleSet}', [\App\Http\Controllers\Pages\SampleSetController::class, 'update'])
+        ->middleware('role_or_permission:admin|edit samples')
+        ->name('sample-sets.update');
+
+    Route::delete('sample-sets/{sampleSet}', [\App\Http\Controllers\Pages\SampleSetController::class, 'destroy'])
+        ->middleware('role_or_permission:admin|delete samples')
+        ->name('sample-sets.destroy');
+
+    Route::post('sample-sets/{sampleSet}/checkout', [\App\Http\Controllers\Pages\SampleSetController::class, 'checkout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('sample-sets.checkout');
+
+    Route::post('sample-sets/{sampleSet}/checkouts/{checkout}/return', [\App\Http\Controllers\Pages\SampleSetController::class, 'returnCheckout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('sample-sets.checkouts.return');
+
     }); // end pages group
 
 
