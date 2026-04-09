@@ -126,13 +126,15 @@ Full details in `Context/context_rfm.md`.
   - "Mobile View" green button added to desktop RFM show page header
 - **`{{rfm_link}}`** tag (2026-03-27): resolves to mobile RFM URL; available in email templates (rfm_created, rfm_updated) and SMS templates (rfm_booked, rfm_reminder); injected into hardcoded mail bodies and all SMS `$vars`
 - **Calendar sync on edit (2026-03-29)**: `RfmController::update()` now calls `syncCalendarUpdate()` — PATCHes existing MS365 event or creates one if missing. Shared `buildRfmEventData()` helper used by both create and update paths. See `context_rfm.md` for full details.
+- **Calendar sync on status change (2026-04-09)**: `updateStatus()` now syncs MS365 — `cancelled`/`completed` deletes the event; `confirmed`/`pending` updates it. `syncCalendarUpdate()` self-heals missing `ExternalEventLink` records by falling through to `syncCalendarCreate()`.
 - **MS365 token expiry notification (2026-03-29)**: `GraphCalendarService::ensureAccessToken()` marks `is_connected = false` + `disconnected_at = now()` on refresh failure. Persistent amber banner in `app.blade.php` shown whenever the user's MS account was once connected but is now disconnected (links to Settings → Integrations). Yellow `session('warning')` flash shown on RFM/WO/PO save if calendar event creation/update fails.
 - **Email calendar invites (2026-03-27)**: `ICalService` generates RFC 5545 `.ics` attachments. Admin toggles `rfm_email_calendar_invite` + `wo_email_calendar_invite` on mail settings page control whether invites are included. RFM estimator emails attach invite (UID `rfm-{id}@rmflooring.ca`, +2h duration). WO installer emails attach invite when `scheduled_date` set (UID `wo-{id}@rmflooring.ca`, +4h duration). Same UID on updates overwrites the existing calendar event in the recipient's client. `GraphMailService::send()` and `sendAsUser()` accept optional `?string $icsContent = null`.
 
 ### RFM open items
 1. ~~Sync MS365 calendar event when RFM is edited~~ ✓ Done (session 39)
 2. ~~Delete RFM route + cancel/delete calendar event on delete~~ ✓ Done (session 40)
-3. RFM → Estimate creation shortcut from the show page
+3. ~~Sync MS365 calendar event on status change~~ ✓ Done (session 50)
+4. RFM → Estimate creation shortcut from the show page
 4. **Auto-confirm RFM on calendar invite acceptance** — when estimator accepts the calendar invite, RFM status should automatically change from `pending` → `confirmed`. Requires Microsoft Graph change notifications (webhooks): subscribe to the estimator's calendar, listen for `created`/`updated` events matching the RFM event UID (`rfm-{id}@rmflooring.ca`), check `responseStatus.response === 'accepted'`, then update `rfm.status`. Needs a publicly accessible webhook endpoint + subscription renewal (Graph subscriptions expire max 3 days for calendar resources).
 
 ### RFM delete (session 40, 2026-03-29)

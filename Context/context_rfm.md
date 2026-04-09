@@ -266,7 +266,8 @@ On **create** (`store`) and **edit** (`update`), the controller attempts (best-e
 - **Location:** street, city, postal code joined by comma
 
 ### Important caveats
-- **Status changes do NOT touch the calendar event** — cancelling an RFM does not cancel the MS365 event. (Known gap)
+- **Status changes sync the calendar** — `updateStatus()` calls `syncCalendarDelete()` for `cancelled`/`completed`; calls `syncCalendarUpdate()` for `confirmed`/`pending`.
+- **Missing ExternalEventLink self-heals** — if `syncCalendarUpdate` finds a `calendar_event_id` but no `ExternalEventLink` (can happen after server migration or data loss), it falls through to `syncCalendarCreate` to create a fresh event.
 - **Calendar group_id is hardcoded** — `b8483c56-fc4b-4734-8011-335b88c7e4ad` in `syncCalendarCreate()`. If the RFM/Measures calendar is ever recreated, this will silently fail (logged as a warning).
 - All calendar failures are caught and logged — never block the save.
 - On token refresh failure, `GraphCalendarService::ensureAccessToken()` now marks `is_connected = false` + `disconnected_at = now()` on the account before throwing, so future syncs skip cleanly.
@@ -304,6 +305,8 @@ On **create** (`store`) and **edit** (`update`), the controller attempts (best-e
 - [x] **RFM index** — delete button in Action column hidden by default; trash icon toggle in column header reveals/hides them (Alpine.js); `delete rfms` permission gated
 - [x] **RFM index** — "Site Address" column renamed "Site Info"; now shows job site customer name (bold) above the address; `jobSiteCustomer` eager-loaded in `index()` query; container widened to `max-w-screen-2xl`
 - [x] **RFM index column sorting** — clickable sortable headers via `?sort=field&dir=asc|desc`; sortable columns: `customer_name` (via `leftJoin` on `customers`, uses `COALESCE(NULLIF(company_name,''),name)`), `scheduled_at`, `status`, `site_city`; default order: `scheduled_at DESC`; uses shared `admin.partials.sort-link` partial (▲/▼ indicators, preserves all filters via `withQueryString()`); non-relational filters prefixed with `rfms.` to avoid ambiguous column errors with the join
+- [x] **Status change → calendar sync** — `updateStatus()` now syncs MS365: `cancelled`/`completed` → delete event; `confirmed`/`pending` → update event (or recreate if missing)
+- [x] **ExternalEventLink self-heal** — `syncCalendarUpdate()` recreates the MS365 event via `syncCalendarCreate()` when the link record is missing (data gap from server migration)
 
 ---
 
