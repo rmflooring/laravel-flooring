@@ -19,9 +19,11 @@
 
         .label {
             width: {{ $format === '5388' ? '216pt' : '252pt' }};
-            height: {{ $format === '5388' ? '352pt' : '138pt' }};
-            padding: {{ $format === '5388' ? '8pt' : '6pt' }};
+            max-height: {{ $format === '5388' ? '348pt' : '136pt' }};
+            padding: {{ $format === '5388' ? '8pt' : '5pt' }};
             overflow: hidden;
+            page-break-inside: avoid;
+            page-break-after: avoid;
         }
 
         /* ── Shared ─────────────────────────────────────── */
@@ -97,8 +99,7 @@
             vertical-align: middle;
         }
 
-        .td-name  { width: 73%; }
-        .td-price { width: 27%; text-align: right; font-weight: bold; color: #1d4ed8; white-space: nowrap; }
+        .td-name  { width: 100%; }
 
         .style-color { color: #9ca3af; font-size: 6.5pt; }
 
@@ -201,10 +202,8 @@
                 @if ($item->productStyle->color)
                     <span class="style-color">&middot; {{ $item->productStyle->color }}</span>
                 @endif
-            </td>
-            <td class="td-price">
                 @if ($item->display_price)
-                    ${{ number_format($item->display_price, 2) }}
+                    <br><span style="font-weight:bold;color:#1d4ed8;font-size:7pt;">${{ number_format($item->display_price, 2) }}</span>
                 @endif
             </td>
         </tr>
