@@ -140,6 +140,16 @@
             color: #9ca3af;
             font-size: {{ $format === '5388' ? '7pt' : '5.5pt' }};
         }
+
+        .style-price {
+            float: right;
+            font-weight: bold;
+            color: #1d4ed8;
+            font-size: {{ $format === '5388' ? '8pt' : '6pt' }};
+        }
+
+        .price-range-label { font-size: 5.5pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
+        .price-range-value { font-size: 11pt; font-weight: bold; color: #1d4ed8; line-height: 1.1; }
     </style>
 </head>
 <body>
@@ -163,6 +173,16 @@
             {{ $sampleSet->productLine->manufacturer }}
             &middot; {{ $sampleSet->items->count() }} {{ $sampleSet->items->count() === 1 ? 'style' : 'styles' }}
         </div>
+
+        @php
+            $prices = $sampleSet->items->pluck('display_price')->filter()->map(fn($p) => (float)$p);
+        @endphp
+        @if ($prices->isNotEmpty())
+        <div class="price-line" style="margin-top: 4px;">
+            <div class="price-range-label">From</div>
+            <div class="price-range-value">${{ number_format($prices->min(), 2) }}</div>
+        </div>
+        @endif
 
         <div class="set-id">{{ $sampleSet->set_id }}</div>
     </div>
@@ -210,6 +230,9 @@
     <div class="styles-heading">Styles in this set ({{ $sampleSet->items->count() }})</div>
     @foreach ($sampleSet->items as $item)
         <div class="style-row">
+            @if ($item->display_price)
+                <span class="style-price">${{ number_format($item->display_price, 2) }}</span>
+            @endif
             {{ $item->productStyle->name }}
             @if ($item->productStyle->color)
                 <span class="style-color">&middot; {{ $item->productStyle->color }}</span>
