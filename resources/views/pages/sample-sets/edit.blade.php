@@ -126,8 +126,7 @@
                                         <span class="text-gray-400 text-xs">$</span>
                                         <input type="number" step="0.01" min="0"
                                                :name="`display_prices[${style.id}]`"
-                                               :value="existingPrices[style.id] ?? null"
-                                               :placeholder="style.sell_price ? parseFloat(style.sell_price).toFixed(2) : ''"
+                                               :value="existingPrices[style.id] ?? (style.sell_price ? parseFloat(style.sell_price).toFixed(2) : '')"
                                                @click.stop
                                                class="w-24 text-xs text-right border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:border-gray-500 dark:text-white focus:ring-blue-500 focus:border-blue-500">
                                     </div>
