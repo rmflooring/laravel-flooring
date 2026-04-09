@@ -11,7 +11,10 @@ use App\Models\SampleSet;
 use App\Models\SampleSetItem;
 use App\Models\Setting;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class SampleSetController extends Controller
 {
@@ -164,6 +167,40 @@ class SampleSetController extends Controller
 
         return redirect()->route('pages.sample-sets.show', $sampleSet)
             ->with('success', "Sample Set {$sampleSet->set_id} updated.");
+    }
+
+    // -----------------------------------------------------------------------
+    // LABEL PDF
+    // -----------------------------------------------------------------------
+
+    public function label(Request $request, SampleSet $sampleSet)
+    {
+        $format = $request->input('format', '5371');
+
+        $sampleSet->load(['productLine', 'items.productStyle']);
+
+        $mobileUrl = route('mobile.samples.show', $sampleSet->set_id);
+        $qrSvg     = base64_encode(QrCode::format('svg')->size(150)->generate($mobileUrl));
+
+        $logoPath    = Setting::get('branding_logo_path');
+        $logoDataUri = null;
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            $logoData    = Storage::disk('public')->get($logoPath);
+            $logoMime    = Storage::disk('public')->mimeType($logoPath);
+            $logoDataUri = 'data:' . $logoMime . ';base64,' . base64_encode($logoData);
+        }
+
+        $companyName = Setting::get('branding_company_name', 'RM Flooring');
+
+        $paperSize = $format === '5388'
+            ? [0, 0, 216, 360]
+            : [0, 0, 252, 144];
+
+        $pdf = Pdf::loadView('pdf.sample-set-label', compact(
+            'sampleSet', 'format', 'qrSvg', 'logoDataUri', 'companyName'
+        ))->setPaper($paperSize);
+
+        return $pdf->stream("label-{$sampleSet->set_id}.pdf");
     }
 
     // -----------------------------------------------------------------------

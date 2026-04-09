@@ -24,6 +24,31 @@
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
+                    {{-- Label dropdown --}}
+                    <div x-data="{ open: false }" class="relative">
+                        <button @click="open = !open"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"/>
+                            </svg>
+                            Print Label
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.outside="open = false" x-cloak
+                             class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                            <a href="{{ route('pages.sample-sets.label', [$sampleSet, 'format' => '5371']) }}" target="_blank"
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg">
+                                Avery 5371 (3.5" × 2")
+                            </a>
+                            <a href="{{ route('pages.sample-sets.label', [$sampleSet, 'format' => '5388']) }}" target="_blank"
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg border-t border-gray-100 dark:border-gray-700">
+                                Avery 5388 (3" × 5")
+                            </a>
+                        </div>
+                    </div>
+
                     @can('edit samples')
                     <a href="{{ route('pages.sample-sets.edit', $sampleSet) }}"
                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">

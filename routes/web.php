@@ -1323,6 +1323,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         ->middleware('role_or_permission:admin|view samples')
         ->name('sample-sets.show');
 
+    Route::get('sample-sets/{sampleSet}/label', [\App\Http\Controllers\Pages\SampleSetController::class, 'label'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('sample-sets.label');
+
     Route::get('sample-sets/{sampleSet}/edit', [\App\Http\Controllers\Pages\SampleSetController::class, 'edit'])
         ->middleware('role_or_permission:admin|edit samples')
         ->name('sample-sets.edit');
