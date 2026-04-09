@@ -221,7 +221,7 @@
         <div>
             @if ($logoData)
                 <img src="data:{{ $logoMime }};base64,{{ $logoData }}"
-                     style="height: 110px; max-width: 352px; object-fit: contain;">
+                     style="height: 100px; max-width: 320px; object-fit: contain;">
             @else
                 <div class="company-name">{{ $brandName }}</div>
                 @if ($brandTagline)
