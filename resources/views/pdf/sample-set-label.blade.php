@@ -127,25 +127,34 @@
             margin-bottom: 3px;
         }
 
-        .style-row {
-            font-size: {{ $format === '5388' ? '8pt' : '6pt' }};
-            color: #374151;
-            line-height: 1.5;
-            border-bottom: 1px solid #f3f4f6;
-            padding-bottom: 1px;
-            margin-bottom: 1px;
-        }
 
         .style-color {
             color: #9ca3af;
             font-size: {{ $format === '5388' ? '7pt' : '5.5pt' }};
         }
 
-        .style-price {
-            float: right;
+        .styles-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .styles-table td {
+            font-size: {{ $format === '5388' ? '8pt' : '6pt' }};
+            color: #374151;
+            line-height: 1.5;
+            border-bottom: 1px solid #f3f4f6;
+            padding: 1px 0;
+            vertical-align: middle;
+        }
+        .styles-table .td-price {
+            text-align: right;
+            white-space: nowrap;
             font-weight: bold;
             color: #1d4ed8;
-            font-size: {{ $format === '5388' ? '8pt' : '6pt' }};
+            width: 48px;
+            padding-left: 4px;
+        }
+        .styles-table .td-name {
+            width: auto;
         }
 
         .price-range-label { font-size: 5.5pt; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -228,17 +237,23 @@
     <hr class="divider">
 
     <div class="styles-heading">Styles in this set ({{ $sampleSet->items->count() }})</div>
-    @foreach ($sampleSet->items as $item)
-        <div class="style-row">
-            @if ($item->display_price)
-                <span class="style-price">${{ number_format($item->display_price, 2) }}</span>
-            @endif
-            {{ $item->productStyle->name }}
-            @if ($item->productStyle->color)
-                <span class="style-color">&middot; {{ $item->productStyle->color }}</span>
-            @endif
-        </div>
-    @endforeach
+    <table class="styles-table">
+        @foreach ($sampleSet->items as $item)
+        <tr>
+            <td class="td-name">
+                {{ $item->productStyle->name }}
+                @if ($item->productStyle->color)
+                    <span class="style-color">&middot; {{ $item->productStyle->color }}</span>
+                @endif
+            </td>
+            <td class="td-price">
+                @if ($item->display_price)
+                    ${{ number_format($item->display_price, 2) }}
+                @endif
+            </td>
+        </tr>
+        @endforeach
+    </table>
 
     <div class="set-id" style="margin-top: auto; padding-top: 6px;">
         Set ID: {{ $sampleSet->set_id }}
