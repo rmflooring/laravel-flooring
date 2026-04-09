@@ -541,8 +541,8 @@ class RfmController extends Controller
 
             $link = $rfm->calendarEvent?->externalLink;
             if (! $link) {
-                Log::warning('[RFM] No ExternalEventLink found for update — skipping', ['rfm_id' => $rfm->id]);
-                session()->flash('warning', 'RFM saved, but no linked calendar event was found to update.');
+                Log::warning('[RFM] No ExternalEventLink found — creating a fresh calendar event', ['rfm_id' => $rfm->id]);
+                $this->syncCalendarCreate($rfm, $opportunity);
                 return;
             }
 
