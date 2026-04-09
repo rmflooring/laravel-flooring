@@ -542,11 +542,16 @@ class RfmController extends Controller
             $link = $rfm->calendarEvent?->externalLink;
             if (! $link) {
                 Log::warning('[RFM] No ExternalEventLink found for update — skipping', ['rfm_id' => $rfm->id]);
+                session()->flash('warning', 'RFM saved, but no linked calendar event was found to update.');
                 return;
             }
 
             $account = MicrosoftAccount::find($link->microsoft_account_id);
-            if (! $account) return;
+            if (! $account) {
+                Log::warning('[RFM] Microsoft account not found for calendar update', ['rfm_id' => $rfm->id, 'account_id' => $link->microsoft_account_id]);
+                session()->flash('warning', 'RFM saved, but the Microsoft account linked to this calendar event could not be found.');
+                return;
+            }
 
             $eventData = $this->buildRfmEventData($rfm, $opportunity);
             $service   = new GraphCalendarService();
