@@ -28,6 +28,7 @@ class SampleController extends Controller
             return view('mobile.samples.show-set', compact('sampleSet'));
         }
 
+
         $sample = Sample::where('sample_id', $sampleId)
             ->with([
                 'productStyle.productLine',
@@ -37,6 +38,84 @@ class SampleController extends Controller
             ->firstOrFail();
 
         return view('mobile.samples.show', compact('sample'));
+    }
+
+    // -----------------------------------------------------------------------
+    // SET CHECKOUT FORM
+    // -----------------------------------------------------------------------
+
+    public function checkoutSet(string $setId)
+    {
+        $sampleSet = SampleSet::where('set_id', $setId)
+            ->with(['productLine'])
+            ->firstOrFail();
+
+        if ($sampleSet->status !== 'active') {
+            return redirect()->route('mobile.samples.show', $setId)
+                ->with('error', 'This set is not available for checkout.');
+        }
+
+        $customers  = Customer::orderBy('company_name')->get(['id', 'company_name', 'name', 'phone', 'email']);
+        $staffUsers = User::whereHas('roles', fn ($q) => $q->whereNotIn('name', ['installer']))
+            ->orderBy('name')->get(['id', 'name']);
+        $defaultDays = (int) Setting::get('sample_checkout_days', 5);
+
+        return view('mobile.samples.checkout-set', compact('sampleSet', 'customers', 'staffUsers', 'defaultDays'));
+    }
+
+    // -----------------------------------------------------------------------
+    // SET CHECKOUT STORE
+    // -----------------------------------------------------------------------
+
+    public function storeCheckoutSet(Request $request, string $setId)
+    {
+        $sampleSet = SampleSet::where('set_id', $setId)->firstOrFail();
+
+        if ($sampleSet->status !== 'active') {
+            return back()->with('error', 'This set is not available for checkout.');
+        }
+
+        $validated = $request->validate([
+            'checkout_type'  => ['required', 'in:customer,staff'],
+            'due_back_at'    => ['nullable', 'date', 'after_or_equal:today'],
+            'customer_id'    => ['nullable', 'exists:customers,id'],
+            'customer_name'  => ['nullable', 'string', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'max:50'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
+            'user_id'        => ['nullable', 'exists:users,id'],
+            'notes'          => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validated['checkout_type'] === 'customer'
+            && empty($validated['customer_id'])
+            && empty($validated['customer_name'])) {
+            return back()->withErrors(['customer_name' => 'Please select a customer or enter a name.'])->withInput();
+        }
+
+        if (! empty($validated['customer_id'])) {
+            $customer = Customer::find($validated['customer_id']);
+            $validated['customer_name']  = $validated['customer_name']  ?: ($customer->company_name ?: $customer->name);
+            $validated['customer_phone'] = $validated['customer_phone'] ?: $customer->phone;
+            $validated['customer_email'] = $validated['customer_email'] ?: $customer->email;
+        }
+
+        SampleCheckout::create([
+            'sample_id'      => null,
+            'sample_set_id'  => $sampleSet->id,
+            'checkout_type'  => $validated['checkout_type'],
+            'customer_id'    => $validated['customer_id'] ?? null,
+            'customer_name'  => $validated['customer_name'] ?? null,
+            'customer_phone' => $validated['customer_phone'] ?? null,
+            'customer_email' => $validated['customer_email'] ?? null,
+            'user_id'        => $validated['user_id'] ?? null,
+            'notes'          => $validated['notes'] ?? null,
+            'due_back_at'    => $validated['due_back_at'] ?? null,
+        ]);
+
+        $sampleSet->update(['status' => 'checked_out']);
+
+        return redirect()->route('mobile.samples.show', $setId)
+            ->with('success', "{$setId} checked out successfully.");
     }
 
     // -----------------------------------------------------------------------

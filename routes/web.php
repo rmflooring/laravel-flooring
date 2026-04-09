@@ -1431,6 +1431,14 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
     Route::post('sample/{sampleId}/checkout', [\App\Http\Controllers\Mobile\SampleController::class, 'storeCheckout'])
         ->middleware('role_or_permission:admin|manage sample checkouts')
         ->name('samples.checkout.store');
+
+    Route::get('sample/{setId}/checkout-set', [\App\Http\Controllers\Mobile\SampleController::class, 'checkoutSet'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('sample-sets.checkout');
+
+    Route::post('sample/{setId}/checkout-set', [\App\Http\Controllers\Mobile\SampleController::class, 'storeCheckoutSet'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('sample-sets.checkout.store');
 });
 
 // ─── Installer portal ──────────────────────────────────────────────────────────
