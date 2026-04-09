@@ -429,6 +429,15 @@ class RfmController extends Controller
 
         $rfm->update(['status' => $request->input('status')]);
 
+        // Sync MS365 calendar event based on new status (best-effort)
+        $newStatus = $request->input('status');
+        if (in_array($newStatus, ['cancelled', 'completed'])) {
+            $this->syncCalendarDelete($rfm);
+        } else {
+            // confirmed / pending — update the existing event (or create if missing)
+            $this->syncCalendarUpdate($rfm, $opportunity);
+        }
+
         return back()->with('success', 'RFM status updated.');
     }
 
