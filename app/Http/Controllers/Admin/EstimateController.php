@@ -1197,7 +1197,7 @@ public function makeRevision(Estimate $estimate)
             ? request('format')
             : 'detailed';
 
-        $estimate->loadMissing(['rooms.items']);
+        $estimate->loadMissing(['rooms.items', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
         $pdf = Pdf::loadView('pdf.estimate', compact('estimate', 'format'));
         $filename = 'Estimate-' . ($estimate->estimate_number ?? $estimate->id) . '.pdf';
         return response($pdf->output(), 200, [
@@ -1222,7 +1222,7 @@ public function makeRevision(Estimate $estimate)
         $mailer = app(GraphMailService::class);
         $cc     = array_filter($request->input('cc', []));
 
-        $estimate->loadMissing(['rooms.items']);
+        $estimate->loadMissing(['rooms.items', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
         $pdfContent = Pdf::loadView('pdf.estimate', compact('estimate', 'format'))->output();
         $attachment = [
             'filename' => 'Estimate-' . ($estimate->estimate_number ?? $estimate->id) . '.pdf',

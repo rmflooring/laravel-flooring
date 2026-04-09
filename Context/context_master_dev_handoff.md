@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-08 (session 49)
+Updated: 2026-04-09 (session 50)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -49,7 +49,7 @@ Current core modules:
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 - **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
-- **Sample Tracking** — showroom sample checkout system (see section below)
+- **Sample Tracking** — showroom sample checkout system — see `Context/context_samples.md`
 - **Accounts Payable** — vendor/installer bills + aging (see section below)
 
 ---
@@ -899,7 +899,9 @@ Photos attached to product styles — used on sample show page and mobile scan p
 
 ---
 
-## Sample Tracking Module (session 49, 2026-04-08)
+## Sample Tracking Module (session 49–50, 2026-04-08)
+
+Full details in `Context/context_samples.md`.
 
 Showroom sample tracking — checkout, return, overdue reminders.
 
@@ -1031,11 +1033,14 @@ mobile.samples.checkout.store    POST  m/sample/{sampleId}/checkout
 | Payment terms controller (admin) | `app/Http/Controllers/Admin/PaymentTermController.php` |
 | Payment terms views (admin) | `resources/views/admin/payment-terms/` |
 | Sample controller (pages) | `app/Http/Controllers/Pages/SampleController.php` |
+| Sample set controller (pages) | `app/Http/Controllers/Pages/SampleSetController.php` |
 | Sample controller (mobile) | `app/Http/Controllers/Mobile/SampleController.php` |
 | Sample views (pages) | `resources/views/pages/samples/` |
+| Sample set views (pages) | `resources/views/pages/sample-sets/` |
 | Sample views (mobile) | `resources/views/mobile/samples/` |
 | Sample label PDF | `resources/views/pdf/sample-label.blade.php` |
-| Sample models | `app/Models/Sample.php`, `app/Models/SampleCheckout.php` |
+| Sample set label PDF | `resources/views/pdf/sample-set-label.blade.php` |
+| Sample models | `app/Models/Sample.php`, `app/Models/SampleCheckout.php`, `app/Models/SampleSet.php`, `app/Models/SampleSetItem.php` |
 | Sample overdue command | `app/Console/Commands/SendSampleReminders.php` |
 | Product style photo controller | `app/Http/Controllers/Admin/ProductStylePhotoController.php` |
 | Product style photo model | `app/Models/ProductStylePhoto.php` |

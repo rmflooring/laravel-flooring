@@ -199,7 +199,8 @@
         $brandCity     = Setting::get('branding_city', '');
         $brandProvince = Setting::get('branding_province', '');
         $brandPostal   = Setting::get('branding_postal', '');
-        $brandAddress  = trim(implode(', ', array_filter([$brandStreet, $brandCity, $brandProvince, $brandPostal])));
+        $brandAddressLine1 = trim(implode(', ', array_filter([$brandStreet, $brandCity])));
+        $brandAddressLine2 = trim(implode(' ', array_filter([$brandProvince, $brandPostal])));
         $brandPhone   = Setting::get('branding_phone', '');
         $brandEmail   = Setting::get('branding_email', '');
         $brandWebsite = Setting::get('branding_website', '');
@@ -220,16 +221,17 @@
         <div>
             @if ($logoData)
                 <img src="data:{{ $logoMime }};base64,{{ $logoData }}"
-                     style="height: 100px; max-width: 320px; object-fit: contain;">
+                     style="height: 120px; max-width: 384px; object-fit: contain;">
             @else
                 <div class="company-name">{{ $brandName }}</div>
                 @if ($brandTagline)
                     <div class="company-sub">{{ $brandTagline }}</div>
                 @endif
             @endif
-            @if ($brandAddress || $brandPhone || $brandWebsite)
+            @if ($brandAddressLine1 || $brandAddressLine2 || $brandPhone || $brandWebsite)
                 <div class="company-sub" style="margin-top: 4px;">
-                    @if ($brandAddress) {{ $brandAddress }}<br> @endif
+                    @if ($brandAddressLine1) {{ $brandAddressLine1 }}<br> @endif
+                    @if ($brandAddressLine2) {{ $brandAddressLine2 }}<br> @endif
                     @if ($brandPhone) {{ $brandPhone }} @endif
                     @if ($brandPhone && $brandWebsite)  &nbsp;|&nbsp;  @endif
                     @if ($brandWebsite) {{ $brandWebsite }} @endif
@@ -244,12 +246,38 @@
     </div>
 
     {{-- Info grid --}}
+    @php
+        $parentCustomerName  = $estimate->opportunity?->parentCustomer?->name;
+        $jobSiteCustomerName = $estimate->opportunity?->jobSiteCustomer?->name;
+
+        // Parse stored job_address ("street\ncity, province, postal") into two display lines
+        $jobAddrLine1 = '';
+        $jobAddrLine2 = '';
+        if ($estimate->job_address) {
+            $addrParts    = explode("\n", $estimate->job_address, 2);
+            $street       = trim($addrParts[0] ?? '');
+            $cityLineParts = array_map('trim', explode(',', $addrParts[1] ?? ''));
+            $city         = $cityLineParts[0] ?? '';
+            $province     = $cityLineParts[1] ?? '';
+            $postal       = $cityLineParts[2] ?? '';
+            $jobAddrLine1 = trim(implode(', ', array_filter([$street, $city])));
+            $jobAddrLine2 = trim(implode(' ', array_filter([$province, $postal])));
+        }
+    @endphp
     <table class="info-grid">
         <tr>
             <td>
                 <div class="info-section-title">Prepared For</div>
-                @if ($estimate->homeowner_name)
-                    <div class="info-row"><span class="info-value">{{ $estimate->homeowner_name }}</span></div>
+                @php
+                    $preparedForName = $parentCustomerName
+                        ?? $estimate->homeowner_name
+                        ?? $estimate->customer_name;
+                @endphp
+                @if ($preparedForName)
+                    <div class="info-row"><span class="info-value">{{ $preparedForName }}</span></div>
+                @endif
+                @if ($estimate->homeowner_name && $parentCustomerName && $estimate->homeowner_name !== $parentCustomerName)
+                    <div class="info-row">{{ $estimate->homeowner_name }}</div>
                 @endif
                 @if ($estimate->homeowner_email)
                     <div class="info-row">{{ $estimate->homeowner_email }}</div>
@@ -257,20 +285,23 @@
                 @if ($estimate->homeowner_phone)
                     <div class="info-row">{{ $estimate->homeowner_phone }}</div>
                 @endif
-                @if (! $estimate->homeowner_name && ! $estimate->homeowner_email)
-                    <div class="info-row"><span class="info-value">{{ $estimate->customer_name ?? '—' }}</span></div>
+                @if ($estimate->pm_name)
+                    <div class="info-row" style="margin-top: 6px;"><span class="info-label">PM: </span>{{ $estimate->pm_name }}</div>
                 @endif
             </td>
             <td>
                 <div class="info-section-title">Job Details</div>
+                @if ($jobSiteCustomerName)
+                    <div class="info-row"><span class="info-value">{{ $jobSiteCustomerName }}</span></div>
+                @endif
+                @if ($jobAddrLine1)
+                    <div class="info-row">{{ $jobAddrLine1 }}</div>
+                @endif
+                @if ($jobAddrLine2)
+                    <div class="info-row">{{ $jobAddrLine2 }}</div>
+                @endif
                 @if ($estimate->job_name)
                     <div class="info-row"><span class="info-label">Job: </span><span class="info-value">{{ $estimate->job_name }}</span></div>
-                @endif
-                @if ($estimate->job_address)
-                    <div class="info-row"><span class="info-label">Address: </span>{{ $estimate->job_address }}</div>
-                @endif
-                @if ($estimate->pm_name)
-                    <div class="info-row"><span class="info-label">PM: </span>{{ $estimate->pm_name }}</div>
                 @endif
                 @if ($estimate->estimate_number)
                     <div class="info-row"><span class="info-label">Estimate #: </span><span class="info-value">{{ $estimate->estimate_number }}</span></div>
