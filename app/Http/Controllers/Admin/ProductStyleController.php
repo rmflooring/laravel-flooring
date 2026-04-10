@@ -52,7 +52,7 @@ class ProductStyleController extends Controller
     return response()->json(
         $product_line->productStyles()
             ->orderBy('name')
-            ->get(['id', 'name', 'use_box_qty', 'units_per', 'cost_price'])
+            ->get(['id', 'name', 'use_box_qty', 'units_per', 'cost_price', 'sell_price'])
     );
 }
 

@@ -891,7 +891,9 @@ function initManufacturerDropdownForRoom(roomCard) {
           <button type="button"
             class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
             data-line-id="${line.id}"
-            data-line-name="${escapeHtml(line.name)}">
+            data-line-name="${escapeHtml(line.name)}"
+            data-sell-price="${parseFloat(line.default_sell_price ?? 0).toFixed(2)}"
+            data-cost-price="${parseFloat(line.default_cost_price ?? 0).toFixed(2)}">
             <span class="truncate">${escapeHtml(line.name)}</span>
           </button>
         </li>
@@ -911,6 +913,23 @@ function initManufacturerDropdownForRoom(roomCard) {
 
       const lineIdInput = row.querySelector('.js-product-line-id-input');
       if (lineIdInput) lineIdInput.value = id;
+
+      // Fill sell price from line default (only if not manually overridden)
+      const priceInput = row.querySelector('input[name$="[sell_price]"]');
+      if (priceInput && priceInput.dataset.userOverridden !== '1') {
+        const defaultSellPrice = parseFloat(btn.getAttribute('data-sell-price') || 0);
+        if (defaultSellPrice > 0) {
+          priceInput.value = defaultSellPrice.toFixed(2);
+          priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+
+      // Fill cost price from line default
+      const costPriceInput = row.querySelector('input[name$="[cost_price]"]');
+      if (costPriceInput) {
+        const defaultCostPrice = parseFloat(btn.getAttribute('data-cost-price') || 0);
+        if (defaultCostPrice > 0) costPriceInput.value = defaultCostPrice.toFixed(2);
+      }
 
       closeDropdown();
       styleInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1111,7 +1130,8 @@ function initManufacturerDropdownForRoom(roomCard) {
             data-style-name="${escapeHtml(s.name)}"
             data-use-box-qty="${s.use_box_qty ? '1' : '0'}"
             data-units-per="${s.units_per ?? ''}"
-            data-cost-price="${parseFloat(s.cost_price ?? 0).toFixed(2)}">
+            data-cost-price="${parseFloat(s.cost_price ?? 0).toFixed(2)}"
+            data-sell-price="${parseFloat(s.sell_price ?? 0).toFixed(2)}">
             <span class="truncate">${escapeHtml(s.name)}</span>
           </button>
         </li>
@@ -1193,12 +1213,17 @@ function initManufacturerDropdownForRoom(roomCard) {
 			costTotalInput.value = (qty * catalogCost).toFixed(2);
 		}
 
-		// New color selected -> allow autofill again (clear any manual override)
-const priceInput = row.querySelector('input[name*="[materials]"][name$="[sell_price]"]');
-if (priceInput) delete priceInput.dataset.userOverridden;
-
-		// Autofill sell price now (style price, else line default) — async, but cost is already set above
-		autofillSellPriceForRow(row);
+		// New color selected — clear manual override, then apply style's sell price if set
+		const priceInput = row.querySelector('input[name$="[sell_price]"]');
+		if (priceInput) {
+			delete priceInput.dataset.userOverridden;
+			const styleSellPrice = parseFloat(btn.getAttribute('data-sell-price') || 0);
+			if (styleSellPrice > 0) {
+				priceInput.value = styleSellPrice.toFixed(2);
+				priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+			}
+			// If styleSellPrice is 0, keep the line default already in the field
+		}
 
 		// If qty is already filled, check box qty now
 		const qtyInput = row.querySelector('input[name*="[quantity]"]');

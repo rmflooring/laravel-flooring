@@ -927,7 +927,7 @@ public function apiStyles(Request $request)
     }
 
     $lines = \DB::table('product_lines')
-        ->select('id', 'name')
+        ->select('id', 'name', 'default_sell_price', 'default_cost_price')
         ->where('status', 'active')
         ->where('product_type_id', $productTypeId)
         ->where('manufacturer', $manufacturer)
