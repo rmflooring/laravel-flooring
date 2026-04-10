@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Opportunity;
+use App\Services\OpportunityFolderService;
 use Illuminate\Http\Request;
 
 class JobSiteCustomerController extends Controller
@@ -30,6 +32,15 @@ class JobSiteCustomerController extends Controller
             'redirect_to'        => ['nullable', 'string'],
         ]);
 
+        // Capture old folder names for all opportunities using this job site before renaming
+        $opportunities = Opportunity::where('job_site_customer_id', $customer->id)
+            ->with('jobSiteCustomer')
+            ->get();
+
+        $oldFolderNames = $opportunities->mapWithKeys(
+            fn ($opp) => [$opp->id => $opp->storageFolderName()]
+        );
+
         $customer->update([
             'name'              => $data['name'] ?? null,
             'company_name'      => $data['company_name'] ?? null,
@@ -48,6 +59,13 @@ class JobSiteCustomerController extends Controller
             'claim_number'      => $data['claim_number'] ?? null,
             'dol'               => $data['dol'] ?? null,
         ]);
+
+        // Rename folders for any linked opportunities — customer model is updated in-place
+        $folderService = app(OpportunityFolderService::class);
+        foreach ($opportunities as $opp) {
+            $opp->setRelation('jobSiteCustomer', $customer);
+            $folderService->renameFolder($opp, $oldFolderNames[$opp->id]);
+        }
 
         $redirectTo = $data['redirect_to'] ?? null;
         if ($redirectTo && str_starts_with($redirectTo, '/')) {

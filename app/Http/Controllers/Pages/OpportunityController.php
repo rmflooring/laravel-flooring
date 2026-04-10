@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\ProjectManager;
 use App\Models\Opportunity;
 use App\Models\Sale;
+use App\Services\OpportunityFolderService;
 use Illuminate\Http\Request;
 use App\Models\Employee;
 
@@ -315,7 +316,14 @@ public function update(Request $request, string $id)
         }
     }
 
+    $oldFolderName = $opportunity->storageFolderName();
+
     $opportunity->update($data);
+
+    // Reload the job site relationship in case job_site_customer_id changed
+    $opportunity->load('jobSiteCustomer');
+
+    app(OpportunityFolderService::class)->renameFolder($opportunity, $oldFolderName);
 
     return redirect()
         ->route('pages.opportunities.show', $opportunity->id)
