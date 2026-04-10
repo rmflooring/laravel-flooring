@@ -83,6 +83,7 @@ $payload['end'] = [
     'timeZone' => 'America/Vancouver',
 ];
         } else {
+            $payload['isAllDay'] = false;
             $payload['start'] = [
                 'dateTime' => date('Y-m-d\TH:i:s', strtotime($data['start'])),
                 'timeZone' => 'America/Vancouver',
@@ -289,6 +290,12 @@ if (!$calendar) {
                 ->patch($url, $payload);
 
             if (!$resp->successful()) {
+                \Log::error('Microsoft PATCH failed', [
+                    'status'           => $resp->status(),
+                    'error'            => $resp->json(),
+                    'url'              => $url,
+                    'external_event_id' => $link->external_event_id,
+                ]);
                 return response()->json([
                     'message' => 'Microsoft update failed',
                     'status'  => $resp->status(),
