@@ -409,8 +409,8 @@ $resp = Http::withToken($accessToken)
         $calendarEvent->description = $ev['bodyPreview'] ?? null;
         $calendarEvent->location = $ev['location']['displayName'] ?? null;
 
-        $calendarEvent->starts_at = \Carbon\Carbon::parse($startDt, $startTz ?: 'UTC')->utc();
-        $calendarEvent->ends_at   = \Carbon\Carbon::parse($endDt, $endTz ?: 'UTC')->utc();
+        $calendarEvent->starts_at = \Carbon\Carbon::parse($startDt, $startTz ?: 'UTC')->setTimezone(config('app.timezone'));
+        $calendarEvent->ends_at   = \Carbon\Carbon::parse($endDt, $endTz ?: 'UTC')->setTimezone(config('app.timezone'));
         $calendarEvent->timezone = $startTz ?: 'UTC';
 
         $calendarEvent->status = $calendarEvent->status ?? 'active';
