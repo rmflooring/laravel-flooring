@@ -125,9 +125,15 @@ public function store(Request $request)
             return response()->json(['message' => 'No connected Microsoft account found'], 400);
         }
 
-        // This is the DB row for the calendar (id = 24/25/26/22 in your UI options)
-        $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-            ->where('id', (int)$data['microsoft_calendar_id'])
+        // Look up the calendar by ID. For group calendars, any connected user can write to them
+        // using their own token, so we don't scope to the current user's account.
+        // For personal calendars, we do require the calendar to belong to the current user's account.
+        $calendarId = (int)$data['microsoft_calendar_id'];
+        $calendar = MicrosoftCalendar::where('id', $calendarId)
+            ->where(function ($q) use ($account) {
+                $q->whereNotNull('group_id')
+                  ->orWhere('microsoft_account_id', $account->id);
+            })
             ->first();
 
         if (!$calendar) {
@@ -252,9 +258,12 @@ public function store(Request $request)
                 return response()->json(['message' => 'Event link not found in database'], 404);
             }
 
-            $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-    ->where('calendar_id', $link->external_calendar_id)  // ← key change!
-    ->first();
+            $calendar = MicrosoftCalendar::where('calendar_id', $link->external_calendar_id)
+                ->where(function ($q) use ($account) {
+                    $q->whereNotNull('group_id')
+                      ->orWhere('microsoft_account_id', $account->id);
+                })
+                ->first();
 
 if (!$calendar) {
     \Log::warning('MicrosoftCalendar not found by external_calendar_id', [
@@ -334,9 +343,12 @@ if (!$calendar) {
                 return response()->json(['message' => 'Event link not found'], 404);
             }
 
-            $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-			->where('calendar_id', $link->external_calendar_id)
-			->first();
+            $calendar = MicrosoftCalendar::where('calendar_id', $link->external_calendar_id)
+                ->where(function ($q) use ($account) {
+                    $q->whereNotNull('group_id')
+                      ->orWhere('microsoft_account_id', $account->id);
+                })
+                ->first();
 
             if (!$calendar) {
                 return response()->json(['message' => 'Calendar not found'], 404);
@@ -401,21 +413,27 @@ if (!$calendar) {
     $accessToken = $this->ensureMicrosoftAccessToken($account);
 
     // Source calendar (based on the link’s external_calendar_id)
-    $sourceCal = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-        ->where('calendar_id', $link->external_calendar_id)
+    $sourceCal = MicrosoftCalendar::where(‘calendar_id’, $link->external_calendar_id)
+        ->where(function ($q) use ($account) {
+            $q->whereNotNull(‘group_id’)
+              ->orWhere(‘microsoft_account_id’, $account->id);
+        })
         ->first();
 
     if (!$sourceCal) {
-        return response()->json(['message' => 'Source calendar not found in database.'], 404);
+        return response()->json([‘message’ => ‘Source calendar not found in database.’], 404);
     }
 
     // Destination calendar (DB id from dropdown)
-    $destCal = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-        ->where('id', (int) $request->microsoft_calendar_id)
+    $destCal = MicrosoftCalendar::where(‘id’, (int) $request->microsoft_calendar_id)
+        ->where(function ($q) use ($account) {
+            $q->whereNotNull(‘group_id’)
+              ->orWhere(‘microsoft_account_id’, $account->id);
+        })
         ->first();
 
     if (!$destCal) {
-        return response()->json(['message' => 'Destination calendar not found.'], 404);
+        return response()->json([‘message’ => ‘Destination calendar not found.’], 404);
     }
 
     // Same calendar? no-op
