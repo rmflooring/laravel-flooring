@@ -76,20 +76,20 @@ class CalendarEventController extends Controller
             $payload['isAllDay'] = true;
             $payload['start'] = [
     'dateTime' => $startDate . 'T00:00:00',
-    'timeZone' => 'Pacific Standard Time',
+    'timeZone' => 'America/Vancouver',
 ];
 $payload['end'] = [
     'dateTime' => $endDate . 'T00:00:00',
-    'timeZone' => 'Pacific Standard Time',
+    'timeZone' => 'America/Vancouver',
 ];
         } else {
             $payload['start'] = [
                 'dateTime' => date('Y-m-d\TH:i:s', strtotime($data['start'])),
-                'timeZone' => 'Pacific Standard Time',
+                'timeZone' => 'America/Vancouver',
             ];
             $payload['end'] = [
                 'dateTime' => date('Y-m-d\TH:i:s', strtotime($data['end'])),
-                'timeZone' => 'Pacific Standard Time',
+                'timeZone' => 'America/Vancouver',
             ];
         }
 

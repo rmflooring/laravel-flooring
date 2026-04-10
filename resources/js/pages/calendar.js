@@ -78,6 +78,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelBtn = document.getElementById('event-editor-cancel');
   if (cancelBtn) cancelBtn.addEventListener('click', focusCalendar);
 
+  // Auto-uncheck "All day" when user manually changes a time input
+  ['event-editor-start', 'event-editor-end'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      const allDayEl = document.getElementById('event-editor-all-day');
+      if (allDayEl && allDayEl.checked) {
+        allDayEl.checked = false;
+        allDayEl.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+
   document.addEventListener('hidden.tw.modal', (e) => {
     if (e?.target?.id !== 'event-editor-modal') return;
     focusCalendar();
@@ -534,15 +547,24 @@ const url = isEdit
           throw new Error(json?.message || json?.error?.message || `Save failed (HTTP ${res.status}).`);
         }
 
-        document.getElementById('event-editor-close')?.click();
+        // Close modal immediately — don't make user wait for sync
+        const editorModal = window.FlowbiteInstances?.getInstance('Modal', 'event-editor-modal');
+        if (editorModal) {
+          editorModal.hide();
+        } else {
+          // Fallback: manually remove modal + backdrop
+          document.getElementById('event-editor-modal')?.classList.add('hidden');
+          document.querySelectorAll('[modal-backdrop]').forEach((el) => el.remove());
+        }
+        focusCalendar();
 
-		calendar.unselect();
-		calendar.getEventSourceById('fm-feed')?.refetch();
+        calendar.unselect();
+        calendar.getEventSourceById('fm-feed')?.refetch();
 
-		await syncNowSilently();
-		calendar.getEventSourceById('fm-feed')?.refetch();
-	const editorModal = window.FlowbiteInstances?.getInstance('Modal', 'event-editor-modal');
-if (editorModal) editorModal.hide();
+        // Sync in background then refresh again
+        syncNowSilently().then(() => {
+          calendar.getEventSourceById('fm-feed')?.refetch();
+        });
 
       } catch (err) {
         console.error(err);

@@ -409,8 +409,19 @@ $resp = Http::withToken($accessToken)
         $calendarEvent->description = $ev['bodyPreview'] ?? null;
         $calendarEvent->location = $ev['location']['displayName'] ?? null;
 
-        $calendarEvent->starts_at = \Carbon\Carbon::parse($startDt, $startTz ?: 'UTC')->setTimezone(config('app.timezone'));
-        $calendarEvent->ends_at   = \Carbon\Carbon::parse($endDt, $endTz ?: 'UTC')->setTimezone(config('app.timezone'));
+        // Map Windows timezone names to IANA (PHP does not recognise Windows names)
+        $windowsToIana = [
+            'Pacific Standard Time'  => 'America/Vancouver',
+            'Mountain Standard Time' => 'America/Denver',
+            'Central Standard Time'  => 'America/Chicago',
+            'Eastern Standard Time'  => 'America/New_York',
+            'UTC'                    => 'UTC',
+        ];
+        $startTzIana = $windowsToIana[$startTz] ?? ($startTz ?: config('app.timezone'));
+        $endTzIana   = $windowsToIana[$endTz]   ?? ($endTz   ?: config('app.timezone'));
+
+        $calendarEvent->starts_at = \Carbon\Carbon::parse($startDt, $startTzIana)->setTimezone(config('app.timezone'));
+        $calendarEvent->ends_at   = \Carbon\Carbon::parse($endDt,   $endTzIana)->setTimezone(config('app.timezone'));
         $calendarEvent->timezone = $startTz ?: 'UTC';
 
         $calendarEvent->status = $calendarEvent->status ?? 'active';
