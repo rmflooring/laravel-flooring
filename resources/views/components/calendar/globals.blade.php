@@ -14,12 +14,7 @@
 </script>
 
 <script>
-  window.FM_CALENDAR_OPTIONS = [
-    { id: 18, label: "RM – RFM / Measures" },
-    { id: 19, label: "RM – Installations" },
-    { id: 20, label: "RM – Warehouse" },
-    { id: 16, label: "Team RM" },
-  ];
+  window.FM_CALENDAR_OPTIONS = @json($calendarOptions ?? []);
 
   window.FM_CREATE_EVENT_URL = "{{ route('pages.calendar.events.store') }}";
   window.FM_MICROSOFT_SYNC_NOW_URL = "{{ route('pages.microsoft.syncNow') }}";
