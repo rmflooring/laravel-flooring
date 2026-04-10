@@ -6,6 +6,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Services\GraphOneDriveService;
 
 class OpportunityFolderService
 {
@@ -67,6 +68,12 @@ class OpportunityFolderService
         }
 
         Log::info("OpportunityFolderService: renamed folder for opportunity #{$opportunity->id}: {$oldFolderName} → {$newFolderName}");
+
+        // Mirror the rename to OneDrive (best-effort, same as uploads)
+        app(GraphOneDriveService::class)->renameFolder(
+            "opportunities/{$oldFolderName}",
+            $newFolderName
+        );
 
         return true;
     }

@@ -84,6 +84,57 @@ class GraphOneDriveService
     }
 
     /**
+     * Rename a folder on OneDrive by patching its name in place.
+     *
+     * @param  string  $oldRelativePath  e.g. 'opportunities/OldName - 26-0001'
+     * @param  string  $newFolderName    e.g. 'NewName - 26-0001'  (just the final segment)
+     */
+    public function renameFolder(string $oldRelativePath, string $newFolderName): bool
+    {
+        try {
+            $token = $this->getAppToken();
+
+            $oneDrivePath = self::ONEDRIVE_ROOT . '/' . $oldRelativePath;
+            $encodedPath  = implode('/', array_map('rawurlencode', explode('/', $oneDrivePath)));
+            $url          = self::GRAPH_BASE . '/users/' . self::ONEDRIVE_USER . '/drive/root:/' . $encodedPath;
+
+            $response = Http::withToken($token)->patch($url, [
+                'name' => $newFolderName,
+            ]);
+
+            // 404 means the folder never existed on OneDrive (no files uploaded yet) — not an error
+            if ($response->status() === 404) {
+                return true;
+            }
+
+            if (! $response->successful()) {
+                Log::error('[OneDrive] Folder rename failed', [
+                    'old_path'   => $oldRelativePath,
+                    'new_name'   => $newFolderName,
+                    'status'     => $response->status(),
+                    'body'       => $response->body(),
+                ]);
+                return false;
+            }
+
+            Log::info('[OneDrive] Folder renamed', [
+                'old_path' => $oldRelativePath,
+                'new_name' => $newFolderName,
+            ]);
+
+            return true;
+
+        } catch (\Throwable $e) {
+            Log::error('[OneDrive] Folder rename exception', [
+                'old_path' => $oldRelativePath,
+                'new_name' => $newFolderName,
+                'message'  => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Simple upload for files up to 4MB.
      */
     private function simpleUpload(string $token, string $oneDrivePath, string $contents): bool
