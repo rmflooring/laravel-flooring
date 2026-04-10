@@ -313,9 +313,9 @@
                             {{-- SMS Notify Customer --}}
                             @if($smsRfmBookedToCustomer)
                                 @php
-                                    $customerPhone    = $opportunity->parentCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? null;
-                                    $customerLabel    = $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name ?: 'Customer';
-                                    $customerOptedOut = (bool) ($opportunity->parentCustomer?->sms_opted_out);
+                                    $customerPhone    = $opportunity->jobSiteCustomer?->mobile ?? $opportunity->jobSiteCustomer?->phone ?? null;
+                                    $customerLabel    = $opportunity->jobSiteCustomer?->company_name ?: $opportunity->jobSiteCustomer?->name ?: 'Customer';
+                                    $customerOptedOut = (bool) ($opportunity->jobSiteCustomer?->sms_opted_out);
                                 @endphp
                                 @if($customerOptedOut)
                                     <div class="flex items-start gap-3 opacity-50 cursor-not-allowed">
