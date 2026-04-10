@@ -328,8 +328,17 @@ calEl.dataset.originalCalendarId = String(calEl.value || '');
   if (event.allDay) {
     const sd = ext.start_date; // 'YYYY-MM-DD'
     const ed = ext.end_date;   // 'YYYY-MM-DD'
-    if (startEl) startEl.value = sd ? `${sd}T00:00` : '';
-    if (endEl) endEl.value = ed ? `${ed}T00:00` : '';
+    const startVal = sd ? `${sd}T00:00` : '';
+    let endVal = ed ? `${ed}T00:00` : '';
+
+    // If start === end (single all-day event), default end to start + 1 hour
+    if (startVal && endVal && startVal === endVal) {
+      const bumped = new Date(new Date(startVal).getTime() + 60 * 60 * 1000);
+      endVal = toDatetimeLocal(bumped);
+    }
+
+    if (startEl) startEl.value = startVal;
+    if (endEl) endEl.value = endVal;
   } else {
     if (startEl) startEl.value = toDatetimeLocal(event.start);
     if (endEl) endEl.value = toDatetimeLocal(event.end);
