@@ -340,8 +340,8 @@ calEl.dataset.originalCalendarId = String(calEl.value || '');
     if (startEl) startEl.value = startVal;
     if (endEl) endEl.value = endVal;
   } else {
-    if (startEl) startEl.value = toDatetimeLocal(event.start);
-    if (endEl) endEl.value = toDatetimeLocal(event.end);
+    if (startEl) startEl.value = toLocalInputFromStr(event.startStr);
+    if (endEl) endEl.value = toLocalInputFromStr(event.endStr);
   }
 
   // Show delete in edit mode
