@@ -1103,7 +1103,13 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
 
     $calendarByGraphId = $microsoftCalendars->keyBy('calendar_id')->filter();
 
-    $events = $eventModels->map(function ($e) use ($linksByEventId, $calendarByGraphId) {
+    // Normalized group_id -> min DB id (matches FM_CALENDAR_OPTIONS in the dropdown)
+    $normalizedIdByGroupId = \App\Models\MicrosoftCalendar::whereNotNull('group_id')
+        ->selectRaw('MIN(id) as id, group_id')
+        ->groupBy('group_id')
+        ->pluck('id', 'group_id');
+
+    $events = $eventModels->map(function ($e) use ($linksByEventId, $calendarByGraphId, $normalizedIdByGroupId) {
 
         $isAllDay = $e->starts_at
             && $e->ends_at
@@ -1136,7 +1142,10 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
                 'provider'    => $e->provider ?: ($graphCalendarId ? 'microsoft' : 'local'),
 
                 // for dropdown auto-select + future move logic
-                'calendar_id'          => optional($mc)->id,     // matches <option value="...">
+                // Use normalized id (min per group_id) so it matches FM_CALENDAR_OPTIONS
+                'calendar_id'          => $mc && $mc->group_id
+                    ? ($normalizedIdByGroupId[$mc->group_id] ?? $mc->id)
+                    : optional($mc)->id,
                 'provider_calendar_id' => $graphCalendarId,      // Graph calendar id
                 'calendar_name'        => optional($mc)->name,   // optional UI
 
