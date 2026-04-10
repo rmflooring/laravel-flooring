@@ -206,7 +206,7 @@
         <ul class="divide-y divide-gray-100 dark:divide-gray-700">
             @foreach($opportunity->purchaseOrders as $po)
                 <li>
-                    <a href="{{ route('mobile.po.show', $po->id) }}"
+                    <a href="{{ route('mobile.purchase-orders.show', $po->id) }}"
                        class="flex items-center justify-between px-4 py-3 active:bg-gray-50 dark:active:bg-gray-700/50">
                         <div>
                             <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ $po->po_number }}</p>

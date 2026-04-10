@@ -12,6 +12,33 @@ use Illuminate\Support\Facades\Log;
 
 class RfmController extends Controller
 {
+    public function index(Request $request)
+    {
+        $search = $request->input('search');
+        $status = $request->input('status', 'active');
+
+        $query = Rfm::with(['parentCustomer', 'jobSiteCustomer', 'opportunity.projectManager', 'estimator'])
+            ->whereNull('deleted_at');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('parentCustomer', fn ($q) => $q->where('company_name', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%"))
+                  ->orWhereHas('opportunity', fn ($q) => $q->where('job_no', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($status === 'active') {
+            $query->whereIn('status', ['pending', 'confirmed']);
+        } elseif ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $rfms = $query->orderByDesc('scheduled_at')->paginate(25)->withQueryString();
+
+        return view('mobile.rfms.index', compact('rfms', 'search', 'status'));
+    }
+
     public function show(Rfm $rfm)
     {
         $rfm->load([

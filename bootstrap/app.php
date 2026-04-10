@@ -11,8 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Sync mobile guard auth into web guard on every request so mobile-authenticated
+        // users can access desktop pages without re-logging in on the web guard
+        $middleware->appendToGroup('web', \App\Http\Middleware\SyncMobileAuth::class);
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\Admin::class,
+            'auth.mobile' => \App\Http\Middleware\AuthMobile::class,
 
             // Spatie Permission middleware aliases
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

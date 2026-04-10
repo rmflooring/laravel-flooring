@@ -14,6 +14,39 @@ use Illuminate\Http\Request;
 class SampleController extends Controller
 {
     // -----------------------------------------------------------------------
+    // INDEX — sample listing
+    // -----------------------------------------------------------------------
+
+    public function index(Request $request)
+    {
+        $search = $request->input('search');
+        $status = $request->input('status', 'active');
+
+        $query = Sample::with(['productStyle.productLine'])->whereNull('deleted_at');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('sample_id', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
+                  ->orWhereHas('productStyle', fn ($q) =>
+                      $q->where('name', 'like', "%{$search}%")
+                  )
+                  ->orWhereHas('productStyle.productLine', fn ($q) =>
+                      $q->where('name', 'like', "%{$search}%")
+                  );
+            });
+        }
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $samples = $query->orderBy('sample_id')->paginate(25)->withQueryString();
+
+        return view('mobile.samples.index', compact('samples', 'search', 'status'));
+    }
+
+    // -----------------------------------------------------------------------
     // SHOW — product info page (scanned from QR)
     // -----------------------------------------------------------------------
 

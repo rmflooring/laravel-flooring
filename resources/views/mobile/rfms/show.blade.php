@@ -1,5 +1,5 @@
 {{-- resources/views/mobile/rfms/show.blade.php --}}
-<x-mobile-layout :title="'RFM – ' . ($rfm->parentCustomer?->company_name ?? $rfm->parentCustomer?->first_name ?? 'Measure')">
+<x-mobile-layout :title="'RFM – ' . ($rfm->jobSiteCustomer?->company_name ?: ($rfm->jobSiteCustomer?->name ?: ($rfm->parentCustomer?->company_name ?: ($rfm->parentCustomer?->name ?: 'Measure'))))">
 
     @php
         $statusColors = [
@@ -19,12 +19,10 @@
         ])->filter()->implode(', ');
 
         $customerName = $rfm->parentCustomer?->company_name
-            ?? trim(($rfm->parentCustomer?->first_name ?? '') . ' ' . ($rfm->parentCustomer?->last_name ?? ''))
-            ?: null;
+            ?: ($rfm->parentCustomer?->name ?: null);
 
         $jobSiteName = $rfm->jobSiteCustomer?->company_name
-            ?? trim(($rfm->jobSiteCustomer?->first_name ?? '') . ' ' . ($rfm->jobSiteCustomer?->last_name ?? ''))
-            ?: null;
+            ?: ($rfm->jobSiteCustomer?->name ?: null);
     @endphp
 
     {{-- Flash messages --}}
@@ -105,12 +103,12 @@
     <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4">
         <p class="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">Job Site</p>
 
-        @if($customerName)
+        @if($jobSiteName ?? $customerName)
             <div class="flex items-start gap-3 mb-2">
                 <svg class="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
                 </svg>
-                <span class="text-sm text-gray-800 dark:text-gray-200">{{ $customerName }}</span>
+                <span class="text-sm text-gray-800 dark:text-gray-200">{{ $jobSiteName ?? $customerName }}</span>
             </div>
         @endif
 

@@ -12,6 +12,36 @@ use Illuminate\Support\Facades\Log;
 
 class WorkOrderController extends Controller
 {
+    public function index(Request $request)
+    {
+        $search = $request->input('search');
+        $status = $request->input('status', 'active');
+
+        $query = WorkOrder::with(['sale.opportunity.parentCustomer', 'installer'])
+            ->whereNull('deleted_at');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('wo_number', 'like', "%{$search}%")
+                  ->orWhereHas('installer', fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('sale.opportunity.parentCustomer', fn ($q) =>
+                      $q->where('company_name', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%")
+                  );
+            });
+        }
+
+        if ($status === 'active') {
+            $query->whereNotIn('status', ['completed', 'cancelled']);
+        } elseif ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $workOrders = $query->orderByDesc('scheduled_date')->paginate(25)->withQueryString();
+
+        return view('mobile.work-orders.index', compact('workOrders', 'search', 'status'));
+    }
+
     public function show(WorkOrder $workOrder)
     {
         $workOrder->load([

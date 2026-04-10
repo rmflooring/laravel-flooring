@@ -1384,8 +1384,22 @@ Route::middleware('auth')->group(function () {
 
 });
 
+// ─── Mobile auth (unauthenticated) ────────────────────────────────────────────
+Route::prefix('m')->name('mobile.')->group(function () {
+    Route::get('login', [\App\Http\Controllers\Mobile\MobileSessionController::class, 'create'])
+        ->middleware('guest:mobile')
+        ->name('login');
+    Route::post('login', [\App\Http\Controllers\Mobile\MobileSessionController::class, 'store'])
+        ->middleware('guest:mobile')
+        ->name('login.store');
+    Route::post('logout', [\App\Http\Controllers\Mobile\MobileSessionController::class, 'destroy'])
+        ->name('logout');
+});
+
 // ─── Mobile views ─────────────────────────────────────────────────────────────
-Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(function () {
+Route::middleware(['auth.mobile'])->prefix('m')->name('mobile.')->group(function () {
+    Route::get('/', fn () => view('mobile.home'))->name('home');
+
     Route::get('po/{purchaseOrder}', [\App\Http\Controllers\Mobile\PurchaseOrderController::class, 'show'])
         ->middleware('role_or_permission:admin|view purchase orders')
         ->name('purchase-orders.show');
@@ -1398,6 +1412,10 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
         ->middleware('role_or_permission:admin|view purchase orders')
         ->name('inventory.show');
 
+    Route::get('work-orders', [\App\Http\Controllers\Mobile\WorkOrderController::class, 'index'])
+        ->middleware('role_or_permission:admin|view work orders')
+        ->name('work-orders.index');
+
     Route::get('wo/{workOrder}', [\App\Http\Controllers\Mobile\WorkOrderController::class, 'show'])
         ->middleware('role_or_permission:admin|view work orders')
         ->name('work-orders.show');
@@ -1406,11 +1424,18 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
         ->middleware('role_or_permission:admin|view work orders')
         ->name('work-orders.upload-photos');
 
+    Route::get('opportunities', [\App\Http\Controllers\Mobile\OpportunityController::class, 'index'])
+        ->name('opportunities.index');
+
     Route::get('opportunity/{opportunity}', [\App\Http\Controllers\Mobile\OpportunityController::class, 'show'])
         ->name('opportunity.show');
 
     Route::get('opportunity/{opportunity}/photos', [\App\Http\Controllers\Mobile\PhotoGalleryController::class, 'show'])
         ->name('opportunity.photos');
+
+    Route::get('rfms', [\App\Http\Controllers\Mobile\RfmController::class, 'index'])
+        ->middleware('role_or_permission:admin|view rfms')
+        ->name('rfms.index');
 
     Route::get('rfm/{rfm}', [\App\Http\Controllers\Mobile\RfmController::class, 'show'])
         ->middleware('role_or_permission:admin|view rfms')
@@ -1419,6 +1444,10 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
     Route::post('rfm/{rfm}/photos', [\App\Http\Controllers\Mobile\RfmController::class, 'uploadPhotos'])
         ->middleware('role_or_permission:admin|view rfms')
         ->name('rfms.upload-photos');
+
+    Route::get('samples', [\App\Http\Controllers\Mobile\SampleController::class, 'index'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.index');
 
     Route::get('sample/{sampleId}', [\App\Http\Controllers\Mobile\SampleController::class, 'show'])
         ->middleware('role_or_permission:admin|view samples')
@@ -1442,7 +1471,7 @@ Route::middleware(['auth', 'verified'])->prefix('m')->name('mobile.')->group(fun
 });
 
 // ─── Installer portal ──────────────────────────────────────────────────────────
-Route::middleware(['auth', 'verified', 'role:installer'])->prefix('installer')->name('installer.')->group(function () {
+Route::middleware(['auth.mobile', 'role:installer'])->prefix('installer')->name('installer.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Installer\DashboardController::class, 'index'])
         ->name('dashboard');
 

@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-09 (session 50)
+Updated: 2026-04-09 (session 51)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -979,6 +979,40 @@ mobile.samples.checkout.store    POST  m/sample/{sampleId}/checkout
 
 ### Open Items
 - End-to-end test (create → label → mobile scan → checkout → return → reminder command)
+
+---
+
+## Mobile Auth Guard (session 51, 2026-04-09)
+
+Separate long-lived auth system for all `/m/` and `/installer/` routes.
+
+### Design
+- Custom `mobile` guard in `config/auth.php` — same `users` table/provider as `web` guard
+- `Auth::guard('mobile')->attempt($credentials, remember: true)` — always sets the remember cookie
+- Laravel's remember cookie for the `mobile` guard lasts **5 years** (`remember_mobile_*` cookie, separate from `remember_web_*`)
+- Staff/installers log in once on mobile and stay authenticated indefinitely until they explicitly log out
+
+### Middleware — `auth.mobile`
+- File: `app/Http/Middleware/AuthMobile.php`
+- Checks `Auth::guard('mobile')->check()`; unauthenticated → redirects to `mobile.login`
+- Calls `Auth::setUser(Auth::guard('mobile')->user())` so `auth()->user()` works in all views and Spatie permission middleware without guard-specific calls
+
+### Controller — `MobileSessionController`
+- File: `app/Http/Controllers/Mobile/MobileSessionController.php`
+- `GET  /m/login` → `mobile.login` — shows login form (guest-only)
+- `POST /m/login` → `mobile.login.store` — authenticates via mobile guard, always remember=true (guest-only)
+- `POST /m/logout` → `mobile.logout` — logs out mobile guard, redirects to `/m/login`
+- After login: installers → `installer.dashboard`; staff → `redirect()->intended('/')`
+
+### Login view
+- File: `resources/views/mobile/auth/login.blade.php`
+- Standalone page (no mobile layout header — user is not yet logged in)
+- No "remember me" checkbox — it's always on by default
+
+### Routes changed
+- `/m/` group: was `['auth', 'verified']` → now `['auth.mobile']`
+- `/installer/` group: was `['auth', 'verified', 'role:installer']` → now `['auth.mobile', 'role:installer']`
+- Mobile layout logout: was `route('logout')` → now `route('mobile.logout')`
 
 ---
 

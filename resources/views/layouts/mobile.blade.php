@@ -29,7 +29,7 @@
 
             <div x-show="open" x-cloak
                  class="absolute right-0 mt-2 w-40 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-50">
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ route('mobile.logout') }}">
                     @csrf
                     <button type="submit"
                             class="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
