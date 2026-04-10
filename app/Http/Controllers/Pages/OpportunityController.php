@@ -316,14 +316,12 @@ public function update(Request $request, string $id)
         }
     }
 
-    $oldFolderName = $opportunity->storageFolderName();
-
     $opportunity->update($data);
 
     // Reload the job site relationship in case job_site_customer_id changed
     $opportunity->load('jobSiteCustomer');
 
-    app(OpportunityFolderService::class)->renameFolder($opportunity, $oldFolderName);
+    app(OpportunityFolderService::class)->renameFolder($opportunity);
 
     return redirect()
         ->route('pages.opportunities.show', $opportunity->id)

@@ -32,14 +32,9 @@ class JobSiteCustomerController extends Controller
             'redirect_to'        => ['nullable', 'string'],
         ]);
 
-        // Capture old folder names for all opportunities using this job site before renaming
+        // Load linked opportunities before updating the customer name
         $opportunities = Opportunity::where('job_site_customer_id', $customer->id)
-            ->with('jobSiteCustomer')
             ->get();
-
-        $oldFolderNames = $opportunities->mapWithKeys(
-            fn ($opp) => [$opp->id => $opp->storageFolderName()]
-        );
 
         $customer->update([
             'name'              => $data['name'] ?? null,
@@ -64,7 +59,7 @@ class JobSiteCustomerController extends Controller
         $folderService = app(OpportunityFolderService::class);
         foreach ($opportunities as $opp) {
             $opp->setRelation('jobSiteCustomer', $customer);
-            $folderService->renameFolder($opp, $oldFolderNames[$opp->id]);
+            $folderService->renameFolder($opp);
         }
 
         $redirectTo = $data['redirect_to'] ?? null;
