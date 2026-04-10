@@ -15,10 +15,10 @@
 
 <script>
   window.FM_CALENDAR_OPTIONS = [
-    { id: 24, label: "RM – RFM / Measures" },
-    { id: 25, label: "RM – Installations" },
-    { id: 26, label: "RM – Warehouse" },
-    { id: 22, label: "Team RM" },
+    { id: 18, label: "RM – RFM / Measures" },
+    { id: 19, label: "RM – Installations" },
+    { id: 20, label: "RM – Warehouse" },
+    { id: 16, label: "Team RM" },
   ];
 
   window.FM_CREATE_EVENT_URL = "{{ route('pages.calendar.events.store') }}";

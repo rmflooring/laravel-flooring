@@ -251,13 +251,13 @@ eventSources: [
       const startVal = toLocalInputFromStr(selectionInfo.startStr, '09:00');
       let endVal = toLocalInputFromStr(selectionInfo.endStr, '10:00');
 
-      // Default to 1 hour for timed selections if missing/short (<= 30 mins)
-      if (!selectionInfo.allDay && startVal) {
+      // Always default to 1 hour — month view all-day clicks give next day as end
+      if (startVal) {
         const startDate = new Date(startVal);
         const endDate = endVal ? new Date(endVal) : null;
         const diffMs = endDate ? endDate.getTime() - startDate.getTime() : 0;
 
-        if (!endDate || diffMs <= 30 * 60 * 1000) {
+        if (!endDate || diffMs <= 30 * 60 * 1000 || selectionInfo.allDay) {
           const bumped = new Date(startDate.getTime() + 60 * 60 * 1000);
           endVal = toDatetimeLocal(bumped);
         }

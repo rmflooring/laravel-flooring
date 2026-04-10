@@ -412,28 +412,28 @@ if (!$calendar) {
 
     $accessToken = $this->ensureMicrosoftAccessToken($account);
 
-    // Source calendar (based on the link’s external_calendar_id)
-    $sourceCal = MicrosoftCalendar::where(‘calendar_id’, $link->external_calendar_id)
+    // Source calendar (based on the link's external_calendar_id)
+    $sourceCal = MicrosoftCalendar::where('calendar_id', $link->external_calendar_id)
         ->where(function ($q) use ($account) {
-            $q->whereNotNull(‘group_id’)
-              ->orWhere(‘microsoft_account_id’, $account->id);
+            $q->whereNotNull('group_id')
+              ->orWhere('microsoft_account_id', $account->id);
         })
         ->first();
 
     if (!$sourceCal) {
-        return response()->json([‘message’ => ‘Source calendar not found in database.’], 404);
+        return response()->json(['message' => 'Source calendar not found in database.'], 404);
     }
 
     // Destination calendar (DB id from dropdown)
-    $destCal = MicrosoftCalendar::where(‘id’, (int) $request->microsoft_calendar_id)
+    $destCal = MicrosoftCalendar::where('id', (int) $request->microsoft_calendar_id)
         ->where(function ($q) use ($account) {
-            $q->whereNotNull(‘group_id’)
-              ->orWhere(‘microsoft_account_id’, $account->id);
+            $q->whereNotNull('group_id')
+              ->orWhere('microsoft_account_id', $account->id);
         })
         ->first();
 
     if (!$destCal) {
-        return response()->json([‘message’ => ‘Destination calendar not found.’], 404);
+        return response()->json(['message' => 'Destination calendar not found.'], 404);
     }
 
     // Same calendar? no-op
