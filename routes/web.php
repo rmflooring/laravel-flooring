@@ -1442,6 +1442,9 @@ Route::middleware(['auth.mobile'])->prefix('m')->name('mobile.')->group(function
     Route::get('opportunity/{opportunity}/photos', [\App\Http\Controllers\Mobile\PhotoGalleryController::class, 'show'])
         ->name('opportunity.photos');
 
+    Route::post('opportunity/{opportunity}/photos', [\App\Http\Controllers\Mobile\PhotoGalleryController::class, 'uploadPhotos'])
+        ->name('opportunity.photos.upload');
+
     Route::get('rfms', [\App\Http\Controllers\Mobile\RfmController::class, 'index'])
         ->middleware('role_or_permission:admin|view rfms')
         ->name('rfms.index');

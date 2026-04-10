@@ -55,6 +55,58 @@
         </div>
     @endif
 
+    {{-- Add Photos card --}}
+    <div class="rounded-xl border border-emerald-200 bg-white dark:border-emerald-800 dark:bg-gray-800 shadow-sm overflow-hidden">
+        <form id="photo-upload-form" enctype="multipart/form-data">
+            @csrf
+            <button type="button" id="photo-pick-btn"
+                    onclick="document.getElementById('photo-file-input').click()"
+                    class="w-full flex items-center gap-4 px-5 py-4 active:scale-95 transition-transform text-left">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+                    <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-base font-bold text-gray-900 dark:text-white">Add Photos</p>
+                    <p id="photo-upload-label" class="text-xs text-gray-500 dark:text-gray-400">Tap to take or choose photos</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+
+            <input type="file" id="photo-file-input" name="files[]"
+                   multiple accept="image/*"
+                   class="hidden"
+                   onchange="handlePhotoSelection(this)">
+
+            <div id="photo-submit-area" style="display:none"
+                 class="border-t border-gray-100 dark:border-gray-700 px-5 py-4 space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                    <span id="photo-count-label" class="text-sm text-gray-600 dark:text-gray-300"></span>
+                    <button type="button" id="photo-upload-btn"
+                            onclick="startMobileUpload()"
+                            class="px-5 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-lg">
+                        Upload
+                    </button>
+                </div>
+                <div id="photo-progress-wrap" style="display:none">
+                    <div class="mb-1.5 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span id="photo-progress-label">Uploading…</span>
+                        <span id="photo-progress-pct">0%</span>
+                    </div>
+                    <div class="h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div id="photo-progress-bar"
+                             class="h-3 rounded-full bg-emerald-500 transition-all duration-150"
+                             style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
     {{-- Fullscreen lightbox --}}
     <div id="photoLightbox"
          style="display:none"
@@ -101,6 +153,98 @@
     </div>
 
     <script>
+    var _uploadUrl = '{{ route('mobile.opportunity.photos.upload', $opportunity) }}';
+    var _csrfToken = '{{ csrf_token() }}';
+
+    function handlePhotoSelection(input) {
+        var count = input.files.length;
+        if (count === 0) return;
+        var label = count + ' photo' + (count !== 1 ? 's' : '') + ' selected';
+        document.getElementById('photo-count-label').textContent = label;
+        document.getElementById('photo-upload-label').textContent = label + ' — ready to upload';
+        document.getElementById('photo-submit-area').style.display = 'block';
+    }
+
+    function startMobileUpload() {
+        var input = document.getElementById('photo-file-input');
+        if (!input.files.length) return;
+
+        var fd = new FormData();
+        fd.append('_token', _csrfToken);
+        for (var i = 0; i < input.files.length; i++) {
+            fd.append('files[]', input.files[i]);
+        }
+
+        var progressWrap  = document.getElementById('photo-progress-wrap');
+        var progressBar   = document.getElementById('photo-progress-bar');
+        var progressPct   = document.getElementById('photo-progress-pct');
+        var progressLabel = document.getElementById('photo-progress-label');
+        var uploadBtn     = document.getElementById('photo-upload-btn');
+        var pickBtn       = document.getElementById('photo-pick-btn');
+
+        progressWrap.style.display = 'block';
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Uploading…';
+        pickBtn.disabled = true;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', _uploadUrl);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('X-CSRF-TOKEN', _csrfToken);
+
+        xhr.upload.addEventListener('progress', function (e) {
+            if (!e.lengthComputable) return;
+            var pct = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = pct + '%';
+            progressPct.textContent = pct + '%';
+            progressLabel.textContent = 'Uploading ' + input.files.length + ' photo' + (input.files.length !== 1 ? 's' : '') + '…';
+        });
+
+        xhr.addEventListener('load', function () {
+            var data = null;
+            try { data = JSON.parse(xhr.responseText); } catch (e) {}
+
+            if (data && data.success) {
+                progressBar.style.width = '100%';
+                progressPct.textContent = '100%';
+                progressLabel.textContent = (data.count || input.files.length) + ' photo' + ((data.count || input.files.length) !== 1 ? 's' : '') + ' uploaded!';
+                setTimeout(function () { window.location.reload(); }, 800);
+            } else {
+                var msg = (data && data.message) || 'Upload failed (HTTP ' + xhr.status + ').';
+                progressLabel.textContent = msg;
+                progressBar.style.backgroundColor = '#ef4444';
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Retry';
+                pickBtn.disabled = false;
+            }
+        });
+
+        xhr.addEventListener('error', function () {
+            progressLabel.textContent = 'Upload failed — network error.';
+            progressBar.style.backgroundColor = '#ef4444';
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Retry';
+            pickBtn.disabled = false;
+        });
+
+        xhr.send(fd);
+    }
+
+    window.addEventListener('pageshow', function () {
+        var input = document.getElementById('photo-file-input');
+        if (input) input.value = '';
+        document.getElementById('photo-submit-area').style.display = 'none';
+        document.getElementById('photo-progress-wrap').style.display = 'none';
+        var bar = document.getElementById('photo-progress-bar');
+        if (bar) { bar.style.width = '0%'; bar.style.backgroundColor = ''; }
+        document.getElementById('photo-upload-label').textContent = 'Tap to take or choose photos';
+        var btn = document.getElementById('photo-upload-btn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Upload'; }
+        var pick = document.getElementById('photo-pick-btn');
+        if (pick) pick.disabled = false;
+    });
+
     var lbTiles = Array.from(document.querySelectorAll('[data-idx]'));
     var lbIndex = 0;
     var lbSwipeX = null;
