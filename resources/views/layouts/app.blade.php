@@ -41,7 +41,7 @@
                             <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
                         </svg>
                         <span>Your Microsoft 365 calendar connection has expired. Calendar events will not be created until you reconnect.</span>
-                        <a href="{{ route('settings.integrations.microsoft.index') }}"
+                        <a href="{{ route('pages.settings.integrations.microsoft.index') }}"
                            class="ml-auto shrink-0 font-semibold underline hover:no-underline">
                             Reconnect
                         </a>
@@ -70,10 +70,7 @@
     {{ $slot }}
 </main>
         </div>
-		        <!-- Flowbite JavaScript (CDN) - enables all interactive components -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.5.2/flowbite.min.js"></script>
-
-        <script>
+		        <script>
         document.addEventListener('DOMContentLoaded', () => {
           const sidebar = document.getElementById('app-sidebar');
           const btn = document.getElementById('sidebar-collapse-btn');

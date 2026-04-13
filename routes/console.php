@@ -50,12 +50,31 @@ Schedule::call(function () {
 
     foreach ($users as $user) {
         // Fake a request for THIS user, so syncNow() uses their Microsoft account + enabled calendars
-	    \Log::info('Auto-sync starting', ['user_id' => $user->id]);
-		
-        $request = Request::create('/settings/integrations/microsoft/sync-now', 'POST');
-        $request->setUserResolver(fn () => $user);
+        \Log::info('Auto-sync starting', ['user_id' => $user->id]);
 
-        app(MicrosoftCalendarConnectController::class)->syncNow($request);
+        try {
+            $request = Request::create('/settings/integrations/microsoft/sync-now', 'POST');
+            $request->setUserResolver(fn () => $user);
+
+            app(MicrosoftCalendarConnectController::class)->syncNow($request);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            // Token was encrypted with a different APP_KEY — mark account as disconnected
+            \Log::warning('Auto-sync: could not decrypt tokens for user, disconnecting account', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+            $user->microsoftAccount?->update([
+                'is_connected'    => false,
+                'access_token'    => null,
+                'refresh_token'   => null,
+                'disconnected_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Auto-sync: unexpected error for user', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
     }
 })
 ->everyTenMinutes()
