@@ -725,14 +725,14 @@
 
                             {{-- Conditions --}}
                             @php
-                                $selectedConditionId = old('condition_id', $defaultConditionId);
-                                $selectedConditionBody = $conditions->firstWhere('id', $selectedConditionId)?->body ?? '';
+                                $selectedConditionId   = old('condition_id', $defaultConditionId);
+                                $selectedConditionBody = old('condition_body', $conditions->firstWhere('id', $selectedConditionId)?->body ?? '');
                             @endphp
                             <script>
                                 window._estimateConditions = @json($conditions->mapWithKeys(fn($c) => [$c->id => $c->body]));
                             </script>
                             <div class="mt-4 border-t pt-4"
-                                 x-data="{ preview: {{ $selectedConditionBody ? Js::from($selectedConditionBody) : "''" }} }">
+                                 x-data="{ preview: {{ Js::from($selectedConditionBody) }} }">
                                 <label class="block mb-1 text-sm font-medium text-gray-700">
                                     Conditions
                                     <span class="ml-1 text-xs font-normal text-gray-400">(printed in PDF footer)</span>
@@ -750,8 +750,12 @@
                                 </select>
 
                                 <div x-show="preview" style="display:{{ $selectedConditionBody ? 'block' : 'none' }}"
-                                     class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 italic">
-                                    <span x-text="preview"></span>
+                                     class="mt-3">
+                                    <label class="block mb-1 text-xs font-medium text-gray-500">Condition text <span class="font-normal">(editable — changes apply to this estimate only)</span></label>
+                                    <textarea name="condition_body"
+                                              x-model="preview"
+                                              rows="4"
+                                              class="block w-full rounded-lg border-gray-300 bg-gray-50 text-sm text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
                                 </div>
                             </div>
                         </div>

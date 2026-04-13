@@ -30,6 +30,7 @@ class Estimate extends Model
 
         'notes',
         'condition_id',
+        'condition_body',
 
         'subtotal_materials',
         'subtotal_labour',

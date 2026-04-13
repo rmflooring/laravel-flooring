@@ -92,6 +92,7 @@ class EstimateController extends Controller
 			'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'notes'                => ['nullable', 'string'],
             'condition_id'         => ['nullable', 'integer', 'exists:conditions,id'],
+            'condition_body'       => ['nullable', 'string'],
             'estimate_number'      => ['nullable', 'string', 'max:255'],
             'subtotal_materials'   => ['nullable', 'numeric'],
             'subtotal_labour'      => ['nullable', 'numeric'],
@@ -196,6 +197,7 @@ $data['tax_rate_percent'] = $groupPercent;
 				'salesperson_2_employee_id' => $data['salesperson_2_employee_id'] ?? null,
                 'notes'              => $data['notes'] ?? null,
                 'condition_id'       => $data['condition_id'] ?? null,
+                'condition_body'     => $data['condition_body'] ?? null,
                 'subtotal_materials' => (float)($data['subtotal_materials'] ?? 0),
                 'subtotal_labour'    => (float)($data['subtotal_labour'] ?? 0),
                 'subtotal_freight'   => (float)($data['subtotal_freight'] ?? 0),
@@ -461,6 +463,7 @@ public function update(Request $request, Estimate $estimate)
 		'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         'notes'                => ['nullable', 'string'],
         'condition_id'         => ['nullable', 'integer', 'exists:conditions,id'],
+        'condition_body'       => ['nullable', 'string'],
 		'status' => ['required', 'in:draft,sent,revised,approved,rejected'],
 
 		'homeowner_name'  => ['nullable', 'string', 'max:255'],
@@ -628,6 +631,7 @@ if ($taxGroupId) {
 			'homeowner_email'  => $data['homeowner_email'] ?? $estimate->homeowner_email,
             'notes'              => $data['notes'] ?? $estimate->notes,
             'condition_id'       => array_key_exists('condition_id', $data) ? $data['condition_id'] : $estimate->condition_id,
+            'condition_body'     => array_key_exists('condition_body', $data) ? $data['condition_body'] : $estimate->condition_body,
 			'status' => $data['status'],
 
             'subtotal_materials' => (float)($data['subtotal_materials'] ?? 0),

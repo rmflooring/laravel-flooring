@@ -538,9 +538,10 @@
         </table>
     </div>
 
-    @if ($estimate->condition?->body)
+    @php $conditionText = $estimate->condition_body ?: $estimate->condition?->body; @endphp
+    @if ($conditionText)
         <div class="footer">
-            {{ $estimate->condition->body }}
+            {{ $conditionText }}
         </div>
     @endif
 
