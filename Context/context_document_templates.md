@@ -1,14 +1,32 @@
 # Document Templates Module Context — RM Flooring / Floor Manager
 
-Updated: 2026-03-27 (session 36)
+Updated: 2026-04-13 (session 52)
 
 ---
 
 ## Overview
 
-Admin-managed printable document templates with merge tags. Staff generate PDFs from an opportunity's Documents tab. Generated PDFs are saved to the opportunity's document library.
+Admin-managed printable document templates with merge tags. Staff generate documents from an opportunity's Documents tab. The document opens as an editable form page (pre-filled from opportunity/sale data), staff review/edit the fields, save it, then print to PDF from the saved document's show page.
+
+Generated documents are saved to the opportunity's document library (category: `generated_document`).
 
 Use cases: front file labels, flooring selection sign-offs, work authorization forms, estimator checklists, and any other printable job document.
+
+---
+
+## Flow (session 52 — new)
+
+Old flow: modal → instant PDF → stored on disk → "Print" link.
+
+**New flow:**
+1. Staff click "Create Document" on the Opportunity Documents tab
+2. A dropdown picker appears inline (no modal) — select template, select sale if required
+3. Click "Continue →" → navigates to a dedicated **create page**
+4. Create page shows all merge tag fields used in that template as labeled inputs, pre-filled from opportunity/sale data
+5. Staff edit any fields as needed, then click **Save Document**
+6. Redirects to the **document show page** — displays rendered HTML document + Edit Fields + Print/PDF buttons
+7. Staff can re-open the edit page at any time and re-save
+8. **Print / PDF** button generates PDF on-demand from the saved `rendered_body`
 
 ---
 
@@ -19,172 +37,157 @@ Use cases: front file labels, flooring selection sign-offs, work authorization f
 |--------|------|-------|
 | `id` | bigint | PK |
 | `name` | string | Template name shown to staff |
-| `description` | text (nullable) | Short hint shown in generate modal |
+| `description` | text (nullable) | Short hint |
 | `body` | text | HTML body with `{{merge_tags}}` |
-| `needs_sale` | boolean | When true, staff must select a Sale at generate time (enables `{{flooring_items_table}}`) |
+| `needs_sale` | boolean | When true, staff must select a Sale |
+| `special_flow` | string (nullable) | e.g. `flooring_sign_off` — bypasses normal flow |
 | `is_active` | boolean | Inactive templates hidden from staff |
-| `sort_order` | integer | Ordering in dropdowns and admin list |
+| `sort_order` | integer | Ordering |
 | `created_by` / `updated_by` | nullable FK → users | Audit |
-| `timestamps` | | |
+
+### `opportunity_documents` table — added columns (session 52)
+| Column | Type | Notes |
+|--------|------|-------|
+| `sale_id` | nullable FK → sales | Which sale was selected at generation time |
+| `document_fields` | JSON (nullable) | Field values saved at last save/update |
+| `rendered_body` | longtext (nullable) | Final rendered HTML (merge tags resolved). Present on new-flow docs; null on legacy stored-PDF docs |
 
 ### `opportunity_documents.template_id` (nullable FK → document_templates)
-Added to link generated documents back to their source template. `nullOnDelete()` — record kept even if template deleted.
+Links generated documents back to their source template. `nullOnDelete()` — record kept if template deleted.
 
 ---
 
 ## Models & Services
 
 ### `app/Models/DocumentTemplate.php`
-- `fillable`: name, description, body, needs_sale, is_active, sort_order, created_by, updated_by
-- Booted hooks: set `created_by` / `updated_by` on create/update
-- Relationships: `creator()`, `updater()` (BelongsTo User), `generatedDocuments()` (HasMany OpportunityDocument)
+- `fillable`: name, description, body, needs_sale, special_flow, is_active, sort_order, created_by, updated_by
 - **`OPPORTUNITY_TAGS`** constant — 18 tags always available:
   `{{customer_name}}`, `{{job_name}}`, `{{job_no}}`, `{{job_site_name}}`, `{{job_site_address}}`, `{{job_site_phone}}`, `{{job_site_email}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{pm_phone}}`, `{{pm_email}}`, `{{insurance_company}}`, `{{adjuster}}`, `{{policy_number}}`, `{{claim_number}}`, `{{dol}}`, `{{date}}`, `{{generated_by}}`
-- Insurance tags resolve from `jobSiteCustomer` columns (`insurance_company`, `adjuster`, `policy_number`, `claim_number`, `dol`). `{{dol}}` formatted as `M j, Y` (e.g. "Jan 15, 2024"); empty string if not set.
-- **`SALE_TAGS`** constant — 2 tags available when `needs_sale = true`:
+- **`SALE_TAGS`** constant — 2 tags when `needs_sale = true`:
   `{{sale_number}}`, `{{flooring_items_table}}`
 
+### `app/Models/OpportunityDocument.php`
+- Added `sale_id`, `document_fields`, `rendered_body` to `$fillable`
+- `document_fields` cast to `array`
+
 ### `app/Services/DocumentTemplateService.php`
-- `render(DocumentTemplate $template, Opportunity $opportunity, ?Sale $sale = null): string`
-  - Loads `parentCustomer`, `jobSiteCustomer`, `projectManager` on opportunity
-  - Builds vars array for all opportunity tags
-  - If `needs_sale` + sale provided: adds `sale_number` and `flooring_items_table`
-  - `str_replace` loop replaces all `{{tags}}`
-- `buildFlooringTable(Sale $sale): string` (private)
-  - Loads `sale->rooms->items`, filters to `type === 'material'`
-  - HTML table: blue header row (#1d4ed8), columns: Room (with rowspan), Product (type — manufacturer — style — color/item#), Qty, Unit
+- **`TAG_LABELS`** constant — human-readable labels for each tag key (used on create/edit form)
+- `render(template, opportunity, ?sale)` — now delegates to `getDefaultFields()` + `renderFromFields()`
+- **`getDefaultFields(template, opportunity, ?sale)`** — resolves all tag values from opportunity/sale data; returns only tags whose `{{tag}}` appears in the template body
+- **`renderFromFields(template, fields, ?sale)`** — renders body from caller-supplied field values; `{{flooring_items_table}}` is always re-built fresh from live sale data regardless of stored fields
+- `buildFlooringTable(Sale)` — private; builds HTML table of material items grouped by room
 
 ---
 
-## Admin CRUD
+## Controller
 
-### Controller
-`app/Http/Controllers/Admin/DocumentTemplateController.php`
-- `index()` — ordered by `sort_order` then `name`
-- `store()` / `update()` — validates: name (required), description (nullable), body (required), needs_sale (boolean), is_active (boolean), sort_order (integer)
-- `destroy()` — blocks deletion if template has been used to generate documents (`usageCount > 0`); shows error redirect
+`app/Http/Controllers/OpportunityDocumentController.php`
 
-### Routes
-Registered under the `admin` middleware group:
-```
-GET    admin/document-templates               admin.document-templates.index
-GET    admin/document-templates/create        admin.document-templates.create
-POST   admin/document-templates              admin.document-templates.store
-GET    admin/document-templates/{id}/edit     admin.document-templates.edit
-PUT    admin/document-templates/{id}          admin.document-templates.update
-DELETE admin/document-templates/{id}          admin.document-templates.destroy
-```
-All gated by `role_or_permission:admin`.
+### New methods (session 52)
+| Method | Purpose |
+|--------|---------|
+| `createGenerated(Request, Opportunity, DocumentTemplate)` | Shows editable form pre-filled from opportunity/sale. Handles `special_flow` redirect. |
+| `storeGenerated(Request, Opportunity)` | Saves field values + renders body → creates `OpportunityDocument` with `rendered_body` |
+| `showGenerated(Opportunity, OpportunityDocument)` | Shows saved document (rendered HTML) with Edit + Print/PDF buttons |
+| `editGenerated(Opportunity, OpportunityDocument)` | Re-opens editable form pre-filled from saved `document_fields` |
+| `updateGenerated(Request, Opportunity, OpportunityDocument)` | Re-renders body from updated fields, saves |
+| `downloadPdf(Opportunity, OpportunityDocument)` | Generates PDF on-demand from `rendered_body` using `pdf.document-template` |
 
-### Views
-`resources/views/admin/document-templates/`
-- `index.blade.php` — table with sort_order, name, description, "Sale required" badge, Active/Inactive badge, usage count, Edit / Delete (blocked when in use → "In use")
-- `create.blade.php` — wraps `_form` partial
-- `edit.blade.php` — wraps `_form` partial; amber warning if usageCount > 0; **Preview button** (client-side, see below)
-- `_form.blade.php` — fields: name, description, sort_order, needs_sale checkbox, is_active checkbox, body textarea (font-mono, rows=16); Tag reference panel with click-to-copy tags
+### Updated methods
+- `reprint()` — if document has `rendered_body`, redirects to `show-generated`; otherwise streams legacy stored PDF
 
-### Preview button (edit page only)
-- Client-side JavaScript; no server round-trip
-- Reads current textarea content, replaces all known merge tags with sample placeholder values
-- Renders in a simulated PDF layout (blue header, body, footer)
-- Unknown `{{tags}}` highlighted in amber
-- Script uses `@verbatim`/`@endverbatim` to prevent Blade parsing `{{tags}}` in JS; date passed via a small pre-verbatim `<script>` block
-
-### Admin Settings page
-Link to "Document Templates" added to `resources/views/admin/settings.blade.php` (after SMS Templates).
-
-### Admin Sidebar
-"Document Templates" link added to `resources/views/layouts/sidebar.blade.php` (above Document Labels).
+### Private helper
+- `sanitizeFields(array)` — strips any field keys not in the allowed tag lists before saving
 
 ---
 
-## Staff — Generate Document
+## Routes
 
-### `OpportunityDocumentController` changes
-- `index()`: loads `$activeTemplates` and `$opportunitySales`; type filter updated to `whereIn('category', ['documents', 'generated_document'])`
-- `generate(Request $request, Opportunity $opportunity)`:
-  - Validates `template_id` (required), `sale_id` (nullable; required when `needs_sale = true`)
-  - Calls `DocumentTemplateService::render()`
-  - DomPDF renders `pdf.document-template` on letter/portrait
-  - Stored at `opportunities/{id}/doc_{slug}_{timestamp}.pdf` on `public` disk
-  - Creates `OpportunityDocument` with `category='generated_document'`, `template_id` set
-  - Redirects with `success` flash + `generated_doc_id` session
-- `reprint(Opportunity $opportunity, OpportunityDocument $document)`:
-  - Asserts document belongs to opportunity
-  - Aborts 404 if `category !== 'generated_document'`
-  - Streams stored PDF inline
+All nested under `pages/opportunities/{opportunity}/`:
 
-### Routes (nested under `pages/opportunities/{opportunity}/`)
 ```
-POST   documents/generate              pages.opportunities.documents.generate
-GET    documents/{document}/reprint    pages.opportunities.documents.reprint
+GET  documents/create/{template}           pages.opportunities.documents.create-generated
+POST documents/generated                   pages.opportunities.documents.store-generated
+GET  documents/{document}/view             pages.opportunities.documents.show-generated
+GET  documents/{document}/edit-fields      pages.opportunities.documents.edit-generated
+PUT  documents/{document}/generated        pages.opportunities.documents.update-generated
+GET  documents/{document}/pdf              pages.opportunities.documents.pdf
+GET  documents/{document}/reprint          pages.opportunities.documents.reprint  (legacy)
 ```
 
-### Generate Modal (documents index blade)
-Alpine.js `x-data` component in `resources/views/pages/opportunities/documents/index.blade.php`:
-- "Create Document" emerald button in action bar (only shown when `$activeTemplates->isNotEmpty()`)
-- Template dropdown — populates `needsSale` flag from `$activeTemplates` JSON
-- Sale dropdown appears (`x-show="needsSale"`) when selected template requires a sale
-- If no sales exist for the opportunity, an amber warning message shows instead of the dropdown
-- POSTs to `pages.opportunities.documents.generate`
+---
 
-### Documents table
-- Category badge: "Generated" (green) for `generated_document` category
-- Actions column: generated docs show "Print" link (→ `reprint` route, opens in new tab) instead of View
+## Views
+
+### `resources/views/pages/opportunities/documents/create-generated.blade.php`
+- Shared for create and edit (edit passes `$document`, create passes `null`)
+- Document Name field (defaults to template name, editable — stored as `original_name`)
+- Sale selector shown when `needs_sale = true`
+- Labeled inputs for each tag that appears in the template body (from `getDefaultFields()`)
+- `job_site_address` renders as textarea; all others as text inputs
+- `{{flooring_items_table}}` is never shown as an editable field — always re-rendered from sale
+
+### `resources/views/pages/opportunities/documents/show-generated.blade.php`
+- Breadcrumb: Opportunity → Documents → document name
+- Toolbar: Edit Fields button, Print/PDF button (opens new tab), ← Documents link
+- Rendered HTML displayed in a styled document preview div
+- Template name + created/updated timestamps shown
+
+### `resources/views/pages/opportunities/documents/index.blade.php` (updated)
+- **Removed**: generate modal
+- **Added**: inline dropdown picker (Alpine.js) — "Create Document" button reveals template + sale selectors; "Continue →" navigates to `create-generated` route
+- Generated docs with `rendered_body`: show **"Open"** link → `show-generated`
+- Generated docs without `rendered_body` (legacy): show **"Print"** link → `reprint`
 
 ---
 
 ## PDF Template
 
-`resources/views/pdf/document-template.blade.php`
-- Font: DejaVu Sans 11px, 32px body padding
-- **Header**: branding logo (base64 data URI from `public` disk) or text fallback; right side shows template name + generated date + job_no + sale_number
-- **Body**: `{!! $body !!}` (raw HTML — merge tags already resolved by service)
-- **Footer**: fixed bottom; left: brand name / phone / email; right: template name
-- Uses `Setting::get('branding_*')` for all branding values
-- ⚠️ Do NOT put `{{tags}}` anywhere in this file — Blade parses them even inside CSS comments
+`resources/views/pdf/document-template.blade.php` — unchanged
+- Receives pre-rendered `$body` (merge tags already resolved)
+- Font: DejaVu Sans 11px, letter/portrait
+- Header: branding logo + template name + generated date + job_no
+- Footer: brand name / phone / email
+
+---
+
+## Legacy Compatibility
+
+Old generated docs (stored as PDF files on disk) still work via `reprint`. The `reprint` method detects whether `rendered_body` is set:
+- Has `rendered_body` → redirect to `show-generated` page
+- No `rendered_body` → stream stored PDF file (old behaviour)
 
 ---
 
 ## Seeded Starter Templates
 
-Three templates seeded via migration `2026_03_27_113248_create_document_templates_table.php`:
+1. **Front File Label** (sort_order: 1, needs_sale: false) — blue header, job name strip, two-column layout, fill-in lines
+2. **Flooring Selection Sign-Off** (sort_order: 2, special_flow: `flooring_sign_off`) — redirects to dedicated sign-off wizard
+3. **Work Authorization Form** (sort_order: 3, needs_sale: false) — customer table, authorization paragraph, signature lines
 
-### 1. Front File Label (sort_order: 1, needs_sale: false)
-Layout updated via migration `2026_03_27_115223_update_front_file_label_template_body.php` and then refined via tinker to match the RFM show page layout:
-- Blue header (Job # large, customer name below)
-- Indigo job name strip
-- Two columns: **left** = Parent Customer name + PM box (name, phone, email); **right** = Job Site box (name, address, phone, email)
-- Measure Details section: 4 blank fill-in underline fields (Estimator, Flooring Type, Scheduled Date & Time, Completed Date)
-- Special Instructions box (amber, empty — for handwriting)
-- Notes box (larger, empty — for handwriting)
-- Generated date + generated_by footer line
+---
 
-### 2. Flooring Selection Sign-Off (sort_order: 2, needs_sale: true)
-- Requires Sale selection
-- Shows `{{flooring_items_table}}` — renders all material items by room
-- Signature line at bottom
+## Admin CRUD
 
-### 3. Work Authorization Form (sort_order: 3, needs_sale: false)
-- Customer/job detail table
-- Authorization paragraph text
-- Two signature lines (customer + RM Flooring rep)
+`app/Http/Controllers/Admin/DocumentTemplateController.php`
+- Routes: `admin.document-templates.*` (index, create, store, edit, update, destroy)
+- Gated: `role_or_permission:admin`
+- Destroy blocked if template has generated documents (`usageCount > 0`)
+- Edit page has client-side **Preview button** (replaces tags with sample values, no server round-trip)
+- Views: `resources/views/admin/document-templates/` (index, create, edit, _form partials)
 
 ---
 
 ## Known Blade Gotchas
 
-Blade parses `{{ }}` everywhere in `.blade.php` files — including inside:
-- CSS comments: `/* {{flooring_items_table}} */` → **error**. Fixed: removed tag from CSS comment.
-- JavaScript string literals: `'{{customer_name}}'` → **error**. Fixed: wrap script block in `@verbatim`/`@endverbatim`.
-- Template hint text: `{{flooring_items_table}}` in form labels → **error**. Fixed: use `@{{flooring_items_table}}`.
-
-Pattern for JS blocks with merge tag keys: declare a small `<script>` block before `@verbatim` for any PHP values needed (e.g. date), then reference the JS variable from within verbatim.
+- Blade parses `{{ }}` everywhere — use `@{{tag}}` in text, `@verbatim` in `<script>` blocks
+- Do NOT put `{{tags}}` in CSS comments in Blade files
+- `flooring_items_table` in the template body is always re-rendered from live sale data, never stored as editable text
 
 ---
 
 ## Open Items
 
-- Preview button on the **create** page (currently edit only)
-- Highlight newly generated document in the documents list on redirect (session data `generated_doc_id` available but not yet used)
-- Additional starter templates as needed (e.g. Estimator Checklist)
+- Preview button on the **create** page for admin template editor (currently edit only)
+- Highlight newly saved document in the documents list on redirect
+- Additional starter templates (e.g. Estimator Checklist)

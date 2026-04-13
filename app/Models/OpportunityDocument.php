@@ -37,11 +37,18 @@ class OpportunityDocument extends Model
         'category',
         'category_override',
         'template_id',
+        'sale_id',
+        'document_fields',
+        'rendered_body',
         'label_id',
         'label_text',
         'description',
         'created_by',
         'updated_by',
+    ];
+
+    protected $casts = [
+        'document_fields' => 'array',
     ];
 
     public function getUrlAttribute(): string

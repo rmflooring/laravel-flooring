@@ -42,17 +42,83 @@
         <div class="mb-6">
             <div class="flex items-center justify-end gap-3">
 
-                {{-- Create Document button --}}
+                {{-- Create Document picker --}}
                 @if ($activeTemplates->isNotEmpty())
-                <button type="button"
-                        data-modal-target="generate-doc-modal"
-                        data-modal-toggle="generate-doc-modal"
-                        class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 dark:bg-emerald-600 dark:hover:bg-emerald-700 dark:focus:ring-emerald-800">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
-                    </svg>
-                    Create Document
-                </button>
+                <div x-data="{
+                        open: false,
+                        templateId: '',
+                        needsSale: false,
+                        specialFlow: '',
+                        saleId: '',
+                        templates: {{ $activeTemplates->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'needs_sale' => (bool) $t->needs_sale, 'special_flow' => $t->special_flow ?? ''])->toJson() }},
+                        selectTemplate(id) {
+                            this.templateId = id;
+                            const t = this.templates.find(t => String(t.id) === String(id));
+                            this.needsSale = t ? (t.needs_sale || t.special_flow === 'flooring_sign_off') : false;
+                            this.specialFlow = t ? t.special_flow : '';
+                        },
+                        go() {
+                            if (!this.templateId) return;
+                            const base = '{{ route('pages.opportunities.documents.create-generated', [$opportunity->id, '__TPL__']) }}'.replace('__TPL__', this.templateId);
+                            const url = this.saleId ? base + '?sale_id=' + this.saleId : base;
+                            window.location = url;
+                        }
+                     }"
+                     class="relative">
+
+                    <button type="button"
+                            @click="open = !open"
+                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 dark:bg-emerald-600 dark:hover:bg-emerald-700 dark:focus:ring-emerald-800">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                        </svg>
+                        Create Document
+                        <svg class="w-3.5 h-3.5 ml-0.5 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <div x-show="open"
+                         x-cloak
+                         @click.outside="open = false"
+                         class="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+
+                        <p class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Choose a template</p>
+
+                        <select @change="selectTemplate($event.target.value)"
+                                class="mb-3 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="">— Select template —</option>
+                            @foreach ($activeTemplates as $tpl)
+                                <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
+                            @endforeach
+                        </select>
+
+                        <div x-show="needsSale" x-cloak class="mb-3">
+                            @if ($opportunitySales->isNotEmpty())
+                                <select x-model="saleId"
+                                        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                    <option value="">— Select sale (required) —</option>
+                                    @foreach ($opportunitySales as $s)
+                                        <option value="{{ $s->id }}">
+                                            Sale #{{ $s->sale_number }}{{ $s->job_name ? ' — ' . $s->job_name : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <p class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                                    This template requires a sale, but no sales exist yet.
+                                </p>
+                            @endif
+                        </div>
+
+                        <button type="button"
+                                @click="go()"
+                                :disabled="!templateId || (needsSale && !saleId && {{ $opportunitySales->isNotEmpty() ? 'true' : 'false' }})"
+                                class="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-emerald-600 dark:hover:bg-emerald-700">
+                            Continue →
+                        </button>
+                    </div>
+                </div>
                 @endif
 
                 <button type="button"
@@ -424,14 +490,19 @@
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-2">
                                         @if ($doc->category === 'generated_document')
-                                            <a href="{{ route('pages.opportunities.documents.reprint', [$opportunity->id, $doc->id]) }}"
-                                               target="_blank"
-                                               class="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-200 dark:border-emerald-700 dark:bg-gray-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z"/>
-                                                </svg>
-                                                Print
-                                            </a>
+                                            @if ($doc->rendered_body)
+                                                <a href="{{ route('pages.opportunities.documents.show-generated', [$opportunity->id, $doc->id]) }}"
+                                                   class="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-200 dark:border-emerald-700 dark:bg-gray-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20">
+                                                    Open
+                                                </a>
+                                            @else
+                                                {{-- Legacy stored-PDF document --}}
+                                                <a href="{{ route('pages.opportunities.documents.reprint', [$opportunity->id, $doc->id]) }}"
+                                                   target="_blank"
+                                                   class="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-200 dark:border-emerald-700 dark:bg-gray-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20">
+                                                    Print
+                                                </a>
+                                            @endif
                                         @elseif($docType)
                                             <button type="button"
                                                     class="doc-view-btn inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
@@ -581,114 +652,6 @@
 
     </div>
 
-    {{-- ============================================================ --}}
-    {{-- Generate Document Modal                                      --}}
-    {{-- ============================================================ --}}
-    @if ($activeTemplates->isNotEmpty())
-    <div id="generate-doc-modal" tabindex="-1" aria-hidden="true"
-         class="fixed left-0 right-0 top-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-y-auto overflow-x-hidden p-4 md:inset-0">
-
-        <div class="relative max-h-full w-full max-w-lg">
-            {{-- Backdrop --}}
-            <div class="fixed inset-0 bg-gray-900/50 dark:bg-gray-900/80" data-modal-backdrop="generate-doc-modal"></div>
-
-            {{-- Panel --}}
-            <div class="relative rounded-xl bg-white shadow dark:bg-gray-700"
-                 x-data="{
-                     templateId: '',
-                     needsSale: false,
-                     specialFlow: '',
-                     templates: {{ $activeTemplates->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'description' => $t->description, 'needs_sale' => (bool) $t->needs_sale, 'special_flow' => $t->special_flow])->toJson() }},
-                     selectTemplate(id) {
-                         this.templateId = id;
-                         const t = this.templates.find(t => t.id == id);
-                         this.needsSale = t ? (t.needs_sale || t.special_flow === 'flooring_sign_off') : false;
-                         this.specialFlow = t ? (t.special_flow ?? '') : '';
-                     }
-                 }">
-
-                {{-- Header --}}
-                <div class="flex items-center justify-between rounded-t border-b border-gray-200 p-4 dark:border-gray-600">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create Document</h3>
-                    <button type="button"
-                            data-modal-hide="generate-doc-modal"
-                            class="inline-flex items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white">
-                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
-                    </button>
-                </div>
-
-                {{-- Form --}}
-                <form method="POST" action="{{ route('pages.opportunities.documents.generate', $opportunity->id) }}">
-                    @csrf
-                    <div class="space-y-4 p-4">
-
-                        {{-- Template selector --}}
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Template <span class="text-red-500">*</span>
-                            </label>
-                            <select name="template_id" required
-                                    class="w-full rounded-lg border-gray-300 bg-gray-50 text-sm dark:border-gray-600 dark:bg-gray-600 dark:text-white focus:border-blue-500 focus:ring-blue-500"
-                                    @change="selectTemplate($event.target.value)">
-                                <option value="">— Choose a template —</option>
-                                @foreach ($activeTemplates as $tpl)
-                                    <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
-                                @endforeach
-                            </select>
-
-                            {{-- Description hint --}}
-                            <template x-if="templateId">
-                                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400"
-                                   x-text="templates.find(t => t.id == templateId)?.description ?? ''"></p>
-                            </template>
-                        </div>
-
-                        {{-- Sale selector (only when template needs_sale) --}}
-                        <div x-show="needsSale" x-cloak>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Sale <span class="text-red-500">*</span>
-                            </label>
-                            @if ($opportunitySales->isNotEmpty())
-                                <select name="sale_id"
-                                        class="w-full rounded-lg border-gray-300 bg-gray-50 text-sm dark:border-gray-600 dark:bg-gray-600 dark:text-white focus:border-blue-500 focus:ring-blue-500"
-                                        :required="needsSale">
-                                    <option value="">— Choose a sale —</option>
-                                    @foreach ($opportunitySales as $sale)
-                                        <option value="{{ $sale->id }}">
-                                            Sale #{{ $sale->sale_number }}{{ $sale->job_name ? ' — ' . $sale->job_name : '' }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            @else
-                                <p class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
-                                    This template requires a sale, but no sales exist for this opportunity.
-                                </p>
-                            @endif
-                        </div>
-
-                    </div>
-
-                    {{-- Footer --}}
-                    <div class="flex items-center justify-end gap-3 rounded-b border-t border-gray-200 p-4 dark:border-gray-600">
-                        <button type="button"
-                                data-modal-hide="generate-doc-modal"
-                                class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-500 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white dark:focus:ring-gray-600">
-                            Cancel
-                        </button>
-                        <button type="submit"
-                                class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300 dark:bg-emerald-600 dark:hover:bg-emerald-700 dark:focus:ring-emerald-800"
-                                x-text="specialFlow === 'flooring_sign_off' ? 'Next →' : 'Generate PDF'">
-                        </button>
-                    </div>
-                </form>
-
-            </div>
-        </div>
-    </div>
-    @endif
-    {{-- ============================================================ --}}
 
     {{-- ============================================================ --}}
     {{-- Image Viewer Modal                                           --}}

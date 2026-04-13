@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Condition;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class ConditionController extends Controller
@@ -11,7 +12,28 @@ class ConditionController extends Controller
     public function index()
     {
         $conditions = Condition::orderBy('sort_order')->orderBy('title')->get();
-        return view('admin.conditions.index', compact('conditions'));
+
+        $defaultEstimateConditionId = (int) Setting::get('default_estimate_condition_id', 0) ?: null;
+        $defaultSaleConditionId     = (int) Setting::get('default_sale_condition_id', 0) ?: null;
+
+        return view('admin.conditions.index', compact(
+            'conditions',
+            'defaultEstimateConditionId',
+            'defaultSaleConditionId',
+        ));
+    }
+
+    public function saveDefaults(Request $request)
+    {
+        $request->validate([
+            'default_estimate_condition_id' => ['nullable', 'integer', 'exists:conditions,id'],
+            'default_sale_condition_id'     => ['nullable', 'integer', 'exists:conditions,id'],
+        ]);
+
+        Setting::set('default_estimate_condition_id', $request->input('default_estimate_condition_id', ''));
+        Setting::set('default_sale_condition_id',     $request->input('default_sale_condition_id', ''));
+
+        return redirect()->route('admin.conditions.index')->with('success', 'Document defaults saved.');
     }
 
     public function store(Request $request)

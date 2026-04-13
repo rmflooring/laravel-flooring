@@ -91,6 +91,7 @@ class EstimateController extends Controller
 			'salesperson_1_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
 			'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
             'notes'                => ['nullable', 'string'],
+            'condition_id'         => ['nullable', 'integer', 'exists:conditions,id'],
             'estimate_number'      => ['nullable', 'string', 'max:255'],
             'subtotal_materials'   => ['nullable', 'numeric'],
             'subtotal_labour'      => ['nullable', 'numeric'],
@@ -194,6 +195,7 @@ $data['tax_rate_percent'] = $groupPercent;
 				'salesperson_1_employee_id' => $data['salesperson_1_employee_id'] ?? null,
 				'salesperson_2_employee_id' => $data['salesperson_2_employee_id'] ?? null,
                 'notes'              => $data['notes'] ?? null,
+                'condition_id'       => $data['condition_id'] ?? null,
                 'subtotal_materials' => (float)($data['subtotal_materials'] ?? 0),
                 'subtotal_labour'    => (float)($data['subtotal_labour'] ?? 0),
                 'subtotal_freight'   => (float)($data['subtotal_freight'] ?? 0),
@@ -433,9 +435,13 @@ $data['tax_rate_percent'] = $groupPercent;
 		$pmEmail          = $estimate->opportunity?->projectManager?->email;
 		$customerContacts = $estimate->opportunity?->parentCustomer?->contacts ?? collect();
 
+		$conditions         = \App\Models\Condition::where('is_active', true)->orderBy('sort_order')->orderBy('title')->get();
+		$defaultConditionId = (int) \App\Models\Setting::get('default_estimate_condition_id', 0) ?: null;
+
 		return view('admin.estimates.edit', compact(
 			'estimate', 'taxGroups', 'defaultTaxGroupId', 'employees',
 			'emailSubject', 'emailBody', 'pmEmail', 'customerContacts',
+			'conditions', 'defaultConditionId',
 		));
 	}
 
@@ -454,8 +460,9 @@ public function update(Request $request, Estimate $estimate)
 		'salesperson_1_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
 		'salesperson_2_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         'notes'                => ['nullable', 'string'],
+        'condition_id'         => ['nullable', 'integer', 'exists:conditions,id'],
 		'status' => ['required', 'in:draft,sent,revised,approved,rejected'],
-		
+
 		'homeowner_name'  => ['nullable', 'string', 'max:255'],
 		'homeowner_phone'  => ['nullable', 'string', 'max:255'],
 		'homeowner_mobile' => ['nullable', 'string', 'max:255'],
@@ -620,6 +627,7 @@ if ($taxGroupId) {
 			'homeowner_mobile' => $data['homeowner_mobile'] ?? $estimate->homeowner_mobile,
 			'homeowner_email'  => $data['homeowner_email'] ?? $estimate->homeowner_email,
             'notes'              => $data['notes'] ?? $estimate->notes,
+            'condition_id'       => array_key_exists('condition_id', $data) ? $data['condition_id'] : $estimate->condition_id,
 			'status' => $data['status'],
 
             'subtotal_materials' => (float)($data['subtotal_materials'] ?? 0),

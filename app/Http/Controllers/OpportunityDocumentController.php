@@ -405,88 +405,209 @@ public function index(Opportunity $opportunity, Request $request)
         return redirect()->route('pages.opportunities.documents.index', $opportunity->id);
     }
 
-    // ── Document generation ───────────────────────────────────────────────────
+    // ── Document generation — new flow ────────────────────────────────────────
 
-    public function generate(Request $request, Opportunity $opportunity)
+    public function createGenerated(Request $request, Opportunity $opportunity, DocumentTemplate $template)
     {
-        $request->validate([
-            'template_id' => ['required', 'exists:document_templates,id'],
-            'sale_id'     => ['nullable', 'exists:sales,id'],
-        ]);
+        abort_if(! $template->is_active, 404);
 
-        $template = DocumentTemplate::findOrFail($request->template_id);
-
-        // Special flows bypass normal PDF generation
+        // Special flow — redirect to sign-off wizard
         if ($template->special_flow === 'flooring_sign_off') {
-            $request->validate(['sale_id' => ['required', 'exists:sales,id']]);
-            $sale = Sale::findOrFail($request->sale_id);
-            abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 403);
-
             return redirect()->route('pages.opportunities.sign-offs.create', [
                 'opportunity' => $opportunity->id,
-                'sale_id'     => $request->sale_id,
+                'sale_id'     => $request->get('sale_id'),
             ]);
         }
 
         $sale = null;
-        if ($template->needs_sale) {
-            $request->validate(['sale_id' => ['required', 'exists:sales,id']]);
+        if ($template->needs_sale && $request->get('sale_id')) {
+            $sale = Sale::findOrFail($request->get('sale_id'));
+            abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 403);
+        }
+
+        $service          = new DocumentTemplateService();
+        $fields           = $service->getDefaultFields($template, $opportunity, $sale);
+        $opportunitySales = $opportunity->sales()->orderByDesc('id')->get(['id', 'sale_number', 'job_name']);
+
+        return view('pages.opportunities.documents.create-generated', [
+            'opportunity'      => $opportunity,
+            'template'         => $template,
+            'fields'           => $fields,
+            'sale'             => $sale,
+            'opportunitySales' => $opportunitySales,
+            'document'         => null,
+            'tagLabels'        => DocumentTemplateService::TAG_LABELS,
+        ]);
+    }
+
+    public function storeGenerated(Request $request, Opportunity $opportunity)
+    {
+        $request->validate([
+            'template_id'   => ['required', 'exists:document_templates,id'],
+            'sale_id'       => ['nullable', 'exists:sales,id'],
+            'document_name' => ['required', 'string', 'max:255'],
+            'fields'        => ['nullable', 'array'],
+        ]);
+
+        $template = DocumentTemplate::findOrFail($request->template_id);
+
+        $sale = null;
+        if ($request->sale_id) {
             $sale = Sale::findOrFail($request->sale_id);
             abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 403);
         }
 
-        $service = new DocumentTemplateService();
-        $body    = $service->render($template, $opportunity, $sale);
+        $fields = $this->sanitizeFields($request->input('fields', []));
 
-        $pdf = Pdf::loadView('pdf.document-template', [
-            'template'    => $template,
-            'body'        => $body,
-            'opportunity' => $opportunity,
-            'sale'        => $sale,
-        ])->setPaper('letter', 'portrait');
-
-        $pdfContent = $pdf->output();
-
-        $slug      = Str::slug($template->name);
-        $timestamp = now()->format('Ymd_His');
-        $filename  = "doc_{$slug}_{$timestamp}.pdf";
-        $path      = "opportunities/{$opportunity->storageFolderName()}/{$filename}";
-
-        $disk = DocumentStorageService::disk();
-        Storage::disk($disk)->put($path, $pdfContent);
+        $service      = new DocumentTemplateService();
+        $renderedBody = $service->renderFromFields($template, $fields, $sale);
 
         $doc = OpportunityDocument::create([
             'opportunity_id' => $opportunity->id,
             'template_id'    => $template->id,
-            'disk'           => $disk,
-            'path'           => $path,
-            'original_name'  => $template->name . '.pdf',
-            'stored_name'    => $filename,
-            'mime_type'      => 'application/pdf',
-            'extension'      => 'pdf',
-            'size_bytes'     => strlen($pdfContent),
+            'sale_id'        => $sale?->id,
+            'original_name'  => $request->document_name,
             'category'       => 'generated_document',
+            'document_fields'=> $fields,
+            'rendered_body'  => $renderedBody,
             'created_by'     => Auth::id(),
             'updated_by'     => Auth::id(),
         ]);
 
         return redirect()
-            ->route('pages.opportunities.documents.index', $opportunity)
-            ->with('success', '"' . $template->name . '" generated successfully.')
-            ->with('generated_doc_id', $doc->id);
+            ->route('pages.opportunities.documents.show-generated', [$opportunity->id, $doc->id])
+            ->with('success', '"' . $request->document_name . '" saved successfully.');
     }
+
+    public function showGenerated(Opportunity $opportunity, OpportunityDocument $document)
+    {
+        $this->assertBelongsToOpportunity($opportunity, $document);
+        abort_if($document->category !== 'generated_document', 404);
+        abort_if(! $document->rendered_body, 404);
+
+        $template = DocumentTemplate::find($document->template_id);
+
+        return view('pages.opportunities.documents.show-generated', compact('opportunity', 'document', 'template'));
+    }
+
+    public function editGenerated(Opportunity $opportunity, OpportunityDocument $document)
+    {
+        $this->assertBelongsToOpportunity($opportunity, $document);
+        abort_if($document->category !== 'generated_document', 404);
+        abort_if(! $document->rendered_body, 404);
+
+        $template = DocumentTemplate::findOrFail($document->template_id);
+        $fields   = $document->document_fields ?? [];
+
+        $sale = null;
+        if ($document->sale_id) {
+            $sale = Sale::find($document->sale_id);
+        }
+
+        $opportunitySales = $opportunity->sales()->orderByDesc('id')->get(['id', 'sale_number', 'job_name']);
+
+        return view('pages.opportunities.documents.create-generated', [
+            'opportunity'      => $opportunity,
+            'template'         => $template,
+            'fields'           => $fields,
+            'sale'             => $sale,
+            'opportunitySales' => $opportunitySales,
+            'document'         => $document,
+            'tagLabels'        => DocumentTemplateService::TAG_LABELS,
+        ]);
+    }
+
+    public function updateGenerated(Request $request, Opportunity $opportunity, OpportunityDocument $document)
+    {
+        $this->assertBelongsToOpportunity($opportunity, $document);
+        abort_if($document->category !== 'generated_document', 404);
+
+        $request->validate([
+            'sale_id'       => ['nullable', 'exists:sales,id'],
+            'document_name' => ['required', 'string', 'max:255'],
+            'fields'        => ['nullable', 'array'],
+        ]);
+
+        $template = DocumentTemplate::findOrFail($document->template_id);
+
+        $sale = null;
+        if ($request->sale_id) {
+            $sale = Sale::findOrFail($request->sale_id);
+            abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 403);
+        }
+
+        $fields = $this->sanitizeFields($request->input('fields', []));
+
+        $service      = new DocumentTemplateService();
+        $renderedBody = $service->renderFromFields($template, $fields, $sale);
+
+        $document->update([
+            'sale_id'         => $sale?->id,
+            'original_name'   => $request->document_name,
+            'document_fields' => $fields,
+            'rendered_body'   => $renderedBody,
+            'updated_by'      => Auth::id(),
+        ]);
+
+        return redirect()
+            ->route('pages.opportunities.documents.show-generated', [$opportunity->id, $document->id])
+            ->with('success', 'Document updated successfully.');
+    }
+
+    public function downloadPdf(Opportunity $opportunity, OpportunityDocument $document)
+    {
+        $this->assertBelongsToOpportunity($opportunity, $document);
+        abort_if($document->category !== 'generated_document', 404);
+        abort_if(! $document->rendered_body, 404);
+
+        $template = DocumentTemplate::find($document->template_id);
+        $sale     = $document->sale_id ? Sale::find($document->sale_id) : null;
+
+        $pdf = Pdf::loadView('pdf.document-template', [
+            'template'    => $template,
+            'body'        => $document->rendered_body,
+            'opportunity' => $opportunity,
+            'sale'        => $sale,
+        ])->setPaper('letter', 'portrait');
+
+        $filename = Str::slug($document->original_name) . '.pdf';
+
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
+    }
+
+    // ── Legacy generate (kept for backward compat with old stored PDFs) ────────
 
     public function reprint(Opportunity $opportunity, OpportunityDocument $document)
     {
         $this->assertBelongsToOpportunity($opportunity, $document);
         abort_if($document->category !== 'generated_document', 404);
-        abort_if(! Storage::disk($document->disk)->exists($document->path), 404);
 
+        // New-style documents: redirect to show page
+        if ($document->rendered_body) {
+            return redirect()->route('pages.opportunities.documents.show-generated', [$opportunity->id, $document->id]);
+        }
+
+        // Legacy: stream stored PDF file
+        abort_if(! Storage::disk($document->disk)->exists($document->path), 404);
         $file = Storage::disk($document->disk)->get($document->path);
 
         return response($file, 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="' . $document->original_name . '"');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private function sanitizeFields(array $fields): array
+    {
+        $allowed = array_map(
+            fn($tag) => trim($tag, '{}'),
+            array_merge(\App\Models\DocumentTemplate::OPPORTUNITY_TAGS, \App\Models\DocumentTemplate::SALE_TAGS)
+        );
+
+        return array_intersect_key($fields, array_flip($allowed));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

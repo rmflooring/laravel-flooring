@@ -370,6 +370,9 @@ Route::prefix('admin')
             ]);
 
         // General Conditions (used in sign-offs, estimates, sales, etc.)
+        Route::post('conditions/defaults', [\App\Http\Controllers\Admin\ConditionController::class, 'saveDefaults'])
+            ->middleware('role_or_permission:admin')
+            ->name('conditions.defaults');
         Route::resource('conditions', \App\Http\Controllers\Admin\ConditionController::class)
             ->middleware('role_or_permission:admin')
             ->names([
@@ -586,11 +589,15 @@ Route::prefix('pages')
 			$taxGroups = \DB::table('tax_rate_groups')
 				->orderBy('name')
 				->get();
+			$conditions = \App\Models\Condition::where('is_active', true)->orderBy('sort_order')->orderBy('title')->get();
+			$defaultConditionId = (int) \App\Models\Setting::get('default_estimate_condition_id', 0) ?: null;
 			return view('admin.estimates.create', [
-				'opportunity'       => $opportunity,
-				'employees'         => $employees,
-				'defaultTaxGroupId' => $defaultTaxGroupId,
-				'taxGroups'         => $taxGroups,
+				'opportunity'        => $opportunity,
+				'employees'          => $employees,
+				'defaultTaxGroupId'  => $defaultTaxGroupId,
+				'taxGroups'          => $taxGroups,
+				'conditions'         => $conditions,
+				'defaultConditionId' => $defaultConditionId,
 			]);
 		})->middleware('permission:create estimates')
 		  ->name('estimates.create');
@@ -1211,11 +1218,27 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->name('opportunities.documents.forceDestroy')
                 ->middleware('role_or_permission:admin');
 
-            Route::post('documents/generate', [OpportunityDocumentController::class, 'generate'])
-                ->name('opportunities.documents.generate');
-
             Route::get('documents/{document}/reprint', [OpportunityDocumentController::class, 'reprint'])
                 ->name('opportunities.documents.reprint');
+
+            // Generated document — new editable flow
+            Route::get('documents/create/{template}', [OpportunityDocumentController::class, 'createGenerated'])
+                ->name('opportunities.documents.create-generated');
+
+            Route::post('documents/generated', [OpportunityDocumentController::class, 'storeGenerated'])
+                ->name('opportunities.documents.store-generated');
+
+            Route::get('documents/{document}/view', [OpportunityDocumentController::class, 'showGenerated'])
+                ->name('opportunities.documents.show-generated');
+
+            Route::get('documents/{document}/edit-fields', [OpportunityDocumentController::class, 'editGenerated'])
+                ->name('opportunities.documents.edit-generated');
+
+            Route::put('documents/{document}/generated', [OpportunityDocumentController::class, 'updateGenerated'])
+                ->name('opportunities.documents.update-generated');
+
+            Route::get('documents/{document}/pdf', [OpportunityDocumentController::class, 'downloadPdf'])
+                ->name('opportunities.documents.pdf');
 
             // Flooring Sign-Off routes
             Route::get('sign-offs/create', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'create'])

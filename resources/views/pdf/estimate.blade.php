@@ -538,9 +538,11 @@
         </table>
     </div>
 
-    <div class="footer">
-        This estimate is valid for 30 days. Thank you for choosing RM Flooring.
-    </div>
+    @if ($estimate->condition?->body)
+        <div class="footer">
+            {{ $estimate->condition->body }}
+        </div>
+    @endif
 
 </body>
 </html>

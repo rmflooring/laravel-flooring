@@ -189,6 +189,24 @@
                         </div>
 
                     </div>
+
+                    {{-- Conditions (PDF footer) --}}
+                    <div class="col-span-2 border-t pt-4 mt-2">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">
+                            Conditions
+                            <span class="ml-1 text-xs font-normal text-gray-400">(printed in PDF footer)</span>
+                        </label>
+                        <select name="condition_id"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                            <option value="">— None —</option>
+                            @foreach ($conditions as $condition)
+                                <option value="{{ $condition->id }}"
+                                    @selected(old('condition_id', $defaultConditionId) == $condition->id)>
+                                    {{ $condition->title }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
             </div>
 </div> {{-- end max-w-7xl container --}}

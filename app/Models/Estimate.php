@@ -29,6 +29,7 @@ class Estimate extends Model
 		'homeowner_email',
 
         'notes',
+        'condition_id',
 
         'subtotal_materials',
         'subtotal_labour',
@@ -71,6 +72,11 @@ class Estimate extends Model
         return $this->hasMany(EstimateItem::class);
     }
 	
+    public function condition(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Condition::class, 'condition_id');
+    }
+
 	public function opportunity()
 {
     return $this->belongsTo(\App\Models\Opportunity::class);

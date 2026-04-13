@@ -21,6 +21,45 @@
             </div>
         @endif
 
+        {{-- Document Defaults --}}
+        <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Document Defaults</h2>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Which condition auto-selects when creating a new estimate or sale. Staff can change it per document.</p>
+            </div>
+            <form method="POST" action="{{ route('admin.conditions.defaults') }}" class="p-4">
+                @csrf
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Default — Estimates</label>
+                        <select name="default_estimate_condition_id"
+                                class="block w-full rounded-lg border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="">— None —</option>
+                            @foreach ($conditions->where('is_active', true) as $c)
+                                <option value="{{ $c->id }}" @selected($defaultEstimateConditionId == $c->id)>{{ $c->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Default — Sales</label>
+                        <select name="default_sale_condition_id"
+                                class="block w-full rounded-lg border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="">— None —</option>
+                            @foreach ($conditions->where('is_active', true) as $c)
+                                <option value="{{ $c->id }}" @selected($defaultSaleConditionId == $c->id)>{{ $c->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button type="submit"
+                            class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        Save Defaults
+                    </button>
+                </div>
+            </form>
+        </div>
+
         {{-- Add New --}}
         <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
