@@ -282,24 +282,6 @@
                         </div>
 
                     </div>
-
-                    {{-- Conditions (PDF footer) --}}
-                    <div class="col-span-2 border-t pt-4 mt-2">
-                        <label class="block mb-1 text-sm font-medium text-gray-700">
-                            Conditions
-                            <span class="ml-1 text-xs font-normal text-gray-400">(printed in PDF footer)</span>
-                        </label>
-                        <select name="condition_id"
-                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                            <option value="">— None —</option>
-                            @foreach ($conditions as $condition)
-                                <option value="{{ $condition->id }}"
-                                    @selected(old('condition_id', $estimate->condition_id ?? $defaultConditionId) == $condition->id)>
-                                    {{ $condition->title }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
                 </div>
             </div>
 </div> {{-- end max-w-7xl container --}}
@@ -1925,6 +1907,40 @@
                       Totals are display-only. Tax will recalculate after selecting a tax group (later).
                   </p>
                             <p class="text-xs text-gray-500"></p>
+
+                    {{-- Conditions --}}
+                    @php
+                        $selectedConditionId = old('condition_id', $estimate->condition_id ?? $defaultConditionId);
+                        $selectedConditionBody = $conditions->firstWhere('id', $selectedConditionId)?->body ?? '';
+                    @endphp
+                    <script>
+                        window._estimateConditions = @json($conditions->mapWithKeys(fn($c) => [$c->id => $c->body]));
+                    </script>
+                    <div class="mt-6 border-t pt-5"
+                         x-data="{ preview: {{ $selectedConditionBody ? Js::from($selectedConditionBody) : "''" }} }"
+                         x-init="$watch('preview', () => {})">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">
+                            Conditions
+                            <span class="ml-1 text-xs font-normal text-gray-400">(printed in PDF footer)</span>
+                        </label>
+                        <select name="condition_id"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                @change="preview = window._estimateConditions[$event.target.value] ?? ''">
+                            <option value="">— None —</option>
+                            @foreach ($conditions as $condition)
+                                <option value="{{ $condition->id }}"
+                                    @selected($selectedConditionId == $condition->id)>
+                                    {{ $condition->title }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <div x-show="preview" style="display:{{ $selectedConditionBody ? 'block' : 'none' }}"
+                             class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 italic">
+                            <span x-text="preview"></span>
+                        </div>
+                    </div>
+
 		      {{-- Bottom Action Bar --}}
     <div class="mt-10 border-t pt-6">
         <div class="flex items-center justify-between max-w-7xl mx-auto sm:px-6 lg:px-8">
