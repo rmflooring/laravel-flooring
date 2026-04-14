@@ -84,7 +84,7 @@ public function index(Request $request)
      */
     public function create()
 {
-    $types   = ProductType::where('status', 'active')->with('soldByUnit')->get();
+    $types   = ProductType::where('status', 'active')->orderBy('name')->with('soldByUnit')->get();
     $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
     $units   = UnitMeasure::where('status', 'active')->orderBy('label')->get(['id', 'code', 'label']);
 
@@ -125,7 +125,7 @@ public function index(Request $request)
      */
 public function edit(ProductLine $product_line)
 {
-    $types   = ProductType::where('status', 'active')->with('soldByUnit')->get();
+    $types   = ProductType::where('status', 'active')->orderBy('name')->with('soldByUnit')->get();
     $vendors = Vendor::orderBy('company_name')->get(['id', 'company_name']);
     $units   = UnitMeasure::where('status', 'active')->orderBy('label')->get(['id', 'code', 'label']);
 
