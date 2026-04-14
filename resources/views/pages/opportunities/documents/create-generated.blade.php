@@ -116,7 +116,7 @@
                         @foreach ($fields as $key => $value)
                             @php
                                 $label = $tagLabels[$key] ?? ucwords(str_replace('_', ' ', $key));
-                                $isTextarea = in_array($key, ['job_site_address']);
+                                $isTextarea = in_array($key, ['job_site_address', 'special_instructions', 'notes']);
                             @endphp
 
                             <div class="{{ $isTextarea ? 'sm:col-span-2' : '' }}">

@@ -460,7 +460,7 @@ public function index(Opportunity $opportunity, Request $request)
         $fields = $this->sanitizeFields($request->input('fields', []));
 
         $service      = new DocumentTemplateService();
-        $renderedBody = $service->renderFromFields($template, $fields, $sale);
+        $renderedBody = $service->renderFromFields($template, $fields, $sale, $opportunity);
 
         $doc = OpportunityDocument::create([
             'opportunity_id' => $opportunity->id,
@@ -497,12 +497,17 @@ public function index(Opportunity $opportunity, Request $request)
         abort_if(! $document->rendered_body, 404);
 
         $template = DocumentTemplate::findOrFail($document->template_id);
-        $fields   = $document->document_fields ?? [];
 
         $sale = null;
         if ($document->sale_id) {
             $sale = Sale::find($document->sale_id);
         }
+
+        // Merge stored fields with fresh template defaults so that new tags
+        // added after the document was first created still appear in the form.
+        $service  = new DocumentTemplateService();
+        $defaults = $service->getDefaultFields($template, $opportunity, $sale);
+        $fields   = array_merge($defaults, $document->document_fields ?? []);
 
         $opportunitySales = $opportunity->sales()->orderByDesc('id')->get(['id', 'sale_number', 'job_name']);
 
@@ -539,7 +544,7 @@ public function index(Opportunity $opportunity, Request $request)
         $fields = $this->sanitizeFields($request->input('fields', []));
 
         $service      = new DocumentTemplateService();
-        $renderedBody = $service->renderFromFields($template, $fields, $sale);
+        $renderedBody = $service->renderFromFields($template, $fields, $sale, $opportunity);
 
         $document->update([
             'sale_id'         => $sale?->id,

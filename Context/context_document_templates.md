@@ -1,6 +1,6 @@
 # Document Templates Module Context — RM Flooring / Floor Manager
 
-Updated: 2026-04-13 (session 52)
+Updated: 2026-04-14 (session 53)
 
 ---
 
@@ -61,8 +61,8 @@ Links generated documents back to their source template. `nullOnDelete()` — re
 
 ### `app/Models/DocumentTemplate.php`
 - `fillable`: name, description, body, needs_sale, special_flow, is_active, sort_order, created_by, updated_by
-- **`OPPORTUNITY_TAGS`** constant — 18 tags always available:
-  `{{customer_name}}`, `{{job_name}}`, `{{job_no}}`, `{{job_site_name}}`, `{{job_site_address}}`, `{{job_site_phone}}`, `{{job_site_email}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{pm_phone}}`, `{{pm_email}}`, `{{insurance_company}}`, `{{adjuster}}`, `{{policy_number}}`, `{{claim_number}}`, `{{dol}}`, `{{date}}`, `{{generated_by}}`
+- **`OPPORTUNITY_TAGS`** constant — tags always available (opportunity context):
+  `{{customer_name}}`, `{{job_name}}`, `{{job_no}}`, `{{job_site_name}}`, `{{job_site_address}}`, `{{job_site_phone}}`, `{{job_site_email}}`, `{{pm_name}}`, `{{pm_first_name}}`, `{{pm_phone}}`, `{{pm_email}}`, `{{insurance_company}}`, `{{adjuster}}`, `{{policy_number}}`, `{{claim_number}}`, `{{dol}}`, `{{date}}`, `{{generated_by}}`, `{{special_instructions}}`, `{{notes}}`, `{{opportunity_photos_qr}}`, `{{opportunity_qr}}`
 - **`SALE_TAGS`** constant — 2 tags when `needs_sale = true`:
   `{{sale_number}}`, `{{flooring_items_table}}`
 
@@ -72,9 +72,12 @@ Links generated documents back to their source template. `nullOnDelete()` — re
 
 ### `app/Services/DocumentTemplateService.php`
 - **`TAG_LABELS`** constant — human-readable labels for each tag key (used on create/edit form)
-- `render(template, opportunity, ?sale)` — now delegates to `getDefaultFields()` + `renderFromFields()`
-- **`getDefaultFields(template, opportunity, ?sale)`** — resolves all tag values from opportunity/sale data; returns only tags whose `{{tag}}` appears in the template body
-- **`renderFromFields(template, fields, ?sale)`** — renders body from caller-supplied field values; `{{flooring_items_table}}` is always re-built fresh from live sale data regardless of stored fields
+- `render(template, opportunity, ?sale)` — delegates to `getDefaultFields()` + `renderFromFields()`
+- **`getDefaultFields(template, opportunity, ?sale)`** — resolves all tag values from opportunity/sale data; returns only tags whose `{{tag}}` appears in the template body. **QR code tags are intentionally excluded** — they are auto-generated at render time and must never appear as editable form fields.
+- **`renderFromFields(template, fields, ?sale, ?opportunity)`** — renders body from caller-supplied field values. Three tags are always re-built fresh from live data regardless of stored fields:
+  - `{{flooring_items_table}}` — rebuilt from sale rooms/items
+  - `{{opportunity_photos_qr}}` — SVG QR code generated from `mobile.opportunity.photos` route
+  - `{{opportunity_qr}}` — SVG QR code generated from `mobile.opportunity.show` route
 - `buildFlooringTable(Sale)` — private; builds HTML table of material items grouped by room
 
 ---
@@ -124,8 +127,9 @@ GET  documents/{document}/reprint          pages.opportunities.documents.reprint
 - Document Name field (defaults to template name, editable — stored as `original_name`)
 - Sale selector shown when `needs_sale = true`
 - Labeled inputs for each tag that appears in the template body (from `getDefaultFields()`)
-- `job_site_address` renders as textarea; all others as text inputs
-- `{{flooring_items_table}}` is never shown as an editable field — always re-rendered from sale
+- `job_site_address`, `special_instructions`, and `notes` render as textareas; all others as text inputs
+- `{{flooring_items_table}}`, `{{opportunity_qr}}`, and `{{opportunity_photos_qr}}` are never shown as editable fields — always regenerated at render time
+- On **edit**, stored `document_fields` are merged over fresh `getDefaultFields()` defaults so newly-added tags (e.g. fields added to a template after a document was first generated) still appear in the form
 
 ### `resources/views/pages/opportunities/documents/show-generated.blade.php`
 - Breadcrumb: Opportunity → Documents → document name
@@ -161,7 +165,7 @@ Old generated docs (stored as PDF files on disk) still work via `reprint`. The `
 
 ## Seeded Starter Templates
 
-1. **Front File Label** (sort_order: 1, needs_sale: false) — blue header, job name strip, two-column layout, fill-in lines
+1. **Front File Label** (sort_order: 1, needs_sale: false) — blue header, job name strip, two-column layout, fill-in measure detail lines, editable **Special Instructions** (`{{special_instructions}}`) and **Notes** (`{{notes}}`) sections
 2. **Flooring Selection Sign-Off** (sort_order: 2, special_flow: `flooring_sign_off`) — redirects to dedicated sign-off wizard
 3. **Work Authorization Form** (sort_order: 3, needs_sale: false) — customer table, authorization paragraph, signature lines
 
@@ -182,7 +186,8 @@ Old generated docs (stored as PDF files on disk) still work via `reprint`. The `
 
 - Blade parses `{{ }}` everywhere — use `@{{tag}}` in text, `@verbatim` in `<script>` blocks
 - Do NOT put `{{tags}}` in CSS comments in Blade files
-- `flooring_items_table` in the template body is always re-rendered from live sale data, never stored as editable text
+- `flooring_items_table`, `opportunity_qr`, and `opportunity_photos_qr` are always re-rendered from live data — never stored as editable fields. QR codes are generated as `<img src="data:image/svg+xml;base64,...">` inline.
+- `opportunity_documents.path` is nullable — generated documents have no physical file path
 
 ---
 

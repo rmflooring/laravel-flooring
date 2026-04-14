@@ -120,6 +120,10 @@
             '{{dol}}':                'Jan 15, 2024',
             '{{date}}':               _previewDate,
             '{{generated_by}}':       'Admin User',
+            '{{special_instructions}}': 'Check subfloor condition before installation. Use moisture barrier in bathroom areas.',
+            '{{notes}}':              'Customer prefers afternoon appointments.\nDog on premises — please confirm entry.',
+            '{{opportunity_photos_qr}}': '<div style="display:inline-block;width:100px;height:100px;border:2px solid #d1d5db;border-radius:4px;background:#f9fafb;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;color:#6b7280;padding:8px;">📷 Photo Gallery QR</div>',
+            '{{opportunity_qr}}': '<div style="display:inline-block;width:100px;height:100px;border:2px solid #d1d5db;border-radius:4px;background:#f9fafb;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;color:#6b7280;padding:8px;">📋 Opportunity QR</div>',
             '{{sale_number}}':        '2024-0042',
             '{{flooring_items_table}}': `<table style="width:100%;border-collapse:collapse;font-size:12px;">
                 <thead>

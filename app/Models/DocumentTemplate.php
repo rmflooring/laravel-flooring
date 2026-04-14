@@ -48,6 +48,10 @@ class DocumentTemplate extends Model
         '{{dol}}',
         '{{date}}',
         '{{generated_by}}',
+        '{{special_instructions}}',
+        '{{notes}}',
+        '{{opportunity_photos_qr}}',
+        '{{opportunity_qr}}',
     ];
 
     /** Tags only available when needs_sale = true */
