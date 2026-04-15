@@ -85,16 +85,6 @@
                             </div>
                         </div>
 
-                        <div class="md:col-span-3 flex items-center gap-3 pt-6">
-                            <input type="checkbox" name="requires_rfm" id="requires_rfm" form="opportunity-form" value="1"
-                                   {{ old('requires_rfm', $opportunity->requires_rfm) ? 'checked' : '' }}
-                                   class="w-4 h-4 text-blue-600 bg-gray-50 border-gray-300 rounded">
-                            <label for="requires_rfm" class="text-sm font-medium text-gray-700 cursor-pointer">
-                                Requires RFM
-                                <span class="block text-xs font-normal text-gray-500">Site visit needed before estimate</span>
-                            </label>
-                        </div>
-
                         <div class="md:col-span-3">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sales Person 1</label>
                            <select name="sales_person_1" form="opportunity-form"
@@ -119,7 +109,17 @@
 								</option>
 							@endforeach
 						</select>
-												</div>
+                        </div>
+
+                        <div class="md:col-span-3 flex items-center gap-3 pt-6">
+                            <input type="checkbox" name="requires_rfm" id="requires_rfm" form="opportunity-form" value="1"
+                                   {{ old('requires_rfm', $opportunity->requires_rfm) ? 'checked' : '' }}
+                                   class="w-4 h-4 text-blue-600 bg-gray-50 border-gray-300 rounded">
+                            <label for="requires_rfm" class="text-sm font-medium text-gray-700 cursor-pointer">
+                                Requires RFM
+                                <span class="block text-xs font-normal text-gray-500">Site visit needed before estimate</span>
+                            </label>
+                        </div>
 
                         <div class="md:col-span-6">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
