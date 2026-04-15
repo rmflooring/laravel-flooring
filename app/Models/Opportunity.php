@@ -13,12 +13,17 @@ class Opportunity extends Model
         'job_no',
         'status',
         'status_reason',
+        'requires_rfm',
         'is_active',
         'sales_person_1',
         'sales_person_2',
         'initiated_by',
         'created_by',
         'updated_by',
+    ];
+
+    protected $casts = [
+        'requires_rfm' => 'boolean',
     ];
 
     // Match your other models that auto-set created_by/updated_by via closures

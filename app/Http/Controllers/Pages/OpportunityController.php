@@ -72,7 +72,15 @@ class OpportunityController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+            $status = $request->input('status');
+            if ($status === 'Awaiting Site Measure') {
+                // Show opportunities with no active or completed RFM
+                $query->whereDoesntHave('rfms', function ($q) {
+                    $q->whereIn('status', ['pending', 'confirmed', 'completed']);
+                });
+            } else {
+                $query->where('opportunities.status', $status);
+            }
         }
 
         if ($request->filled('parent_customer_id')) {
@@ -177,6 +185,8 @@ $employees = Employee::query()
             'sales_person_1'       => ['nullable', 'string', 'max:255'],
             'sales_person_2'       => ['nullable', 'string', 'max:255'],
         ]);
+
+        $data['requires_rfm'] = $request->boolean('requires_rfm');
 
         if (! in_array($data['status'], ['Lost', 'Closed'])) {
             $data['status_reason'] = null;
@@ -300,6 +310,8 @@ public function update(Request $request, string $id)
         'sales_person_1'       => ['nullable', 'string', 'max:255'],
         'sales_person_2'       => ['nullable', 'string', 'max:255'],
     ]);
+
+    $data['requires_rfm'] = $request->boolean('requires_rfm');
 
     if (! in_array($data['status'], ['Lost', 'Closed'])) {
         $data['status_reason'] = null;

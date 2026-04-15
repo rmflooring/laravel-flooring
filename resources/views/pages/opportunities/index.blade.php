@@ -223,11 +223,17 @@
         default => 'bg-gray-100 text-gray-800',
     };
 @endphp
-
-<a href="{{ route('pages.opportunities.index', array_merge(request()->query(), ['status' => $opp->status])) }}"
-   class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $statusClasses }} hover:underline">
-    {{ $opp->status ?: '—' }}
-</a>
+                                        <div class="flex flex-col gap-1">
+                                            <a href="{{ route('pages.opportunities.index', array_merge(request()->query(), ['status' => $opp->status])) }}"
+                                               class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $statusClasses }} hover:underline">
+                                                {{ $opp->status ?: '—' }}
+                                            </a>
+                                            @if ($opp->requires_rfm)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                    Needs RFM
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
 
                                     <td class="px-4 md:px-6 py-3 whitespace-nowrap text-gray-600">
