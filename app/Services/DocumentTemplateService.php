@@ -62,12 +62,13 @@ class DocumentTemplateService
         $jobSiteName  = $jobSite?->company_name ?: ($jobSite?->name ?? '');
         $pmName       = $pm?->name ?? '';
 
-        $jobSiteAddress = implode(', ', array_filter([
-            $jobSite?->address,
+        $jobSiteStreet  = $jobSite?->address ?? '';
+        $jobSiteCityLine = implode(', ', array_filter([
             $jobSite?->city,
             $jobSite?->province,
             $jobSite?->postal_code,
         ]));
+        $jobSiteAddress = implode('<br>', array_filter([$jobSiteStreet, $jobSiteCityLine]));
 
         $allVars = [
             'customer_name'        => $customerName,

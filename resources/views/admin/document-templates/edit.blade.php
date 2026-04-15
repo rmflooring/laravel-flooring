@@ -106,7 +106,7 @@
             '{{job_name}}':           'Master Bedroom Renovation',
             '{{job_no}}':             'JOB-2024-001',
             '{{job_site_name}}':      'Smith Residence',
-            '{{job_site_address}}':   '123 Main Street\nAnytown, BC  V1V 1V1',
+            '{{job_site_address}}':   '123 Main Street<br>Anytown, BC  V1V 1V1',
             '{{job_site_phone}}':     '(604) 555-0123',
             '{{job_site_email}}':     'john.smith@example.com',
             '{{pm_name}}':            'Sarah Johnson',
