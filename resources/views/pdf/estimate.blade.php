@@ -306,6 +306,9 @@
                 @if ($estimate->estimate_number)
                     <div class="info-row"><span class="info-label">Estimate #: </span><span class="info-value">{{ $estimate->estimate_number }}</span></div>
                 @endif
+                @if ($estimate->job_no)
+                    <div class="info-row"><span class="info-label">Job #: </span><span class="info-value">{{ $estimate->job_no }}</span></div>
+                @endif
             </td>
         </tr>
     </table>
