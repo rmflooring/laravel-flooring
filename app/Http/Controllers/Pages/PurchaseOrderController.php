@@ -795,6 +795,8 @@ class PurchaseOrderController extends Controller
             'content'  => base64_encode($pdfContent),
         ];
 
+        $pdfUrl = route('pages.purchase-orders.pdf', $purchaseOrder);
+
         $sent = $mailer->send(
             $request->input('to'),
             $request->input('subject'),
@@ -803,6 +805,10 @@ class PurchaseOrderController extends Controller
             null,
             $attachment,
             $cc ?: null,
+            null,
+            $purchaseOrder->id,
+            'purchase_order',
+            $pdfUrl,
         );
 
         if ($sent) {

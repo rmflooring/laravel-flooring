@@ -7,7 +7,21 @@
             <div class="flex items-center justify-between mb-6" x-data="{ showDelete: false }">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Edit Sale</h1>
-                    <p class="text-sm text-gray-600">Status: <span class="font-semibold">{{ ucwords(str_replace('_', ' ', $sale->status)) }}</span></p>
+                    <p class="text-sm text-gray-600">Status:
+                        @if($sale->status === 'sent')
+                            <button type="button"
+                                    @click="window.dispatchEvent(new Event('open-sent-email-modal'))"
+                                    class="inline-flex items-center gap-1 font-semibold text-sky-700 underline decoration-dotted underline-offset-2 cursor-pointer hover:text-sky-900">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                Sent
+                            </button>
+                        @else
+                            <span class="font-semibold">{{ ucwords(str_replace('_', ' ', $sale->status)) }}</span>
+                        @endif
+                    </p>
                 </div>
 @if (session('success'))
     <div class="mb-4 p-4 text-green-800 bg-green-100 border border-green-200 rounded-lg rounded-lg">
@@ -2434,4 +2448,5 @@
 </div>
 @include('components.modals.box-qty-modal')
 
+<x-modals.sent-email-modal type="sale" :related-id="$sale->id" />
 </x-admin-layout>

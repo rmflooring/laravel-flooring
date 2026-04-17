@@ -227,12 +227,14 @@ class InvoiceController extends Controller
         $mailer = app(GraphMailService::class);
         $user   = Auth::user();
 
+        $pdfUrl = route('pages.sales.invoices.pdf', [$sale, $invoice]);
+
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', $attachment, $cc ?: null)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl)
             : false;
 
         if (! $sent) {
-            $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', null, $attachment, $cc ?: null);
+            $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', null, $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl);
         }
 
         // Mark as sent if still draft

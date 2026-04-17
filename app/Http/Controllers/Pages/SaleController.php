@@ -707,12 +707,14 @@ public function showProfits(Sale $sale)
             'content'  => base64_encode($pdfContent),
         ];
 
+        $pdfUrl = route('pages.sales.pdf', $sale);
+
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl);
         }
 
         if (! $sent) {

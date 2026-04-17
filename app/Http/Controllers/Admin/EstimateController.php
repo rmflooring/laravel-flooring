@@ -1241,12 +1241,14 @@ public function makeRevision(Estimate $estimate)
             'content'  => base64_encode($pdfContent),
         ];
 
+        $pdfUrl = route('pages.estimates.pdf', $estimate);
+
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment, $cc ?: null)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment, $cc ?: null, null, $estimate->id, 'estimate', $pdfUrl)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', null, $attachment, $cc ?: null);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', null, $attachment, $cc ?: null, null, $estimate->id, 'estimate', $pdfUrl);
         }
 
         if (! $sent) {

@@ -112,12 +112,14 @@ class ChangeOrderController extends Controller
             'content'  => base64_encode($pdfContent),
         ];
 
+        $pdfUrl = route('pages.sales.change-orders.pdf', [$sale, $changeOrder]);
+
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', $attachment, $cc ?: null)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', $attachment, $cc ?: null, null, $changeOrder->id, 'change_order', $pdfUrl)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', null, $attachment, $cc ?: null);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', null, $attachment, $cc ?: null, null, $changeOrder->id, 'change_order', $pdfUrl);
         }
 
         if (! $sent) {

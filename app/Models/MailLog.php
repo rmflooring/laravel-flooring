@@ -16,5 +16,11 @@ class MailLog extends Model
         'track',
         'sent_from',
         'error',
+        'body',
+        'cc',
+        'attachment_name',
+        'pdf_url',
+        'related_id',
+        'related_type',
     ];
 }

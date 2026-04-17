@@ -576,6 +576,8 @@ class WorkOrderController extends Controller
             );
         }
 
+        $pdfUrl = route('pages.sales.work-orders.pdf', [$sale, $workOrder]);
+
         $sent = $mailer->send(
             $request->input('to'),
             $request->input('subject'),
@@ -585,6 +587,9 @@ class WorkOrderController extends Controller
             $attachment,
             $cc ?: null,
             $icsContent,
+            $workOrder->id,
+            'work_order',
+            $pdfUrl,
         );
 
         if ($sent) {

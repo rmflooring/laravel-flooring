@@ -64,6 +64,9 @@ class GraphMailService
         ?array $attachment = null,
         ?array $cc = null,
         ?string $icsContent = null,
+        ?int $relatedId = null,
+        ?string $relatedType = null,
+        ?string $pdfUrl = null,
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -158,15 +161,22 @@ class GraphMailService
                     'subject' => $subject,
                 ]);
 
+                $logBase = [
+                    'subject'         => $subject,
+                    'status'          => 'sent',
+                    'type'            => $type,
+                    'track'           => 1,
+                    'sent_from'       => $from,
+                    'body'            => $body,
+                    'cc'              => $cc ? implode(', ', $cc) : null,
+                    'attachment_name' => $attachment['filename'] ?? $attachment['name'] ?? null,
+                    'pdf_url'         => $pdfUrl,
+                    'related_id'      => $relatedId,
+                    'related_type'    => $relatedType,
+                ];
+
                 foreach ((array) $to as $address) {
-                    MailLog::create([
-                        'to'        => $address,
-                        'subject'   => $subject,
-                        'status'    => 'sent',
-                        'type'      => $type,
-                        'track'     => 1,
-                        'sent_from' => $from,
-                    ]);
+                    MailLog::create(array_merge($logBase, ['to' => $address]));
                 }
 
                 return true;
@@ -413,6 +423,9 @@ class GraphMailService
         ?array $attachment = null,
         ?array $cc = null,
         ?string $icsContent = null,
+        ?int $relatedId = null,
+        ?string $relatedType = null,
+        ?string $pdfUrl = null,
     ): bool {
         $token = $this->getUserToken($user);
 
@@ -489,15 +502,22 @@ class GraphMailService
                     'subject'  => $subject,
                 ]);
 
+                $logBase = [
+                    'subject'         => $subject,
+                    'status'          => 'sent',
+                    'type'            => $type,
+                    'track'           => 2,
+                    'sent_from'       => $senderEmail,
+                    'body'            => $body,
+                    'cc'              => $cc ? implode(', ', $cc) : null,
+                    'attachment_name' => $attachment['filename'] ?? $attachment['name'] ?? null,
+                    'pdf_url'         => $pdfUrl,
+                    'related_id'      => $relatedId,
+                    'related_type'    => $relatedType,
+                ];
+
                 foreach ((array) $to as $address) {
-                    MailLog::create([
-                        'to'        => $address,
-                        'subject'   => $subject,
-                        'status'    => 'sent',
-                        'type'      => $type,
-                        'track'     => 2,
-                        'sent_from' => $senderEmail,
-                    ]);
+                    MailLog::create(array_merge($logBase, ['to' => $address]));
                 }
 
                 return true;

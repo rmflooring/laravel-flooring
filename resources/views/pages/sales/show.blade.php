@@ -125,7 +125,21 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div class="text-xs text-gray-500">Status</div>
-                    <div class="mt-1 font-semibold text-gray-900">{{ $sale->status ?? '—' }}</div>
+                    <div class="mt-1 font-semibold text-gray-900">
+                        @if($sale->status === 'sent')
+                            <button type="button"
+                                    @click="window.dispatchEvent(new Event('open-sent-email-modal'))"
+                                    class="inline-flex items-center gap-1 text-sky-700 underline decoration-dotted underline-offset-2 cursor-pointer hover:text-sky-900">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                Sent
+                            </button>
+                        @else
+                            {{ $sale->status ?? '—' }}
+                        @endif
+                    </div>
                 </div>
 
                 <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -1355,4 +1369,6 @@ function updatePayerCustomer(select) {
 }
 </script>
 
+
+<x-modals.sent-email-modal type="sale" :related-id="$sale->id" />
 </x-admin-layout>

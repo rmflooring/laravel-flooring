@@ -629,6 +629,9 @@ Route::prefix('pages')
 			->middleware('permission:view estimates')
 			->name('estimates.pdf');
 
+		Route::get('mail-log/{type}/{id}', [\App\Http\Controllers\Pages\MailLogController::class, 'latest'])
+			->name('mail-log.latest');
+
 		Route::get('sales/{sale}/pdf', [\App\Http\Controllers\Pages\SaleController::class, 'previewPdf'])
 			->name('sales.pdf');
 

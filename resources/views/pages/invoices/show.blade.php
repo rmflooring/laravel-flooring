@@ -84,7 +84,17 @@
                         <div>Customer PO#: <span class="text-gray-700 dark:text-gray-300">{{ $invoice->customer_po_number }}</span></div>
                     @endif
                     @if($invoice->sent_at)
-                        <div>Sent: {{ $invoice->sent_at->format('M j, Y') }}</div>
+                        <div>Sent:
+                            <button type="button"
+                                    @click="window.dispatchEvent(new Event('open-sent-email-modal'))"
+                                    class="inline-flex items-center gap-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 cursor-pointer">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                {{ $invoice->sent_at->format('M j, Y') }}
+                            </button>
+                        </div>
                     @endif
                 </div>
                 @if($invoice->voided_at)
@@ -411,4 +421,6 @@ Thank you for your business.</textarea>
     </div>
 </div>
 
+
+<x-modals.sent-email-modal type="invoice" :related-id="$invoice->id" />
 </x-app-layout>
