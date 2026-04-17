@@ -35,7 +35,20 @@
                         $statusLabel = $statusLabels[$estimate->status] ?? ucfirst($estimate->status);
                     @endphp
                     <p class="text-sm text-gray-600 mt-1">
-                        Status: <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+                        Status:
+                        @if($estimate->status === 'sent')
+                            <button type="button"
+                                    @click="window.dispatchEvent(new Event('open-sent-email-modal'))"
+                                    class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $statusClass }} underline decoration-dotted underline-offset-2 cursor-pointer hover:opacity-80">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                {{ $statusLabel }}
+                            </button>
+                        @else
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+                        @endif
                     </p>
                     @if ($estimate->parentEstimate)
                         <p class="text-sm text-gray-500 mt-1">
@@ -1780,6 +1793,14 @@
 </div>
                     </div>
 
+                    {{-- GPT hint: shown live when no labour/freight amounts exist --}}
+                    <div id="fm-gpt-hint" class="hidden mb-3 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-lg">
+                        <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                        </svg>
+                        No labour or freight — <strong class="ml-1">GPT (GST + PST) recommended</strong>
+                    </div>
+
                     <div class="flex items-center justify-between border-b pb-2">
     <span class="text-sm text-gray-700">Subtotal (Materials)</span>
     <span class="estimate-materials-value text-sm font-semibold text-gray-900">$0.00</span>
@@ -2315,4 +2336,34 @@
 
 @include('components.modals.box-qty-modal')
 
+<x-modals.sent-email-modal type="estimate" :related-id="$estimate->id" />
+
+{{-- GPT Tax Warning Modal --}}
+<div id="fm-gpt-warn-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <div class="flex items-start gap-3 mb-5">
+            <svg class="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+            </svg>
+            <div>
+                <h3 class="text-base font-semibold text-gray-900">Verify Tax Code</h3>
+                <p class="mt-1 text-sm text-gray-600">
+                    This estimate has no labour or freight items. Materials-only jobs require <strong>GPT (GST + PST)</strong>.
+                    The current tax code is <strong id="fm-gpt-warn-current" class="text-gray-900"></strong>.
+                </p>
+                <p class="mt-2 text-sm text-gray-600">Do you want to continue saving with the current tax code?</p>
+            </div>
+        </div>
+        <div class="flex justify-end gap-3">
+            <button type="button" id="fm-gpt-warn-back"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                Go Back
+            </button>
+            <button type="button" id="fm-gpt-warn-save"
+                class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700">
+                Save Anyway
+            </button>
+        </div>
+    </div>
+</div>
 </x-admin-layout>

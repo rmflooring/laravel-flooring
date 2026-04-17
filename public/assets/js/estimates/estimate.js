@@ -14,13 +14,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Unsaved changes warning (Create Estimate) ───────────────────────────
   let fmHasUnsavedChanges = false;
+  let fmGptCheckBypassed = false;
 
   const form = roomsContainer.closest("form");
   if (form) {
     form.addEventListener("input", () => { fmHasUnsavedChanges = true; }, true);
     form.addEventListener("change", () => { fmHasUnsavedChanges = true; }, true);
     form.addEventListener("submit", () => { fmHasUnsavedChanges = false; });
+
+    // ── GPT tax warning on save ──────────────────────────────────────────
+    form.addEventListener('submit', function(e) {
+      if (fmGptCheckBypassed) { fmGptCheckBypassed = false; return; }
+
+      const labour  = parseNumber(document.getElementById('subtotal_labour_input')?.value  || 0);
+      const freight = parseNumber(document.getElementById('subtotal_freight_input')?.value || 0);
+      const isMaterialsOnly = labour === 0 && freight === 0;
+      const isGpt = (window.FM_CURRENT_TAX_GROUP_LABEL || '').toUpperCase() === 'GPT';
+
+      if (isMaterialsOnly && !isGpt) {
+        e.preventDefault();
+        const modal = document.getElementById('fm-gpt-warn-modal');
+        const currentEl = document.getElementById('fm-gpt-warn-current');
+        if (currentEl) currentEl.textContent = window.FM_CURRENT_TAX_GROUP_LABEL || 'None';
+        if (modal) modal.classList.remove('hidden');
+      }
+    });
   }
+
+  // ── GPT modal buttons ────────────────────────────────────────────────────
+  document.getElementById('fm-gpt-warn-save')?.addEventListener('click', () => {
+    document.getElementById('fm-gpt-warn-modal')?.classList.add('hidden');
+    fmGptCheckBypassed = true;
+    form?.requestSubmit();
+  });
+  document.getElementById('fm-gpt-warn-back')?.addEventListener('click', () => {
+    document.getElementById('fm-gpt-warn-modal')?.classList.add('hidden');
+  });
 
   window.addEventListener("beforeunload", (e) => {
     if (!fmHasUnsavedChanges) return;
@@ -289,6 +318,7 @@ document.addEventListener('fm:tax-group-selected', (e) => {
   if (openBtn) openBtn.focus();
 
   loadTaxGroupRate(groupId);
+  checkGptHint();
 });
 											   
   // ── Row template insertion ───────────────────────────────────────────────
@@ -2094,6 +2124,19 @@ function addRoom() {
   }
 
   // ✅ FIX: Estimate totals now read from hidden room subtotal inputs
+  // ── GPT Tax Hint ──────────────────────────────────────────────────────────
+  function checkGptHint() {
+    const hint = document.getElementById('fm-gpt-hint');
+    if (!hint) return;
+
+    const labour  = parseNumber(document.getElementById('subtotal_labour_input')?.value  || 0);
+    const freight = parseNumber(document.getElementById('subtotal_freight_input')?.value || 0);
+    const isMaterialsOnly = labour === 0 && freight === 0;
+    const isGpt = (window.FM_CURRENT_TAX_GROUP_LABEL || '').toUpperCase() === 'GPT';
+
+    hint.classList.toggle('hidden', !isMaterialsOnly || isGpt);
+  }
+
   function updateEstimateTotals() {
     let materials = 0, freight = 0, labour = 0;
 
@@ -2159,6 +2202,8 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     setHidden("pretax_total_input", pretax);
     setHidden("tax_amount_input", tax);
     setHidden("grand_total_input", grand);
+
+    checkGptHint();
   }
 
   // ── Real-time line total calculation ────────────────────────────────────
