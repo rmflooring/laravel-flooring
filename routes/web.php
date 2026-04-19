@@ -1443,9 +1443,43 @@ Route::middleware(['auth.mobile'])->prefix('m')->name('mobile.')->group(function
         ->middleware('role_or_permission:admin|edit purchase orders')
         ->name('purchase-orders.receive');
 
+    Route::get('inventory', [\App\Http\Controllers\Mobile\InventoryController::class, 'index'])
+        ->middleware('role_or_permission:admin|view inventory')
+        ->name('inventory.index');
+
     Route::get('inventory/{receipt}', [\App\Http\Controllers\Mobile\InventoryController::class, 'show'])
         ->middleware('role_or_permission:admin|view purchase orders')
         ->name('inventory.show');
+
+    // Warehouse hub + pick tickets
+    Route::middleware('role_or_permission:admin|view inventory')->group(function () {
+        Route::get('warehouse', [\App\Http\Controllers\Mobile\WarehouseController::class, 'index'])
+            ->name('warehouse.index');
+
+        Route::get('warehouse/pick-tickets', [\App\Http\Controllers\Mobile\WarehouseController::class, 'pickTickets'])
+            ->middleware('role_or_permission:admin|view pick tickets')
+            ->name('warehouse.pick-tickets.index');
+
+        Route::get('warehouse/pt/{pickTicket}', [\App\Http\Controllers\Mobile\WarehouseController::class, 'showPickTicket'])
+            ->middleware('role_or_permission:admin|view pick tickets')
+            ->name('warehouse.pick-tickets.show');
+
+        Route::patch('warehouse/pt/{pickTicket}/status', [\App\Http\Controllers\Mobile\WarehouseController::class, 'updatePickTicketStatus'])
+            ->middleware('role_or_permission:admin|view pick tickets')
+            ->name('warehouse.pick-tickets.update-status');
+
+        Route::get('warehouse/rfc', [\App\Http\Controllers\Mobile\WarehouseController::class, 'rfcs'])
+            ->name('warehouse.rfc.index');
+
+        Route::get('warehouse/rfc/{customerReturn}', [\App\Http\Controllers\Mobile\WarehouseController::class, 'showRfc'])
+            ->name('warehouse.rfc.show');
+
+        Route::get('warehouse/rtv', [\App\Http\Controllers\Mobile\WarehouseController::class, 'rtvs'])
+            ->name('warehouse.rtv.index');
+
+        Route::get('warehouse/rtv/{inventoryReturn}', [\App\Http\Controllers\Mobile\WarehouseController::class, 'showRtv'])
+            ->name('warehouse.rtv.show');
+    });
 
     Route::get('work-orders', [\App\Http\Controllers\Mobile\WorkOrderController::class, 'index'])
         ->middleware('role_or_permission:admin|view work orders')

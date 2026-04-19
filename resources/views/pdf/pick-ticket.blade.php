@@ -171,11 +171,24 @@
 </div>
 @endif
 
-<div class="footer">
-    {{ $companyName }}
-    @if($phone) · {{ $phone }} @endif
-    @if($email) · {{ $email }} @endif
-    @if($website) · {{ $website }} @endif
+@php
+    $mobileUrl  = route('mobile.warehouse.pick-tickets.show', $pickTicket);
+    $qrSvg      = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size(64)->margin(1)->generate($mobileUrl);
+    $qrDataUri  = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+@endphp
+<div style="display:table; width:100%; margin-top:24px; border-top:1px solid #e5e7eb; padding-top:10px;">
+    <div style="display:table-cell; vertical-align:middle;">
+        <span style="font-size:10px; color:#888;">
+            {{ $companyName }}
+            @if($phone) · {{ $phone }} @endif
+            @if($email) · {{ $email }} @endif
+            @if($website) · {{ $website }} @endif
+        </span>
+    </div>
+    <div style="display:table-cell; vertical-align:middle; text-align:right; width:72pt;">
+        <img src="{{ $qrDataUri }}" style="width:64pt; height:64pt;">
+        <div style="font-size:8px; color:#aaa; margin-top:2px; text-align:center;">Scan for mobile</div>
+    </div>
 </div>
 
 </body>

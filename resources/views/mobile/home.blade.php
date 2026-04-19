@@ -96,7 +96,7 @@
 
         {{-- Inventory / Warehouse --}}
         @can('view inventory')
-        <a href="{{ route('pages.inventory.index') }}"
+        <a href="{{ route('mobile.warehouse.index') }}"
            class="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 py-4 shadow-sm active:bg-gray-50">
             <div class="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
