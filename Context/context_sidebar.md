@@ -102,6 +102,30 @@ Routes used:
 - Installers standalone sidebar entry removed; now lives under Vendors flyout.
 - User confirmed: “it looks great”.
 
+## User Dropdown (Top-Right Header) — 2026-04-20
+
+The top-right user icon dropdown (Profile / Email Templates / Log Out) was previously wired up using Flowbite's `data-dropdown-toggle` attribute. This **never worked reliably** — Flowbite 4.x was failing to initialise the dropdown on `window load`.
+
+**Fix:** Replaced with a pure Alpine.js dropdown (same pattern as sidebar accordions):
+
+```blade
+<div class=”relative” x-data=”{ open: false }” @click.outside=”open = false”>
+    <button @click=”open = !open” :aria-expanded=”open” ...>
+        <!-- user avatar -->
+    </button>
+    <div x-show=”open” x-cloak x-transition
+         class=”absolute right-0 z-50 mt-2 w-48 ...”>
+        <!-- Profile / Email Templates / Log Out links -->
+    </div>
+</div>
+```
+
+Key points:
+- `x-cloak` prevents flash-of-unstyled-content on load.
+- `@click.outside` closes the dropdown when clicking elsewhere.
+- Positioned with `absolute right-0 mt-2` — no Popper.js needed.
+- Do **not** re-introduce Flowbite `data-dropdown-toggle` here; it does not initialise reliably with this stack.
+
 ## Next Possible Enhancements (Not Implemented)
 - Active state highlighting when on a Products/Labour child route.
 - Add small hover delay or “safe triangle” behavior to prevent accidental close.

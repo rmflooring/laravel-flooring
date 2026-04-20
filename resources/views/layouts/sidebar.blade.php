@@ -668,14 +668,12 @@
                 </div>
 
                 <!-- User dropdown -->
-                <div class="relative">
+                <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                     <button
                         type="button"
                         class="flex rounded-full text-sm focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700"
-                        id="user-menu-button"
-                        aria-expanded="false"
-                        data-dropdown-toggle="user-dropdown"
-                        data-dropdown-placement="bottom-end"
+                        @click="open = !open"
+                        :aria-expanded="open"
                     >
                         <span class="sr-only">Open user menu</span>
                         <div class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
@@ -684,14 +682,16 @@
                     </button>
 
                     <div
-                        class="z-50 hidden my-4 list-none divide-y divide-gray-100 rounded-lg bg-white text-base shadow dark:divide-gray-600 dark:bg-gray-700"
-                        id="user-dropdown"
+                        x-show="open"
+                        x-cloak
+                        x-transition
+                        class="absolute right-0 z-50 mt-2 w-48 list-none divide-y divide-gray-100 rounded-lg bg-white text-base shadow dark:divide-gray-600 dark:bg-gray-700"
                     >
                         <div class="px-4 py-3">
                             <span class="block text-sm text-gray-900 dark:text-white">{{ Auth::user()->name }}</span>
                             <span class="block truncate text-sm text-gray-500 dark:text-gray-300">{{ Auth::user()->email }}</span>
                         </div>
-                        <ul class="py-2" aria-labelledby="user-menu-button">
+                        <ul class="py-2">
                             <li>
                                 <a href="{{ route('profile.edit') }}"
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">
