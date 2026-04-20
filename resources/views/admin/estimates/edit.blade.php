@@ -38,7 +38,7 @@
                         Status:
                         @if($estimate->status === 'sent')
                             <button type="button"
-                                    @click="window.dispatchEvent(new Event('open-sent-email-modal'))"
+                                    onclick="window.dispatchEvent(new Event('open-sent-email-modal'))"
                                     class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $statusClass }} underline decoration-dotted underline-offset-2 cursor-pointer hover:opacity-80">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

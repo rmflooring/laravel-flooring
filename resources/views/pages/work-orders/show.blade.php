@@ -47,7 +47,7 @@
                         @if($workOrder->sent_at)
                             <span class="text-gray-400">•</span>
                             <button type="button"
-                                    @click="window.dispatchEvent(new Event('open-sent-email-modal'))"
+                                    onclick="window.dispatchEvent(new Event('open-sent-email-modal'))"
                                     class="inline-flex items-center gap-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 text-sm cursor-pointer">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
