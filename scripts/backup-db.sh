@@ -11,6 +11,7 @@ set -euo pipefail
 
 # --- Config ------------------------------------------------------------------
 DB_NAME="fm_laravel"
+DB_HOST="192.168.1.201"
 DB_USER="root"
 CREDENTIALS_FILE="/etc/mysql/backup.my.cnf"   # stores password securely
 BACKUP_DIR="/mnt/nas_storage/backups/db"
@@ -38,6 +39,8 @@ log "Starting backup of '$DB_NAME' → $BACKUP_DIR/$FILENAME"
 mysqldump \
     --defaults-file="$CREDENTIALS_FILE" \
     --user="$DB_USER" \
+    --host="$DB_HOST" \
+    --protocol=TCP \
     --single-transaction \
     --routines \
     --triggers \
