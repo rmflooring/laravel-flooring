@@ -45,6 +45,7 @@ mysqldump \
     --routines \
     --triggers \
     --hex-blob \
+    --column-statistics=0 \
     "$DB_NAME" \
   | gzip -9 > "$BACKUP_DIR/$FILENAME"
 
