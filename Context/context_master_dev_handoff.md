@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-09 (session 51)
+Updated: 2026-04-20 (session 52)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -1013,6 +1013,31 @@ Separate long-lived auth system for all `/m/` and `/installer/` routes.
 - `/m/` group: was `['auth', 'verified']` → now `['auth.mobile']`
 - `/installer/` group: was `['auth', 'verified', 'role:installer']` → now `['auth.mobile', 'role:installer']`
 - Mobile layout logout: was `route('logout')` → now `route('mobile.logout')`
+
+---
+
+## QuickBooks Online Integration (session 52, 2026-04-20)
+Full details in `Context/context_quickbooks.md`.
+
+### Phase 1 — Complete ✅
+- OAuth connect/disconnect flow via Intuit OAuth 2.0
+- `qbo_connections` table — single row, stores encrypted access + refresh tokens, realm ID
+- `qbo_sync_log` table — audit trail for every push/pull
+- `QuickBooksService` — token management, auto-refresh, API GET/POST/query wrapper, sync logger
+- `QuickBooksController` — connect redirect, OAuth callback, disconnect
+- Admin settings page: `/admin/settings/quickbooks` — connection status + sync log
+- Sidebar + admin settings page links added
+- SDK: `quickbooks/v3-php-sdk`
+- OAuth must be done from live server (fm.rmflooring.ca) — Intuit rejects localhost with port / IP addresses
+- Sandbox company realm ID: `9341456914584979`
+- `.env` keys: `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, `QBO_ENVIRONMENT`, `QBO_WEBHOOK_VERIFIER_TOKEN`
+
+### Phase roadmap
+- Phase 2 (next): Push Vendor + Customer to QBO
+- Phase 3: Push Bills (AP) — manual "Push to QBO" button on bill show page
+- Phase 4: Push Invoices (AR) + Payments
+- Phase 5: Webhook receiver — QBO payment status → FM
+- Phase 6: Tax code mapping + account mapping UI
 
 ---
 
