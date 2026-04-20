@@ -128,7 +128,7 @@ public function store(Request $request)
         'phone' => 'nullable|string',
         'mobile' => 'nullable|string',
         'parent_id' => 'nullable|exists:customers,id',
-        'province' => 'nullable|string|size:2',
+        'province' => 'nullable|string',
         'postal_code' => 'nullable|string',
         'insurance_company' => 'nullable|string|max:255',
         'adjuster' => 'nullable|string|max:255',
@@ -252,7 +252,7 @@ public function update(Request $request, Customer $customer)
         'phone' => 'nullable|string',
         'mobile' => 'nullable|string',
         'parent_id' => 'nullable|exists:customers,id',
-        'province' => 'nullable|string|size:2',
+        'province' => 'nullable|string',
         'postal_code' => 'nullable|string',
         'insurance_company' => 'nullable|string|max:255',
         'adjuster' => 'nullable|string|max:255',
@@ -267,9 +267,29 @@ public function update(Request $request, Customer $customer)
         'company_name' => 'required_without:name',
     ]);
 
-    $customer->update($request->all());
+    $customer->update($request->only([
+        'parent_id',
+        'name',
+        'company_name',
+        'email',
+        'phone',
+        'mobile',
+        'address',
+        'address2',
+        'city',
+        'province',
+        'postal_code',
+        'customer_type',
+        'customer_status',
+        'notes',
+        'insurance_company',
+        'adjuster',
+        'policy_number',
+        'claim_number',
+        'dol',
+    ]));
 
-    return redirect()->route('admin.customers.index')->with('success', 'Customer updated successfully.');
+    return redirect()->route('admin.customers.show', $customer)->with('success', 'Customer updated successfully.');
 }
 //end edit method
 
