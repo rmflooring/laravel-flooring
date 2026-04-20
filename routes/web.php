@@ -190,6 +190,16 @@ Route::prefix('admin')
             Route::delete('/settings/sms-templates/{type}', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'reset'])
                 ->name('settings.sms-templates.reset');
 
+            // QuickBooks Online
+            Route::get('/settings/quickbooks', [\App\Http\Controllers\Admin\QuickBooksController::class, 'index'])
+                ->name('settings.quickbooks');
+            Route::get('/settings/quickbooks/connect', [\App\Http\Controllers\Admin\QuickBooksController::class, 'connect'])
+                ->name('settings.quickbooks.connect');
+            Route::get('/settings/quickbooks/callback', [\App\Http\Controllers\Admin\QuickBooksController::class, 'callback'])
+                ->name('settings.quickbooks.callback');
+            Route::post('/settings/quickbooks/disconnect', [\App\Http\Controllers\Admin\QuickBooksController::class, 'disconnect'])
+                ->name('settings.quickbooks.disconnect');
+
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);
 
