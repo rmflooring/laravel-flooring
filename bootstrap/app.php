@@ -11,6 +11,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Restore Laravel <11 behaviour: convert empty strings to null and trim input
+        $middleware->convertEmptyStringsToNull();
+        $middleware->trimStrings(except: [
+            'current_password',
+            'password',
+            'password_confirmation',
+        ]);
+
         // Sync mobile guard auth into web guard on every request so mobile-authenticated
         // users can access desktop pages without re-logging in on the web guard
         $middleware->appendToGroup('web', \App\Http\Middleware\SyncMobileAuth::class);
