@@ -52,6 +52,14 @@ mysqldump \
 SIZE=$(du -sh "$BACKUP_DIR/$FILENAME" | cut -f1)
 log "Backup complete — $FILENAME ($SIZE)"
 
+# --- Mirror to OneDrive ------------------------------------------------------
+log "Uploading to OneDrive..."
+if cd /var/www/myapp && php artisan backup:upload-db "$BACKUP_DIR/$FILENAME" >> "$LOG_FILE" 2>&1; then
+    log "OneDrive upload complete."
+else
+    log "WARNING: OneDrive upload failed — backup is still safe on NAS."
+fi
+
 # --- Prune old backups -------------------------------------------------------
 DELETED=$(find "$BACKUP_DIR" -name "${DB_NAME}_*.sql.gz" -mtime +${RETAIN_DAYS} -print -delete | wc -l)
 if [ "$DELETED" -gt 0 ]; then

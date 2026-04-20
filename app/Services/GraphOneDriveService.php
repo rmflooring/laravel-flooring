@@ -135,6 +135,41 @@ class GraphOneDriveService
     }
 
     /**
+     * Upload a local file (by absolute path) to OneDrive under FloorManager/db-backups/.
+     *
+     * @param  string  $localPath     Absolute path on disk, e.g. /mnt/nas_storage/backups/db/fm_laravel_2026-04-20.sql.gz
+     * @param  string  $oneDriveFolder  Folder inside FloorManager, e.g. 'db-backups'
+     */
+    public function uploadLocalFile(string $localPath, string $oneDriveFolder = 'db-backups'): bool
+    {
+        try {
+            if (! file_exists($localPath)) {
+                Log::warning('[OneDrive] uploadLocalFile: file not found', ['path' => $localPath]);
+                return false;
+            }
+
+            $contents    = file_get_contents($localPath);
+            $sizeBytes   = strlen($contents);
+            $filename    = basename($localPath);
+            $token       = $this->getAppToken();
+            $oneDrivePath = self::ONEDRIVE_ROOT . '/' . $oneDriveFolder . '/' . $filename;
+
+            if ($sizeBytes <= 4 * 1024 * 1024) {
+                return $this->simpleUpload($token, $oneDrivePath, $contents);
+            }
+
+            return $this->uploadSession($token, $oneDrivePath, $contents, $sizeBytes);
+
+        } catch (\Throwable $e) {
+            Log::error('[OneDrive] uploadLocalFile failed', [
+                'path'    => $localPath,
+                'message' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Simple upload for files up to 4MB.
      */
     private function simpleUpload(string $token, string $oneDrivePath, string $contents): bool
