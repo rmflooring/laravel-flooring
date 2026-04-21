@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pages;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryReceipt;
 use App\Models\PurchaseOrder;
+use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class InventoryTagController extends Controller
@@ -21,8 +22,12 @@ class InventoryTagController extends Controller
             'transactions',
         ]);
 
-        $pdf = Pdf::loadView('pdf.inventory-tag', compact('receipt'))
-            ->setPaper([0, 0, 226.77, 170.08]); // ~8cm × 6cm label in points
+        $format = Setting::get('label_printer_format', 'standard');
+        // Standard: ~3" × 2.4" portrait  |  Zebra: 6" × 4" landscape
+        $paper = $format === 'zebra' ? [0, 0, 432, 288] : [0, 0, 226.77, 170.08];
+
+        $pdf = Pdf::loadView('pdf.inventory-tag', compact('receipt', 'format'))
+            ->setPaper($paper);
 
         return $pdf->stream("tag-{$receipt->id}.pdf");
     }
@@ -43,8 +48,12 @@ class InventoryTagController extends Controller
 
         abort_if($receipts->isEmpty(), 404, 'No inventory receipts found for this PO.');
 
-        $pdf = Pdf::loadView('pdf.inventory-tags', compact('receipts', 'purchaseOrder'))
-            ->setPaper([0, 0, 226.77, 170.08]); // ~8cm × 6cm label in points
+        $format = Setting::get('label_printer_format', 'standard');
+        // Standard: ~3" × 2.4" portrait  |  Zebra: 6" × 4" landscape
+        $paper = $format === 'zebra' ? [0, 0, 432, 288] : [0, 0, 226.77, 170.08];
+
+        $pdf = Pdf::loadView('pdf.inventory-tags', compact('receipts', 'purchaseOrder', 'format'))
+            ->setPaper($paper);
 
         return $pdf->stream("tags-{$purchaseOrder->po_number}.pdf");
     }

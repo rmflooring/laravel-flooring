@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryReceipt;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -24,8 +25,9 @@ class InventoryController extends Controller
 
         $allocated = $inventoryReceipt->allocations->sum('quantity');
         $available = max(0, (float) $inventoryReceipt->quantity_received - $allocated);
+        $tagFormat = Setting::get('label_printer_format', 'standard');
 
-        return view('pages.inventory.show', compact('inventoryReceipt', 'allocated', 'available'));
+        return view('pages.inventory.show', compact('inventoryReceipt', 'allocated', 'available', 'tagFormat'));
     }
 
     public function index(Request $request): View

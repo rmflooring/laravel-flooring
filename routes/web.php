@@ -183,6 +183,11 @@ Route::prefix('admin')
             Route::post('/settings/storage/test', [\App\Http\Controllers\Admin\StorageSettingsController::class, 'test'])
                 ->name('settings.storage.test');
 
+            Route::get('/settings/label-printer', [\App\Http\Controllers\Admin\LabelPrinterController::class, 'index'])
+                ->name('settings.label-printer');
+            Route::put('/settings/label-printer', [\App\Http\Controllers\Admin\LabelPrinterController::class, 'update'])
+                ->name('settings.label-printer.update');
+
             Route::get('/settings/sms-templates', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'index'])
                 ->name('settings.sms-templates.index');
             Route::post('/settings/sms-templates/{type}', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'save'])

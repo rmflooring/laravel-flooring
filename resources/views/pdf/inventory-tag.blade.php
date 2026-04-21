@@ -2,6 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+@php
+    $isZebra    = ($format ?? 'standard') === 'zebra';
+    $bodyW      = $isZebra ? '432pt' : '226.77pt';
+    $bodyH      = $isZebra ? '288pt' : '170.08pt';
+    $itemNameSz = $isZebra ? '14pt' : '11pt';
+    $qtyNumSz   = $isZebra ? '24pt' : '18pt';
+    $qrSize     = $isZebra ? 90 : 64;
+    $qrColW     = $isZebra ? '100pt' : '70pt';
+    $qrImgSz    = $isZebra ? '90pt' : '64pt';
+    $bodyGap    = $isZebra ? '10pt' : '6pt';
+
+    $mobileUrl  = route('mobile.inventory.show', $receipt);
+    $qrSvg      = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size($qrSize)->margin(1)->generate($mobileUrl);
+    $allocSale  = $receipt->allocations->first()?->sale;
+    $qtyDisplay = rtrim(rtrim(number_format((float)$receipt->quantity_received, 2), '0'), '.');
+@endphp
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -9,8 +25,8 @@
             font-family: DejaVu Sans, sans-serif;
             font-size: 9px;
             color: #1a1a1a;
-            width: 226.77pt;
-            height: 170.08pt;
+            width: {{ $bodyW }};
+            height: {{ $bodyH }};
             padding: 8pt;
         }
 
@@ -40,7 +56,7 @@
         }
 
         .item-name {
-            font-size: 11pt;
+            font-size: {{ $itemNameSz }};
             font-weight: bold;
             color: #111;
             line-height: 1.2;
@@ -48,17 +64,13 @@
 
         .tag-body {
             display: flex;
-            gap: 6pt;
+            gap: {{ $bodyGap }};
             flex: 1;
         }
 
-        .tag-info {
-            flex: 1;
-        }
+        .tag-info { flex: 1; }
 
-        .info-row {
-            margin-bottom: 3pt;
-        }
+        .info-row { margin-bottom: 3pt; }
 
         .info-label {
             font-size: 6.5pt;
@@ -83,7 +95,7 @@
         }
 
         .qty-number {
-            font-size: 18pt;
+            font-size: {{ $qtyNumSz }};
             font-weight: bold;
             color: #1d4ed8;
             line-height: 1;
@@ -123,12 +135,12 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            width: 70pt;
+            width: {{ $qrColW }};
         }
 
         .qr-img {
-            width: 64pt;
-            height: 64pt;
+            width: {{ $qrImgSz }};
+            height: {{ $qrImgSz }};
         }
 
         .qr-caption {
@@ -148,34 +160,23 @@
     </style>
 </head>
 <body>
-@php
-    $mobileUrl = route('mobile.inventory.show', $receipt);
-    $qrSvg     = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size(64)->margin(1)->generate($mobileUrl);
-
-    $allocSale = $receipt->allocations->first()?->sale;
-    $qtyDisplay = rtrim(rtrim(number_format((float)$receipt->quantity_received, 2), '0'), '.');
-@endphp
 
 <div class="tag">
 
-    {{-- Header: item name --}}
     <div class="tag-header">
         <div class="tag-label">Inventory Tag</div>
         <div class="item-name">{{ $receipt->item_name }}</div>
     </div>
 
-    {{-- Body: info + QR --}}
     <div class="tag-body">
 
         <div class="tag-info">
 
-            {{-- Qty received --}}
             <div class="qty-box">
                 <div class="qty-number">{{ $qtyDisplay }}</div>
                 <div class="qty-unit">{{ $receipt->unit ?: 'units' }}</div>
             </div>
 
-            {{-- Allocation --}}
             @if ($allocSale)
                 <div class="alloc-badge">
                     Sale #{{ $allocSale->sale_number }}<br>
@@ -185,7 +186,6 @@
                 <div class="stock-badge">Stock / Unallocated</div>
             @endif
 
-            {{-- PO + Date --}}
             <div style="margin-top: 4pt;">
                 @if ($receipt->purchaseOrder)
                     <div class="info-row">
@@ -200,7 +200,6 @@
             </div>
         </div>
 
-        {{-- QR code --}}
         <div class="qr-col">
             <div class="qr-img">{!! $qrSvg !!}</div>
             <div class="qr-caption">Scan for details</div>

@@ -2,6 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+@php
+    $isZebra    = ($format ?? 'standard') === 'zebra';
+    $bodyW      = $isZebra ? '432pt' : '226.77pt';
+    $bodyH      = $isZebra ? '288pt' : '170.08pt';
+    $itemNameSz = $isZebra ? '14pt' : '11pt';
+    $qtyNumSz   = $isZebra ? '24pt' : '18pt';
+    $qrSize     = $isZebra ? 90 : 64;
+    $qrColW     = $isZebra ? '100pt' : '70pt';
+    $qrImgSz    = $isZebra ? '90pt' : '64pt';
+    $bodyGap    = $isZebra ? '10pt' : '6pt';
+@endphp
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -12,8 +23,8 @@
         }
 
         .page {
-            width: 226.77pt;
-            height: 170.08pt;
+            width: {{ $bodyW }};
+            height: {{ $bodyH }};
             padding: 8pt;
             page-break-after: always;
         }
@@ -46,7 +57,7 @@
         }
 
         .item-name {
-            font-size: 11pt;
+            font-size: {{ $itemNameSz }};
             font-weight: bold;
             color: #111;
             line-height: 1.2;
@@ -54,7 +65,7 @@
 
         .tag-body {
             display: flex;
-            gap: 6pt;
+            gap: {{ $bodyGap }};
             flex: 1;
         }
 
@@ -85,7 +96,7 @@
         }
 
         .qty-number {
-            font-size: 18pt;
+            font-size: {{ $qtyNumSz }};
             font-weight: bold;
             color: #1d4ed8;
             line-height: 1;
@@ -125,10 +136,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            width: 70pt;
+            width: {{ $qrColW }};
         }
 
-        .qr-img { width: 64pt; height: 64pt; }
+        .qr-img { width: {{ $qrImgSz }}; height: {{ $qrImgSz }}; }
 
         .qr-caption {
             font-size: 5.5pt;
@@ -151,7 +162,7 @@
 @foreach ($receipts as $receipt)
 @php
     $mobileUrl  = route('mobile.inventory.show', $receipt);
-    $qrSvg      = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size(64)->margin(1)->generate($mobileUrl);
+    $qrSvg      = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size($qrSize)->margin(1)->generate($mobileUrl);
     $allocSale  = $receipt->allocations->first()?->sale;
     $qtyDisplay = rtrim(rtrim(number_format((float)$receipt->quantity_received, 2), '0'), '.');
 @endphp
