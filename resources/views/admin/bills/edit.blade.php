@@ -104,15 +104,19 @@
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
 
-                        {{-- Tax Code Preset --}}
+                        {{-- Tax Group --}}
                         <div class="sm:col-span-2">
-                            <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Tax Code</label>
-                            <select x-model="taxCode" @change="applyTaxCode"
+                            <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Tax Group</label>
+                            <select id="tax_group_select" x-model="selectedTaxGroup" @change="applyTaxGroup"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                <option value="gst">GST Only (5%)</option>
-                                <option value="gst_pst">GST + PST (5% + 7%)</option>
-                                <option value="exempt">Zero Rated / Exempt (0%)</option>
-                                <option value="custom">Custom</option>
+                                <option value="">— Select tax group —</option>
+                                @foreach ($taxGroups as $tg)
+                                    <option value="{{ $tg->id }}"
+                                        data-gst="{{ $tg->gst_rate }}"
+                                        data-pst="{{ $tg->pst_rate }}">
+                                        {{ $tg->name }}{{ $tg->description ? ' — '.$tg->description : '' }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
 
@@ -120,7 +124,7 @@
                             <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">GST Rate (%)</label>
                             <input type="number" name="gst_rate" step="0.001" min="0" max="100"
                                 value="{{ old('gst_rate', $bill->gst_rate * 100) }}"
-                                x-model.number="gstRate" @input="taxCode = 'custom'; recalculate()"
+                                x-model.number="gstRate" @input="selectedTaxGroup = ''; recalculate()"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
 
@@ -128,7 +132,7 @@
                             <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">PST Rate (%)</label>
                             <input type="number" name="pst_rate" step="0.001" min="0" max="100"
                                 value="{{ old('pst_rate', $bill->pst_rate * 100) }}"
-                                x-model.number="pstRate" @input="taxCode = 'custom'; recalculate()"
+                                x-model.number="pstRate" @input="selectedTaxGroup = ''; recalculate()"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
                     </div>
@@ -300,13 +304,14 @@ function billEditForm() {
     const savedTaxManual = {{ $bill->tax_manual ? 'true' : 'false' }};
     const savedGstAmount = {{ (float) $bill->gst_amount }};
     const savedPstAmount = {{ (float) $bill->pst_amount }};
+    const taxGroupData = @json($taxGroups);
 
-    // Detect initial tax code from saved rates
-    function detectTaxCode(gst, pst) {
-        if (gst === 5 && pst === 0) return 'gst';
-        if (gst === 5 && pst === 7) return 'gst_pst';
-        if (gst === 0 && pst === 0) return 'exempt';
-        return 'custom';
+    // Try to match current rates to a tax group
+    function detectTaxGroup(gst, pst) {
+        const match = taxGroupData.find(g =>
+            parseFloat(g.gst_rate) === gst && parseFloat(g.pst_rate) === pst
+        );
+        return match ? String(match.id) : '';
     }
 
     return {
@@ -315,7 +320,7 @@ function billEditForm() {
         billDate: '{{ $bill->bill_date->toDateString() }}',
         termId: '{{ $bill->payment_term_id ?? '' }}',
         dueDate: '{{ $bill->due_date?->toDateString() ?? '' }}',
-        taxCode: detectTaxCode(savedGstRate, savedPstRate),
+        selectedTaxGroup: detectTaxGroup(savedGstRate, savedPstRate),
         gstRate: savedGstRate,
         pstRate: savedPstRate,
         taxManual: savedTaxManual,
@@ -325,10 +330,12 @@ function billEditForm() {
 
         init() { this.recalculate(); },
 
-        applyTaxCode() {
-            if (this.taxCode === 'gst')     { this.gstRate = 5; this.pstRate = 0; }
-            if (this.taxCode === 'gst_pst') { this.gstRate = 5; this.pstRate = 7; }
-            if (this.taxCode === 'exempt')  { this.gstRate = 0; this.pstRate = 0; }
+        applyTaxGroup() {
+            const opt = document.querySelector(`#tax_group_select option[value="${this.selectedTaxGroup}"]`);
+            if (opt && this.selectedTaxGroup) {
+                this.gstRate = parseFloat(opt.dataset.gst) || 0;
+                this.pstRate = parseFloat(opt.dataset.pst) || 0;
+            }
             this.recalculate();
         },
 

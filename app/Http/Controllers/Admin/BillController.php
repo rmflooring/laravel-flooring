@@ -103,6 +103,7 @@ class BillController extends Controller
             'paymentTerms'  => $paymentTerms,
             'vendors'       => $vendors,
             'installers'    => $installers,
+            'taxGroups'     => $this->taxGroups(),
         ]);
     }
 
@@ -231,6 +232,7 @@ class BillController extends Controller
             'paymentTerms' => $paymentTerms,
             'vendors'      => $vendors,
             'installers'   => $installers,
+            'taxGroups'    => $this->taxGroups(),
         ]);
     }
 
@@ -364,6 +366,24 @@ class BillController extends Controller
             $result['success'] ? 'success' : 'error',
             $result['message']
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // HELPERS
+    // -----------------------------------------------------------------------
+
+    private function taxGroups(): \Illuminate\Support\Collection
+    {
+        return DB::table('tax_rate_groups as g')
+            ->select('g.id', 'g.name', 'g.description')
+            ->selectRaw('SUM(CASE WHEN tr.name = "GST" THEN tr.purchase_rate ELSE 0 END) as gst_rate')
+            ->selectRaw('SUM(CASE WHEN tr.name = "PST" THEN tr.purchase_rate ELSE 0 END) as pst_rate')
+            ->join('tax_rate_group_items as i', 'g.id', '=', 'i.tax_rate_group_id')
+            ->join('tax_rates as tr', 'i.tax_rate_id', '=', 'tr.id')
+            ->whereNull('g.deleted_at')
+            ->groupBy('g.id', 'g.name', 'g.description')
+            ->orderBy('g.name')
+            ->get();
     }
 
     // -----------------------------------------------------------------------

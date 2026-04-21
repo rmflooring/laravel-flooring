@@ -132,15 +132,19 @@
                             @error('due_date')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                         </div>
 
-                        {{-- Tax Code Preset --}}
+                        {{-- Tax Group --}}
                         <div class="sm:col-span-2">
-                            <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Tax Code</label>
-                            <select x-model="taxCode" @change="applyTaxCode"
+                            <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Tax Group</label>
+                            <select id="tax_group_select" x-model="selectedTaxGroup" @change="applyTaxGroup"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                <option value="gst">GST Only (5%)</option>
-                                <option value="gst_pst">GST + PST (5% + 7%)</option>
-                                <option value="exempt">Zero Rated / Exempt (0%)</option>
-                                <option value="custom">Custom</option>
+                                <option value="">— Select tax group —</option>
+                                @foreach ($taxGroups as $tg)
+                                    <option value="{{ $tg->id }}"
+                                        data-gst="{{ $tg->gst_rate }}"
+                                        data-pst="{{ $tg->pst_rate }}">
+                                        {{ $tg->name }}{{ $tg->description ? ' — '.$tg->description : '' }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
 
@@ -150,7 +154,7 @@
                             <input type="number" name="gst_rate" step="0.001" min="0" max="100"
                                 value="{{ old('gst_rate', '5') }}"
                                 x-model.number="gstRate"
-                                @input="taxCode = 'custom'; recalculate()"
+                                @input="selectedTaxGroup = ''; recalculate()"
                                 placeholder="5"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
@@ -161,7 +165,7 @@
                             <input type="number" name="pst_rate" step="0.001" min="0" max="100"
                                 value="{{ old('pst_rate', '0') }}"
                                 x-model.number="pstRate"
-                                @input="taxCode = 'custom'; recalculate()"
+                                @input="selectedTaxGroup = ''; recalculate()"
                                 placeholder="0"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
@@ -380,7 +384,7 @@ function billForm() {
         billDate: document.getElementById('bill_date').value,
         termId: '',
         dueDate: '',
-        taxCode: 'gst',
+        selectedTaxGroup: '',
         gstRate: 5,
         pstRate: 0,
         taxManual: false,
@@ -395,11 +399,12 @@ function billForm() {
             this.recalculate();
         },
 
-        applyTaxCode() {
-            if (this.taxCode === 'gst')     { this.gstRate = 5; this.pstRate = 0; }
-            if (this.taxCode === 'gst_pst') { this.gstRate = 5; this.pstRate = 7; }
-            if (this.taxCode === 'exempt')  { this.gstRate = 0; this.pstRate = 0; }
-            // 'custom' leaves rates unchanged
+        applyTaxGroup() {
+            const opt = document.querySelector(`#tax_group_select option[value="${this.selectedTaxGroup}"]`);
+            if (opt && this.selectedTaxGroup) {
+                this.gstRate = parseFloat(opt.dataset.gst) || 0;
+                this.pstRate = parseFloat(opt.dataset.pst) || 0;
+            }
             this.recalculate();
         },
 
