@@ -204,10 +204,20 @@
             <td class="t-label">Subtotal</td>
             <td class="t-amount">${{ number_format((float)$invoice->subtotal, 2) }}</td>
         </tr>
+        @if($taxRates->isNotEmpty())
+            @foreach($taxRates as $taxRate)
+                @php $lineAmt = round((float)$invoice->subtotal * ((float)$taxRate->sales_rate / 100), 2); @endphp
+            <tr>
+                <td class="t-label">{{ $taxRate->name }} ({{ number_format((float)$taxRate->sales_rate, 0) }}%)</td>
+                <td class="t-amount">${{ number_format($lineAmt, 2) }}</td>
+            </tr>
+            @endforeach
+        @else
         <tr>
             <td class="t-label">Tax</td>
             <td class="t-amount">${{ number_format((float)$invoice->tax_amount, 2) }}</td>
         </tr>
+        @endif
         <tr class="t-grand">
             <td class="t-label">Total</td>
             <td class="t-amount">${{ number_format((float)$invoice->grand_total, 2) }}</td>

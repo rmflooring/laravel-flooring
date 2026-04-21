@@ -272,9 +272,16 @@ class InvoiceController extends Controller
         $invoice->load(['rooms.items', 'paymentTerm', 'payments']);
         $sale->load(['opportunity.projectManager', 'opportunity.customer']);
 
+        $taxRates = $sale->tax_group_id
+            ? \DB::table('tax_rate_group_items')
+                ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
+                ->where('tax_rate_group_id', $sale->tax_group_id)
+                ->get(['tax_rates.name', 'tax_rates.sales_rate'])
+            : collect();
+
         $branding = $this->getBranding();
 
-        $pdf = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding'))
+        $pdf = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxRates'))
             ->setPaper('letter', 'portrait');
 
         return $pdf->stream("invoice-{$invoice->invoice_number}.pdf");
@@ -308,9 +315,15 @@ class InvoiceController extends Controller
         try {
             $invoice->load(['rooms.items', 'paymentTerm', 'payments']);
             $sale->load(['opportunity.projectManager', 'opportunity.customer']);
+            $taxRates = $sale->tax_group_id
+                ? \DB::table('tax_rate_group_items')
+                    ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
+                    ->where('tax_rate_group_id', $sale->tax_group_id)
+                    ->get(['tax_rates.name', 'tax_rates.sales_rate'])
+                : collect();
             $branding = $this->getBranding();
 
-            $pdf  = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding'))->setPaper('letter', 'portrait');
+            $pdf  = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxRates'))->setPaper('letter', 'portrait');
             $data = base64_encode($pdf->output());
 
             return [
