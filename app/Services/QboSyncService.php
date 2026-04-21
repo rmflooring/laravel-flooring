@@ -230,16 +230,20 @@ class QboSyncService
     }
 
     /**
-     * QBO requires DisplayName to be unique across all customers.
-     * For job sites use "ParentName:JobSiteName" format (QBO sub-customer convention).
+     * QBO requires DisplayName to be unique. For job sites, QBO builds
+     * the "Parent:Child" display automatically from ParentRef — we just
+     * need a unique name for the child record itself.
      */
     private function customerDisplayName(Customer $customer): string
     {
         $name = $customer->company_name ?: $customer->name;
 
+        // If this is a job site with the same name as the parent, make it unique
         if ($customer->parent_id && $customer->parent) {
             $parentName = $customer->parent->company_name ?: $customer->parent->name;
-            return $parentName . ':' . $name;
+            if ($name === $parentName) {
+                return $name . ' (Site)';
+            }
         }
 
         return $name;
