@@ -123,7 +123,14 @@
             {{-- Financial summary --}}
             <div class="text-right space-y-1">
                 <div class="text-sm text-gray-500">Subtotal: <span class="text-gray-900 dark:text-white font-medium">${{ number_format((float)$invoice->subtotal, 2) }}</span></div>
-                <div class="text-sm text-gray-500">Tax: <span class="text-gray-900 dark:text-white font-medium">${{ number_format((float)$invoice->tax_amount, 2) }}</span></div>
+                @if($taxRates->isNotEmpty())
+                    @foreach($taxRates as $taxRate)
+                        @php $lineAmt = round((float)$invoice->subtotal * ((float)$taxRate->sales_rate / 100), 2); @endphp
+                        <div class="text-sm text-gray-500">{{ $taxRate->name }} ({{ number_format((float)$taxRate->sales_rate, 0) }}%): <span class="text-gray-900 dark:text-white font-medium">${{ number_format($lineAmt, 2) }}</span></div>
+                    @endforeach
+                @else
+                    <div class="text-sm text-gray-500">Tax: <span class="text-gray-900 dark:text-white font-medium">${{ number_format((float)$invoice->tax_amount, 2) }}</span></div>
+                @endif
                 <div class="text-lg font-bold text-gray-900 dark:text-white">Total: ${{ number_format((float)$invoice->grand_total, 2) }}</div>
                 <div class="text-sm text-gray-500">Paid: <span class="text-green-600 dark:text-green-400 font-medium">${{ number_format((float)$invoice->amount_paid, 2) }}</span></div>
                 @if($invoice->balance_due > 0 && $invoice->status !== 'voided')
@@ -189,10 +196,20 @@
                 <span>Subtotal</span>
                 <span class="w-28 text-right">${{ number_format((float)$invoice->subtotal, 2) }}</span>
             </div>
+            @if($taxRates->isNotEmpty())
+                @foreach($taxRates as $taxRate)
+                    @php $lineAmt = round((float)$invoice->subtotal * ((float)$taxRate->sales_rate / 100), 2); @endphp
+                    <div class="flex gap-8 text-sm text-gray-600 dark:text-gray-300">
+                        <span>{{ $taxRate->name }} ({{ number_format((float)$taxRate->sales_rate, 0) }}%)</span>
+                        <span class="w-28 text-right">${{ number_format($lineAmt, 2) }}</span>
+                    </div>
+                @endforeach
+            @else
             <div class="flex gap-8 text-sm text-gray-600 dark:text-gray-300">
                 <span>Tax</span>
                 <span class="w-28 text-right">${{ number_format((float)$invoice->tax_amount, 2) }}</span>
             </div>
+            @endif
             <div class="flex gap-8 text-base font-bold text-gray-900 dark:text-white border-t border-gray-300 dark:border-gray-500 pt-2 mt-1">
                 <span>Total</span>
                 <span class="w-28 text-right">${{ number_format((float)$invoice->grand_total, 2) }}</span>

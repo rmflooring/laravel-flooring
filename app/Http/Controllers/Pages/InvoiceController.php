@@ -101,7 +101,14 @@ class InvoiceController extends Controller
 
         $paymentMethods = InvoicePayment::PAYMENT_METHODS;
 
-        return view('pages.invoices.show', compact('sale', 'invoice', 'paymentMethods'));
+        $taxRates = $sale->tax_group_id
+            ? \DB::table('tax_rate_group_items')
+                ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
+                ->where('tax_rate_group_id', $sale->tax_group_id)
+                ->get(['tax_rates.name', 'tax_rates.sales_rate'])
+            : collect();
+
+        return view('pages.invoices.show', compact('sale', 'invoice', 'paymentMethods', 'taxRates'));
     }
 
     // -------------------------------------------------------------------------

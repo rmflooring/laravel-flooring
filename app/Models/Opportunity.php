@@ -57,6 +57,11 @@ class Opportunity extends Model
         return $this->belongsTo(Customer::class, 'parent_customer_id');
     }
 
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'parent_customer_id');
+    }
+
     public function jobSiteCustomer()
     {
         return $this->belongsTo(Customer::class, 'job_site_customer_id');
