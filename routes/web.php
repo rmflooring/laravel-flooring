@@ -806,6 +806,15 @@ Route::prefix('pages')
 			->name('sales.change-orders.send-email')
 			->middleware('role_or_permission:admin|edit estimates');
 
+		// Accounts Receivable
+		Route::get('ar', [\App\Http\Controllers\Pages\ArController::class, 'index'])
+			->name('ar.index')
+			->middleware('role_or_permission:admin|view invoices');
+
+		Route::get('ar/aging', [\App\Http\Controllers\Pages\ArController::class, 'aging'])
+			->name('ar.aging')
+			->middleware('role_or_permission:admin|view invoices');
+
 		// Invoices
 		Route::get('sales/{sale}/invoices/create', [\App\Http\Controllers\Pages\InvoiceController::class, 'create'])
 			->name('sales.invoices.create')
