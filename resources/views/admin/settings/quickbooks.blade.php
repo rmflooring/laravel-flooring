@@ -99,22 +99,35 @@
 
                 <form method="POST" action="{{ route('admin.settings.quickbooks.save-settings') }}" class="space-y-4">
                     @csrf
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Expense Account ID <span class="text-red-500">*</span>
-                        </label>
-                        <div class="flex gap-3 items-center">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Expense Account ID <span class="text-red-500">*</span>
+                            </label>
                             <input type="text"
                                    name="qbo_ap_account_id"
                                    value="{{ $apAccountId }}"
-                                   placeholder="e.g. 7"
-                                   class="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
-                            <button type="submit"
-                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-                                Save
-                            </button>
+                                   placeholder="e.g. 63"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            <p class="mt-1 text-xs text-gray-400">Used for bill (AP) line items pushed to QBO.</p>
                         </div>
-                        <p class="mt-1 text-xs text-gray-400">Used for all bill line items pushed to QBO.</p>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Income Account ID <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text"
+                                   name="qbo_income_account_id"
+                                   value="{{ $incomeAccountId }}"
+                                   placeholder="e.g. 79"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            <p class="mt-1 text-xs text-gray-400">Used for invoice (AR) line items pushed to QBO.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                            Save Settings
+                        </button>
                     </div>
                 </form>
             </div>

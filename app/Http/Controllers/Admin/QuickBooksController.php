@@ -21,15 +21,21 @@ class QuickBooksController extends Controller
     {
         $connection    = QboConnection::with('connectedBy')->first();
         $recentLogs    = QboSyncLog::orderByDesc('created_at')->limit(25)->get();
-        $apAccountId   = Setting::get('qbo_ap_account_id', '');
+        $apAccountId     = Setting::get('qbo_ap_account_id', '');
+        $incomeAccountId = Setting::get('qbo_income_account_id', '');
 
-        return view('admin.settings.quickbooks', compact('connection', 'recentLogs', 'apAccountId'));
+        return view('admin.settings.quickbooks', compact('connection', 'recentLogs', 'apAccountId', 'incomeAccountId'));
     }
 
     public function saveSettings(Request $request)
     {
-        $request->validate(['qbo_ap_account_id' => 'required|string|max:50']);
-        Setting::set('qbo_ap_account_id', trim($request->qbo_ap_account_id));
+        $request->validate([
+            'qbo_ap_account_id'     => 'required|string|max:50',
+            'qbo_income_account_id' => 'required|string|max:50',
+        ]);
+
+        Setting::set('qbo_ap_account_id',     trim($request->qbo_ap_account_id));
+        Setting::set('qbo_income_account_id', trim($request->qbo_income_account_id));
 
         return back()->with('success', 'QuickBooks settings saved.');
     }

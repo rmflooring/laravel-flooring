@@ -848,6 +848,10 @@ Route::prefix('pages')
 			->name('sales.invoices.payments.destroy')
 			->middleware('role_or_permission:admin|edit invoices');
 
+		Route::post('sales/{sale}/invoices/{invoice}/push-to-qbo', [\App\Http\Controllers\Pages\InvoiceController::class, 'pushToQbo'])
+			->name('sales.invoices.push-to-qbo')
+			->middleware('role_or_permission:admin|edit invoices');
+
 		// Sale Deposits
 		Route::post('sales/{sale}/deposits', [\App\Http\Controllers\Pages\SaleController::class, 'storeDeposit'])
 			->name('sales.deposits.store')

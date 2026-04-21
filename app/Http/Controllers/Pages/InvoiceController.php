@@ -7,8 +7,10 @@ use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\PaymentTerm;
 use App\Models\Sale;
-use App\Services\InvoiceService;
+use App\Models\Setting;
 use App\Services\GraphMailService;
+use App\Services\InvoiceService;
+use App\Services\QboSyncService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -262,6 +264,25 @@ class InvoiceController extends Controller
             ->setPaper('letter', 'portrait');
 
         return $pdf->stream("invoice-{$invoice->invoice_number}.pdf");
+    }
+
+    public function pushToQbo(Sale $sale, Invoice $invoice, QboSyncService $sync)
+    {
+        if (! app(\App\Services\QuickBooksService::class)->isConnected()) {
+            return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
+        }
+
+        $incomeAccountId = Setting::get('qbo_income_account_id');
+        if (! $incomeAccountId) {
+            return back()->with('error', 'No QBO income account configured. Visit Settings → QuickBooks Online to set it up.');
+        }
+
+        $result = $sync->pushInvoice($invoice, $incomeAccountId);
+
+        return back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 
     // -------------------------------------------------------------------------

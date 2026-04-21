@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Vendor;
 
 class QboSyncService
@@ -370,6 +371,127 @@ class QboSyncService
 
         if ($bill->notes) {
             $payload['PrivateNote'] = $bill->notes;
+        }
+
+        return $payload;
+    }
+
+    // =========================================================================
+    // Invoices (AR)
+    // =========================================================================
+
+    /**
+     * Push an invoice to QBO as an Invoice entity.
+     * Customer (job site) is auto-synced if not already in QBO.
+     * $incomeAccountId = QBO Account ID for the income/revenue account
+     */
+    public function pushInvoice(Invoice $invoice, string $incomeAccountId): array
+    {
+        try {
+            $invoice->load(['rooms.items', 'sale.opportunity.jobSiteCustomer.parent', 'sale.opportunity.parentCustomer']);
+
+            $sale        = $invoice->sale;
+            $opportunity = $sale?->opportunity;
+            $jobSite     = $opportunity?->jobSiteCustomer;
+            $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
+
+            if (! $jobSite) {
+                return ['success' => false, 'message' => 'Invoice has no job site customer linked.', 'qbo_id' => null];
+            }
+
+            // Ensure parent customer is synced first
+            if ($parent && ! $parent->qbo_id) {
+                $parentResult = $this->pushCustomer($parent);
+                if (! $parentResult['success']) {
+                    return ['success' => false, 'message' => 'Failed to sync parent customer: ' . $parentResult['message'], 'qbo_id' => null];
+                }
+                $parent->refresh();
+            }
+
+            // Ensure job site customer is synced
+            if (! $jobSite->qbo_id) {
+                $customerResult = $this->pushCustomer($jobSite);
+                if (! $customerResult['success']) {
+                    return ['success' => false, 'message' => 'Failed to sync customer: ' . $customerResult['message'], 'qbo_id' => null];
+                }
+                $jobSite->refresh();
+            }
+
+            $payload = $this->buildInvoicePayload($invoice, $jobSite->qbo_id, $incomeAccountId);
+
+            if ($invoice->qbo_id) {
+                $payload['Id']        = $invoice->qbo_id;
+                $payload['SyncToken'] = $invoice->qbo_sync_token ?? '0';
+                $response    = $this->qbo->post('invoice', $payload);
+                $qboInvoice  = $response['Invoice'];
+                $action      = 'updated';
+            } else {
+                $response    = $this->qbo->post('invoice', $payload);
+                $qboInvoice  = $response['Invoice'];
+                $action      = 'created';
+            }
+
+            $invoice->update([
+                'qbo_id'         => $qboInvoice['Id'],
+                'qbo_sync_token' => $qboInvoice['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('invoice', $invoice->id, 'push', 'success', $qboInvoice['Id'],
+                ucfirst($action) . ' invoice in QBO', $payload, $qboInvoice);
+
+            return ['success' => true, 'message' => 'Invoice ' . $action . ' in QuickBooks.', 'qbo_id' => $qboInvoice['Id']];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('invoice', $invoice->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
+    }
+
+    private function buildInvoicePayload(Invoice $invoice, string $customerQboId, string $incomeAccountId): array
+    {
+        $lines = [];
+
+        foreach ($invoice->rooms as $room) {
+            foreach ($room->items as $item) {
+                $lines[] = [
+                    'Amount'      => (float) $item->line_total,
+                    'DetailType'  => 'SalesItemLineDetail',
+                    'Description' => ($room->name ? $room->name . ' — ' : '') . $item->label,
+                    'SalesItemLineDetail' => [
+                        'ItemRef'   => ['value' => 'ACCOUNT-' . $incomeAccountId, 'name' => 'Services'],
+                        'Qty'       => (float) $item->quantity,
+                        'UnitPrice' => (float) $item->sell_price,
+                    ],
+                ];
+            }
+        }
+
+        // Tax line
+        if ($invoice->tax_amount > 0) {
+            $lines[] = [
+                'Amount'      => (float) $invoice->tax_amount,
+                'DetailType'  => 'SalesItemLineDetail',
+                'Description' => 'Tax',
+                'SalesItemLineDetail' => [
+                    'ItemRef' => ['value' => 'ACCOUNT-' . $incomeAccountId, 'name' => 'Services'],
+                ],
+            ];
+        }
+
+        $payload = [
+            'CustomerRef' => ['value' => $customerQboId],
+            'TxnDate'     => $invoice->created_at->toDateString(),
+            'DocNumber'   => $invoice->invoice_number,
+            'Line'        => $lines,
+        ];
+
+        if ($invoice->due_date) {
+            $payload['DueDate'] = $invoice->due_date->toDateString();
+        }
+
+        if ($invoice->notes) {
+            $payload['CustomerMemo'] = ['value' => $invoice->notes];
         }
 
         return $payload;

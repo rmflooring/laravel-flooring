@@ -15,13 +15,14 @@ class Invoice extends Model
     protected $guarded = ['id', 'invoice_number'];
 
     protected $casts = [
-        'subtotal'     => 'decimal:2',
-        'tax_amount'   => 'decimal:2',
-        'grand_total'  => 'decimal:2',
-        'amount_paid'  => 'decimal:2',
-        'due_date'     => 'date',
-        'sent_at'      => 'datetime',
-        'voided_at'    => 'datetime',
+        'subtotal'      => 'decimal:2',
+        'tax_amount'    => 'decimal:2',
+        'grand_total'   => 'decimal:2',
+        'amount_paid'   => 'decimal:2',
+        'due_date'      => 'date',
+        'sent_at'       => 'datetime',
+        'voided_at'     => 'datetime',
+        'qbo_synced_at' => 'datetime',
     ];
 
     protected static function booted(): void

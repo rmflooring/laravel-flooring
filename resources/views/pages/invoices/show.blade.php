@@ -21,6 +21,23 @@
                     class="inline-flex items-center gap-1.5 py-2 px-4 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700">
                     Edit Invoice
                 </a>
+                {{-- Push to QBO --}}
+                @if (app(\App\Services\QuickBooksService::class)->isConnected())
+                    <form method="POST" action="{{ route('pages.sales.invoices.push-to-qbo', [$sale, $invoice]) }}">
+                        @csrf
+                        <button type="submit"
+                                class="inline-flex items-center gap-1.5 py-2 px-4 text-sm font-medium rounded-lg border transition
+                                    {{ $invoice->qbo_id
+                                        ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
+                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            {{ $invoice->qbo_id ? 'Re-sync to QBO' : 'Push to QBO' }}
+                        </button>
+                    </form>
+                @endif
+            @endif
                 {{-- Send email button --}}
                 <button type="button" onclick="document.getElementById('send-modal').classList.remove('hidden')"
                     class="inline-flex items-center gap-1.5 py-2 px-4 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
@@ -253,6 +270,22 @@
             </table>
         @endif
     </div>
+
+    {{-- QuickBooks status --}}
+    @if (app(\App\Services\QuickBooksService::class)->isConnected())
+    <div class="bg-white border border-gray-200 rounded-lg p-4 dark:bg-gray-800 dark:border-gray-700">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">QuickBooks Online</h3>
+        @if ($invoice->qbo_id)
+            <div class="flex items-center gap-3 text-sm">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Synced</span>
+                <span class="text-gray-500">QBO ID: <span class="font-mono">{{ $invoice->qbo_id }}</span></span>
+                <span class="text-gray-400">· {{ $invoice->qbo_synced_at?->format('M j, Y g:i a') }}</span>
+            </div>
+        @else
+            <p class="text-sm text-gray-500">Not yet synced to QuickBooks. Use the "Push to QBO" button above.</p>
+        @endif
+    </div>
+    @endif
 
     {{-- Void section --}}
     @if($invoice->status !== 'voided')
