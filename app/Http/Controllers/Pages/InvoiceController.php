@@ -272,12 +272,12 @@ class InvoiceController extends Controller
             return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
         }
 
-        $incomeAccountId = Setting::get('qbo_income_account_id');
-        if (! $incomeAccountId) {
-            return back()->with('error', 'No QBO income account configured. Visit Settings → QuickBooks Online to set it up.');
+        $incomeItemId = Setting::get('qbo_income_item_id');
+        if (! $incomeItemId) {
+            return back()->with('error', 'No QBO income item configured. Visit Settings → QuickBooks Online to set it up.');
         }
 
-        $result = $sync->pushInvoice($invoice, $incomeAccountId);
+        $result = $sync->pushInvoice($invoice, $incomeItemId);
 
         return back()->with(
             $result['success'] ? 'success' : 'error',

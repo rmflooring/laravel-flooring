@@ -94,8 +94,8 @@
 
             {{-- Account Mapping --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                <h2 class="text-base font-semibold text-gray-800 mb-1">Account Mapping</h2>
-                <p class="text-sm text-gray-500 mb-4">Set the QBO Account ID used for bill line items. Find this in QuickBooks → Chart of Accounts — hover any account and note the ID in the URL.</p>
+                <h2 class="text-base font-semibold text-gray-800 mb-1">Account & Item Mapping</h2>
+                <p class="text-sm text-gray-500 mb-4">Configure the QBO accounts and items used when syncing bills and invoices.</p>
 
                 <form method="POST" action="{{ route('admin.settings.quickbooks.save-settings') }}" class="space-y-4">
                     @csrf
@@ -109,18 +109,18 @@
                                    value="{{ $apAccountId }}"
                                    placeholder="e.g. 63"
                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
-                            <p class="mt-1 text-xs text-gray-400">Used for bill (AP) line items pushed to QBO.</p>
+                            <p class="mt-1 text-xs text-gray-400">Used for bill (AP) line items. Find in QuickBooks → Chart of Accounts → hover account → note ID in URL.</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Income Account ID <span class="text-red-500">*</span>
+                                Income Item ID <span class="text-red-500">*</span>
                             </label>
                             <input type="text"
-                                   name="qbo_income_account_id"
-                                   value="{{ $incomeAccountId }}"
-                                   placeholder="e.g. 79"
+                                   name="qbo_income_item_id"
+                                   value="{{ $incomeItemId }}"
+                                   placeholder="e.g. 1"
                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
-                            <p class="mt-1 text-xs text-gray-400">Used for invoice (AR) line items pushed to QBO.</p>
+                            <p class="mt-1 text-xs text-gray-400">QBO <strong>Item</strong> (product/service) used for invoice lines. Find in QuickBooks → Products &amp; Services → hover item → note ID in URL.</p>
                         </div>
                     </div>
                     <div>

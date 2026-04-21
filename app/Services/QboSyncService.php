@@ -387,9 +387,9 @@ class QboSyncService
     /**
      * Push an invoice to QBO as an Invoice entity.
      * Customer (job site) is auto-synced if not already in QBO.
-     * $incomeAccountId = QBO Account ID for the income/revenue account
+     * $incomeItemId = QBO Item ID (product/service) used for invoice line items
      */
-    public function pushInvoice(Invoice $invoice, string $incomeAccountId): array
+    public function pushInvoice(Invoice $invoice, string $incomeItemId): array
     {
         try {
             $invoice->load(['rooms.items', 'sale.opportunity.jobSiteCustomer.parent', 'sale.opportunity.parentCustomer']);
@@ -421,7 +421,7 @@ class QboSyncService
                 $jobSite->refresh();
             }
 
-            $payload = $this->buildInvoicePayload($invoice, $jobSite->qbo_id, $incomeAccountId);
+            $payload = $this->buildInvoicePayload($invoice, $jobSite->qbo_id, $incomeItemId);
 
             if ($invoice->qbo_id) {
                 $payload['Id']        = $invoice->qbo_id;
@@ -452,7 +452,7 @@ class QboSyncService
         }
     }
 
-    private function buildInvoicePayload(Invoice $invoice, string $customerQboId, string $incomeAccountId): array
+    private function buildInvoicePayload(Invoice $invoice, string $customerQboId, string $incomeItemId): array
     {
         $lines = [];
 
@@ -463,7 +463,7 @@ class QboSyncService
                     'DetailType'  => 'SalesItemLineDetail',
                     'Description' => ($room->name ? $room->name . ' — ' : '') . $item->label,
                     'SalesItemLineDetail' => [
-                        'ItemRef'   => ['value' => 'ACCOUNT-' . $incomeAccountId, 'name' => 'Services'],
+                        'ItemRef'   => ['value' => $incomeItemId],
                         'Qty'       => (float) $item->quantity,
                         'UnitPrice' => (float) $item->sell_price,
                     ],
@@ -478,7 +478,7 @@ class QboSyncService
                 'DetailType'  => 'SalesItemLineDetail',
                 'Description' => 'Tax',
                 'SalesItemLineDetail' => [
-                    'ItemRef' => ['value' => 'ACCOUNT-' . $incomeAccountId, 'name' => 'Services'],
+                    'ItemRef' => ['value' => $incomeItemId],
                 ],
             ];
         }
