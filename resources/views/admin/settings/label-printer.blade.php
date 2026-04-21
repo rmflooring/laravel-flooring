@@ -56,26 +56,19 @@
                 <div class="flex-1">
                     <div class="flex items-center gap-3">
                         <span class="text-sm font-semibold text-gray-900 dark:text-white">Zebra Label Printer</span>
-                        <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">6" × 4" landscape</span>
+                        <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">4" × 6" portrait</span>
                     </div>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Landscape layout optimised for Zebra thermal label printers using 4"×6" stock.</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Portrait layout optimised for Zebra thermal label printers using 4"×6" vertical stock.</p>
                     {{-- Preview --}}
-                    <div class="mt-3 inline-block border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 p-2" style="width:90px; height:60px; font-size:5px; color:#374151; position:relative; overflow:hidden; display:flex; gap:4px;">
-                        <div style="flex:1;">
-                            <div style="background:#1d4ed8; color:#fff; padding:2px 3px; border-radius:2px; margin-bottom:2px; font-size:3.5px; font-weight:700; display:flex; justify-content:space-between;">
-                                <span>INVENTORY</span><span>#42</span>
-                            </div>
-                            <div style="font-size:5px; font-weight:700; margin-bottom:2px; line-height:1.2;">Item Name</div>
-                            <div style="font-size:3.5px; color:#555; margin-bottom:1px;">Qty: 24.5 SF</div>
-                            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:1px; padding:1px 2px;">
-                                <div style="font-size:3px; color:#166534; font-weight:700;">JOB #</div>
-                                <div style="font-size:6px; font-weight:700; color:#15803d; font-family:monospace;">8</div>
-                            </div>
+                    <div class="mt-3 inline-block border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 p-2" style="width:60px; height:90px; font-size:5px; color:#374151; position:relative; overflow:hidden;">
+                        <div style="background:#1d4ed8; color:#fff; padding:2px 3px; border-radius:2px; margin-bottom:3px; font-size:4px; font-weight:700;">INVENTORY RECORD</div>
+                        <div style="font-size:5.5px; font-weight:700; margin-bottom:2px; line-height:1.2;">Item Name</div>
+                        <div style="font-size:4px; color:#555; margin-bottom:1px;">Qty: 24.5 SF</div>
+                        <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:2px; padding:2px; margin-bottom:2px;">
+                            <div style="font-size:3.5px; color:#166534; font-weight:700;">JOB #</div>
+                            <div style="font-size:7px; font-weight:700; color:#15803d; font-family:monospace;">8</div>
                         </div>
-                        <div style="width:20px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:1px;">
-                            <div style="width:18px; height:18px; background:#eee; border-radius:1px;"></div>
-                            <div style="font-size:2.5px; color:#aaa;">Scan</div>
-                        </div>
+                        <div style="position:absolute; bottom:4px; right:4px; width:18px; height:18px; background:#eee; border-radius:1px;"></div>
                     </div>
                 </div>
             </label>

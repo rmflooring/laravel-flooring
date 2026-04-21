@@ -493,40 +493,38 @@ function printTag() {
     let html;
 
     if (format === 'zebra') {
-        // Zebra thermal: 6" × 4" landscape, two-column layout
+        // Zebra thermal: 4" × 6" portrait (vertical label stock)
         html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
-    @page { size: 6in 4in; margin: 0; }
+    @page { size: 4in 6in; margin: 0; }
     * { box-sizing: border-box; }
-    html, body { width: 6in; height: 4in; margin: 0; padding: 0; overflow: hidden; }
+    html, body { width: 4in; height: 6in; margin: 0; padding: 0; overflow: hidden; }
     .tag {
-        width: 6in; height: 4in; padding: 0.2in;
+        width: 4in; height: 6in; padding: 0.2in;
         font-family: Arial, Helvetica, sans-serif;
         display: flex; flex-direction: column; overflow: hidden;
     }
     .tag-header {
         background: #1d4ed8; color: #fff;
-        padding: 6px 10px; border-radius: 4px; margin-bottom: 10px;
+        padding: 7px 10px; border-radius: 4px; margin-bottom: 10px;
         display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
     }
     .tag-header-label { font-size: 10pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-    .tag-header-id    { font-size: 13pt; font-weight: 700; font-family: monospace; }
-    .tag-body         { display: flex; gap: 0.2in; flex: 1; min-height: 0; }
-    .tag-left         { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .tag-right        { width: 1.1in; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; flex-shrink: 0; }
-    .tag-item-name    { font-size: 15pt; font-weight: 700; color: #111; line-height: 1.2; margin-bottom: 5px; flex-shrink: 0; }
-    .tag-detail       { font-size: 10pt; color: #555; margin-bottom: 3px; flex-shrink: 0; }
-    .tag-date         { font-size: 9pt; color: #777; margin-bottom: 8px; flex-shrink: 0; }
-    .tag-job          { background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; padding: 5px 8px; margin-bottom: 8px; flex-shrink: 0; }
-    .tag-job-label    { font-size: 7pt; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
-    .tag-job-number   { font-size: 17pt; font-weight: 700; color: #15803d; font-family: monospace; }
+    .tag-header-id    { font-size: 14pt; font-weight: 700; font-family: monospace; }
+    .tag-item-name    { font-size: 16pt; font-weight: 700; color: #111; line-height: 1.2; margin-bottom: 6px; flex-shrink: 0; }
+    .tag-detail       { font-size: 10pt; color: #555; margin-bottom: 4px; flex-shrink: 0; }
+    .tag-date         { font-size: 9pt; color: #777; margin-bottom: 10px; flex-shrink: 0; }
+    .tag-job          { background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; flex-shrink: 0; }
+    .tag-job-label    { font-size: 8pt; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .tag-job-number   { font-size: 18pt; font-weight: 700; color: #15803d; font-family: monospace; }
     .tag-spacer       { flex: 1; min-height: 0; }
-    .tag-notes        { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; margin-bottom: 8px; flex-shrink: 0; }
-    .tag-notes-label  { font-size: 7pt; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
-    .tag-notes-text   { font-size: 9pt; color: #374151; white-space: pre-wrap; word-break: break-word; }
-    .tag-footer-text  { font-size: 7pt; color: #9ca3af; text-align: center; }
-    .tag-qr img       { width: 88pt; height: 88pt; display: block; }
-    .tag-qr-caption   { font-size: 6pt; color: #c0c0c0; margin-top: 2pt; text-align: center; }
+    .tag-notes        { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; flex-shrink: 0; }
+    .tag-notes-label  { font-size: 8pt; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .tag-notes-text   { font-size: 10pt; color: #374151; white-space: pre-wrap; word-break: break-word; }
+    .tag-footer       { margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 7pt; color: #9ca3af; display: flex; justify-content: space-between; align-items: flex-end; flex-shrink: 0; }
+    .tag-qr           { text-align: center; }
+    .tag-qr img       { width: 72pt; height: 72pt; display: block; }
+    .tag-qr-caption   { font-size: 6pt; color: #c0c0c0; margin-top: 2pt; }
 </style>
 </head><body>
 <div class="tag">
@@ -534,20 +532,21 @@ function printTag() {
         <span class="tag-header-label">Inventory Record</span>
         <span class="tag-header-id">#{{ $inventoryReceipt->id }}</span>
     </div>
-    <div class="tag-body">
-        <div class="tag-left">
-            <div class="tag-item-name">{{ addslashes($inventoryReceipt->item_name) }}</div>
-            <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
-            <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
-            ${poHtml}
-            ${jobHtml}
-            ${noteHtml}
-            <div class="tag-spacer"></div>
+    <div class="tag-item-name">{{ addslashes($inventoryReceipt->item_name) }}</div>
+    <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
+    <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
+    ${poHtml}
+    ${jobHtml}
+    ${noteHtml}
+    <div class="tag-spacer"></div>
+    <div class="tag-footer">
+        <div>
+            <div>RM Flooring</div>
+            <div>{{ now()->format('M j, Y') }}</div>
         </div>
-        <div class="tag-right">
-            <img src="${qrSrc}" alt="QR" style="width:88pt; height:88pt; display:block;">
+        <div class="tag-qr">
+            <img src="${qrSrc}" alt="QR">
             <div class="tag-qr-caption">Scan for details</div>
-            <div class="tag-footer-text">RM Flooring<br>{{ now()->format('M j, Y') }}</div>
         </div>
     </div>
 </div>
@@ -613,8 +612,8 @@ function printTag() {
 </body></html>`;
     }
 
-    const winW = format === 'zebra' ? 576 : 384;
-    const winH = format === 'zebra' ? 384 : 576;
+    const winW = 384;
+    const winH = 576;
     const win  = window.open('', '_blank', `width=${winW},height=${winH}`);
     win.document.write(html);
     win.document.close();
