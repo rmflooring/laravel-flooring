@@ -113,19 +113,22 @@ class BillController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'bill_type'          => 'required|in:vendor,installer',
-            'vendor_id'          => 'nullable|exists:vendors,id',
-            'installer_id'       => 'nullable|exists:installers,id',
-            'purchase_order_id'  => 'nullable|exists:purchase_orders,id',
-            'work_order_id'      => 'nullable|exists:work_orders,id',
-            'payment_term_id'    => 'nullable|exists:payment_terms,id',
-            'reference_number'   => 'required|string|max:100',
-            'bill_date'          => 'required|date',
-            'due_date'           => 'nullable|date|after_or_equal:bill_date',
-            'gst_rate'           => 'required|numeric|min:0|max:100',
-            'pst_rate'           => 'required|numeric|min:0|max:100',
-            'notes'              => 'nullable|string',
-            'items'              => 'required|array|min:1',
+            'bill_type'           => 'required|in:vendor,installer',
+            'vendor_id'           => 'nullable|exists:vendors,id',
+            'installer_id'        => 'nullable|exists:installers,id',
+            'purchase_order_id'   => 'nullable|exists:purchase_orders,id',
+            'work_order_id'       => 'nullable|exists:work_orders,id',
+            'payment_term_id'     => 'nullable|exists:payment_terms,id',
+            'reference_number'    => 'required|string|max:100',
+            'bill_date'           => 'required|date',
+            'due_date'            => 'nullable|date|after_or_equal:bill_date',
+            'gst_rate'            => 'required|numeric|min:0|max:100',
+            'pst_rate'            => 'required|numeric|min:0|max:100',
+            'tax_manual'          => 'boolean',
+            'gst_amount_override' => 'nullable|numeric|min:0',
+            'pst_amount_override' => 'nullable|numeric|min:0',
+            'notes'               => 'nullable|string',
+            'items'               => 'required|array|min:1',
             'items.*.item_name'              => 'required|string|max:255',
             'items.*.quantity'               => 'required|numeric|min:0',
             'items.*.unit'                   => 'nullable|string|max:20',
@@ -145,10 +148,11 @@ class BillController extends Controller
         }
 
         // Convert percentage inputs to decimal rates
-        $gstRate = round(($validated['gst_rate'] ?? 0) / 100, 6);
-        $pstRate = round(($validated['pst_rate'] ?? 0) / 100, 6);
+        $gstRate   = round(($validated['gst_rate'] ?? 0) / 100, 6);
+        $pstRate   = round(($validated['pst_rate'] ?? 0) / 100, 6);
+        $taxManual = $request->boolean('tax_manual');
 
-        $bill = DB::transaction(function () use ($validated, $gstRate, $pstRate) {
+        $bill = DB::transaction(function () use ($validated, $gstRate, $pstRate, $taxManual) {
             $bill = Bill::create([
                 'bill_type'         => $validated['bill_type'],
                 'vendor_id'         => $validated['vendor_id'] ?? null,
@@ -161,11 +165,12 @@ class BillController extends Controller
                 'due_date'          => $validated['due_date'] ?? null,
                 'gst_rate'          => $gstRate,
                 'pst_rate'          => $pstRate,
+                'tax_manual'        => $taxManual,
                 'status'            => 'pending',
                 'notes'             => $validated['notes'] ?? null,
                 'subtotal'          => 0,
-                'gst_amount'        => 0,
-                'pst_amount'        => 0,
+                'gst_amount'        => $taxManual ? round($validated['gst_amount_override'] ?? 0, 2) : 0,
+                'pst_amount'        => $taxManual ? round($validated['pst_amount_override'] ?? 0, 2) : 0,
                 'tax_amount'        => 0,
                 'grand_total'       => 0,
             ]);
@@ -240,17 +245,20 @@ class BillController extends Controller
         }
 
         $validated = $request->validate([
-            'vendor_id'         => 'nullable|exists:vendors,id',
-            'installer_id'      => 'nullable|exists:installers,id',
-            'payment_term_id'   => 'nullable|exists:payment_terms,id',
-            'reference_number'  => 'required|string|max:100',
-            'bill_date'         => 'required|date',
-            'due_date'          => 'nullable|date|after_or_equal:bill_date',
-            'status'            => 'required|in:draft,pending,approved,overdue',
-            'gst_rate'          => 'required|numeric|min:0|max:100',
-            'pst_rate'          => 'required|numeric|min:0|max:100',
-            'notes'             => 'nullable|string',
-            'items'             => 'required|array|min:1',
+            'vendor_id'           => 'nullable|exists:vendors,id',
+            'installer_id'        => 'nullable|exists:installers,id',
+            'payment_term_id'     => 'nullable|exists:payment_terms,id',
+            'reference_number'    => 'required|string|max:100',
+            'bill_date'           => 'required|date',
+            'due_date'            => 'nullable|date|after_or_equal:bill_date',
+            'status'              => 'required|in:draft,pending,approved,overdue',
+            'gst_rate'            => 'required|numeric|min:0|max:100',
+            'pst_rate'            => 'required|numeric|min:0|max:100',
+            'tax_manual'          => 'boolean',
+            'gst_amount_override' => 'nullable|numeric|min:0',
+            'pst_amount_override' => 'nullable|numeric|min:0',
+            'notes'               => 'nullable|string',
+            'items'               => 'required|array|min:1',
             'items.*.id'                     => 'nullable|exists:bill_items,id',
             'items.*.item_name'              => 'required|string|max:255',
             'items.*.quantity'               => 'required|numeric|min:0',
@@ -260,10 +268,11 @@ class BillController extends Controller
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
         ]);
 
-        $gstRate = round(($validated['gst_rate'] ?? 0) / 100, 6);
-        $pstRate = round(($validated['pst_rate'] ?? 0) / 100, 6);
+        $gstRate   = round(($validated['gst_rate'] ?? 0) / 100, 6);
+        $pstRate   = round(($validated['pst_rate'] ?? 0) / 100, 6);
+        $taxManual = $request->boolean('tax_manual');
 
-        DB::transaction(function () use ($bill, $validated, $gstRate, $pstRate) {
+        DB::transaction(function () use ($bill, $validated, $gstRate, $pstRate, $taxManual) {
             $bill->update([
                 'vendor_id'        => $validated['vendor_id'] ?? null,
                 'installer_id'     => $validated['installer_id'] ?? null,
@@ -274,6 +283,9 @@ class BillController extends Controller
                 'status'           => $validated['status'],
                 'gst_rate'         => $gstRate,
                 'pst_rate'         => $pstRate,
+                'tax_manual'       => $taxManual,
+                'gst_amount'       => $taxManual ? round($validated['gst_amount_override'] ?? 0, 2) : 0,
+                'pst_amount'       => $taxManual ? round($validated['pst_amount_override'] ?? 0, 2) : 0,
                 'notes'            => $validated['notes'] ?? null,
             ]);
 

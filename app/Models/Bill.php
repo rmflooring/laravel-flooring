@@ -21,6 +21,7 @@ class Bill extends Model
         'subtotal'      => 'decimal:2',
         'gst_rate'      => 'decimal:4',
         'pst_rate'      => 'decimal:4',
+        'tax_manual'    => 'boolean',
         'gst_amount'    => 'decimal:2',
         'pst_amount'    => 'decimal:2',
         'tax_amount'    => 'decimal:2',
@@ -153,8 +154,15 @@ class Bill extends Model
     public function recalculateTotals(): void
     {
         $subtotal = $this->items->sum('line_total');
-        $gst      = round($subtotal * $this->gst_rate, 2);
-        $pst      = round($subtotal * $this->pst_rate, 2);
+
+        if ($this->tax_manual) {
+            // Use the already-stored manual amounts (don't recalculate from rates)
+            $gst = round((float) $this->gst_amount, 2);
+            $pst = round((float) $this->pst_amount, 2);
+        } else {
+            $gst = round($subtotal * $this->gst_rate, 2);
+            $pst = round($subtotal * $this->pst_rate, 2);
+        }
 
         $this->subtotal    = $subtotal;
         $this->gst_amount  = $gst;

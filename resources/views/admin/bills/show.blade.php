@@ -174,13 +174,13 @@
                         </div>
                         @if ($bill->gst_amount > 0)
                         <div class="flex justify-between w-56">
-                            <span>GST ({{ number_format($bill->gst_rate * 100, 3) }}%)</span>
+                            <span>GST {{ $bill->tax_manual ? '(manual)' : '('.number_format($bill->gst_rate * 100, 3).'%)' }}</span>
                             <span class="font-medium">${{ number_format($bill->gst_amount, 2) }}</span>
                         </div>
                         @endif
                         @if ($bill->pst_amount > 0)
                         <div class="flex justify-between w-56">
-                            <span>PST ({{ number_format($bill->pst_rate * 100, 3) }}%)</span>
+                            <span>PST {{ $bill->tax_manual ? '(manual)' : '('.number_format($bill->pst_rate * 100, 3).'%)' }}</span>
                             <span class="font-medium">${{ number_format($bill->pst_amount, 2) }}</span>
                         </div>
                         @endif

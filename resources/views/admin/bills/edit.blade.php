@@ -104,11 +104,23 @@
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
 
+                        {{-- Tax Code Preset --}}
+                        <div class="sm:col-span-2">
+                            <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Tax Code</label>
+                            <select x-model="taxCode" @change="applyTaxCode"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <option value="gst">GST Only (5%)</option>
+                                <option value="gst_pst">GST + PST (5% + 7%)</option>
+                                <option value="exempt">Zero Rated / Exempt (0%)</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+
                         <div>
                             <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">GST Rate (%)</label>
                             <input type="number" name="gst_rate" step="0.001" min="0" max="100"
                                 value="{{ old('gst_rate', $bill->gst_rate * 100) }}"
-                                x-model.number="gstRate" @input="recalculate"
+                                x-model.number="gstRate" @input="taxCode = 'custom'; recalculate()"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
 
@@ -116,7 +128,7 @@
                             <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">PST Rate (%)</label>
                             <input type="number" name="pst_rate" step="0.001" min="0" max="100"
                                 value="{{ old('pst_rate', $bill->pst_rate * 100) }}"
-                                x-model.number="pstRate" @input="recalculate"
+                                x-model.number="pstRate" @input="taxCode = 'custom'; recalculate()"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         </div>
                     </div>
@@ -193,22 +205,54 @@
                         </table>
                     </div>
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
+                        <input type="hidden" name="tax_manual" :value="taxManual ? '1' : '0'">
+                        <input type="hidden" name="gst_amount_override" :value="gstAmountOverride">
+                        <input type="hidden" name="pst_amount_override" :value="pstAmountOverride">
+
                         <div class="flex flex-col items-end gap-1 text-sm text-gray-700 dark:text-gray-300">
-                            <div class="flex justify-between w-56">
+                            <div class="flex justify-between w-72">
                                 <span>Subtotal</span>
                                 <span class="font-medium">$<span x-text="subtotal.toFixed(2)"></span></span>
                             </div>
-                            <div class="flex justify-between w-56" x-show="gstRate > 0">
-                                <span>GST (<span x-text="gstRate"></span>%)</span>
-                                <span class="font-medium">$<span x-text="gstAmount.toFixed(2)"></span></span>
+
+                            {{-- GST row --}}
+                            <div class="flex items-center justify-between w-72" x-show="gstRate > 0 || taxManual">
+                                <span x-text="taxManual ? 'GST' : `GST (${gstRate}%)`">GST</span>
+                                <div x-show="!taxManual" class="font-medium">$<span x-text="gstAmount.toFixed(2)"></span></div>
+                                <div x-show="taxManual" class="flex items-center gap-1">
+                                    <span class="text-gray-500">$</span>
+                                    <input type="number" step="0.01" min="0"
+                                        x-model.number="gstAmountOverride"
+                                        @input="recalculate()"
+                                        class="w-24 bg-white border border-blue-300 text-gray-900 text-sm rounded p-1 text-right dark:bg-gray-700 dark:border-blue-500 dark:text-white">
+                                </div>
                             </div>
-                            <div class="flex justify-between w-56" x-show="pstRate > 0">
-                                <span>PST (<span x-text="pstRate"></span>%)</span>
-                                <span class="font-medium">$<span x-text="pstAmount.toFixed(2)"></span></span>
+
+                            {{-- PST row --}}
+                            <div class="flex items-center justify-between w-72" x-show="pstRate > 0 || taxManual">
+                                <span x-text="taxManual ? 'PST' : `PST (${pstRate}%)`">PST</span>
+                                <div x-show="!taxManual" class="font-medium">$<span x-text="pstAmount.toFixed(2)"></span></div>
+                                <div x-show="taxManual" class="flex items-center gap-1">
+                                    <span class="text-gray-500">$</span>
+                                    <input type="number" step="0.01" min="0"
+                                        x-model.number="pstAmountOverride"
+                                        @input="recalculate()"
+                                        class="w-24 bg-white border border-blue-300 text-gray-900 text-sm rounded p-1 text-right dark:bg-gray-700 dark:border-blue-500 dark:text-white">
+                                </div>
                             </div>
-                            <div class="flex justify-between w-56 font-bold text-base text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
+
+                            <div class="flex justify-between w-72 font-bold text-base text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
                                 <span>Total</span>
                                 <span>$<span x-text="grandTotal.toFixed(2)"></span></span>
+                            </div>
+
+                            {{-- Override toggle --}}
+                            <div class="flex items-center gap-2 mt-2 w-72 justify-end">
+                                <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                                    <input type="checkbox" x-model="taxManual" @change="onTaxManualToggle()"
+                                        class="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                    Override tax amounts manually
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -251,6 +295,19 @@ function billEditForm() {
     });
 
     const initialRows = @json($initialRows);
+    const savedGstRate = {{ $bill->gst_rate * 100 }};
+    const savedPstRate = {{ $bill->pst_rate * 100 }};
+    const savedTaxManual = {{ $bill->tax_manual ? 'true' : 'false' }};
+    const savedGstAmount = {{ (float) $bill->gst_amount }};
+    const savedPstAmount = {{ (float) $bill->pst_amount }};
+
+    // Detect initial tax code from saved rates
+    function detectTaxCode(gst, pst) {
+        if (gst === 5 && pst === 0) return 'gst';
+        if (gst === 5 && pst === 7) return 'gst_pst';
+        if (gst === 0 && pst === 0) return 'exempt';
+        return 'custom';
+    }
 
     return {
         rows: initialRows.map(r => ({ ...r })),
@@ -258,11 +315,30 @@ function billEditForm() {
         billDate: '{{ $bill->bill_date->toDateString() }}',
         termId: '{{ $bill->payment_term_id ?? '' }}',
         dueDate: '{{ $bill->due_date?->toDateString() ?? '' }}',
-        gstRate: {{ $bill->gst_rate * 100 }},
-        pstRate: {{ $bill->pst_rate * 100 }},
+        taxCode: detectTaxCode(savedGstRate, savedPstRate),
+        gstRate: savedGstRate,
+        pstRate: savedPstRate,
+        taxManual: savedTaxManual,
+        gstAmountOverride: savedTaxManual ? savedGstAmount : 0,
+        pstAmountOverride: savedTaxManual ? savedPstAmount : 0,
         subtotal: 0, gstAmount: 0, pstAmount: 0, grandTotal: 0,
 
         init() { this.recalculate(); },
+
+        applyTaxCode() {
+            if (this.taxCode === 'gst')     { this.gstRate = 5; this.pstRate = 0; }
+            if (this.taxCode === 'gst_pst') { this.gstRate = 5; this.pstRate = 7; }
+            if (this.taxCode === 'exempt')  { this.gstRate = 0; this.pstRate = 0; }
+            this.recalculate();
+        },
+
+        onTaxManualToggle() {
+            if (this.taxManual) {
+                this.gstAmountOverride = this.gstAmount;
+                this.pstAmountOverride = this.pstAmount;
+            }
+            this.recalculate();
+        },
 
         addRow() {
             this.rows.push({ key: this.rowKey++, id: null, purchase_order_item_id: null, work_order_item_id: null, item_name: '', quantity: 1, unit: '', unit_cost: 0, line_total: 0 });
@@ -275,9 +351,14 @@ function billEditForm() {
         recalcRow(row) { row.line_total = Math.round(row.quantity * row.unit_cost * 100) / 100; },
 
         recalculate() {
-            this.subtotal   = this.rows.reduce((s, r) => s + (r.line_total || 0), 0);
-            this.gstAmount  = Math.round(this.subtotal * (this.gstRate / 100) * 100) / 100;
-            this.pstAmount  = Math.round(this.subtotal * (this.pstRate / 100) * 100) / 100;
+            this.subtotal = this.rows.reduce((s, r) => s + (r.line_total || 0), 0);
+            if (this.taxManual) {
+                this.gstAmount = Math.round((parseFloat(this.gstAmountOverride) || 0) * 100) / 100;
+                this.pstAmount = Math.round((parseFloat(this.pstAmountOverride) || 0) * 100) / 100;
+            } else {
+                this.gstAmount = Math.round(this.subtotal * (this.gstRate / 100) * 100) / 100;
+                this.pstAmount = Math.round(this.subtotal * (this.pstRate / 100) * 100) / 100;
+            }
             this.grandTotal = this.subtotal + this.gstAmount + this.pstAmount;
         },
 
