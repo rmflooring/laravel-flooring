@@ -87,10 +87,11 @@ class InvoiceService
                 ]);
 
                 $subtotal += $lineTotal;
-                $taxTotal += $taxAmount;
             }
         }
 
+        // Compute tax on total subtotal (not sum-of-rounded per-item amounts) to match sale total
+        $taxTotal   = round($subtotal * $taxRate, 2);
         $grandTotal = round($subtotal + $taxTotal, 2);
 
         $invoice->update([

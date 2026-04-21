@@ -38,7 +38,7 @@
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="">— None —</option>
                     @foreach ($paymentTerms as $term)
-                        <option value="{{ $term->id }}" {{ old('payment_term_id', $invoice->payment_term_id) == $term->id ? 'selected' : '' }}>
+                        <option value="{{ $term->id }}" data-days="{{ $term->days }}" data-dom="{{ $term->day_of_month }}" {{ old('payment_term_id', $invoice->payment_term_id) == $term->id ? 'selected' : '' }}>
                             {{ $term->name }}{{ $term->days ? ' (Net ' . $term->days . ')' : '' }}
                         </option>
                     @endforeach
@@ -80,4 +80,24 @@
 
 </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelector('select[name="payment_term_id"]').addEventListener('change', function () {
+        const opt  = this.options[this.selectedIndex];
+        const dom  = parseInt(opt.dataset.dom);
+        const days = parseInt(opt.dataset.days);
+        const dueDateInput = document.querySelector('input[name="due_date"]');
+        if (dom > 0) {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 1, dom);
+            dueDateInput.value = d.toISOString().slice(0, 10);
+        } else if (days >= 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            dueDateInput.value = d.toISOString().slice(0, 10);
+        }
+    });
+});
+</script>
 </x-app-layout>
