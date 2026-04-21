@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
 @php
     $isZebra    = ($format ?? 'standard') === 'zebra';
-    $bodyW      = $isZebra ? '288pt' : '226.77pt';
-    $bodyH      = $isZebra ? '432pt' : '170.08pt';
+    $bodyW      = $isZebra ? '432pt' : '226.77pt';
+    $bodyH      = $isZebra ? '288pt' : '170.08pt';
     $itemNameSz = $isZebra ? '14pt' : '11pt';
     $qtyNumSz   = $isZebra ? '24pt' : '18pt';
     $qrSize     = $isZebra ? 90 : 64;
-    $qrColW     = $isZebra ? '80pt' : '70pt';
-    $qrImgSz    = $isZebra ? '80pt' : '64pt';
-    $bodyGap    = $isZebra ? '8pt' : '6pt';
+    $qrColW     = $isZebra ? '100pt' : '70pt';
+    $qrImgSz    = $isZebra ? '90pt' : '64pt';
+    $bodyGap    = $isZebra ? '10pt' : '6pt';
 @endphp
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }

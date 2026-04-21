@@ -23,8 +23,8 @@ class InventoryTagController extends Controller
         ]);
 
         $format = Setting::get('label_printer_format', 'standard');
-        // Standard: ~3" × 2.4"  |  Zebra: 4" × 6" portrait (288 × 432 pt)
-        $paper = $format === 'zebra' ? [0, 0, 288, 432] : [0, 0, 226.77, 170.08];
+        // Standard: ~3" × 2.4" portrait  |  Zebra: 6" × 4" landscape
+        $paper = $format === 'zebra' ? [0, 0, 432, 288] : [0, 0, 226.77, 170.08];
 
         $pdf = Pdf::loadView('pdf.inventory-tag', compact('receipt', 'format'))
             ->setPaper($paper);
@@ -49,8 +49,8 @@ class InventoryTagController extends Controller
         abort_if($receipts->isEmpty(), 404, 'No inventory receipts found for this PO.');
 
         $format = Setting::get('label_printer_format', 'standard');
-        // Standard: ~3" × 2.4"  |  Zebra: 4" × 6" portrait (288 × 432 pt)
-        $paper = $format === 'zebra' ? [0, 0, 288, 432] : [0, 0, 226.77, 170.08];
+        // Standard: ~3" × 2.4" portrait  |  Zebra: 6" × 4" landscape
+        $paper = $format === 'zebra' ? [0, 0, 432, 288] : [0, 0, 226.77, 170.08];
 
         $pdf = Pdf::loadView('pdf.inventory-tags', compact('receipts', 'purchaseOrder', 'format'))
             ->setPaper($paper);
