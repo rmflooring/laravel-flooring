@@ -34,7 +34,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('admin.bills.store') }}" x-data="billForm()" @submit.prevent="submitForm">
+            <form method="POST" action="{{ route('admin.bills.store') }}" x-data="billForm()">
                 @csrf
                 <input type="hidden" name="bill_type" value="{{ $billType }}">
                 @if ($purchaseOrder)
@@ -462,9 +462,6 @@ function billForm() {
             }
         },
 
-        submitForm(e) {
-            e.$el.closest('form').submit();
-        },
     };
 }
 </script>
