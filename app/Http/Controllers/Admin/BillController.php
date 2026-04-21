@@ -8,8 +8,10 @@ use App\Models\BillItem;
 use App\Models\Installer;
 use App\Models\PaymentTerm;
 use App\Models\PurchaseOrder;
+use App\Models\Setting;
 use App\Models\Vendor;
 use App\Models\WorkOrder;
+use App\Services\QboSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -331,6 +333,25 @@ class BillController extends Controller
         $bill->delete();
 
         return redirect()->route('admin.bills.index')->with('success', "Bill #{$bill->reference_number} deleted.");
+    }
+
+    public function pushToQbo(Bill $bill, QboSyncService $sync)
+    {
+        if (! app(\App\Services\QuickBooksService::class)->isConnected()) {
+            return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
+        }
+
+        $apAccountId = Setting::get('qbo_ap_account_id');
+        if (! $apAccountId) {
+            return back()->with('error', 'No QBO expense account configured. Visit Settings → QuickBooks Online to set it up.');
+        }
+
+        $result = $sync->pushBill($bill, $apAccountId);
+
+        return back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 
     // -----------------------------------------------------------------------

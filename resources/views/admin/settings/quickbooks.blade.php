@@ -92,6 +92,33 @@
                 @endif
             </div>
 
+            {{-- Account Mapping --}}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                <h2 class="text-base font-semibold text-gray-800 mb-1">Account Mapping</h2>
+                <p class="text-sm text-gray-500 mb-4">Set the QBO Account ID used for bill line items. Find this in QuickBooks → Chart of Accounts — hover any account and note the ID in the URL.</p>
+
+                <form method="POST" action="{{ route('admin.settings.quickbooks.save-settings') }}" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Expense Account ID <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex gap-3 items-center">
+                            <input type="text"
+                                   name="qbo_ap_account_id"
+                                   value="{{ $apAccountId }}"
+                                   placeholder="e.g. 7"
+                                   class="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            <button type="submit"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                                Save
+                            </button>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-400">Used for all bill line items pushed to QBO.</p>
+                    </div>
+                </form>
+            </div>
+
             {{-- What will sync --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
                 <h2 class="text-base font-semibold text-gray-800 mb-3">What syncs to QuickBooks</h2>

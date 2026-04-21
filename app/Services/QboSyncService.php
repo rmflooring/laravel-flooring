@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Vendor;
 
@@ -249,5 +250,130 @@ class QboSyncService
         $result = $this->qbo->query("SELECT * FROM Customer WHERE DisplayName = '{$escapedName}'");
         $customers = $result['QueryResponse']['Customer'] ?? [];
         return $customers[0] ?? null;
+    }
+
+    // =========================================================================
+    // Bills (AP)
+    // =========================================================================
+
+    /**
+     * Push a bill to QBO as a Bill entity.
+     * Vendor must be synced first (or will be auto-synced).
+     * $apAccountId = QBO Account ID for the AP expense account (e.g. "7" for Accounts Payable)
+     */
+    public function pushBill(Bill $bill, string $apAccountId): array
+    {
+        try {
+            if ($bill->bill_type !== 'vendor') {
+                return ['success' => false, 'message' => 'Only vendor bills can be pushed to QBO at this time.', 'qbo_id' => null];
+            }
+
+            $bill->load(['vendor', 'items']);
+
+            // Ensure vendor is synced to QBO first
+            $vendor = $bill->vendor;
+            if (! $vendor) {
+                return ['success' => false, 'message' => 'Bill has no vendor assigned.', 'qbo_id' => null];
+            }
+
+            if (! $vendor->qbo_id) {
+                $vendorResult = $this->pushVendor($vendor);
+                if (! $vendorResult['success']) {
+                    return ['success' => false, 'message' => 'Failed to sync vendor: ' . $vendorResult['message'], 'qbo_id' => null];
+                }
+                $vendor->refresh();
+            }
+
+            $payload = $this->buildBillPayload($bill, $vendor->qbo_id, $apAccountId);
+
+            if ($bill->qbo_id) {
+                $payload['Id']        = $bill->qbo_id;
+                $payload['SyncToken'] = $bill->qbo_sync_token ?? '0';
+                $response = $this->qbo->post('bill', $payload);
+                $qboBill = $response['Bill'];
+                $action = 'updated';
+            } else {
+                $response = $this->qbo->post('bill', $payload);
+                $qboBill = $response['Bill'];
+                $action = 'created';
+            }
+
+            $bill->update([
+                'qbo_id'         => $qboBill['Id'],
+                'qbo_sync_token' => $qboBill['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('bill', $bill->id, 'push', 'success', $qboBill['Id'],
+                ucfirst($action) . ' bill in QBO', $payload, $qboBill);
+
+            return ['success' => true, 'message' => 'Bill ' . $action . ' in QuickBooks.', 'qbo_id' => $qboBill['Id']];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('bill', $bill->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
+    }
+
+    private function buildBillPayload(Bill $bill, string $vendorQboId, string $apAccountId): array
+    {
+        $lines = [];
+
+        foreach ($bill->items as $item) {
+            $lines[] = [
+                'Amount'          => (float) $item->line_total,
+                'DetailType'      => 'AccountBasedExpenseLineDetail',
+                'Description'     => $item->item_name,
+                'AccountBasedExpenseLineDetail' => [
+                    'AccountRef' => ['value' => $apAccountId],
+                    'BillableStatus' => 'NotBillable',
+                    'Qty'        => (float) $item->quantity,
+                    'UnitPrice'  => (float) $item->unit_cost,
+                ],
+            ];
+        }
+
+        // GST tax line
+        if ($bill->gst_amount > 0) {
+            $lines[] = [
+                'Amount'      => (float) $bill->gst_amount,
+                'DetailType'  => 'AccountBasedExpenseLineDetail',
+                'Description' => 'GST',
+                'AccountBasedExpenseLineDetail' => [
+                    'AccountRef' => ['value' => $apAccountId],
+                    'BillableStatus' => 'NotBillable',
+                ],
+            ];
+        }
+
+        // PST tax line
+        if ($bill->pst_amount > 0) {
+            $lines[] = [
+                'Amount'      => (float) $bill->pst_amount,
+                'DetailType'  => 'AccountBasedExpenseLineDetail',
+                'Description' => 'PST',
+                'AccountBasedExpenseLineDetail' => [
+                    'AccountRef' => ['value' => $apAccountId],
+                    'BillableStatus' => 'NotBillable',
+                ],
+            ];
+        }
+
+        $payload = [
+            'VendorRef'  => ['value' => $vendorQboId],
+            'TxnDate'    => $bill->bill_date->toDateString(),
+            'DocNumber'  => $bill->reference_number,
+            'Line'       => $lines,
+        ];
+
+        if ($bill->due_date) {
+            $payload['DueDate'] = $bill->due_date->toDateString();
+        }
+
+        if ($bill->notes) {
+            $payload['PrivateNote'] = $bill->notes;
+        }
+
+        return $payload;
     }
 }

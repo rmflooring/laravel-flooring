@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\QboConnection;
 use App\Models\QboSyncLog;
+use App\Models\Setting;
 use App\Services\QuickBooksService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -18,10 +19,19 @@ class QuickBooksController extends Controller
      */
     public function index()
     {
-        $connection = QboConnection::with('connectedBy')->first();
-        $recentLogs = QboSyncLog::orderByDesc('created_at')->limit(25)->get();
+        $connection    = QboConnection::with('connectedBy')->first();
+        $recentLogs    = QboSyncLog::orderByDesc('created_at')->limit(25)->get();
+        $apAccountId   = Setting::get('qbo_ap_account_id', '');
 
-        return view('admin.settings.quickbooks', compact('connection', 'recentLogs'));
+        return view('admin.settings.quickbooks', compact('connection', 'recentLogs', 'apAccountId'));
+    }
+
+    public function saveSettings(Request $request)
+    {
+        $request->validate(['qbo_ap_account_id' => 'required|string|max:50']);
+        Setting::set('qbo_ap_account_id', trim($request->qbo_ap_account_id));
+
+        return back()->with('success', 'QuickBooks settings saved.');
     }
 
     /**

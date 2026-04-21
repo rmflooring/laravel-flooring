@@ -15,16 +15,18 @@ class Bill extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'bill_date'  => 'date',
-        'due_date'   => 'date',
-        'voided_at'  => 'datetime',
-        'subtotal'   => 'decimal:2',
-        'gst_rate'   => 'decimal:4',
-        'pst_rate'   => 'decimal:4',
-        'gst_amount' => 'decimal:2',
-        'pst_amount' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
-        'grand_total' => 'decimal:2',
+        'bill_date'     => 'date',
+        'due_date'      => 'date',
+        'voided_at'     => 'datetime',
+        'subtotal'      => 'decimal:2',
+        'gst_rate'      => 'decimal:4',
+        'pst_rate'      => 'decimal:4',
+        'gst_amount'    => 'decimal:2',
+        'pst_amount'    => 'decimal:2',
+        'tax_amount'    => 'decimal:2',
+        'grand_total'   => 'decimal:2',
+        'qbo_synced_at' => 'datetime',
+        'qbo_paid_at'   => 'datetime',
     ];
 
     const STATUSES = [

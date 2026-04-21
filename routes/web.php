@@ -199,6 +199,8 @@ Route::prefix('admin')
                 ->name('settings.quickbooks.callback');
             Route::post('/settings/quickbooks/disconnect', [\App\Http\Controllers\Admin\QuickBooksController::class, 'disconnect'])
                 ->name('settings.quickbooks.disconnect');
+            Route::post('/settings/quickbooks/settings', [\App\Http\Controllers\Admin\QuickBooksController::class, 'saveSettings'])
+                ->name('settings.quickbooks.save-settings');
 
             Route::resource('users', UserController::class);
             Route::resource('roles', RoleController::class);
@@ -451,6 +453,8 @@ Route::prefix('admin')
                 ]);
             Route::post('bills/{bill}/void', [\App\Http\Controllers\Admin\BillController::class, 'void'])
                 ->name('bills.void');
+            Route::post('bills/{bill}/push-to-qbo', [\App\Http\Controllers\Admin\BillController::class, 'pushToQbo'])
+                ->name('bills.push-to-qbo');
         });
 
         // Installers
