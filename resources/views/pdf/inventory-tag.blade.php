@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
 @php
     $isZebra    = ($format ?? 'standard') === 'zebra';
-    $bodyW      = $isZebra ? '432pt' : '226.77pt';
-    $bodyH      = $isZebra ? '288pt' : '170.08pt';
-    $itemNameSz = $isZebra ? '14pt' : '11pt';
-    $qtyNumSz   = $isZebra ? '24pt' : '18pt';
-    $qrSize     = $isZebra ? 90 : 64;
-    $qrColW     = $isZebra ? '100pt' : '70pt';
-    $qrImgSz    = $isZebra ? '90pt' : '64pt';
-    $bodyGap    = $isZebra ? '10pt' : '6pt';
+    $bodyW      = $isZebra ? '216pt' : '226.77pt';
+    $bodyH      = $isZebra ? '144pt' : '170.08pt';
+    $itemNameSz = $isZebra ? '9pt' : '11pt';
+    $qtyNumSz   = $isZebra ? '14pt' : '18pt';
+    $qrSize     = $isZebra ? 48 : 64;
+    $qrColW     = $isZebra ? '52pt' : '70pt';
+    $qrImgSz    = $isZebra ? '48pt' : '64pt';
+    $bodyGap    = $isZebra ? '6pt' : '6pt';
 
     $mobileUrl  = route('mobile.inventory.show', $receipt);
     $qrSvg      = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size($qrSize)->margin(1)->generate($mobileUrl);

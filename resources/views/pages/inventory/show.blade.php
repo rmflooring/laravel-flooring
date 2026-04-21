@@ -493,40 +493,40 @@ function printTag() {
     let html;
 
     if (format === 'zebra') {
-        // Zebra thermal: 6" × 4" landscape, two-column layout
+        // Zebra thermal: 3" × 2" landscape (W=7.62cm × H=5.07cm per printer settings)
         html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
-    @page { size: 6in 4in; margin: 0; }
+    @page { size: 3in 2in; margin: 0; }
     * { box-sizing: border-box; }
-    html, body { width: 6in; height: 4in; margin: 0; padding: 0; overflow: hidden; }
+    html, body { width: 3in; height: 2in; margin: 0; padding: 0; overflow: hidden; }
     .tag {
-        width: 6in; height: 4in; padding: 0.2in;
+        width: 3in; height: 2in; padding: 0.1in;
         font-family: Arial, Helvetica, sans-serif;
         display: flex; flex-direction: column; overflow: hidden;
     }
     .tag-header {
         background: #1d4ed8; color: #fff;
-        padding: 6px 10px; border-radius: 4px; margin-bottom: 10px;
+        padding: 3px 6px; border-radius: 3px; margin-bottom: 5px;
         display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
     }
-    .tag-header-label { font-size: 10pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-    .tag-header-id    { font-size: 13pt; font-weight: 700; font-family: monospace; }
-    .tag-body         { display: flex; gap: 0.2in; flex: 1; min-height: 0; }
+    .tag-header-label { font-size: 6pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .tag-header-id    { font-size: 8pt; font-weight: 700; font-family: monospace; }
+    .tag-body         { display: flex; gap: 0.1in; flex: 1; min-height: 0; }
     .tag-left         { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .tag-right        { width: 1.1in; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; flex-shrink: 0; }
-    .tag-item-name    { font-size: 15pt; font-weight: 700; color: #111; line-height: 1.2; margin-bottom: 5px; flex-shrink: 0; }
-    .tag-detail       { font-size: 10pt; color: #555; margin-bottom: 3px; flex-shrink: 0; }
-    .tag-date         { font-size: 9pt; color: #777; margin-bottom: 8px; flex-shrink: 0; }
-    .tag-job          { background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; padding: 5px 8px; margin-bottom: 8px; flex-shrink: 0; }
-    .tag-job-label    { font-size: 7pt; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
-    .tag-job-number   { font-size: 17pt; font-weight: 700; color: #15803d; font-family: monospace; }
+    .tag-right        { width: 0.65in; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; flex-shrink: 0; }
+    .tag-item-name    { font-size: 9pt; font-weight: 700; color: #111; line-height: 1.2; margin-bottom: 3px; flex-shrink: 0; }
+    .tag-detail       { font-size: 7pt; color: #555; margin-bottom: 2px; flex-shrink: 0; }
+    .tag-date         { font-size: 6pt; color: #777; margin-bottom: 4px; flex-shrink: 0; }
+    .tag-job          { background: #f0fdf4; border: 1px solid #86efac; border-radius: 3px; padding: 2px 4px; margin-bottom: 4px; flex-shrink: 0; }
+    .tag-job-label    { font-size: 5pt; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .tag-job-number   { font-size: 11pt; font-weight: 700; color: #15803d; font-family: monospace; line-height: 1.1; }
     .tag-spacer       { flex: 1; min-height: 0; }
-    .tag-notes        { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; margin-bottom: 8px; flex-shrink: 0; }
-    .tag-notes-label  { font-size: 7pt; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
-    .tag-notes-text   { font-size: 9pt; color: #374151; white-space: pre-wrap; word-break: break-word; }
-    .tag-footer-text  { font-size: 7pt; color: #9ca3af; text-align: center; }
-    .tag-qr img       { width: 88pt; height: 88pt; display: block; }
-    .tag-qr-caption   { font-size: 6pt; color: #c0c0c0; margin-top: 2pt; text-align: center; }
+    .tag-notes        { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 4px; margin-bottom: 4px; flex-shrink: 0; }
+    .tag-notes-label  { font-size: 5pt; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .tag-notes-text   { font-size: 6pt; color: #374151; white-space: pre-wrap; word-break: break-word; }
+    .tag-footer-text  { font-size: 5pt; color: #9ca3af; text-align: center; line-height: 1.3; }
+    .tag-qr img       { width: 48pt; height: 48pt; display: block; }
+    .tag-qr-caption   { font-size: 4pt; color: #c0c0c0; margin-top: 1pt; text-align: center; }
 </style>
 </head><body>
 <div class="tag">
@@ -545,8 +545,8 @@ function printTag() {
             <div class="tag-spacer"></div>
         </div>
         <div class="tag-right">
-            <img src="${qrSrc}" alt="QR" style="width:88pt; height:88pt; display:block;">
-            <div class="tag-qr-caption">Scan for details</div>
+            <img src="${qrSrc}" alt="QR" style="width:48pt; height:48pt; display:block;">
+            <div class="tag-qr-caption">Scan</div>
             <div class="tag-footer-text">RM Flooring<br>{{ now()->format('M j, Y') }}</div>
         </div>
     </div>
@@ -613,8 +613,8 @@ function printTag() {
 </body></html>`;
     }
 
-    const winW = format === 'zebra' ? 576 : 384;
-    const winH = format === 'zebra' ? 384 : 576;
+    const winW = format === 'zebra' ? 288 : 384;
+    const winH = format === 'zebra' ? 192 : 576;
     const win  = window.open('', '_blank', `width=${winW},height=${winH}`);
     win.document.write(html);
     win.document.close();
