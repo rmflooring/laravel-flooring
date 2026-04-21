@@ -37,7 +37,6 @@
                         </button>
                     </form>
                 @endif
-            @endif
                 {{-- Send email button --}}
                 <button type="button" onclick="document.getElementById('send-modal').classList.remove('hidden')"
                     class="inline-flex items-center gap-1.5 py-2 px-4 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
