@@ -76,10 +76,19 @@
                             <span class="text-gray-500 dark:text-gray-400">Subtotal</span>
                             <span class="font-medium text-gray-900 dark:text-white" id="summary-subtotal">$0.00</span>
                         </div>
+                        @if($taxRates->isNotEmpty())
+                            @foreach($taxRates as $taxRate)
+                            <div class="flex justify-between">
+                                <span class="text-gray-500 dark:text-gray-400">{{ $taxRate->name }} ({{ number_format((float)$taxRate->sales_rate, 0) }}%)</span>
+                                <span class="font-medium text-gray-900 dark:text-white" id="summary-tax-{{ Str::slug($taxRate->name) }}" data-rate="{{ (float)$taxRate->sales_rate / 100 }}">$0.00</span>
+                            </div>
+                            @endforeach
+                        @else
                         <div class="flex justify-between">
                             <span class="text-gray-500 dark:text-gray-400">Tax ({{ number_format((float)($sale->tax_rate_percent ?? 0), 2) }}%)</span>
                             <span class="font-medium text-gray-900 dark:text-white" id="summary-tax">$0.00</span>
                         </div>
+                        @endif
                         <div class="flex justify-between border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
                             <span class="font-semibold text-gray-900 dark:text-white">Total</span>
                             <span class="font-bold text-gray-900 dark:text-white text-base" id="summary-total">$0.00</span>
@@ -259,7 +268,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const grand = Math.round((subtotal + tax) * 100) / 100;
 
         document.getElementById('summary-subtotal').textContent = formatMoney(subtotal);
-        document.getElementById('summary-tax').textContent      = formatMoney(tax);
+
+        // Per-tax breakdown lines
+        document.querySelectorAll('[id^="summary-tax-"]').forEach(function (el) {
+            const rate = parseFloat(el.dataset.rate) || 0;
+            el.textContent = formatMoney(Math.round(subtotal * rate * 100) / 100);
+        });
+        // Fallback single-tax element
+        const singleTax = document.getElementById('summary-tax');
+        if (singleTax) singleTax.textContent = formatMoney(tax);
+
         document.getElementById('summary-total').textContent    = formatMoney(grand);
     }
 

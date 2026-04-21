@@ -37,7 +37,14 @@ class InvoiceController extends Controller
 
         $paymentTerms = PaymentTerm::where('is_active', true)->orderBy('name')->get();
 
-        return view('pages.invoices.create', compact('sale', 'invoicedQty', 'paymentTerms'));
+        $taxRates = $sale->tax_group_id
+            ? \DB::table('tax_rate_group_items')
+                ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
+                ->where('tax_rate_group_id', $sale->tax_group_id)
+                ->get(['tax_rates.name', 'tax_rates.sales_rate'])
+            : collect();
+
+        return view('pages.invoices.create', compact('sale', 'invoicedQty', 'paymentTerms', 'taxRates'));
     }
 
     public function store(Request $request, Sale $sale)
