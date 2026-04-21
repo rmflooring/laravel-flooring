@@ -383,7 +383,38 @@
 </td>
 
                                     {{-- Invoices --}}
-                                    <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>
+                                    <td class="px-6 py-4">
+                                        @php
+                                            $allInvoices = $sales->flatMap->invoices;
+                                        @endphp
+                                        @if($allInvoices->isNotEmpty())
+                                            @php
+                                                $invStatusColors = [
+                                                    'draft'           => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                                                    'sent'            => 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200',
+                                                    'paid'            => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+                                                    'overdue'         => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+                                                    'partially_paid'  => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+                                                ];
+                                            @endphp
+                                            <ul class="list-disc space-y-1 pl-5 text-gray-700 dark:text-gray-200">
+                                                @foreach($allInvoices as $inv)
+                                                    <li>
+                                                        <a href="{{ route('pages.sales.invoices.show', [$inv->sale_id, $inv]) }}"
+                                                           class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                            {{ $inv->invoice_number }}
+                                                        </a>
+                                                        <span class="text-gray-600 dark:text-gray-300">(${{ number_format((float)$inv->grand_total, 2) }})</span>
+                                                        <span class="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium {{ $invStatusColors[$inv->status] ?? 'bg-gray-100 text-gray-700' }}">
+                                                            {{ ucfirst(str_replace('_', ' ', $inv->status)) }}
+                                                        </span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <span class="text-gray-400 dark:text-gray-500">—</span>
+                                        @endif
+                                    </td>
 
                                     {{-- POs --}}
                                     <td class="px-6 py-4">

@@ -198,7 +198,9 @@ class InvoiceService
         $activeInvoices = $sale->invoices->whereNotIn('status', ['voided']);
 
         $invoicedTotal = round($activeInvoices->sum('grand_total'), 2);
-        $saleTotal     = (float) ($sale->locked_grand_total ?: ($sale->revised_contract_total ?: $sale->grand_total));
+        $lockedTotal   = (float) $sale->locked_grand_total;
+        $revisedTotal  = (float) $sale->revised_contract_total;
+        $saleTotal     = $lockedTotal > 0 ? $lockedTotal : ($revisedTotal > 0 ? $revisedTotal : (float) $sale->grand_total);
 
         $isFullyInvoiced = $saleTotal > 0 && $invoicedTotal >= $saleTotal;
 
