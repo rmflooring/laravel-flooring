@@ -38,6 +38,22 @@
                        class="inline-flex items-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                         Edit Vendor
                     </a>
+                    {{-- QuickBooks sync --}}
+                    @if (app(\App\Services\QuickBooksService::class)->isConnected())
+                        <form method="POST" action="{{ route('admin.vendors.push-to-qbo', $vendor) }}">
+                            @csrf
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition
+                                        {{ $vendor->qbo_id
+                                            ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
+                                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                                </svg>
+                                {{ $vendor->qbo_id ? 'Re-sync to QBO' : 'Push to QBO' }}
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
 
@@ -155,6 +171,31 @@
                             <p class="text-sm text-gray-400 dark:text-gray-500">No reps assigned.</p>
                         @endforelse
                     </div>
+
+                    {{-- QuickBooks status --}}
+                    @if (app(\App\Services\QuickBooksService::class)->isConnected())
+                        <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                            <h2 class="mb-3 text-base font-semibold text-gray-900 dark:text-white">QuickBooks Online</h2>
+                            @if ($vendor->qbo_id)
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Synced</span>
+                                </div>
+                                <dl class="space-y-2 text-sm">
+                                    <div>
+                                        <dt class="text-xs text-gray-500 uppercase tracking-wide">QBO ID</dt>
+                                        <dd class="font-mono text-gray-700">{{ $vendor->qbo_id }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-xs text-gray-500 uppercase tracking-wide">Last Synced</dt>
+                                        <dd class="text-gray-700">{{ $vendor->qbo_synced_at?->format('M j, Y g:i a') ?? '—' }}</dd>
+                                    </div>
+                                </dl>
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Not synced</span>
+                                <p class="mt-2 text-xs text-gray-500">Use the "Push to QBO" button above to sync this vendor.</p>
+                            @endif
+                        </div>
+                    @endif
 
                     {{-- Record info --}}
                     <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">

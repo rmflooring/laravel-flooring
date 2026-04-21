@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Installer;
 use App\Models\Vendor;
 use App\Models\VendorRep;
+use App\Services\QboSyncService;
 use Illuminate\Http\Request;
 
 class VendorController extends Controller
@@ -229,5 +230,19 @@ class VendorController extends Controller
         $vendor->delete();
 
         return redirect()->route('admin.vendors.index')->with('success', 'Vendor deleted successfully.');
+    }
+
+    public function pushToQbo(Vendor $vendor, QboSyncService $sync)
+    {
+        if (! app(\App\Services\QuickBooksService::class)->isConnected()) {
+            return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
+        }
+
+        $result = $sync->pushVendor($vendor);
+
+        return back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 }

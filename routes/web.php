@@ -367,6 +367,10 @@ Route::prefix('admin')
                 'destroy' => 'vendors.destroy',
             ]);
 
+        Route::post('vendors/{vendor}/push-to-qbo', [\App\Http\Controllers\Admin\VendorController::class, 'pushToQbo'])
+            ->name('vendors.push-to-qbo')
+            ->middleware('role_or_permission:admin|edit vendors');
+
         Route::resource('vendor-reps', VendorRepController::class)
             ->middleware('role_or_permission:admin|view vendor reps')
             ->names([

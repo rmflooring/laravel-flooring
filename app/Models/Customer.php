@@ -17,6 +17,7 @@ class Customer extends Model
     protected $casts = [
         'sms_opted_out'    => 'boolean',
         'sms_opted_out_at' => 'datetime',
+        'qbo_synced_at'    => 'datetime',
     ];
 
     protected $fillable = [
@@ -43,6 +44,9 @@ class Customer extends Model
         'dol',
         'created_by',
         'updated_by',
+        'qbo_id',
+        'qbo_sync_token',
+        'qbo_synced_at',
     ];
 
     public function contacts(): HasMany

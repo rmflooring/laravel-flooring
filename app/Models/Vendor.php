@@ -28,6 +28,13 @@ class Vendor extends Model
         'terms',
         'created_by',
         'updated_by',
+        'qbo_id',
+        'qbo_sync_token',
+        'qbo_synced_at',
+    ];
+
+    protected $casts = [
+        'qbo_synced_at' => 'datetime',
     ];
 
     // Automatically set created_by and updated_by
