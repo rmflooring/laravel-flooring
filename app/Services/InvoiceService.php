@@ -58,7 +58,7 @@ class InvoiceService
             $invoiceRoom = InvoiceRoom::create([
                 'invoice_id'   => $invoice->id,
                 'sale_room_id' => $saleRoom->id,
-                'name'         => $saleRoom->room_name,
+                'name'         => $saleRoom->room_name ?? '',
                 'sort_order'   => $sort++,
             ]);
 
