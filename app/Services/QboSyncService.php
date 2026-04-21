@@ -321,14 +321,12 @@ class QboSyncService
 
         foreach ($bill->items as $item) {
             $lines[] = [
-                'Amount'          => (float) $item->line_total,
-                'DetailType'      => 'AccountBasedExpenseLineDetail',
-                'Description'     => $item->item_name,
+                'Amount'      => (float) $item->line_total,
+                'DetailType'  => 'AccountBasedExpenseLineDetail',
+                'Description' => $item->item_name . ($item->quantity ? ' (Qty: ' . $item->quantity . ' @ $' . number_format($item->unit_cost, 2) . ')' : ''),
                 'AccountBasedExpenseLineDetail' => [
-                    'AccountRef' => ['value' => $apAccountId],
+                    'AccountRef'     => ['value' => $apAccountId],
                     'BillableStatus' => 'NotBillable',
-                    'Qty'        => (float) $item->quantity,
-                    'UnitPrice'  => (float) $item->unit_cost,
                 ],
             ];
         }
