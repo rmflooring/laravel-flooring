@@ -41,7 +41,7 @@
                             <!-- Cost -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Cost *</label>
-                                <input type="number" step="0.01" name="cost" value="{{ old('cost', $labourItem->cost) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="number" step="0.01" name="cost" id="cost" value="{{ old('cost', $labourItem->cost) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 @error('cost') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                             </div>
 
@@ -68,6 +68,9 @@
                                         <option value="0.65">65%</option>
                                         <option value="0.70">70%</option>
                                     </select>
+                                </div>
+                                <div class="mt-1">
+                                    <span id="margin_display" class="text-xs font-medium" style="color:#6b7280;">Margin: —</span>
                                 </div>
                                 @error('sell') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                             </div>
@@ -112,12 +115,25 @@
         </div>
     </div>
 <script>
+function updateLabourMargin() {
+    const cost = parseFloat(document.getElementById('cost').value);
+    const sell = parseFloat(document.getElementById('sell').value);
+    const el = document.getElementById('margin_display');
+    if (!cost || !sell || sell <= 0) { el.textContent = 'Margin: —'; el.style.color = '#6b7280'; return; }
+    const margin = ((sell - cost) / sell) * 100;
+    el.textContent = 'Margin: ' + margin.toFixed(1) + '%';
+    el.style.color = margin < 20 ? '#dc2626' : margin < 38 ? '#d97706' : '#16a34a';
+}
+document.getElementById('cost').addEventListener('input', updateLabourMargin);
+document.getElementById('sell').addEventListener('input', updateLabourMargin);
 document.getElementById('gpm_selector').addEventListener('change', function () {
     const margin = parseFloat(this.value);
-    const cost = parseFloat(document.querySelector('[name="cost"]').value);
+    const cost = parseFloat(document.getElementById('cost').value);
     if (!margin || isNaN(cost) || cost <= 0) { this.value = ''; return; }
     document.getElementById('sell').value = (cost / (1 - margin)).toFixed(2);
     this.value = '';
+    updateLabourMargin();
 });
+updateLabourMargin();
 </script>
 </x-app-layout>

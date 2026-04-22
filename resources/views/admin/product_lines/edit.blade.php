@@ -145,6 +145,9 @@
                                         <option value="0.70">70%</option>
                                     </select>
                                 </div>
+                                <div class="mt-1">
+                                    <span id="pl_margin_display" class="text-xs font-medium" style="color:#6b7280;">Margin: —</span>
+                                </div>
                                 @error('default_sell_price')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -243,13 +246,26 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    function updatePlMargin() {
+        const cost = parseFloat(document.getElementById('default_cost_price').value);
+        const sell = parseFloat(document.getElementById('default_sell_price').value);
+        const el = document.getElementById('pl_margin_display');
+        if (!cost || !sell || sell <= 0) { el.textContent = 'Margin: —'; el.style.color = '#6b7280'; return; }
+        const margin = ((sell - cost) / sell) * 100;
+        el.textContent = 'Margin: ' + margin.toFixed(1) + '%';
+        el.style.color = margin < 20 ? '#dc2626' : margin < 38 ? '#d97706' : '#16a34a';
+    }
+    document.getElementById('default_cost_price').addEventListener('input', updatePlMargin);
+    document.getElementById('default_sell_price').addEventListener('input', updatePlMargin);
     document.getElementById('gpm_selector').addEventListener('change', function () {
         const margin = parseFloat(this.value);
         const cost = parseFloat(document.getElementById('default_cost_price').value);
         if (!margin || isNaN(cost) || cost <= 0) { this.value = ''; return; }
         document.getElementById('default_sell_price').value = (cost / (1 - margin)).toFixed(2);
         this.value = '';
+        updatePlMargin();
     });
+    updatePlMargin();
 });
 </script>
 </x-app-layout>

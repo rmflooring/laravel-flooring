@@ -409,6 +409,9 @@
                                     <option value="0.70">70%</option>
                                 </select>
                             </div>
+                            <div class="mt-1">
+                                <span id="ps_margin_display" class="text-xs font-medium" style="color:#6b7280;">Margin: —</span>
+                            </div>
                         </div>
 
                         <div class="col-span-2 sm:col-span-1">
@@ -565,9 +568,20 @@
     </script>
     @endif
 
-    <!-- GPM sell price calculator -->
+    <!-- GPM sell price calculator + margin display -->
     <script>
     document.addEventListener('DOMContentLoaded', function () {
+        function updatePsMargin() {
+            const cost = parseFloat(document.getElementById('cost_price').value);
+            const sell = parseFloat(document.getElementById('sell_price').value);
+            const el = document.getElementById('ps_margin_display');
+            if (!cost || !sell || sell <= 0) { el.textContent = 'Margin: —'; el.style.color = '#6b7280'; return; }
+            const margin = ((sell - cost) / sell) * 100;
+            el.textContent = 'Margin: ' + margin.toFixed(1) + '%';
+            el.style.color = margin < 20 ? '#dc2626' : margin < 38 ? '#d97706' : '#16a34a';
+        }
+        document.getElementById('cost_price').addEventListener('input', updatePsMargin);
+        document.getElementById('sell_price').addEventListener('input', updatePsMargin);
         document.getElementById('gpm_selector').addEventListener('change', function () {
             const margin = parseFloat(this.value);
             const cost = parseFloat(document.getElementById('cost_price').value);
@@ -578,7 +592,9 @@
             const sell = cost / (1 - margin);
             document.getElementById('sell_price').value = sell.toFixed(2);
             this.value = '';
+            updatePsMargin();
         });
+        updatePsMargin();
     });
     </script>
 
