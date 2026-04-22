@@ -21,14 +21,12 @@ class MicrosoftCalendarConnectController extends Controller
         session(['microsoft_oauth_state' => $state]);
 
         $query = http_build_query([
-              'client_id'     => config('services.microsoft.client_id'),
-				'response_type' => 'code',
-				'redirect_uri'  => route('pages.microsoft.callback'),
-				'response_mode' => 'query',
-				'scope' => 'offline_access User.Read Calendars.ReadWrite',
-				'state'         => $state,
-				'prompt'        => 'consent',
-				'include_granted_scopes' => 'true',
+            'client_id'     => config('services.microsoft.client_id'),
+            'response_type' => 'code',
+            'redirect_uri'  => route('pages.microsoft.callback'),
+            'response_mode' => 'query',
+            'scope'         => 'offline_access User.Read Calendars.ReadWrite',
+            'state'         => $state,
         ]);
 
         $tenantId = config('services.microsoft.tenant_id');
