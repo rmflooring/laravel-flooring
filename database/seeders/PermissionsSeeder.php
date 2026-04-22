@@ -63,6 +63,12 @@ class PermissionsSeeder extends Seeder
             'edit labour types',
             'delete labour types',
 
+            // ===== Labour Items =====
+            'view labour items',
+            'create labour items',
+            'edit labour items',
+            'delete labour items',
+
             // ===== Unit Measures =====
             'view unit measures',
             'create unit measures',

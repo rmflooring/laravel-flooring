@@ -69,6 +69,7 @@ class RolesSeeder extends Seeder
             'view product lines', 'create product lines', 'edit product lines',
 
             'view labour types', 'create labour types', 'edit labour types',
+            'view labour items', 'create labour items', 'edit labour items',
             'view unit measures', 'create unit measures', 'edit unit measures',
 
             'view rfms', 'create rfms',
@@ -94,6 +95,7 @@ class RolesSeeder extends Seeder
             'view product types',
             'view product lines',
             'view labour types',
+            'view labour items',
             'view unit measures',
 
             'view rfms', 'create rfms', 'edit rfms',
