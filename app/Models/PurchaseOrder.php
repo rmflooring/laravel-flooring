@@ -111,6 +111,11 @@ class PurchaseOrder extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderDocument::class)->orderByDesc('created_at');
+    }
+
     public function getFulfillmentLabelAttribute(): string
     {
         return match ($this->fulfillment_method) {

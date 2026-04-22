@@ -950,6 +950,14 @@ Route::prefix('pages')
 				->middleware('role_or_permission:admin|view purchase orders')
 				->name('receive');
 
+			Route::get('pickups', [\App\Http\Controllers\Pages\WarehousePickupsController::class, 'index'])
+				->middleware('role_or_permission:admin|view purchase orders')
+				->name('pickups.index');
+
+			Route::get('pickups/{purchaseOrder}', [\App\Http\Controllers\Pages\WarehousePickupsController::class, 'show'])
+				->middleware('role_or_permission:admin|view purchase orders')
+				->name('pickups.show');
+
 			Route::get('pick-tickets', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'index'])
 				->middleware('role_or_permission:admin|view pick tickets')
 				->name('pick-tickets.index');
@@ -1048,6 +1056,19 @@ Route::prefix('pages')
 		Route::post('purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendEmail'])
 			->middleware('role_or_permission:admin|edit purchase orders')
 			->name('purchase-orders.send-email');
+
+		// Purchase Order Documents
+		Route::post('purchase-orders/{purchaseOrder}/documents', [\App\Http\Controllers\Pages\PurchaseOrderDocumentController::class, 'store'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.documents.store');
+
+		Route::delete('purchase-orders/{purchaseOrder}/documents/{document}', [\App\Http\Controllers\Pages\PurchaseOrderDocumentController::class, 'destroy'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.documents.destroy');
+
+		Route::get('purchase-orders/{purchaseOrder}/documents/{document}/download', [\App\Http\Controllers\Pages\PurchaseOrderDocumentController::class, 'download'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('purchase-orders.documents.download');
 
 		Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])
 			->middleware('role_or_permission:admin|delete purchase orders')

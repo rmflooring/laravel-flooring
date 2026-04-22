@@ -386,6 +386,12 @@
                         </li>
                         @can('view purchase orders')
                         <li>
+                            <a href="{{ route('pages.warehouse.pickups.index') }}"
+                               class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.warehouse.pickups.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                                Pickups &amp; Deliveries
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('pages.warehouse.receive') }}"
                                class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.warehouse.receive') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
                                 Receive Inventory

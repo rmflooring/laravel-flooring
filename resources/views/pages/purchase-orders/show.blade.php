@@ -372,6 +372,11 @@
                 </div>
             @endif
 
+            {{-- Order Confirmations --}}
+            <div class="mb-6">
+                @include('pages.purchase-orders._documents', ['purchaseOrder' => $purchaseOrder])
+            </div>
+
         </div>
     </div>
 

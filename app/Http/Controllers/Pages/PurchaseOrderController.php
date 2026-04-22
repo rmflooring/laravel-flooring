@@ -438,7 +438,7 @@ class PurchaseOrderController extends Controller
 
     public function show(PurchaseOrder $purchaseOrder)
     {
-        $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy']);
+        $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy', 'documents.uploader']);
 
         // Scope: within same sale (if sale-linked), or within all stock POs
         $base = PurchaseOrder::query();
