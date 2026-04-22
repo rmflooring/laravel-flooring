@@ -25,7 +25,7 @@ class MicrosoftCalendarConnectController extends Controller
 				'response_type' => 'code',
 				'redirect_uri'  => route('pages.microsoft.callback'),
 				'response_mode' => 'query',
-				'scope' => 'offline_access User.Read Calendars.ReadWrite Group.ReadWrite.All Group.Read.All GroupMember.Read.All',
+				'scope' => 'offline_access User.Read Calendars.ReadWrite',
 				'state'         => $state,
 				'prompt'        => 'consent',
 				'include_granted_scopes' => 'true',
