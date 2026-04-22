@@ -11,13 +11,15 @@
                             Labour Items
                         </h1>
 
+                        @can('create labour items')
                         <a href="{{ route('admin.labour_items.create') }}"
                            class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-700 rounded-xl hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                             Add New Labour Item
                         </a>
+                        @endcan
                     </div>
 
-                    {{-- Filters (Customer-style layout) --}}
+                    {{-- Filters --}}
                     <div class="border border-gray-200 dark:border-gray-700 rounded-2xl p-6 mb-8">
                         <form method="GET" action="{{ route('admin.labour_items.index') }}">
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -56,7 +58,7 @@
                                     </select>
                                 </div>
 
-                                {{-- Labour Type (this is your "Type") --}}
+                                {{-- Labour Type --}}
                                 <div>
                                     <label for="labour_type_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                                         Type
@@ -95,22 +97,32 @@
 
                             </div>
 
-                            {{-- Buttons (Customer-style: left aligned, not full width) --}}
-                            <div class="mt-6 flex gap-3">
-                                <button
-                                    type="submit"
-                                    class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-700 rounded-xl hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-                                >
-                                    Apply
-                                </button>
+                            {{-- Show Archived toggle + buttons --}}
+                            <div class="mt-6 flex items-center gap-6">
+                                <div class="flex gap-3">
+                                    <button
+                                        type="submit"
+                                        class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-blue-700 rounded-xl hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                                    >
+                                        Apply
+                                    </button>
+                                    <a
+                                        href="{{ route('admin.labour_items.index') }}"
+                                        class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200
+                                               dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+                                    >
+                                        Reset
+                                    </a>
+                                </div>
 
-                                <a
-                                    href="{{ route('admin.labour_items.index') }}"
-                                    class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200
-                                           dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
-                                >
-                                    Reset
-                                </a>
+                                @can('delete labour items')
+                                <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" name="show_archived" value="1"
+                                           @checked($showArchived)
+                                           class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+                                    Show archived
+                                </label>
+                                @endcan
                             </div>
                         </form>
                     </div>
@@ -126,7 +138,9 @@
                     @if ($labourItems->total() === 0)
                         <p class="text-gray-500 dark:text-gray-400">
                             No labour items found.
+                            @can('create labour items')
                             <a href="{{ route('admin.labour_items.create') }}" class="text-blue-700 hover:underline dark:text-blue-400">Create one now</a>.
+                            @endcan
                         </p>
                     @else
                         <div class="text-sm text-gray-600 dark:text-gray-300 mb-3">
@@ -150,9 +164,12 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($labourItems as $item)
-                                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 {{ $item->trashed() ? 'opacity-60' : '' }}">
                                             <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                                                 {{ $item->description }}
+                                                @if ($item->trashed())
+                                                    <span class="ml-2 text-xs font-medium px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">Archived</span>
+                                                @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 {{ $item->labourType->name ?? 'N/A' }}
@@ -167,6 +184,7 @@
                                                 ${{ number_format($item->sell, 2) }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
+                                                @if (!$item->trashed())
                                                 <span class="text-xs font-medium px-2.5 py-0.5 rounded
                                                     @if ($item->status === 'Active')
                                                         bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300
@@ -178,12 +196,50 @@
                                                 ">
                                                     {{ $item->status }}
                                                 </span>
+                                                @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <a href="{{ route('admin.labour_items.edit', $item) }}"
-                                                   class="font-medium text-blue-600 hover:underline dark:text-blue-500">
-                                                    Edit
-                                                </a>
+                                                <div class="flex items-center gap-3">
+                                                    @if (!$item->trashed())
+                                                        @can('edit labour items')
+                                                        <a href="{{ route('admin.labour_items.edit', $item) }}"
+                                                           class="font-medium text-blue-600 hover:underline dark:text-blue-500">
+                                                            Edit
+                                                        </a>
+                                                        @endcan
+
+                                                        @can('delete labour items')
+                                                        <form method="POST" action="{{ route('admin.labour_items.destroy', $item) }}"
+                                                              onsubmit="return confirm('Archive {{ addslashes($item->description) }}? It will be hidden from new estimates but can be restored.')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-500">
+                                                                Archive
+                                                            </button>
+                                                        </form>
+                                                        @endcan
+                                                    @else
+                                                        @can('delete labour items')
+                                                        <form method="POST" action="{{ route('admin.labour_items.restore', $item->id) }}">
+                                                            @csrf
+                                                            <button type="submit" class="font-medium text-green-600 hover:underline dark:text-green-500">
+                                                                Restore
+                                                            </button>
+                                                        </form>
+                                                        @endcan
+
+                                                        @role('admin')
+                                                        <form method="POST" action="{{ route('admin.labour_items.force-destroy', $item->id) }}"
+                                                              onsubmit="return confirm('Permanently delete {{ addslashes($item->description) }}? This cannot be undone.')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-500">
+                                                                Delete Permanently
+                                                            </button>
+                                                        </form>
+                                                        @endrole
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforeach

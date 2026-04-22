@@ -12,19 +12,20 @@ class LabourItemController extends Controller
 {
     public function index(Request $request)
     {
-        $query = LabourItem::with(['unitMeasure', 'labourType']);
+        $showArchived = $request->boolean('show_archived');
 
-        // Search (matches your CustomerController style)
+        $query = $showArchived
+            ? LabourItem::withTrashed()->with(['unitMeasure', 'labourType'])
+            : LabourItem::with(['unitMeasure', 'labourType']);
+
         if ($request->filled('search')) {
             $search = trim($request->search);
-
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
                   ->orWhere('notes', 'like', "%{$search}%");
             });
         }
 
-        // Filters
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -33,11 +34,6 @@ class LabourItemController extends Controller
             $query->where('labour_type_id', $request->labour_type_id);
         }
 
-        if ($request->filled('unit_measure_id')) {
-            $query->where('unit_measure_id', $request->unit_measure_id);
-        }
-
-        // Per-page (optional but handy)
         $perPage = (int) $request->get('per_page', 15);
         if (!in_array($perPage, [10, 15, 25, 50, 100], true)) {
             $perPage = 15;
@@ -48,11 +44,10 @@ class LabourItemController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        // Dropdown data for filters / create/edit
         $unitMeasures = UnitMeasure::query()->orderBy('label')->get(['id', 'label']);
         $labourTypes  = LabourType::query()->orderBy('name')->get(['id', 'name']);
 
-        return view('admin.labour_items.index', compact('labourItems', 'unitMeasures', 'labourTypes'));
+        return view('admin.labour_items.index', compact('labourItems', 'unitMeasures', 'labourTypes', 'showArchived'));
     }
 
     public function create()
@@ -66,19 +61,19 @@ class LabourItemController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'labour_type_id'   => 'required|exists:labour_types,id',   // ✅ make consistent with update()
-            'description'      => 'required|string|max:255',
-            'notes'            => 'nullable|string',
-            'cost'             => 'required|numeric|min:0',
-            'sell'             => 'required|numeric|min:0',
-            'unit_measure_id'  => 'required|exists:unit_measures,id',
-            'status'           => 'required|in:Active,Inactive,Needs Update',
+            'labour_type_id'  => 'required|exists:labour_types,id',
+            'description'     => 'required|string|max:255',
+            'notes'           => 'nullable|string',
+            'cost'            => 'required|numeric|min:0',
+            'sell'            => 'required|numeric|min:0',
+            'unit_measure_id' => 'required|exists:unit_measures,id',
+            'status'          => 'required|in:Active,Inactive,Needs Update',
         ]);
 
         LabourItem::create($validated);
 
         return redirect()->route('admin.labour_items.index')
-            ->with('success', 'Labour Item created!');
+            ->with('success', 'Labour item created.');
     }
 
     public function edit(LabourItem $labourItem)
@@ -92,41 +87,69 @@ class LabourItemController extends Controller
     public function update(Request $request, LabourItem $labourItem)
     {
         $validated = $request->validate([
-            'labour_type_id'   => 'required|exists:labour_types,id',
-            'description'      => 'required|string|max:255',
-            'notes'            => 'nullable|string',
-            'cost'             => 'required|numeric|min:0',
-            'sell'             => 'required|numeric|min:0',
-            'unit_measure_id'  => 'required|exists:unit_measures,id',
-            'status'           => 'required|in:Active,Inactive,Needs Update',
+            'labour_type_id'  => 'required|exists:labour_types,id',
+            'description'     => 'required|string|max:255',
+            'notes'           => 'nullable|string',
+            'cost'            => 'required|numeric|min:0',
+            'sell'            => 'required|numeric|min:0',
+            'unit_measure_id' => 'required|exists:unit_measures,id',
+            'status'          => 'required|in:Active,Inactive,Needs Update',
         ]);
 
         $labourItem->update($validated);
 
         return redirect()->route('admin.labour_items.index')
-            ->with('success', 'Labour Item updated successfully!');
-    }
-	public function apiIndex(Request $request)
-{
-    $labourTypeId = $request->get('labour_type_id');
-
-    $query = LabourItem::query()
-        ->with(['unitMeasure'])
-        ->orderBy('description');
-
-    if ($labourTypeId) {
-        $query->where('labour_type_id', $labourTypeId);
+            ->with('success', 'Labour item updated.');
     }
 
-    return $query->get()->map(function ($item) {
-        return [
-            'id'        => $item->id,
-            'description' => $item->description,
-            'unit_code' => optional($item->unitMeasure)->code ?? optional($item->unitMeasure)->label ?? '',
-            'cost'      => (string) $item->cost,
-            'sell'      => (string) $item->sell,
-            'notes'     => (string) ($item->notes ?? ''),
-        ];
-    });
-}
+    public function destroy(LabourItem $labourItem)
+    {
+        $labourItem->delete();
+
+        return redirect()->route('admin.labour_items.index')
+            ->with('success', "Labour item \"{$labourItem->description}\" archived.");
+    }
+
+    public function restore(int $id)
+    {
+        $labourItem = LabourItem::withTrashed()->findOrFail($id);
+        $labourItem->restore();
+
+        return redirect()->route('admin.labour_items.index', ['show_archived' => 1])
+            ->with('success', "Labour item \"{$labourItem->description}\" restored.");
+    }
+
+    public function forceDestroy(int $id)
+    {
+        $labourItem = LabourItem::withTrashed()->findOrFail($id);
+        $description = $labourItem->description;
+        $labourItem->forceDelete();
+
+        return redirect()->route('admin.labour_items.index', ['show_archived' => 1])
+            ->with('success', "Labour item \"{$description}\" permanently deleted.");
+    }
+
+    public function apiIndex(Request $request)
+    {
+        $labourTypeId = $request->get('labour_type_id');
+
+        $query = LabourItem::query()
+            ->with(['unitMeasure'])
+            ->orderBy('description');
+
+        if ($labourTypeId) {
+            $query->where('labour_type_id', $labourTypeId);
+        }
+
+        return $query->get()->map(function ($item) {
+            return [
+                'id'          => $item->id,
+                'description' => $item->description,
+                'unit_code'   => optional($item->unitMeasure)->code ?? optional($item->unitMeasure)->label ?? '',
+                'cost'        => (string) $item->cost,
+                'sell'        => (string) $item->sell,
+                'notes'       => (string) ($item->notes ?? ''),
+            ];
+        });
+    }
 }

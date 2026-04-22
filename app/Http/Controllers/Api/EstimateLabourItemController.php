@@ -18,6 +18,7 @@ class EstimateLabourItemController extends Controller
             ->join('unit_measures', 'unit_measures.id', '=', 'labour_items.unit_measure_id')
             ->where('labour_items.labour_type_id', (int) $request->labour_type_id)
             ->where('labour_items.status', 'Active')
+            ->whereNull('labour_items.deleted_at')
             ->select([
     'labour_items.id',
     'labour_items.description',

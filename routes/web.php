@@ -499,6 +499,12 @@ Route::prefix('admin')
                 'update'  => 'labour_items.update',
                 'destroy' => 'labour_items.destroy',
             ]);
+        Route::post('labour-items/{id}/restore', [LabourItemController::class, 'restore'])
+            ->middleware('role_or_permission:admin|delete labour items')
+            ->name('labour_items.restore');
+        Route::delete('labour-items/{id}/force', [LabourItemController::class, 'forceDestroy'])
+            ->middleware('role_or_permission:admin')
+            ->name('labour_items.force-destroy');
 
         // Products
         Route::get('products', [ProductCatalogController::class, 'index'])
