@@ -158,6 +158,7 @@
                                         <th scope="col" class="px-6 py-4 whitespace-nowrap">Unit</th>
                                         <th scope="col" class="px-6 py-4 whitespace-nowrap">Cost</th>
                                         <th scope="col" class="px-6 py-4 whitespace-nowrap">Sell</th>
+                                        <th scope="col" class="px-6 py-4 whitespace-nowrap">Margin</th>
                                         <th scope="col" class="px-6 py-4 whitespace-nowrap">Status</th>
                                         <th scope="col" class="px-6 py-4 whitespace-nowrap">Actions</th>
                                     </tr>
@@ -182,6 +183,17 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 ${{ number_format($item->sell, 2) }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                @if ($item->sell > 0 && $item->cost > 0)
+                                                    @php $margin = (($item->sell - $item->cost) / $item->sell) * 100; @endphp
+                                                    <span class="text-xs font-semibold"
+                                                          style="color: {{ $margin < 20 ? '#dc2626' : ($margin < 38 ? '#d97706' : '#16a34a') }}">
+                                                        {{ number_format($margin, 1) }}%
+                                                    </span>
+                                                @else
+                                                    <span class="text-xs text-gray-400">—</span>
+                                                @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 @if (!$item->trashed())
