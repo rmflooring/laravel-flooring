@@ -1304,6 +1304,10 @@ function initManufacturerDropdownForRoom(roomCard) {
     });
 
     colorInput.addEventListener('input', () => {
+      // Clear the linked style ID — only a dropdown selection should set it
+      colorInput.dataset.productStyleId = '';
+      const styleIdInput = row.querySelector('.js-product-style-id-input');
+      if (styleIdInput) styleIdInput.value = '';
       openDropdown();
       applyFilter();
     });
@@ -1319,6 +1323,8 @@ function initManufacturerDropdownForRoom(roomCard) {
       styleInput.addEventListener('change', () => {
         colorInput.value = '';
         colorInput.dataset.productStyleId = '';
+        const styleIdInput = row.querySelector('.js-product-style-id-input');
+        if (styleIdInput) styleIdInput.value = '';
         styles = [];
         render([]);
       });
