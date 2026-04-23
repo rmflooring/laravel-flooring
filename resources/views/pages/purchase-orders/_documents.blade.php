@@ -1,7 +1,20 @@
 {{-- resources/views/pages/purchase-orders/_documents.blade.php --}}
 {{-- Usage: @include('pages.purchase-orders._documents', ['purchaseOrder' => $purchaseOrder]) --}}
 <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
-     x-data="{ dragging: false }">
+     x-data="{ dragging: false }"
+     @dragover.prevent="dragging = true"
+     @dragleave="if (!$el.contains($event.relatedTarget)) dragging = false"
+     @drop.prevent="
+         dragging = false;
+         const input = document.getElementById('po-doc-upload-{{ $purchaseOrder->id }}');
+         const form  = document.getElementById('po-doc-upload-form-{{ $purchaseOrder->id }}');
+         if ($event.dataTransfer.files.length && input && form) {
+             const dt = new DataTransfer();
+             Array.from($event.dataTransfer.files).forEach(f => dt.items.add(f));
+             input.files = dt.files;
+             form.submit();
+         }
+     ">
 
     {{-- Header --}}
     <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -133,37 +146,3 @@
 
 </div>
 
-@can('edit purchase orders')
-<script>
-(function () {
-    // Drag-and-drop for the upload form
-    var container = document.getElementById('po-doc-upload-form-{{ $purchaseOrder->id }}').closest('[x-data]');
-    if (!container) return;
-
-    var alpineComp = container._x_dataStack?.[0];
-    if (!alpineComp) return;
-
-    container.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        alpineComp.dragging = true;
-    });
-    container.addEventListener('dragleave', function (e) {
-        if (!container.contains(e.relatedTarget)) {
-            alpineComp.dragging = false;
-        }
-    });
-    container.addEventListener('drop', function (e) {
-        e.preventDefault();
-        alpineComp.dragging = false;
-        var input = document.getElementById('po-doc-upload-{{ $purchaseOrder->id }}');
-        if (e.dataTransfer.files.length) {
-            // Transfer the dropped files to the input and submit
-            var dt = new DataTransfer();
-            Array.from(e.dataTransfer.files).forEach(function (f) { dt.items.add(f); });
-            input.files = dt.files;
-            document.getElementById('po-doc-upload-form-{{ $purchaseOrder->id }}').submit();
-        }
-    });
-})();
-</script>
-@endcan
