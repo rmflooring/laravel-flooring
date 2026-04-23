@@ -258,6 +258,138 @@
                 @endif
             </div>
 
+            {{-- Sale Pickups & Deliveries (direct-staged pick tickets) --}}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-white">Sale Pickups &amp; Deliveries</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Material orders staged directly from a sale (no work order).</p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">PT #</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sale / Customer</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Scheduled Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Notes</th>
+                                <th class="px-4 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @forelse ($pickTickets as $pt)
+                                @php
+                                    $ptStatusColors = [
+                                        'staged'              => 'bg-orange-100 text-orange-800',
+                                        'pending'             => 'bg-gray-100 text-gray-700',
+                                        'ready'               => 'bg-blue-100 text-blue-800',
+                                        'picked'              => 'bg-purple-100 text-purple-800',
+                                        'partially_delivered' => 'bg-yellow-100 text-yellow-800',
+                                        'delivered'           => 'bg-green-100 text-green-800',
+                                    ];
+                                    $ptStatusColor = $ptStatusColors[$pt->status] ?? 'bg-gray-100 text-gray-700';
+
+                                    $isOverdue = $pt->delivery_date
+                                        && $pt->delivery_date->isPast()
+                                        && ! in_array($pt->status, ['delivered', 'cancelled', 'returned']);
+                                @endphp
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 {{ $isOverdue ? 'bg-red-50 dark:bg-red-950' : '' }}">
+
+                                    {{-- PT # --}}
+                                    <td class="px-4 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                                        <a href="{{ route('pages.warehouse.pick-tickets.show', $pt) }}" class="hover:underline">
+                                            {{ $pt->pt_number }}
+                                        </a>
+                                    </td>
+
+                                    {{-- Type badge --}}
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        @if ($pt->fulfillment_type === 'pickup')
+                                            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                                </svg>
+                                                Pickup
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                                </svg>
+                                                Delivery
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Sale / Customer --}}
+                                    <td class="px-4 py-3 text-sm">
+                                        @if ($pt->sale)
+                                            <a href="{{ route('pages.sales.show', $pt->sale) }}"
+                                               class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                Sale #{{ $pt->sale->sale_number }}
+                                            </a>
+                                            @if ($pt->sale->customer_name)
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ $pt->sale->customer_name }}</div>
+                                            @endif
+                                            @if ($pt->sale->homeowner_name)
+                                                <div class="text-xs text-gray-400 dark:text-gray-500">{{ $pt->sale->homeowner_name }}</div>
+                                            @endif
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Scheduled date --}}
+                                    <td class="px-4 py-3 text-sm whitespace-nowrap">
+                                        @if ($pt->delivery_date)
+                                            <span class="{{ $isOverdue ? 'font-semibold text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300' }}">
+                                                {{ $pt->delivery_date->format('M j, Y') }}
+                                                @if ($pt->delivery_time)
+                                                    <span class="text-gray-400 text-xs">{{ \Carbon\Carbon::createFromFormat('H:i', $pt->delivery_time)->format('g:i A') }}</span>
+                                                @endif
+                                            </span>
+                                            @if ($isOverdue)
+                                                <span class="ml-1 text-xs font-semibold text-red-600 dark:text-red-400">Overdue</span>
+                                            @endif
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Status --}}
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $ptStatusColor }}">
+                                            {{ $pt->status_label }}
+                                        </span>
+                                    </td>
+
+                                    {{-- Notes --}}
+                                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                                        {{ $pt->staging_notes ?? '—' }}
+                                    </td>
+
+                                    {{-- Action --}}
+                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        <a href="{{ route('pages.warehouse.pick-tickets.show', $pt) }}"
+                                           class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        No sale pickups or deliveries found matching your filters.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
 </x-app-layout>
