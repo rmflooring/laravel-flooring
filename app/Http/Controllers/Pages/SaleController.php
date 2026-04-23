@@ -4,15 +4,21 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryReturnItem;
+use App\Models\MicrosoftAccount;
+use App\Models\MicrosoftCalendar;
 use App\Models\PickTicket;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Employee;
+use App\Services\CalendarTemplateService;
 use App\Services\EmailTemplateService;
+use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
 use App\Services\PickTicketService;
+use App\Services\SmsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
 
@@ -601,8 +607,10 @@ private function isRowEmpty(array $row, array $keysToCheck): bool
     return true;
 }
 
-public function stagePickTicket(Request $request, Sale $sale, PickTicketService $service)
+public function stagePickTicket(Request $request, Sale $sale, PickTicketService $ptService, SmsService $smsService)
 {
+    $warehouseGroupId = '4bfd495c-4df2-4eaa-9d8c-987c4ef23b02';
+
     // Block if an active direct PT already exists for this sale
     $existing = PickTicket::where('sale_id', $sale->id)
         ->whereNull('work_order_id')
@@ -618,6 +626,9 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
         'sale_item_ids'    => ['required', 'array', 'min:1'],
         'sale_item_ids.*'  => ['required', 'integer'],
         'staging_notes'    => ['nullable', 'string', 'max:1000'],
+        'delivery_date'    => ['nullable', 'required_if:fulfillment_type,delivery', 'date'],
+        'delivery_time'    => ['nullable', 'date_format:H:i'],
+        'sms_customer'     => ['nullable', 'boolean'],
     ]);
 
     // Verify all selected items are material items belonging to this sale
@@ -630,12 +641,82 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
         return back()->with('error', 'One or more selected items are invalid.');
     }
 
-    $pt = $service->createFromSale(
+    $pt = $ptService->createFromSale(
         $sale,
         $data['sale_item_ids'],
         $data['fulfillment_type'],
         $data['staging_notes'] ?? null,
+        $data['fulfillment_type'] === 'delivery' ? ($data['delivery_date'] ?? null) : null,
+        $data['fulfillment_type'] === 'delivery' ? ($data['delivery_time'] ?? null) : null,
     );
+
+    // Calendar sync — delivery only, date required
+    if ($pt->fulfillment_type === 'delivery' && $pt->delivery_date) {
+        try {
+            $sale->loadMissing(['opportunity.projectManager']);
+
+            $account = MicrosoftAccount::where('user_id', auth()->id())
+                ->where('is_connected', true)
+                ->first();
+
+            if ($account) {
+                $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                    ->where('group_id', $warehouseGroupId)
+                    ->first();
+
+                if ($calendar) {
+                    $start = \Carbon\Carbon::parse(
+                        $pt->delivery_date->format('Y-m-d') . ' ' . ($pt->delivery_time ?? '09:00')
+                    );
+                    $end = $start->copy()->addHour();
+
+                    $pmName      = $sale->pm_name ?? '';
+                    $pmFirstName = explode(' ', trim($pmName))[0] ?? $pmName;
+
+                    $eventData = [
+                        'title' => 'Delivery – ' . ($sale->customer_name ?? $sale->homeowner_name ?? 'Customer') . ' – Sale #' . $sale->sale_number,
+                        'notes' => implode("\n", array_filter([
+                            'PT: ' . $pt->pt_number,
+                            $sale->job_name ? 'Job: ' . $sale->job_name : null,
+                            $sale->homeowner_name ? 'Site contact: ' . $sale->homeowner_name : null,
+                            $sale->job_address ? 'Address: ' . str_replace("\n", ', ', $sale->job_address) : null,
+                            $pmName ? 'PM: ' . $pmName : null,
+                            $pt->staging_notes ? 'Notes: ' . $pt->staging_notes : null,
+                        ])),
+                        'start' => $start,
+                        'end'   => $end,
+                    ];
+
+                    $calService = new GraphCalendarService();
+                    $externalId = $calService->createEvent($account, $calendar, $eventData);
+                    $localEvent = $calService->persistLocalEvent($account, $calendar, $externalId, $eventData, PickTicket::class, $pt->id);
+
+                    $pt->update(['calendar_event_id' => $localEvent->id]);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('[PT] Delivery calendar event creation failed', ['pt_id' => $pt->id, 'error' => $e->getMessage()]);
+            session()->flash('warning', 'Pick ticket staged, but the delivery calendar event could not be created. Your Microsoft 365 connection may have expired.');
+        }
+    }
+
+    // SMS notification to customer
+    if ($request->boolean('sms_customer')) {
+        $phone = $sale->job_mobile ?: $sale->job_phone;
+        if ($phone) {
+            $deliveryLine = $pt->delivery_date
+                ? ' Your delivery is scheduled for ' . $pt->delivery_date->format('l, F j') . ($pt->delivery_time ? ' at ' . \Carbon\Carbon::createFromFormat('H:i', $pt->delivery_time)->format('g:i A') : '') . '.'
+                : '';
+
+            $body = 'Hi' . ($sale->homeowner_name ? ' ' . explode(' ', trim($sale->homeowner_name))[0] : '') . ','
+                . $deliveryLine
+                . ' Your flooring materials are being prepared for delivery'
+                . ($sale->job_name ? ' for ' . $sale->job_name : '') . '.'
+                . ' Please contact us if you have any questions.';
+
+            $smsService->send($phone, $body, 'pt_delivery', $pt);
+        }
+    }
 
     return back()->with('success', 'Pick ticket ' . $pt->pt_number . ' staged for ' . $pt->fulfillment_type_label . '.');
 }

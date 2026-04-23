@@ -289,6 +289,17 @@
                                     </dd>
                                 </div>
                             @endif
+                            @if ($pickTicket->delivery_date)
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-500">Delivery date</dt>
+                                    <dd class="text-gray-700 dark:text-gray-300">
+                                        {{ $pickTicket->delivery_date->format('M j, Y') }}
+                                        @if ($pickTicket->delivery_time)
+                                            · {{ \Carbon\Carbon::createFromFormat('H:i', $pickTicket->delivery_time)->format('g:i A') }}
+                                        @endif
+                                    </dd>
+                                </div>
+                            @endif
                             @if ($pickTicket->sale?->job_name)
                                 <div class="flex justify-between">
                                     <dt class="text-gray-500">Job</dt>

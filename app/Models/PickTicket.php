@@ -12,11 +12,12 @@ class PickTicket extends Model
     protected $guarded = ['id', 'pt_number'];
 
     protected $casts = [
-        'ready_at'     => 'datetime',
-        'picked_at'    => 'datetime',
-        'delivered_at' => 'datetime',
-        'returned_at'  => 'datetime',
-        'unstaged_at'  => 'datetime',
+        'delivery_date' => 'date',
+        'ready_at'      => 'datetime',
+        'picked_at'     => 'datetime',
+        'delivered_at'  => 'datetime',
+        'returned_at'   => 'datetime',
+        'unstaged_at'   => 'datetime',
     ];
 
     const FULFILLMENT_TYPES = [
@@ -110,6 +111,11 @@ class PickTicket extends Model
     public function unstagedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'unstaged_by');
+    }
+
+    public function calendarEvent(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CalendarEvent::class, 'calendar_event_id');
     }
 
     public function getStatusLabelAttribute(): string

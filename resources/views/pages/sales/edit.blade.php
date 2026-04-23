@@ -2166,7 +2166,7 @@
 {{-- Stage for Delivery / Pickup --}}
 @can('edit work orders')
 @if ($materialSaleItems->isNotEmpty())
-<div x-data="{ showStageModal: false }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
+<div x-data="{ showStageModal: false, fulfillmentType: 'delivery' }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
 
         {{-- Header --}}
@@ -2269,17 +2269,52 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Fulfillment Type</label>
                             <div class="flex gap-4">
                                 <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="fulfillment_type" value="delivery" checked
+                                    <input type="radio" name="fulfillment_type" value="delivery"
+                                           x-model="fulfillmentType"
                                            class="text-orange-600 focus:ring-orange-500">
                                     <span class="text-sm text-gray-700">Delivery</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="radio" name="fulfillment_type" value="pickup"
+                                           x-model="fulfillmentType"
                                            class="text-orange-600 focus:ring-orange-500">
                                     <span class="text-sm text-gray-700">Pickup</span>
                                 </label>
                             </div>
                         </div>
+
+                        {{-- Delivery Date/Time (delivery only) --}}
+                        <div x-show="fulfillmentType === 'delivery'" x-cloak>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Scheduled Delivery</label>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <input type="date" name="delivery_date"
+                                           :disabled="fulfillmentType !== 'delivery'"
+                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                </div>
+                                <div class="w-32">
+                                    <input type="time" name="delivery_time" value="09:00"
+                                           :disabled="fulfillmentType !== 'delivery'"
+                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-400">Syncs to the RM Warehouse calendar.</p>
+                        </div>
+
+                        {{-- SMS Customer (delivery only, when phone available) --}}
+                        @php $customerPhone = $sale->job_mobile ?: $sale->job_phone; @endphp
+                        @if ($customerPhone)
+                        <div x-show="fulfillmentType === 'delivery'" x-cloak>
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" name="sms_customer" value="1"
+                                       class="mt-0.5 text-orange-600 focus:ring-orange-500 rounded">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Notify customer by SMS</span>
+                                    <p class="text-xs text-gray-400 mt-0.5">Will send to {{ $customerPhone }}{{ $sale->job_mobile ? ' (mobile)' : '' }}.</p>
+                                </div>
+                            </label>
+                        </div>
+                        @endif
 
                         {{-- Item Selection --}}
                         <div>

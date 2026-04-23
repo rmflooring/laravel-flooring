@@ -54,7 +54,9 @@ class PickTicketService
         Sale $sale,
         array $saleItemIds,
         string $fulfillmentType,
-        ?string $stagingNotes = null
+        ?string $stagingNotes = null,
+        ?string $deliveryDate = null,
+        ?string $deliveryTime = null
     ): PickTicket {
         $saleItems = SaleItem::whereIn('id', $saleItemIds)
             ->whereHas('room', fn ($q) => $q->where('sale_id', $sale->id))
@@ -62,13 +64,15 @@ class PickTicketService
             ->orderBy('id')
             ->get();
 
-        return DB::transaction(function () use ($sale, $saleItems, $fulfillmentType, $stagingNotes) {
+        return DB::transaction(function () use ($sale, $saleItems, $fulfillmentType, $stagingNotes, $deliveryDate, $deliveryTime) {
             $pt = PickTicket::create([
                 'sale_id'          => $sale->id,
                 'work_order_id'    => null,
                 'status'           => 'staged',
                 'fulfillment_type' => $fulfillmentType,
                 'staging_notes'    => $stagingNotes ?: null,
+                'delivery_date'    => $deliveryDate ?: null,
+                'delivery_time'    => $deliveryTime ?: null,
             ]);
 
             foreach ($saleItems as $index => $saleItem) {
