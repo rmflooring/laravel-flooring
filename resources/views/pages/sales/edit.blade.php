@@ -2163,6 +2163,156 @@
 </div>
 @endcan
 
+{{-- Stage for Delivery / Pickup --}}
+@can('edit work orders')
+@if ($materialSaleItems->isNotEmpty())
+<div x-data="{ showStageModal: false }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900">Delivery / Pickup</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Stage material items for warehouse fulfilment.</p>
+            </div>
+            @if (!$directPickTicket)
+                <button @click="showStageModal = true"
+                        class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-lg"
+                        style="background:#ea580c">
+                    Stage for Delivery / Pickup
+                </button>
+            @endif
+        </div>
+
+        {{-- Active PT info --}}
+        @if ($directPickTicket)
+            @php
+                $ptColors = [
+                    'staged'              => '#ea580c',
+                    'pending'             => '#6b7280',
+                    'ready'               => '#2563eb',
+                    'picked'              => '#7c3aed',
+                    'partially_delivered' => '#ca8a04',
+                ];
+                $ptColor = $ptColors[$directPickTicket->status] ?? '#6b7280';
+                $ftLabel = $directPickTicket->fulfillment_type_label ?? '—';
+            @endphp
+            <div class="px-5 py-4 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+                          style="background:{{ $ptColor }}">
+                        {{ $directPickTicket->status_label }}
+                    </span>
+                    <span class="text-sm text-gray-700 font-medium">{{ $directPickTicket->pt_number }}</span>
+                    <span class="text-sm text-gray-500">·</span>
+                    <span class="text-sm text-gray-500">{{ $ftLabel }}</span>
+                    @if ($directPickTicket->staging_notes)
+                        <span class="text-sm text-gray-400 italic">· {{ $directPickTicket->staging_notes }}</span>
+                    @endif
+                </div>
+                <a href="{{ route('pages.warehouse.pick-tickets.show', $directPickTicket) }}"
+                   class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800">
+                    View Pick Ticket
+                </a>
+            </div>
+        @else
+            <div class="px-5 py-4 text-sm text-gray-400">No active pick ticket. Use the button above to stage items.</div>
+        @endif
+
+        {{-- Stage Modal --}}
+        <div x-show="showStageModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center"
+             style="background:rgba(0,0,0,0.5)">
+            <div @click.outside="showStageModal = false"
+                 class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-base font-semibold text-gray-900">Stage for Delivery / Pickup</h3>
+                    <button @click="showStageModal = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <form method="POST" action="{{ route('pages.sales.stage-pick-ticket', $sale) }}">
+                    @csrf
+                    <div class="px-6 py-5 space-y-5">
+
+                        {{-- Fulfillment Type --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fulfillment Type</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="fulfillment_type" value="delivery" checked
+                                           class="text-orange-600 focus:ring-orange-500">
+                                    <span class="text-sm text-gray-700">Delivery</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="fulfillment_type" value="pickup"
+                                           class="text-orange-600 focus:ring-orange-500">
+                                    <span class="text-sm text-gray-700">Pickup</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- Item Selection --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Items to Stage</label>
+                            <div class="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                                @foreach ($materialSaleItems as $item)
+                                    @php
+                                        $itemLabel = implode(' — ', array_filter([
+                                            $item->product_type,
+                                            $item->manufacturer,
+                                            $item->style,
+                                            $item->color_item_number,
+                                        ])) ?: 'Material';
+                                        $roomName = $item->room?->name ?? '—';
+                                    @endphp
+                                    <label class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                                        <input type="checkbox" name="sale_item_ids[]" value="{{ $item->id }}" checked
+                                               class="mt-0.5 text-orange-600 focus:ring-orange-500 rounded">
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-medium text-gray-800">{{ $itemLabel }}</div>
+                                            <div class="text-xs text-gray-500">{{ $roomName }} · {{ $item->quantity }} {{ $item->unit }}</div>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        {{-- Staging Notes --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Warehouse Notes <span class="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <textarea name="staging_notes" rows="2"
+                                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                      placeholder="e.g. Call customer before delivery, handle with care…"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                        <button type="button" @click="showStageModal = false"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white rounded-lg"
+                                style="background:#ea580c">
+                            Stage Items
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+@endif
+@endcan
+
 <script>
   // Neutral (shared) endpoints for both Estimates + Sales
   window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('pages.estimates.api.product-types') }}";

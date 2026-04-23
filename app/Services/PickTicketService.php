@@ -7,6 +7,7 @@ use App\Models\PickTicket;
 use App\Models\PickTicketItem;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,55 @@ class PickTicketService
                 'quantity'                => $allocation->quantity,
                 'sort_order'              => 0,
             ]);
+
+            return $pt;
+        });
+    }
+
+    /**
+     * Create a staging pick ticket directly from a sale (no Work Order).
+     * Used for material-only orders where the customer is picking up or we are delivering.
+     * Items are selected by the user from the sale's material items.
+     */
+    public function createFromSale(
+        Sale $sale,
+        array $saleItemIds,
+        string $fulfillmentType,
+        ?string $stagingNotes = null
+    ): PickTicket {
+        $saleItems = SaleItem::whereIn('id', $saleItemIds)
+            ->whereHas('room', fn ($q) => $q->where('sale_id', $sale->id))
+            ->where('item_type', 'material')
+            ->orderBy('id')
+            ->get();
+
+        return DB::transaction(function () use ($sale, $saleItems, $fulfillmentType, $stagingNotes) {
+            $pt = PickTicket::create([
+                'sale_id'          => $sale->id,
+                'work_order_id'    => null,
+                'status'           => 'staged',
+                'fulfillment_type' => $fulfillmentType,
+                'staging_notes'    => $stagingNotes ?: null,
+            ]);
+
+            foreach ($saleItems as $index => $saleItem) {
+                $itemName = implode(' — ', array_filter([
+                    $saleItem->product_type,
+                    $saleItem->manufacturer,
+                    $saleItem->style,
+                    $saleItem->color_item_number,
+                ])) ?: 'Material';
+
+                PickTicketItem::create([
+                    'pick_ticket_id'          => $pt->id,
+                    'inventory_allocation_id' => null,
+                    'sale_item_id'            => $saleItem->id,
+                    'item_name'               => $itemName,
+                    'unit'                    => $saleItem->unit ?? '',
+                    'quantity'                => $saleItem->quantity,
+                    'sort_order'              => $index,
+                ]);
+            }
 
             return $pt;
         });

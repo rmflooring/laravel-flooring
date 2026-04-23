@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryReturnItem;
+use App\Models\PickTicket;
 use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\Employee;
 use App\Services\EmailTemplateService;
 use App\Services\GraphMailService;
+use App\Services\PickTicketService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -158,6 +161,14 @@ class SaleController extends Controller
 		$pmEmail          = $sale->opportunity?->projectManager?->email;
 		$customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
 
+        // Direct (no-WO) pick ticket for staging card
+        $directPickTicket  = PickTicket::where('sale_id', $sale->id)
+            ->whereNull('work_order_id')
+            ->whereIn('status', PickTicket::ACTIVE_STATUSES)
+            ->latest()
+            ->first();
+        $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
+
         $trashedWorkOrders    = collect();
         $trashedPurchaseOrders = collect();
         $draftRfcs            = collect();
@@ -195,6 +206,7 @@ class SaleController extends Controller
             'sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs', 'customerContacts',
             'depositPayerOptions', 'depositPaymentMethods',
+            'directPickTicket', 'materialSaleItems',
         ));
 	}
 
@@ -234,10 +246,19 @@ class SaleController extends Controller
 
         $deleteBlockReason = $this->getDeleteBlockReason($sale);
 
+        // Direct (no-WO) pick ticket for staging card
+        $directPickTicket  = PickTicket::where('sale_id', $sale->id)
+            ->whereNull('work_order_id')
+            ->whereIn('status', PickTicket::ACTIVE_STATUSES)
+            ->latest()
+            ->first();
+        $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
+
         return view('pages.sales.edit', compact(
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
             'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'deleteBlockReason', 'customerContacts',
+            'directPickTicket', 'materialSaleItems',
         ));
     }
 	
@@ -578,6 +599,45 @@ private function isRowEmpty(array $row, array $keysToCheck): bool
         if (!empty($row[$key])) return false;
     }
     return true;
+}
+
+public function stagePickTicket(Request $request, Sale $sale, PickTicketService $service)
+{
+    // Block if an active direct PT already exists for this sale
+    $existing = PickTicket::where('sale_id', $sale->id)
+        ->whereNull('work_order_id')
+        ->whereIn('status', PickTicket::ACTIVE_STATUSES)
+        ->first();
+
+    if ($existing) {
+        return back()->with('error', 'An active pick ticket (' . $existing->pt_number . ') already exists for this sale.');
+    }
+
+    $data = $request->validate([
+        'fulfillment_type' => ['required', 'in:pickup,delivery'],
+        'sale_item_ids'    => ['required', 'array', 'min:1'],
+        'sale_item_ids.*'  => ['required', 'integer'],
+        'staging_notes'    => ['nullable', 'string', 'max:1000'],
+    ]);
+
+    // Verify all selected items are material items belonging to this sale
+    $validCount = SaleItem::whereIn('id', $data['sale_item_ids'])
+        ->whereHas('room', fn ($q) => $q->where('sale_id', $sale->id))
+        ->where('item_type', 'material')
+        ->count();
+
+    if ($validCount !== count($data['sale_item_ids'])) {
+        return back()->with('error', 'One or more selected items are invalid.');
+    }
+
+    $pt = $service->createFromSale(
+        $sale,
+        $data['sale_item_ids'],
+        $data['fulfillment_type'],
+        $data['staging_notes'] ?? null,
+    );
+
+    return back()->with('success', 'Pick ticket ' . $pt->pt_number . ' staged for ' . $pt->fulfillment_type_label . '.');
 }
 
 public function destroy(Sale $sale)

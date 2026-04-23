@@ -788,6 +788,10 @@ Route::prefix('pages')
 			->name('sales.work-orders.stage-pick-ticket')
 			->middleware('role_or_permission:admin|edit work orders');
 
+		Route::post('sales/{sale}/stage-pick-ticket', [\App\Http\Controllers\Pages\SaleController::class, 'stagePickTicket'])
+			->name('sales.stage-pick-ticket')
+			->middleware('role_or_permission:admin|edit work orders');
+
 		// Change Orders
 		Route::get('sales/{sale}/change-orders/create', [\App\Http\Controllers\Pages\ChangeOrderController::class, 'create'])
 			->name('sales.change-orders.create')

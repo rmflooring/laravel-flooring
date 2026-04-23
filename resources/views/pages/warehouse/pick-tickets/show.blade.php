@@ -281,6 +281,14 @@
                                     </dd>
                                 </div>
                             @endif
+                            @if ($pickTicket->fulfillment_type)
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-500">Fulfillment</dt>
+                                    <dd class="text-gray-700 dark:text-gray-300">
+                                        {{ $pickTicket->fulfillment_type_label }}
+                                    </dd>
+                                </div>
+                            @endif
                             @if ($pickTicket->sale?->job_name)
                                 <div class="flex justify-between">
                                     <dt class="text-gray-500">Job</dt>

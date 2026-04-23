@@ -19,6 +19,13 @@ class PickTicket extends Model
         'unstaged_at'  => 'datetime',
     ];
 
+    const FULFILLMENT_TYPES = [
+        'pickup'   => 'Pickup',
+        'delivery' => 'Delivery',
+    ];
+
+    const ACTIVE_STATUSES = ['staged', 'pending', 'ready', 'picked', 'partially_delivered'];
+
     const STATUSES = ['pending', 'ready', 'picked', 'staged', 'partially_delivered', 'delivered', 'returned', 'cancelled'];
 
     const STATUS_LABELS = [
@@ -108,5 +115,10 @@ class PickTicket extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status] ?? ucfirst($this->status);
+    }
+
+    public function getFulfillmentTypeLabelAttribute(): ?string
+    {
+        return self::FULFILLMENT_TYPES[$this->fulfillment_type] ?? null;
     }
 }
