@@ -648,10 +648,35 @@
                                 <span class="text-sm text-gray-400 italic">· {{ $directPickTicket->staging_notes }}</span>
                             @endif
                         </div>
-                        <a href="{{ route('pages.warehouse.pick-tickets.show', $directPickTicket) }}"
-                           class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800">
-                            View Pick Ticket
-                        </a>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('pages.warehouse.pick-tickets.show', $directPickTicket) }}"
+                               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800">
+                                View Pick Ticket
+                            </a>
+                            @if ($directPickTicket->status === 'staged')
+                                <form method="POST"
+                                      action="{{ route('pages.warehouse.pick-tickets.unstage', $directPickTicket) }}"
+                                      onsubmit="return confirm('Unstage pick ticket {{ $directPickTicket->pt_number }}? The sale can then be re-staged.')">
+                                    @csrf
+                                    <button type="submit"
+                                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
+                                        Unstage
+                                    </button>
+                                </form>
+                            @elseif (in_array($directPickTicket->status, ['pending', 'ready', 'picked']))
+                                <form method="POST"
+                                      action="{{ route('pages.warehouse.pick-tickets.update-status', $directPickTicket) }}"
+                                      onsubmit="return confirm('Cancel pick ticket {{ $directPickTicket->pt_number }}? The sale can then be re-staged.')">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="action" value="cancel">
+                                    <button type="submit"
+                                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
+                                        Cancel PT
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                 @else
                     <div class="px-5 py-4 text-sm text-gray-400">No active pick ticket. Use the button above to stage items.</div>
