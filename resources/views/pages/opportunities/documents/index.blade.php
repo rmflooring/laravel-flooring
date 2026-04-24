@@ -48,14 +48,17 @@
                         open: false,
                         templateId: '',
                         needsSale: false,
+                        isSignOff: false,
                         specialFlow: '',
                         saleId: '',
                         templates: {{ $activeTemplates->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'needs_sale' => (bool) $t->needs_sale, 'special_flow' => $t->special_flow ?? ''])->toJson() }},
                         selectTemplate(id) {
                             this.templateId = id;
                             const t = this.templates.find(t => String(t.id) === String(id));
-                            this.needsSale = t ? (t.needs_sale || t.special_flow === 'flooring_sign_off') : false;
-                            this.specialFlow = t ? t.special_flow : '';
+                            this.specialFlow  = t ? t.special_flow : '';
+                            this.isSignOff    = t ? t.special_flow === 'flooring_sign_off' : false;
+                            this.needsSale    = t ? (t.needs_sale && !this.isSignOff) : false;
+                            this.saleId       = '';
                         },
                         go() {
                             if (!this.templateId) return;
@@ -93,6 +96,29 @@
                             @endforeach
                         </select>
 
+                        {{-- Sign-off: sale selector is optional --}}
+                        <div x-show="isSignOff" x-cloak class="mb-3">
+                            @if ($opportunitySales->isNotEmpty())
+                                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    Link to sale <span class="font-normal text-gray-400">(optional)</span>
+                                </label>
+                                <select x-model="saleId"
+                                        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                    <option value="">— Use latest estimate items —</option>
+                                    @foreach ($opportunitySales as $s)
+                                        <option value="{{ $s->id }}">
+                                            Sale #{{ $s->sale_number }}{{ $s->job_name ? ' — ' . $s->job_name : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <p class="rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-800 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                                    No sale yet — items will be pulled from the latest estimate.
+                                </p>
+                            @endif
+                        </div>
+
+                        {{-- Other needs_sale templates: sale is required --}}
                         <div x-show="needsSale" x-cloak class="mb-3">
                             @if ($opportunitySales->isNotEmpty())
                                 <select x-model="saleId"

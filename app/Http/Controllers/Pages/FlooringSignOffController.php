@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Models\Estimate;
 use App\Models\FlooringSignOff;
 use App\Models\Condition;
 use App\Models\FlooringSignOffItem;
@@ -19,9 +20,6 @@ class FlooringSignOffController extends Controller
 
     public function create(Opportunity $opportunity, Request $request)
     {
-        $sale = Sale::with('rooms.items')->findOrFail($request->sale_id);
-        abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 404);
-
         $opportunity->loadMissing(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
 
         $customer = $opportunity->parentCustomer;
@@ -41,17 +39,46 @@ class FlooringSignOffController extends Controller
             'pm_name'          => $pm?->name ?? '',
         ];
 
-        // Group material items by room, skip empty rooms
-        $rooms = $sale->rooms
-            ->map(fn ($room) => [
-                'room'  => $room,
-                'items' => $room->items->where('item_type', 'material')->values(),
-            ])
-            ->filter(fn ($r) => $r['items']->isNotEmpty())
-            ->values();
+        // If a sale was selected, use its rooms; otherwise fall back to the latest estimate
+        $sale   = null;
+        $source = 'empty'; // no items found
+        $rooms  = collect();
+
+        if ($request->filled('sale_id')) {
+            $sale = Sale::with('rooms.items')->findOrFail($request->sale_id);
+            abort_if((int) $sale->opportunity_id !== (int) $opportunity->id, 404);
+
+            $rooms = $sale->rooms
+                ->map(fn ($room) => [
+                    'room'  => $room,
+                    'items' => $room->items->where('item_type', 'material')->values(),
+                ])
+                ->filter(fn ($r) => $r['items']->isNotEmpty())
+                ->values();
+
+            $source = 'sale';
+        } else {
+            $estimate = Estimate::with('rooms.items')
+                ->where('opportunity_id', $opportunity->id)
+                ->whereHas('rooms.items', fn ($q) => $q->where('item_type', 'material'))
+                ->latest('updated_at')
+                ->first();
+
+            if ($estimate) {
+                $rooms = $estimate->rooms
+                    ->map(fn ($room) => [
+                        'room'  => $room,
+                        'items' => $room->items->where('item_type', 'material')->values(),
+                    ])
+                    ->filter(fn ($r) => $r['items']->isNotEmpty())
+                    ->values();
+
+                $source = 'estimate';
+            }
+        }
 
         return view('pages.opportunities.sign-offs.create', compact(
-            'opportunity', 'sale', 'rooms', 'defaults'
+            'opportunity', 'sale', 'rooms', 'defaults', 'source'
         ));
     }
 
@@ -60,7 +87,7 @@ class FlooringSignOffController extends Controller
     public function store(Opportunity $opportunity, Request $request)
     {
         $request->validate([
-            'sale_id'          => ['required', 'exists:sales,id'],
+            'sale_id'          => ['nullable', 'exists:sales,id'],
             'date'             => ['required', 'date'],
             'customer_name'    => ['nullable', 'string', 'max:255'],
             'job_no'           => ['nullable', 'string', 'max:100'],
@@ -69,14 +96,14 @@ class FlooringSignOffController extends Controller
             'job_site_phone'   => ['nullable', 'string', 'max:50'],
             'job_site_email'   => ['nullable', 'string', 'max:255'],
             'pm_name'          => ['nullable', 'string', 'max:255'],
-            'items'            => ['required', 'array', 'min:1'],
-            'items.*.room_name'           => ['required', 'string'],
+            'items'            => ['nullable', 'array'],
+            'items.*.room_name'           => ['nullable', 'string'],
             'items.*.product_description' => ['nullable', 'string'],
         ]);
 
         $signOff = FlooringSignOff::create([
             'opportunity_id'   => $opportunity->id,
-            'sale_id'          => $request->sale_id,
+            'sale_id'          => $request->filled('sale_id') ? $request->sale_id : null,
             'status'           => 'draft',
             'date'             => $request->date,
             'customer_name'    => $request->customer_name ?? '',
@@ -88,10 +115,10 @@ class FlooringSignOffController extends Controller
             'pm_name'          => $request->pm_name,
         ]);
 
-        foreach ($request->items as $index => $itemData) {
+        foreach ($request->items ?? [] as $index => $itemData) {
             FlooringSignOffItem::create([
                 'sign_off_id'         => $signOff->id,
-                'room_name'           => $itemData['room_name'],
+                'room_name'           => $itemData['room_name'] ?? '',
                 'product_description' => $itemData['product_description'] ?? '',
                 'color_item_number'   => $itemData['color_item_number'] ?? null,
                 'sort_order'          => $index,
@@ -163,7 +190,7 @@ class FlooringSignOffController extends Controller
         foreach ($request->items ?? [] as $index => $itemData) {
             FlooringSignOffItem::create([
                 'sign_off_id'         => $signOff->id,
-                'room_name'           => $itemData['room_name'],
+                'room_name'           => $itemData['room_name'] ?? '',
                 'product_description' => $itemData['product_description'] ?? '',
                 'color_item_number'   => $itemData['color_item_number'] ?? null,
                 'sort_order'          => $index,

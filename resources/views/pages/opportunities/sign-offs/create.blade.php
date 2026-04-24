@@ -9,8 +9,14 @@
                     <h1 class="text-xl font-semibold text-gray-900 dark:text-white">New Flooring Selection Sign-Off</h1>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Opportunity #{{ $opportunity->id }}
-                        @if ($sale->job_name) — {{ $sale->job_name }} @endif
-                        &nbsp;·&nbsp; Sale #{{ $sale->sale_number }}
+                        @if ($sale)
+                            @if ($sale->job_name) — {{ $sale->job_name }} @endif
+                            &nbsp;·&nbsp; Sale #{{ $sale->sale_number }}
+                        @elseif ($source === 'estimate')
+                            &nbsp;·&nbsp; <span class="italic">Items from latest estimate</span>
+                        @else
+                            &nbsp;·&nbsp; <span class="italic">No items found — add manually below</span>
+                        @endif
                     </p>
                 </div>
                 <a href="{{ route('pages.opportunities.documents.index', $opportunity->id) }}"
@@ -39,7 +45,9 @@
 
         <form method="POST" action="{{ route('pages.opportunities.sign-offs.store', $opportunity->id) }}">
             @csrf
-            <input type="hidden" name="sale_id" value="{{ $sale->id }}">
+            @if ($sale)
+                <input type="hidden" name="sale_id" value="{{ $sale->id }}">
+            @endif
 
             {{-- Header Fields --}}
             <div class="mb-5 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -100,7 +108,14 @@
 
                 @if ($rooms->isEmpty())
                     <div class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                        No material items found in this sale.
+                        @if ($source === 'sale')
+                            No material items found on the selected sale.
+                        @elseif ($source === 'estimate')
+                            No material items found on the latest estimate.
+                        @else
+                            No estimate found for this opportunity — add items manually below.
+                        @endif
+                        <br><span class="text-xs">You can add rooms and items manually on the next step.</span>
                     </div>
                 @else
                     <div class="space-y-0 divide-y divide-gray-100 dark:divide-gray-700">
@@ -108,12 +123,16 @@
                             @php $room = $roomGroup['room']; $items = $roomGroup['items']; @endphp
                             <div class="px-4 py-3">
                                 <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
-                                    {{ $room->room_name }}
+                                    {{ $room->room_name ?: '(Unnamed Room)' }}
                                 </p>
                                 <div class="space-y-2">
                                     @foreach ($items as $item)
                                         @php
-                                            $desc = trim(($item->manufacturer ? $item->manufacturer . ' — ' : '') . ($item->style ?? $item->description ?? ''));
+                                            $desc = trim(implode(' — ', array_filter([
+                                                $item->manufacturer ?: null,
+                                                $item->style ?: null,
+                                                $item->description ?: null,
+                                            ]))) ?: '(No description)';
                                         @endphp
                                         <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/50"
                                                data-item-id="{{ $item->id }}">
@@ -129,7 +148,7 @@
                                             </span>
                                             <div class="min-w-0 flex-1">
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {{ $item->style ?? $item->description ?? '(No description)' }}
+                                                    {{ $desc }}
                                                 </p>
                                                 @if ($item->color_item_number)
                                                     <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $item->color_item_number }}</p>
@@ -170,11 +189,15 @@
         cb.addEventListener('change', toggle);
     });
 
+    // Only enforce item selection if item checkboxes were rendered (i.e. items exist)
+    const hasItems = document.querySelectorAll('[data-toggle-item]').length > 0;
     document.querySelector('form').addEventListener('submit', function(e) {
-        const anyChecked = document.querySelector('[data-toggle-item]:checked');
-        if (!anyChecked) {
-            e.preventDefault();
-            alert('Please select at least one item.');
+        if (hasItems) {
+            const anyChecked = document.querySelector('[data-toggle-item]:checked');
+            if (!anyChecked) {
+                e.preventDefault();
+                alert('Please select at least one item.');
+            }
         }
     });
     </script>
