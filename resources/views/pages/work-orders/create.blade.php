@@ -164,11 +164,15 @@
                                                                     @php
                                                                         $matName = implode(' — ', array_filter([$mat->product_type, $mat->manufacturer, $mat->style, $mat->color_item_number])) ?: 'Material';
                                                                     @endphp
-                                                                    <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 cursor-pointer hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
+                                                                    <label x-show="$store.woMaterials.isAvailable({{ $mat->id }}, {{ $item->id }})"
+                                                                           class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 cursor-pointer hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
                                                                         <input type="checkbox"
                                                                                name="materials[{{ $item->id }}][]"
                                                                                value="{{ $mat->id }}"
                                                                                {{ in_array($mat->id, old('materials.' . $item->id, [])) ? 'checked' : '' }}
+                                                                               @change="$event.target.checked
+                                                                                   ? $store.woMaterials.claim({{ $mat->id }}, {{ $item->id }})
+                                                                                   : $store.woMaterials.release({{ $mat->id }})"
                                                                                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                                         <span class="text-xs text-gray-700 dark:text-gray-300">
                                                                             {{ $matName }}
@@ -259,6 +263,23 @@
     </div>
 
     <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('woMaterials', {
+            claimed: {},
+            claim(matId, labourItemId) {
+                this.claimed = { ...this.claimed, [matId]: labourItemId };
+            },
+            release(matId) {
+                const c = { ...this.claimed };
+                delete c[matId];
+                this.claimed = c;
+            },
+            isAvailable(matId, labourItemId) {
+                return !(matId in this.claimed) || this.claimed[matId] === labourItemId;
+            },
+        });
+    });
+
     function woCreate() {
         return {
             installerId:   '{{ old('installer_id', '') }}',
@@ -296,7 +317,21 @@
             qtyError: '',
 
             onCheck() {
-                if (this.checked) this.qty = maxQty;
+                if (this.checked) {
+                    this.qty = maxQty;
+                } else {
+                    // Release any materials this labour item had claimed
+                    const store = Alpine.store('woMaterials');
+                    Object.keys(store.claimed).forEach(matId => {
+                        if (store.claimed[matId] === itemId) {
+                            store.release(parseInt(matId));
+                        }
+                    });
+                    // Uncheck the material checkboxes visually
+                    document.querySelectorAll(`input[name="materials[${itemId}][]"]:checked`).forEach(cb => {
+                        cb.checked = false;
+                    });
+                }
             },
 
             validateQty() {
