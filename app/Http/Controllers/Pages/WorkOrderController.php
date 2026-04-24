@@ -339,11 +339,14 @@ class WorkOrderController extends Controller
         abort_if($workOrder->sale_id !== $sale->id, 404);
 
         $data = $request->validate([
-            'installer_id'   => ['nullable', 'integer', 'exists:installers,id'],
-            'scheduled_date' => ['nullable', 'date'],
-            'scheduled_time' => ['nullable', 'date_format:H:i'],
-            'notes'          => ['nullable', 'string'],
-            'status'         => ['required', 'string', 'in:' . implode(',', WorkOrder::STATUSES)],
+            'installer_id'         => ['nullable', 'integer', 'exists:installers,id'],
+            'scheduled_date'       => ['nullable', 'date'],
+            'scheduled_time'       => ['nullable', 'date_format:H:i'],
+            'notes'                => ['nullable', 'string'],
+            'status'               => ['required', 'string', 'in:' . implode(',', WorkOrder::STATUSES)],
+            'calendar_title'       => ['nullable', 'string', 'max:500'],
+            'calendar_description' => ['nullable', 'string'],
+            'calendar_location'    => ['nullable', 'string', 'max:500'],
             'wo_items'              => ['nullable', 'array'],
             'wo_items.*.quantity'   => ['nullable', 'numeric', 'min:0'],
             'wo_items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
@@ -441,6 +444,12 @@ class WorkOrderController extends Controller
 
         $syncCalendar = $request->boolean('sync_calendar', false);
 
+        $calendarOverrides = array_filter([
+            'title'    => $data['calendar_title'] ?? null,
+            'notes'    => $data['calendar_description'] ?? null,
+            'location' => $data['calendar_location'] ?? null,
+        ], fn($v) => $v !== null && $v !== '');
+
         if (! $wasCancelled) {
             if ($beingCancelled) {
                 $this->cancelCalendarEvent($workOrder);
@@ -448,9 +457,9 @@ class WorkOrderController extends Controller
                 $this->cancelCalendarEvent($workOrder);
             } elseif ($syncCalendar && $calendarFieldsChanged) {
                 if ($workOrder->calendar_event_id) {
-                    $this->syncCalendarUpdate($workOrder);
+                    $this->syncCalendarUpdate($workOrder, $calendarOverrides);
                 } else {
-                    $this->syncCalendarCreate($workOrder);
+                    $this->syncCalendarCreate($workOrder, $calendarOverrides);
                 }
             }
         }
@@ -653,7 +662,7 @@ class WorkOrderController extends Controller
 
     // ── Calendar helpers ──────────────────────────────────────────
 
-    private function buildEventData(WorkOrder $workOrder): array
+    private function buildEventData(WorkOrder $workOrder, array $overrides = []): array
     {
         $sale = $workOrder->relationLoaded('sale') ? $workOrder->sale : Sale::find($workOrder->sale_id);
 
@@ -681,11 +690,11 @@ class WorkOrderController extends Controller
         $rendered = app(CalendarTemplateService::class)->renderTemplate('work_order_calendar', $vars);
 
         return [
-            'title'    => $rendered['title'],
+            'title'    => $overrides['title'] ?? $rendered['title'],
             'start'    => $start,
             'end'      => $end,
-            'location' => $sale->job_address ?? null,
-            'notes'    => $rendered['notes'],
+            'location' => $overrides['location'] ?? $sale->job_address ?? null,
+            'notes'    => $overrides['notes'] ?? $rendered['notes'],
         ];
     }
 
@@ -693,7 +702,7 @@ class WorkOrderController extends Controller
      * Create a calendar event on RM – Installations group calendar (best-effort).
      * Uses the currently logged-in user's MS account to write to the group calendar.
      */
-    private function syncCalendarCreate(WorkOrder $workOrder): void
+    private function syncCalendarCreate(WorkOrder $workOrder, array $overrides = []): void
     {
         if (empty($workOrder->installer_id) || empty($workOrder->scheduled_date)) {
             return;
@@ -723,7 +732,7 @@ class WorkOrderController extends Controller
                 return;
             }
 
-            $eventData  = $this->buildEventData($workOrder);
+            $eventData  = $this->buildEventData($workOrder, $overrides);
             $service    = new GraphCalendarService();
             $externalId = $service->createEvent($account, $calendar, $eventData);
             $localEvent = $service->persistLocalEvent(
@@ -750,7 +759,7 @@ class WorkOrderController extends Controller
         }
     }
 
-    private function syncCalendarUpdate(WorkOrder $workOrder): void
+    private function syncCalendarUpdate(WorkOrder $workOrder, array $overrides = []): void
     {
         if (empty($workOrder->calendar_event_id)) {
             return;
@@ -768,7 +777,7 @@ class WorkOrderController extends Controller
             $account = MicrosoftAccount::find($link->microsoft_account_id);
             if (! $account) return;
 
-            $eventData = $this->buildEventData($workOrder);
+            $eventData = $this->buildEventData($workOrder, $overrides);
             $service   = new GraphCalendarService();
             $service->updateEvent($account, $link, $eventData);
 

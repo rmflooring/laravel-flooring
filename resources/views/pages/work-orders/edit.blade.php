@@ -209,6 +209,11 @@
                     </div>
                 </div>
 
+                {{-- Hidden calendar override fields --}}
+                <input type="hidden" id="cal_title_hidden" name="calendar_title" value="{{ old('calendar_title') }}">
+                <input type="hidden" id="cal_description_hidden" name="calendar_description" value="{{ old('calendar_description') }}">
+                <input type="hidden" id="cal_location_hidden" name="calendar_location" value="{{ old('calendar_location') }}">
+
                 {{-- Scheduling --}}
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -250,6 +255,30 @@
                                 @endif
                             </label>
                         </div>
+
+                        {{-- Configure calendar event button (shown when sync is enabled) --}}
+                        <div class="sm:col-span-2" x-show="syncCalendar" x-cloak>
+                            <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-gray-700">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-medium text-blue-900 dark:text-blue-200">Calendar Event Details</p>
+                                        <p id="wo-cal-summary" class="mt-0.5 text-xs text-blue-700 dark:text-blue-300 truncate">
+                                            Title and description will be generated from your calendar templates.
+                                        </p>
+                                    </div>
+                                    <button type="button"
+                                            onclick="openWoCalModal()"
+                                            class="flex-shrink-0 inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:bg-gray-800 dark:text-blue-300 dark:hover:bg-gray-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Customise Event
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -303,5 +332,126 @@
             },
         };
     }
+
+    // ── WO Calendar event modal ───────────────────────────────────
+    window.WO_CAL_DATA = {
+        woNumber:     '{{ $workOrder->wo_number }}',
+        customerName: @json($sale->homeowner_name ?? $sale->customer_name ?? $sale->job_name ?? ''),
+        jobAddress:   @json($sale->job_address ?? ''),
+        woNotes:      @json($workOrder->notes ?? ''),
+        installers:   @json($installers->keyBy('id')->map(fn($i) => ['company_name' => $i->company_name, 'email' => $i->email])),
+    };
+
+    function openWoCalModal() {
+        const d = window.WO_CAL_DATA;
+
+        // ── Title ─────────────────────────────────────────────────
+        const titleEl = document.getElementById('wo-cal-title');
+        const existingTitle = document.getElementById('cal_title_hidden').value;
+        if (existingTitle) {
+            titleEl.value = existingTitle;
+        } else {
+            const parts = [d.woNumber];
+            if (d.customerName) parts.push(d.customerName);
+            titleEl.value = parts.join(' — ');
+        }
+
+        // ── Attendees (installer email chip) ──────────────────────
+        const attendeesEl = document.getElementById('wo-cal-attendees');
+        attendeesEl.innerHTML = '';
+        const installerId = document.getElementById('installer_id').value;
+        const installer = d.installers[installerId];
+        if (installer?.email) {
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-sm text-blue-800';
+            chip.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>${installer.email}`;
+            if (installer.company_name) {
+                chip.title = installer.company_name;
+            }
+            attendeesEl.appendChild(chip);
+        } else {
+            const placeholder = document.createElement('span');
+            placeholder.className = 'text-base text-gray-400 select-none italic';
+            placeholder.textContent = installer ? 'No email on file for this installer' : 'Select an installer to see attendee';
+            attendeesEl.appendChild(placeholder);
+        }
+
+        // ── Dates ─────────────────────────────────────────────────
+        const pad = n => String(n).padStart(2, '0');
+        const scheduledDate = document.getElementById('scheduled_date').value;
+        const scheduledTime = document.getElementById('scheduled_time').value || '09:00';
+        const startEl = document.getElementById('wo-cal-start');
+        const endEl   = document.getElementById('wo-cal-end');
+        if (scheduledDate) {
+            startEl.value = `${scheduledDate}T${scheduledTime}`;
+            const startDt = new Date(`${scheduledDate}T${scheduledTime}`);
+            startDt.setHours(startDt.getHours() + 2);
+            endEl.value = `${startDt.getFullYear()}-${pad(startDt.getMonth()+1)}-${pad(startDt.getDate())}T${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
+        } else {
+            startEl.value = '';
+            endEl.value   = '';
+        }
+
+        // ── Location ──────────────────────────────────────────────
+        document.getElementById('wo-cal-location').value =
+            document.getElementById('cal_location_hidden').value || d.jobAddress;
+
+        // ── Notes ─────────────────────────────────────────────────
+        document.getElementById('wo-cal-notes').value =
+            document.getElementById('cal_description_hidden').value || d.woNotes;
+
+        // ── Open modal ────────────────────────────────────────────
+        document.getElementById('wo-calendar-modal-init').click();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Apply button — write values back to the form
+        document.getElementById('wo-cal-apply')?.addEventListener('click', () => {
+            document.getElementById('cal_title_hidden').value =
+                document.getElementById('wo-cal-title').value;
+            document.getElementById('cal_description_hidden').value =
+                document.getElementById('wo-cal-notes').value;
+            document.getElementById('cal_location_hidden').value =
+                document.getElementById('wo-cal-location').value;
+
+            // Sync start date/time back to the scheduling fields
+            const startVal = document.getElementById('wo-cal-start').value;
+            if (startVal) {
+                const [date, time] = startVal.split('T');
+                document.getElementById('scheduled_date').value = date;
+                // x-model update for Alpine
+                document.getElementById('scheduled_date').dispatchEvent(new Event('input'));
+                if (time) document.getElementById('scheduled_time').value = time.slice(0, 5);
+            }
+
+            // Update summary line
+            const title = document.getElementById('wo-cal-title').value.trim();
+            if (title) {
+                document.getElementById('wo-cal-summary').textContent = `Title: "${title}"`;
+            }
+
+            // Close modal
+            const modal = window.FlowbiteInstances?.getInstance('Modal', 'wo-calendar-modal');
+            if (modal) modal.hide();
+            else document.getElementById('wo-calendar-modal').classList.add('hidden');
+        });
+
+        // Discard button
+        document.getElementById('wo-cal-discard')?.addEventListener('click', () => {
+            const modal = window.FlowbiteInstances?.getInstance('Modal', 'wo-calendar-modal');
+            if (modal) modal.hide();
+            else document.getElementById('wo-calendar-modal').classList.add('hidden');
+        });
+
+        // Restore summary if values came back from old() after validation failure
+        const existingTitle = document.getElementById('cal_title_hidden').value;
+        if (existingTitle) {
+            const summaryEl = document.getElementById('wo-cal-summary');
+            if (summaryEl) summaryEl.textContent = `Title: "${existingTitle}"`;
+        }
+    });
     </script>
+
+@include('pages.work-orders.partials.wo-calendar-modal')
+
 </x-app-layout>
