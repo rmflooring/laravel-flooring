@@ -191,5 +191,23 @@ Allowed behavior:
 
 ---
 
+# 11. Known JS Quirk: Form Ownership on Sale Edit Page
+
+## Problem
+On the sale edit page (`pages/sales/edit.blade.php`), the `<form id="sale-edit-form">` element is **not a DOM ancestor** of the materials/freight/labour table structure, despite appearing to wrap it in the Blade source. This is an HTML parsing quirk (likely related to table structure and foster parenting).
+
+**Consequence:** Inputs rendered by Blade at page load are form-associated via the parser's implicit form pointer and submit correctly. Inputs added dynamically via JavaScript (`appendRowFromTemplate`) have no implicit form association and are **silently excluded from form submission** by the browser.
+
+## Fix (applied in `sale.js`)
+`appendRowFromTemplate` explicitly sets `form="sale-edit-form"` on every cloned `<input>`, `<select>`, and `<textarea>` after name replacement, before appending to the DOM. This applies to all three row types (materials, freight, labour) and to new room cards.
+
+## Symptom
+New labour/material/freight rows added via "+ Add Row" buttons appear in the UI but are not saved — `$request->input('rooms.*.labour')` on the server only sees the rows that existed at page load.
+
+## Diagnosis approach that found it
+`new FormData(form)` at submit time showed fewer fields than `querySelectorAll('[name]')` in the DOM. Checking `el.form?.id` vs `f.contains(el)` on new-row inputs confirmed `insideForm: false` — the inputs were in the DOM but had no form owner.
+
+---
+
 End of Context File
 

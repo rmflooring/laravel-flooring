@@ -321,6 +321,16 @@ document.addEventListener('fm:tax-group-selected', (e) => {
         .replaceAll("__ITEM_INDEX__", itemIndex);
     });
 
+    // Explicitly associate new inputs with the form. The form element is not a
+    // DOM ancestor of the table structure on this page, so inputs added via JS
+    // have no implicit form owner and are excluded from form submission.
+    const ownerForm = form || document.getElementById("sale-edit-form");
+    if (ownerForm?.id) {
+      fragment.querySelectorAll("input, select, textarea").forEach(el => {
+        el.setAttribute("form", ownerForm.id);
+      });
+    }
+
     tbody.appendChild(fragment);
   }
 
@@ -2266,6 +2276,7 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
   reindexAllRooms();
   updateRoomTotals(room);
+  if (typeof fmMarkDirty === "function") fmMarkDirty();
   return;
 }
 
@@ -2277,21 +2288,20 @@ if (t.closest(".add-freight-row")) {
 
   reindexAllRooms();
   updateRoomTotals(room);
+  if (typeof fmMarkDirty === "function") fmMarkDirty();
   return;
 }
 
     if (t.closest(".add-labour-row")) {
   const room = t.closest(".room-card");
   appendRowFromTemplate(room, ".labour-tbody", ".labour-row-template");
-
-  // ✅ init labour dropdown on the newly added row
   const tbody = room.querySelector(".labour-tbody");
   const newRow = tbody ? tbody.querySelector("tr:last-child") : null;
   if (newRow) initLabourTypeDropdownForRow(newRow);
-initLabourDescriptionDropdownForRow(newRow);
-
+  if (newRow) initLabourDescriptionDropdownForRow(newRow);
   reindexAllRooms();
   updateRoomTotals(room);
+  if (typeof fmMarkDirty === "function") fmMarkDirty();
   return;
 }
 
