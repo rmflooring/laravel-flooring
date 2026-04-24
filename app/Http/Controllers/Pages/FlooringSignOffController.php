@@ -265,7 +265,7 @@ class FlooringSignOffController extends Controller
         return [
             'company_name' => Setting::get('branding_company_name', 'RM Flooring'),
             'tagline'      => Setting::get('branding_tagline', ''),
-            'street'       => Setting::get('branding_street', ''),
+            'street'       => Setting::get('branding_address', ''),
             'city'         => Setting::get('branding_city', ''),
             'province'     => Setting::get('branding_province', ''),
             'postal'       => Setting::get('branding_postal', ''),

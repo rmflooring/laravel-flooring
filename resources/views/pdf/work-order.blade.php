@@ -49,7 +49,7 @@
     $phone       = $settings['branding_phone'] ?? '';
     $email       = $settings['branding_email'] ?? '';
     $website     = $settings['branding_website'] ?? '';
-    $street      = $settings['branding_street'] ?? '';
+    $street      = $settings['branding_address'] ?? '';
     $city        = $settings['branding_city'] ?? '';
     $province    = $settings['branding_province'] ?? '';
     $postal      = $settings['branding_postal'] ?? '';
@@ -73,6 +73,13 @@
             @else
                 <div class="company-name">{{ $companyName }}</div>
                 @if($tagline) <div class="company-sub">{{ $tagline }}</div> @endif
+            @endif
+            @php $brandAddress = implode(', ', array_filter([$street, $city, $province, $postal])); @endphp
+            @if($brandAddress)
+                <div style="margin-top:4px; font-size:10px; color:#555;">{{ $brandAddress }}</div>
+            @endif
+            @if($phone || $email)
+                <div style="margin-top:2px; font-size:10px; color:#555;">{{ $phone }}{{ $phone && $email ? ' · ' : '' }}{{ $email }}</div>
             @endif
         </div>
         <div style="display:table-cell; vertical-align:top; text-align:right; width:40%">

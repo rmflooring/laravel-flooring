@@ -93,6 +93,10 @@
     $brandEmail  = Setting::get('branding_email', '');
     $brandWebsite = Setting::get('branding_website', '');
     $logoPath    = Setting::get('branding_logo_path', '');
+    $brandStreet   = Setting::get('branding_address', '');
+    $brandCity     = Setting::get('branding_city', '');
+    $brandProvince = Setting::get('branding_province', '');
+    $brandPostal   = Setting::get('branding_postal', '');
 
     $logoDataUri = null;
     if ($logoPath && Storage::disk('public')->exists($logoPath)) {
@@ -114,6 +118,13 @@
                     @if ($brandTagline)
                         <div class="company-sub">{{ $brandTagline }}</div>
                     @endif
+                @endif
+                @php $brandAddress = implode(', ', array_filter([$brandStreet, $brandCity, $brandProvince, $brandPostal])); @endphp
+                @if ($brandAddress)
+                    <div style="margin-top:4px; font-size:10px; color:#555;">{{ $brandAddress }}</div>
+                @endif
+                @if ($brandPhone || $brandEmail)
+                    <div style="margin-top:2px; font-size:10px; color:#555;">{{ $brandPhone }}{{ $brandPhone && $brandEmail ? ' · ' : '' }}{{ $brandEmail }}</div>
                 @endif
             </td>
             <td style="vertical-align:top; text-align:right;">
