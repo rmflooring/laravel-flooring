@@ -159,8 +159,25 @@ public function index(Opportunity $opportunity, Request $request)
 
                 $fileDesc = $descriptions[$i] ?? $globalDesc;
 
-                $disk = DocumentStorageService::disk();
-                $path = $file->store("opportunities/{$opportunity->storageFolderName()}", $disk);
+                $disk   = DocumentStorageService::disk();
+                $folder = "opportunities/{$opportunity->storageFolderName()}";
+
+                // Build a safe filename that matches the original name on disk
+                $originalName = $file->getClientOriginalName();
+                $fileExt      = $file->getClientOriginalExtension();
+                $baseStem     = pathinfo($originalName, PATHINFO_FILENAME);
+                $safeStem     = trim(preg_replace('/[^\w\-.]/', '_', $baseStem), '_');
+                if ($safeStem === '') {
+                    $safeStem = 'file';
+                }
+                $filename = $safeStem . ($fileExt ? '.' . $fileExt : '');
+                $counter  = 1;
+                while (Storage::disk($disk)->exists("{$folder}/{$filename}")) {
+                    $filename = $safeStem . '_' . $counter . ($fileExt ? '.' . $fileExt : '');
+                    $counter++;
+                }
+
+                $path = $file->storeAs($folder, $filename, $disk);
 
                 \Log::info('[docs] stored file', [
                     'opportunity_id' => $opportunity->id,
@@ -178,7 +195,7 @@ public function index(Opportunity $opportunity, Request $request)
                         $image   = $manager->decodePath($file->getRealPath());
                         $image->scaleDown(width: 600);
                         $thumbContents = (string) $image->encodeUsingMediaType('image/jpeg', quality: 80);
-                        $thumbnailPath = "opportunities/{$opportunity->storageFolderName()}/thumb_" . pathinfo(basename($path), PATHINFO_FILENAME) . '.jpg';
+                        $thumbnailPath = "{$folder}/thumb_" . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
                         Storage::disk($disk)->put($thumbnailPath, $thumbContents);
                     } catch (\Throwable $e) {
                         \Log::warning('[docs] thumbnail generation failed', [
