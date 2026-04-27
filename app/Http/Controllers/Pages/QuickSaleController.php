@@ -52,7 +52,7 @@ class QuickSaleController extends Controller
             'tax_group_id' => ['required', 'exists:tax_rate_groups,id'],
 
             // Payment
-            'payment_method'   => ['required', 'in:cash,cheque,e-transfer,credit_card,other'],
+            'payment_method'   => ['required', 'in:' . implode(',', array_keys(\App\Models\InvoicePayment::PAYMENT_METHODS))],
             'amount_tendered'  => ['required', 'numeric', 'min:0'],
             'reference_number' => ['nullable', 'string', 'max:100'],
 

@@ -272,11 +272,9 @@
                             <label class="block text-xs font-medium text-gray-600 mb-1">Method <span class="text-red-500">*</span></label>
                             <select name="payment_method" x-model="method"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400">
-                                <option value="cash">Cash</option>
-                                <option value="credit_card">Credit Card</option>
-                                <option value="e-transfer">E-Transfer</option>
-                                <option value="cheque">Cheque</option>
-                                <option value="other">Other</option>
+                                @foreach (\App\Models\InvoicePayment::PAYMENT_METHODS as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
                             </select>
                         </div>
 

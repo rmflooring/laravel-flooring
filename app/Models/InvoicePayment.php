@@ -18,7 +18,8 @@ class InvoicePayment extends Model
         'cash'         => 'Cash',
         'cheque'       => 'Cheque',
         'e-transfer'   => 'E-Transfer',
-        'credit_card'  => 'Credit Card',
+        'visa'         => 'Visa',
+        'mastercard'   => 'Mastercard',
         'other'        => 'Other',
     ];
 
@@ -39,6 +40,7 @@ class InvoicePayment extends Model
 
     public function getMethodLabelAttribute(): string
     {
-        return self::PAYMENT_METHODS[$this->payment_method] ?? ucfirst($this->payment_method);
+        return self::PAYMENT_METHODS[$this->payment_method]
+            ?? ucwords(str_replace('_', ' ', $this->payment_method));
     }
 }
