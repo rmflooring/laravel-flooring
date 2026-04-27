@@ -287,9 +287,10 @@
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Notes</h2>
                     </div>
-                    <div class="p-6">
-                        <textarea id="notes" name="notes" rows="3"
-                                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">{{ old('notes', $workOrder->notes) }}</textarea>
+                    <div>
+                        <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
+                        <div id="notes-quill-editor" style="min-height:100px; font-size:14px;"></div>
+                        <input type="hidden" name="notes" id="notes-input">
                     </div>
                 </div>
 
@@ -453,5 +454,21 @@
     </script>
 
 @include('pages.work-orders.partials.wo-calendar-modal')
+
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+    <script>
+        const notesQuill = new Quill('#notes-quill-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [['bold','italic','underline'],[{'color':[]}],['clean']]
+            },
+        });
+        const notesExisting = @json(old('notes', $workOrder->notes ?? ''));
+        if (notesExisting) notesQuill.clipboard.dangerouslyPasteHTML(notesExisting);
+        document.querySelector('form').addEventListener('submit', function() {
+            const html = notesQuill.root.innerHTML;
+            document.getElementById('notes-input').value = (html === '<p><br></p>') ? '' : html;
+        });
+    </script>
 
 </x-app-layout>

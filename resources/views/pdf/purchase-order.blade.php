@@ -320,10 +320,10 @@
     </table>
 
     {{-- Special Instructions --}}
-    @if ($purchaseOrder->special_instructions)
+    @if (trim(strip_tags($purchaseOrder->special_instructions ?? '')))
         <div class="notes-section">
             <div class="label">Special Instructions</div>
-            <div>{{ $purchaseOrder->special_instructions }}</div>
+            <div>{!! $purchaseOrder->special_instructions !!}</div>
         </div>
     @endif
 

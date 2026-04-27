@@ -292,10 +292,10 @@
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Special Instructions</h2>
                     </div>
-                    <div class="p-6">
-                        <textarea id="special_instructions" name="special_instructions" rows="4"
-                                  placeholder="Any special instructions for the vendor..."
-                                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">{{ old('special_instructions', $purchaseOrder->special_instructions) }}</textarea>
+                    <div>
+                        <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
+                        <div id="si-quill-editor" style="min-height:110px; font-size:14px;"></div>
+                        <input type="hidden" name="special_instructions" id="si-input">
                     </div>
                 </div>
 
@@ -495,5 +495,21 @@
             },
         };
     }
+    </script>
+
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+    <script>
+        const siQuill = new Quill('#si-quill-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [['bold','italic','underline'],[{'color':[]}],['clean']]
+            },
+        });
+        const siExisting = @json(old('special_instructions', $purchaseOrder->special_instructions ?? ''));
+        if (siExisting) siQuill.clipboard.dangerouslyPasteHTML(siExisting);
+        document.querySelector('form').addEventListener('submit', function() {
+            const html = siQuill.root.innerHTML;
+            document.getElementById('si-input').value = (html === '<p><br></p>') ? '' : html;
+        });
     </script>
 </x-app-layout>

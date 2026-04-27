@@ -967,7 +967,7 @@ class PurchaseOrderController extends Controller
             'vendor_name'          => $po->vendor?->company_name ?? 'Vendor',
             'sale_number'          => $po->sale?->sale_number ?? '',
             'customer_name'        => $po->sale?->customer_name ?? '',
-            'special_instructions' => $po->special_instructions ?? '',
+            'special_instructions' => strip_tags($po->special_instructions ?? ''),
             'pm_name'              => $po->sale?->pm_name ?? '',
             'pm_first_name'        => explode(' ', trim($po->sale?->pm_name ?? ''))[0],
         ];

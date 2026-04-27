@@ -208,10 +208,10 @@
 </table>
 
 {{-- Notes --}}
-@if($workOrder->notes)
+@if(trim(strip_tags($workOrder->notes ?? '')))
 <div class="notes-box">
     <div class="label">Notes / Special Instructions</div>
-    <div style="margin-top:4px; white-space:pre-wrap">{{ $workOrder->notes }}</div>
+    <div style="margin-top:4px;">{!! $workOrder->notes !!}</div>
 </div>
 @endif
 

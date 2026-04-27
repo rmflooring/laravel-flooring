@@ -361,13 +361,13 @@
             </div>
 
             {{-- Special Instructions --}}
-            @if($purchaseOrder->special_instructions)
+            @if(trim(strip_tags($purchaseOrder->special_instructions ?? '')))
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Special Instructions</h2>
                     </div>
-                    <div class="p-6">
-                        <p class="whitespace-pre-line text-sm text-gray-700 dark:text-gray-300">{{ $purchaseOrder->special_instructions }}</p>
+                    <div class="p-6 text-sm text-gray-700 dark:text-gray-300 rich-text-content">
+                        {!! $purchaseOrder->special_instructions !!}
                     </div>
                 </div>
             @endif
@@ -453,7 +453,7 @@
                             $emailBody .= 'Fulfillment: Pickup — we will pick up from your location.' . "\n";
                         }
                         if ($purchaseOrder->special_instructions) {
-                            $emailBody .= "\nSpecial Instructions: " . $purchaseOrder->special_instructions . "\n";
+                            $emailBody .= "\nSpecial Instructions: " . strip_tags($purchaseOrder->special_instructions) . "\n";
                         }
                         $emailBody .= "\nPlease confirm receipt of this order.\n\nThank you,\nRM Flooring";
                     @endphp
