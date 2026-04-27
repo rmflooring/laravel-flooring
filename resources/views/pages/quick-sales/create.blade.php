@@ -360,8 +360,8 @@ async function fetchTaxRate(groupId) {
     try {
         const r = await fetch(QS_TAX_RATE_URL + groupId + '/rate');
         const d = await r.json();
-        window._qs.taxRate  = parseFloat(d.rate || 0);
-        window._qs.taxLabel = d.name || '';
+        window._qs.taxRate  = parseFloat(d.tax_rate_percent || 0);
+        window._qs.taxLabel = d.group_name || '';
         recalcTotals();
     } catch {}
 }

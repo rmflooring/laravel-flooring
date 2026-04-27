@@ -255,16 +255,22 @@
                             <td class="px-5 py-3 text-gray-500">{{ $payment->notes ?: '—' }}</td>
                             <td class="px-5 py-3 text-right font-semibold text-green-700 dark:text-green-400">${{ number_format((float)$payment->amount, 2) }}</td>
                             <td class="px-5 py-3 text-right">
-                                @if(! $payment->sale_payment_id)
-                                    <form action="{{ route('pages.sales.invoices.payments.destroy', [$sale, $invoice, $payment]) }}" method="POST"
-                                        onsubmit="return confirm('Remove this payment?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-xs text-red-500 hover:underline">Remove</button>
-                                    </form>
-                                @else
-                                    <a href="{{ route('pages.sales.show', $sale) }}#deposits"
-                                       class="text-xs text-gray-400 hover:underline" title="Manage from the sale page">From sale</a>
-                                @endif
+                                <div class="flex items-center justify-end gap-3">
+                                    @role('admin')
+                                        <a href="{{ route('admin.payments.show', $payment) }}"
+                                           class="text-xs text-blue-600 hover:underline">View</a>
+                                    @endrole
+                                    @if(! $payment->sale_payment_id)
+                                        <form action="{{ route('pages.sales.invoices.payments.destroy', [$sale, $invoice, $payment]) }}" method="POST"
+                                            onsubmit="return confirm('Remove this payment?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-xs text-red-500 hover:underline">Remove</button>
+                                        </form>
+                                    @else
+                                        <a href="{{ route('pages.sales.show', $sale) }}#deposits"
+                                           class="text-xs text-gray-400 hover:underline" title="Manage from the sale page">From sale</a>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @endforeach

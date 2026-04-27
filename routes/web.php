@@ -247,6 +247,12 @@ Route::prefix('admin')
             Route::get('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'show'])
                 ->name('payments.show');
 
+            Route::get('/payments/{payment}/edit', [\App\Http\Controllers\Admin\PaymentController::class, 'edit'])
+                ->name('payments.edit');
+
+            Route::put('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'update'])
+                ->name('payments.update');
+
         });
 
         /*

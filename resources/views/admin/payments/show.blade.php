@@ -18,6 +18,10 @@
                     <h1 class="text-2xl font-bold text-gray-900">Payment Detail</h1>
                     <p class="text-sm text-gray-500 mt-1">Recorded {{ $payment->created_at?->format('Y-m-d g:i A') }}</p>
                 </div>
+                <a href="{{ route('admin.payments.edit', $payment) }}"
+                   class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    Edit Payment
+                </a>
                 @php
                     $methodBadge = match ($payment->payment_method) {
                         'cash'        => 'bg-green-100 text-green-800',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\InvoicePayment;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
@@ -62,5 +63,32 @@ class PaymentController extends Controller
         $payment->load(['invoice.sale.opportunity.customer', 'invoice.paymentTerm', 'recordedBy']);
 
         return view('admin.payments.show', compact('payment'));
+    }
+
+    public function edit(InvoicePayment $payment)
+    {
+        $payment->load(['invoice.sale', 'recordedBy']);
+
+        $paymentMethods = InvoicePayment::PAYMENT_METHODS;
+
+        return view('admin.payments.edit', compact('payment', 'paymentMethods'));
+    }
+
+    public function update(Request $request, InvoicePayment $payment, InvoiceService $service)
+    {
+        $data = $request->validate([
+            'amount'           => ['required', 'numeric', 'min:0.01'],
+            'payment_date'     => ['required', 'date'],
+            'payment_method'   => ['required', 'in:' . implode(',', array_keys(InvoicePayment::PAYMENT_METHODS))],
+            'reference_number' => ['nullable', 'string', 'max:100'],
+            'notes'            => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $payment->update($data);
+
+        $service->recalculateAfterPayment($payment->invoice);
+
+        return redirect()->route('admin.payments.show', $payment)
+            ->with('success', 'Payment updated.');
     }
 }
