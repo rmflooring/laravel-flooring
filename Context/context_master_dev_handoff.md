@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-20 (session 52)
+Updated: 2026-04-27 (session 53)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -24,6 +24,8 @@ Full details: `Context/context_storage.md`
 - **Health monitoring**: `nas:check-health` runs every 5 min, red banner + email alert if NAS goes offline
 - **Queue worker**: `laravel-queue.service` systemd service (must be running for OneDrive mirror to work)
 - **PHP config**: `/etc/php/8.3/fpm/php.ini` — adjust `upload_max_filesize` / `post_max_size` for large uploads
+- **File naming (session 53)**: Uploaded files stored using original filename (sanitized, spaces → underscores); collisions get numeric suffix (`_1`, `_2`). Controller: `OpportunityDocumentController::store()` uses `storeAs()` not `store()`.
+- **NAS SMB permissions (session 53)**: NFS root squash causes files created by `www-data` to be owned by `nobody` → read-only over SMB. Fix: `sudo chmod -R 777 /mnt/nas_storage/opportunities/` from rmserver2. Permanent fix requires SSH into NAS and adding `no_root_squash` to `/etc/exports`. Run chmod again if new top-level folders are created.
 
 ---
 
@@ -357,6 +359,13 @@ Full details in `Context/context_sale_status.md`.
   - Clicking a chip adds the email to `ccEmails` (no duplicates); chips show `Name · Title`
   - `$customerContacts` resolved from `opportunity->parentCustomer->contacts` in each controller
   - Eager-loaded via `opportunity.parentCustomer.contacts` in: `EstimateController::show/edit`, `SaleController::show/edit`, `WorkOrderController::show`
+
+---
+
+## Opportunity Documents — UI enhancements (session 53, 2026-04-27)
+
+- **Download button**: Added "Download" button alongside "View" in the documents index action column (`resources/views/pages/opportunities/documents/index.blade.php`). Uses `<a download="...">` — forces file download so the OS opens it in the default native app. Shown for all non-archived, non-generated documents. Generated documents are excluded (they have no raw file).
+- **Original filename on disk**: `OpportunityDocumentController::store()` now uses `storeAs()` with a sanitized version of the original filename instead of Laravel's default hash. Spaces/special chars → underscores; name collisions → numeric suffix (`_1`, `_2`). `original_name` in DB still stores the exact original; `stored_name` stores the sanitized disk name. Existing files (hash-named) are unaffected.
 
 ---
 

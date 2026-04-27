@@ -1,5 +1,5 @@
 # Storage System Context — Floor Manager
-Updated: 2026-04-02
+Updated: 2026-04-27
 
 ---
 
@@ -125,6 +125,28 @@ All use `DocumentStorageService::disk()` and `$opportunity->storageFolderName()`
 Thumbnails are generated inline for images (≤600px wide, JPEG 80%) and stored in the same folder as the original with a `thumb_` prefix.
 
 `app/Console/Commands/GenerateMediaThumbnails.php` — regenerates missing thumbnails. Uses `dirname($doc->path)` to derive folder (not `opportunity_id`) so it works correctly with new naming.
+
+### File Naming on Disk (session 53, 2026-04-27)
+Files are stored using the **original filename** (sanitized) rather than a random hash, so files are identifiable when browsing the NAS directly.
+- Spaces and special characters → underscores (`My Doc.pdf` → `My_Doc.pdf`)
+- Name collision in same folder → numeric suffix appended (`My_Doc_1.pdf`, `My_Doc_2.pdf`, etc.)
+- Implementation: `OpportunityDocumentController::store()` uses `Storage::storeAs()` instead of `store()`
+- `original_name` in DB still holds the exact original filename; `stored_name` holds the sanitized disk name
+- **Note**: existing files uploaded before this change retain their hash-based names on disk — the app still serves them correctly via the DB path
+
+### NAS SMB Permissions (session 53, 2026-04-27)
+NFS root squash maps the server's `www-data` user to `nobody` on the NAS. Files created by the app are owned by `nobody` and may be read-only when accessed via SMB from a Mac/Windows machine.
+
+**Symptom**: "File is in use" or read-only when trying to edit files directly on the NAS share.
+
+**Fix** (run from rmserver2 when needed):
+```bash
+sudo chmod -R 777 /mnt/nas_storage/opportunities/
+```
+
+**Permanent fix** (requires NAS SSH access): add `no_root_squash` to `/etc/exports` on the NAS. WD My Cloud SSH default credentials: `root` / `welc0me` (zero not O). SSH may need to be enabled in WD My Cloud dashboard → Settings → Network → SSH.
+
+**Important**: OneDrive mirror is NOT triggered by direct NAS edits — only by `OpportunityDocument::created` event in the app.
 
 ---
 
