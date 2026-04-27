@@ -369,6 +369,9 @@
                                         @if ($ptNextInstall)
                                             <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                                                 install {{ \Carbon\Carbon::parse($ptNextInstall->scheduled_date)->format('M j, Y') }}
+                                                @if ($ptNextInstall->scheduled_time)
+                                                    {{ \Carbon\Carbon::createFromFormat('H:i', $ptNextInstall->scheduled_time)->format('g:i A') }}
+                                                @endif
                                             </div>
                                         @endif
                                     </td>
