@@ -549,6 +549,17 @@
                                             </a>
                                         @endif
 
+                                        @if (!$doc->trashed() && $doc->category !== 'generated_document')
+                                            <a href="{{ $docUrl }}"
+                                               download="{{ $doc->original_name }}"
+                                               class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 3v13.5m0 0l-4.5-4.5M12 16.5l4.5-4.5"/>
+                                                </svg>
+                                                Download
+                                            </a>
+                                        @endif
+
                                         @if ($doc->trashed())
                                             <form method="POST" action="{{ route('pages.opportunities.documents.restore', [$opportunity->id, $doc->id]) }}">
                                                 @csrf
