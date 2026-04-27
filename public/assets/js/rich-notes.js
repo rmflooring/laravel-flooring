@@ -82,10 +82,10 @@
         const rect = sel.getRangeAt(0).getBoundingClientRect();
         toolbar.style.display = 'flex';
         const tw = toolbar.offsetWidth || 200;
-        let left = rect.left + rect.width / 2 - tw / 2 + window.scrollX;
-        let top  = rect.top  - toolbar.offsetHeight - 8 + window.scrollY;
+        let left = rect.left + rect.width / 2 - tw / 2;
+        let top  = rect.top  - toolbar.offsetHeight - 8;
         left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
-        if (top < window.scrollY + 4) top = rect.bottom + 8 + window.scrollY;
+        if (top < 4) top = rect.bottom + 8;
         toolbar.style.left = left + 'px';
         toolbar.style.top  = top  + 'px';
     }
