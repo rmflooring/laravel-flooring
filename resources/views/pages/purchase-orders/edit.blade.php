@@ -505,11 +505,13 @@
                 toolbar: [['bold','italic','underline'],[{'color':[]}],['clean']]
             },
         });
-        const siExisting = @json(old('special_instructions', $purchaseOrder->special_instructions ?? ''));
-        if (siExisting) siQuill.clipboard.dangerouslyPasteHTML(siExisting);
-        document.querySelector('form').addEventListener('submit', function() {
+        function syncSiInput() {
             const html = siQuill.root.innerHTML;
             document.getElementById('si-input').value = (html === '<p><br></p>') ? '' : html;
-        });
+        }
+        siQuill.on('text-change', syncSiInput);
+        const siExisting = @json(old('special_instructions', $purchaseOrder->special_instructions ?? ''));
+        if (siExisting) siQuill.clipboard.dangerouslyPasteHTML(siExisting);
+        else syncSiInput();
     </script>
 </x-app-layout>

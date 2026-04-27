@@ -357,11 +357,13 @@
             },
             placeholder: 'Special instructions or context...',
         });
-        const notesExisting = @json(old('notes', ''));
-        if (notesExisting) notesQuill.clipboard.dangerouslyPasteHTML(notesExisting);
-        document.querySelector('form').addEventListener('submit', function() {
+        function syncNotesInput() {
             const html = notesQuill.root.innerHTML;
             document.getElementById('notes-input').value = (html === '<p><br></p>') ? '' : html;
-        });
+        }
+        notesQuill.on('text-change', syncNotesInput);
+        const notesExisting = @json(old('notes', ''));
+        if (notesExisting) notesQuill.clipboard.dangerouslyPasteHTML(notesExisting);
+        else syncNotesInput();
     </script>
 </x-app-layout>
