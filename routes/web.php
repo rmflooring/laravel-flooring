@@ -240,6 +240,13 @@ Route::prefix('admin')
 			Route::put('/freight-items/{freightItem}', [\App\Http\Controllers\Admin\FreightItemController::class, 'update'])
 			  ->name('freight_items.update');
 
+            // Payments (received)
+            Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])
+                ->name('payments.index');
+
+            Route::get('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'show'])
+                ->name('payments.show');
+
         });
 
         /*
@@ -660,6 +667,29 @@ Route::prefix('pages')
 
 		Route::get('mail-log/{type}/{id}', [\App\Http\Controllers\Pages\MailLogController::class, 'latest'])
 			->name('mail-log.latest');
+
+		// Quick Sales (Cash & Carry) — static routes before {sale} wildcard
+		Route::get('quick-sales/create', [\App\Http\Controllers\Pages\QuickSaleController::class, 'create'])
+			->name('quick-sales.create')
+			->middleware('role_or_permission:admin|create sales');
+
+		Route::post('quick-sales', [\App\Http\Controllers\Pages\QuickSaleController::class, 'store'])
+			->name('quick-sales.store')
+			->middleware('role_or_permission:admin|create sales');
+
+		Route::get('quick-sales/api/customers', [\App\Http\Controllers\Pages\QuickSaleController::class, 'searchCustomers'])
+			->name('quick-sales.api.customers');
+
+		Route::get('quick-sales/api/products', [\App\Http\Controllers\Pages\QuickSaleController::class, 'searchProducts'])
+			->name('quick-sales.api.products');
+
+		Route::get('quick-sales/{sale}', [\App\Http\Controllers\Pages\QuickSaleController::class, 'show'])
+			->name('quick-sales.show')
+			->middleware('role_or_permission:admin|view sales');
+
+		Route::get('quick-sales/{sale}/receipt', [\App\Http\Controllers\Pages\QuickSaleController::class, 'receipt'])
+			->name('quick-sales.receipt')
+			->middleware('role_or_permission:admin|view sales');
 
 		Route::get('sales/{sale}/pdf', [\App\Http\Controllers\Pages\SaleController::class, 'previewPdf'])
 			->name('sales.pdf');

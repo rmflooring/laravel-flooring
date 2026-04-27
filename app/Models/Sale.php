@@ -100,6 +100,11 @@ class Sale extends Model
     {
         return $this->belongsTo(Opportunity::class);
     }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
 	
 	public function salesperson1Employee(): BelongsTo
 	{
