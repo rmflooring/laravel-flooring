@@ -57,7 +57,7 @@ class WarehousePickupsController extends Controller
             default              => null,
         };
 
-        $pickTickets = PickTicket::with(['sale', 'creator'])
+        $pickTickets = PickTicket::with(['sale.workOrders', 'creator'])
             ->whereNull('work_order_id')
             ->whereIn('fulfillment_type', ['pickup', 'delivery'])
             ->whereNotIn('status', ['cancelled', 'returned'])

@@ -356,6 +356,21 @@
                                         @else
                                             <span class="text-gray-400">—</span>
                                         @endif
+                                        @php
+                                            $ptNextInstall = null;
+                                            if ($pt->sale) {
+                                                $ptNextInstall = $pt->sale->workOrders
+                                                    ->whereNotIn('status', ['cancelled', 'completed'])
+                                                    ->whereNotNull('scheduled_date')
+                                                    ->sortBy('scheduled_date')
+                                                    ->first();
+                                            }
+                                        @endphp
+                                        @if ($ptNextInstall)
+                                            <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                install {{ \Carbon\Carbon::parse($ptNextInstall->scheduled_date)->format('M j, Y') }}
+                                            </div>
+                                        @endif
                                     </td>
 
                                     {{-- Status --}}
