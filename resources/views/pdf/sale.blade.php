@@ -290,8 +290,8 @@
                                     <td class="right">${{ number_format($item->sell_price, 2) }}</td>
                                     <td class="right">${{ number_format($item->line_total, 2) }}</td>
                                 </tr>
-                                @if ($item->notes)
-                                    <tr class="note-row"><td colspan="8">{{ $item->notes }}</td></tr>
+                                @if (trim(strip_tags($item->notes ?? '')))
+                                    <tr class="note-row"><td colspan="8">{!! $item->notes !!}</td></tr>
                                 @endif
                             @endforeach
                         </tbody>
@@ -314,8 +314,8 @@
                                     <td>{{ $item->style ?: '—' }}</td>
                                     <td>{{ $item->color_item_number ?: '—' }}</td>
                                 </tr>
-                                @if ($item->notes)
-                                    <tr class="note-row"><td colspan="4">{{ $item->notes }}</td></tr>
+                                @if (trim(strip_tags($item->notes ?? '')))
+                                    <tr class="note-row"><td colspan="4">{!! $item->notes !!}</td></tr>
                                 @endif
                             @endforeach
                         </tbody>
@@ -347,8 +347,8 @@
                                     <td class="right">${{ number_format($item->sell_price, 2) }}</td>
                                     <td class="right">${{ number_format($item->line_total, 2) }}</td>
                                 </tr>
-                                @if ($item->notes)
-                                    <tr class="note-row"><td colspan="6">{{ $item->notes }}</td></tr>
+                                @if (trim(strip_tags($item->notes ?? '')))
+                                    <tr class="note-row"><td colspan="6">{!! $item->notes !!}</td></tr>
                                 @endif
                             @endforeach
                         </tbody>
@@ -367,8 +367,8 @@
                                     <td>{{ $item->labour_type ?: '—' }}</td>
                                     <td>{{ $item->description ?: '—' }}</td>
                                 </tr>
-                                @if ($item->notes)
-                                    <tr class="note-row"><td colspan="2">{{ $item->notes }}</td></tr>
+                                @if (trim(strip_tags($item->notes ?? '')))
+                                    <tr class="note-row"><td colspan="2">{!! $item->notes !!}</td></tr>
                                 @endif
                             @endforeach
                         </tbody>
@@ -398,8 +398,8 @@
                                     <td class="right">${{ number_format($item->sell_price, 2) }}</td>
                                     <td class="right">${{ number_format($item->line_total, 2) }}</td>
                                 </tr>
-                                @if ($item->notes)
-                                    <tr class="note-row"><td colspan="5">{{ $item->notes }}</td></tr>
+                                @if (trim(strip_tags($item->notes ?? '')))
+                                    <tr class="note-row"><td colspan="5">{!! $item->notes !!}</td></tr>
                                 @endif
                             @endforeach
                         </tbody>
@@ -416,8 +416,8 @@
                                 <tr>
                                     <td>{{ $item->freight_description ?: '—' }}</td>
                                 </tr>
-                                @if ($item->notes)
-                                    <tr class="note-row"><td>{{ $item->notes }}</td></tr>
+                                @if (trim(strip_tags($item->notes ?? '')))
+                                    <tr class="note-row"><td>{!! $item->notes !!}</td></tr>
                                 @endif
                             @endforeach
                         </tbody>

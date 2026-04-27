@@ -1788,7 +1788,7 @@ function initLabourDescriptionDropdownForRow(rowEl) {
   const list      = rowEl.querySelector('[data-labour-desc-options]');
   const unitInput = rowEl.querySelector('[data-labour-unit-input]');
   const priceInput = rowEl.querySelector('input[name*="[labour]"][name$="[sell_price]"]');
-  const notesInput = rowEl.querySelector('input[name*="[labour]"][name$="[notes]"], textarea[name*="[labour]"][name$="[notes]"]');
+  const notesInput = rowEl.querySelector('input[type="hidden"][name*="[labour]"][name$="[notes]"], input[name*="[labour]"][name$="[notes]"], textarea[name*="[labour]"][name$="[notes]"]');
 
   if (!typeInput || !descInput || !dropdown || !list || !unitInput) return;
   if (rowEl.dataset.labourDescBound === '1') return;
@@ -1883,8 +1883,12 @@ if (costPriceInput && cost !== '' && cost !== null) {
 if (notesInput) {
   notesInput.value = notes;
   notesInput.dispatchEvent(new Event('input', { bubbles: true }));
+  const richField = notesInput.previousElementSibling;
+  if (richField && richField.classList.contains('rich-notes-field')) {
+    richField.innerHTML = notes;
+  }
 }
-        
+
         descInput.dispatchEvent(new Event('input', { bubbles: true }));
         unitInput.dispatchEvent(new Event('input', { bubbles: true }));
       });
@@ -1982,6 +1986,7 @@ function addRoom() {
   initLabourTypeDropdownForRow(row);
   initLabourDescriptionDropdownForRow(row);
 });
+  if (window.initRichNotesIn) window.initRichNotesIn(newRoomCard);
 
   renumberRooms();
   reindexAllRooms();
@@ -2273,6 +2278,7 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
   initStyleDropdownForRoom(room);
   initColorDropdownForRoom(room);
   initManualPriceOverrideForRoom(room);
+  if (window.initRichNotesIn) window.initRichNotesIn(room);
 
   reindexAllRooms();
   updateRoomTotals(room);
@@ -2299,6 +2305,7 @@ if (t.closest(".add-freight-row")) {
   const newRow = tbody ? tbody.querySelector("tr:last-child") : null;
   if (newRow) initLabourTypeDropdownForRow(newRow);
   if (newRow) initLabourDescriptionDropdownForRow(newRow);
+  if (window.initRichNotesIn) window.initRichNotesIn(room);
   reindexAllRooms();
   updateRoomTotals(room);
   if (typeof fmMarkDirty === "function") fmMarkDirty();

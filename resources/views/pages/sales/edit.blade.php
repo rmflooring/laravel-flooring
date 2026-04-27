@@ -527,10 +527,12 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="text"
+        <div class="rich-notes-field w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          contenteditable="true" placeholder="PO Notes"
+          style="min-height:2rem;cursor:text;">{!! old("rooms.$roomIndex.materials.$i.po_notes", $item->po_notes) !!}</div>
+        <input type="hidden"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][po_notes]"
-          value="{{ old("rooms.$roomIndex.materials.$i.po_notes", $item->po_notes) }}"
-          class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2">
+          value="{{ old("rooms.$roomIndex.materials.$i.po_notes", $item->po_notes) }}">
       </td>
 
       <td class="px-3 py-2">
@@ -673,10 +675,11 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="text"
-          name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][po_notes]"
-          class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-          placeholder="PO Notes">
+        <div class="rich-notes-field w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          contenteditable="true" placeholder="PO Notes"
+          style="min-height:2rem;cursor:text;"></div>
+        <input type="hidden"
+          name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][po_notes]">
       </td>
 
       <td class="px-3 py-2">
@@ -1033,10 +1036,12 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="text"
+        <div class="rich-notes-field w-56 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          contenteditable="true" placeholder="Notes"
+          style="min-height:2rem;cursor:text;">{!! old("rooms.$roomIndex.labour.$i.notes", $item->notes ?? $item->item_notes ?? '') !!}</div>
+        <input type="hidden"
           name="rooms[{{ $roomIndex }}][labour][{{ $i }}][notes]"
-          value="{{ old("rooms.$roomIndex.labour.$i.notes", $item->notes ?? $item->item_notes ?? '') }}"
-          class="w-56 bg-gray-50 border border-gray-300 rounded-lg p-2">
+          value="{{ old("rooms.$roomIndex.labour.$i.notes", $item->notes ?? $item->item_notes ?? '') }}">
       </td>
 
       <td class="px-3 py-2">
@@ -1182,10 +1187,11 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="text"
-          name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][notes]"
-          class="w-56 bg-gray-50 border border-gray-300 rounded-lg p-2"
-          placeholder="Notes">
+        <div class="rich-notes-field w-56 bg-gray-50 border border-gray-300 rounded-lg p-2"
+          contenteditable="true" placeholder="Notes"
+          style="min-height:2rem;cursor:text;"></div>
+        <input type="hidden"
+          name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][notes]">
       </td>
 
       <td class="px-3 py-2">
@@ -1409,10 +1415,11 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="text"
-        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][po_notes]"
-        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
-        placeholder="PO Notes">
+      <div class="rich-notes-field w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+        contenteditable="true" placeholder="PO Notes"
+        style="min-height:2rem;cursor:text;"></div>
+      <input type="hidden"
+        name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][po_notes]">
     </td>
 
     <td class="px-3 py-2">
@@ -1645,9 +1652,10 @@
 						  </div>
 						</td>
                         <td class="px-3 py-2">
-                            <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][notes]"
-                                class="w-56 bg-gray-50 border border-gray-300 rounded-lg p-2"
-                                placeholder="Notes">
+                            <div class="rich-notes-field w-56 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                              contenteditable="true" placeholder="Notes"
+                              style="min-height:2rem;cursor:text;"></div>
+                            <input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][notes]">
                         </td>
                         <td class="px-3 py-2">
                             <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][sell_price]"
@@ -2479,6 +2487,7 @@
 }());
 </script>
 
+<script src="{{ asset('assets/js/rich-notes.js') }}" defer></script>
 <script src="{{ asset('assets/js/sales/sale.js') }}" defer></script>
 <script src="{{ asset('assets/js/sales/sale_edit.js') }}" defer></script>
 <script src="{{ asset('assets/js/sales/dropdown_pin.js') }}" defer></script>
