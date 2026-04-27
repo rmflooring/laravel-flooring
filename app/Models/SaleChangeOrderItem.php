@@ -11,7 +11,7 @@ class SaleChangeOrderItem extends Model
 
     protected $casts = [
         'quantity'   => 'decimal:2',
-        'sell_price' => 'decimal:2',
+        'sell_price' => 'decimal:4',
         'line_total'  => 'decimal:2',
     ];
 

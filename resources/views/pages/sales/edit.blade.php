@@ -536,7 +536,7 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="0.0001"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][sell_price]"
           value="{{ old("rooms.$roomIndex.materials.$i.sell_price", $item->sell_price) }}"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
@@ -797,9 +797,9 @@
 </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="0.0001"
           name="rooms[{{ $roomIndex }}][freight][{{ $i }}][sell_price]"
-          value="{{ old("rooms.$roomIndex.freight.$i.sell_price", number_format($sell, 2, '.', '')) }}"
+          value="{{ old("rooms.$roomIndex.freight.$i.sell_price", number_format($sell, 4, '.', '')) }}"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
@@ -1045,9 +1045,9 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="0.0001"
           name="rooms[{{ $roomIndex }}][labour][{{ $i }}][sell_price]"
-          value="{{ old("rooms.$roomIndex.labour.$i.sell_price", number_format($sell, 2, '.', '')) }}"
+          value="{{ old("rooms.$roomIndex.labour.$i.sell_price", number_format($sell, 4, '.', '')) }}"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
@@ -1423,7 +1423,7 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="number" step="0.01"
+      <input type="number" step="0.0001"
         name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][sell_price]"
         class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="0.00">
@@ -1527,7 +1527,7 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][sell_price]"
+      <input type="number" step="0.0001" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][sell_price]"
         class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="0.00">
       <input type="hidden" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][cost_price]" class="freight-cost-price-input" value="0">
@@ -1658,7 +1658,7 @@
                             <input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][notes]">
                         </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][sell_price]"
+                            <input type="number" step="0.0001" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][sell_price]"
                                 class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0.00">
                             <input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][cost_price]" class="labour-cost-price-input" value="0">

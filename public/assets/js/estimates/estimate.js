@@ -922,7 +922,7 @@ function initManufacturerDropdownForRoom(roomCard) {
             class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
             data-line-id="${line.id}"
             data-line-name="${escapeHtml(line.name)}"
-            data-sell-price="${parseFloat(line.default_sell_price ?? 0).toFixed(2)}"
+            data-sell-price="${parseFloat(line.default_sell_price ?? 0).toFixed(4)}"
             data-cost-price="${parseFloat(line.default_cost_price ?? 0).toFixed(2)}">
             <span class="truncate">${escapeHtml(line.name)}</span>
           </button>
@@ -949,7 +949,7 @@ function initManufacturerDropdownForRoom(roomCard) {
       if (priceInput && priceInput.dataset.userOverridden !== '1') {
         const defaultSellPrice = parseFloat(btn.getAttribute('data-sell-price') || 0);
         if (defaultSellPrice > 0) {
-          priceInput.value = defaultSellPrice.toFixed(2);
+          priceInput.value = defaultSellPrice.toFixed(4);
           priceInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
@@ -1161,7 +1161,7 @@ function initManufacturerDropdownForRoom(roomCard) {
             data-use-box-qty="${s.use_box_qty ? '1' : '0'}"
             data-units-per="${s.units_per ?? ''}"
             data-cost-price="${parseFloat(s.cost_price ?? 0).toFixed(2)}"
-            data-sell-price="${parseFloat(s.sell_price ?? 0).toFixed(2)}">
+            data-sell-price="${parseFloat(s.sell_price ?? 0).toFixed(4)}">
             <span class="truncate">${escapeHtml(s.name)}</span>
           </button>
         </li>
@@ -1199,7 +1199,7 @@ function initManufacturerDropdownForRoom(roomCard) {
 
   // --- SELL PRICE ---
   if (typeof data.sell_price === 'number') {
-    priceInput.value = data.sell_price.toFixed(2);
+    priceInput.value = data.sell_price.toFixed(4);
     priceInput.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -1249,7 +1249,7 @@ function initManufacturerDropdownForRoom(roomCard) {
 			delete priceInput.dataset.userOverridden;
 			const styleSellPrice = parseFloat(btn.getAttribute('data-sell-price') || 0);
 			if (styleSellPrice > 0) {
-				priceInput.value = styleSellPrice.toFixed(2);
+				priceInput.value = styleSellPrice.toFixed(4);
 				priceInput.dispatchEvent(new Event('input', { bubbles: true }));
 			}
 			// If styleSellPrice is 0, keep the line default already in the field
@@ -1558,7 +1558,7 @@ data-freight-cost="${escapeHtml(cost)}">
       if (priceInput && p !== '' && p != null) {
         const n = Number(p);
         if (!isNaN(n)) {
-          priceInput.value = n.toFixed(2);
+          priceInput.value = n.toFixed(4);
           priceInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
