@@ -70,7 +70,7 @@ Format: `YYYY-NNN` — sequential per calendar year, zero-padded to 3 digits (e.
 | invoice_id | FK → invoices | cascade delete |
 | amount | decimal 10,2 | |
 | payment_date | date | |
-| payment_method | enum | cash, cheque, e-transfer, credit_card, other |
+| payment_method | enum | cash, cheque, e-transfer, visa, mastercard, other, credit_card (legacy) |
 | reference_number | string nullable | Cheque #, transaction ID, etc. |
 | notes | text nullable | |
 | recorded_by | FK → users nullable | null on delete |
@@ -81,7 +81,7 @@ Format: `YYYY-NNN` — sequential per calendar year, zero-padded to 3 digits (e.
 - `App\Models\Invoice` — `booted()` generates invoice_number; `$guarded = ['id', 'invoice_number']`; accessors `balance_due`, `is_overpaid`
 - `App\Models\InvoiceRoom` — accessors `subtotal`, `tax_total`
 - `App\Models\InvoiceItem`
-- `App\Models\InvoicePayment` — `PAYMENT_METHODS` constant; accessor `method_label`
+- `App\Models\InvoicePayment` — `PAYMENT_METHODS` constant (cash, cheque, e-transfer, visa, mastercard, other); accessor `method_label` (fallback uses `ucwords(str_replace('_',' ',...))` so legacy `credit_card` records display as "Credit Card")
 - `App\Models\PaymentTerm`
 - `App\Models\Sale` — added `invoices()` hasMany + `activeInvoices()` hasMany (excludes voided)
 

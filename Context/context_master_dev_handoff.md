@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-27 (session 53)
+Updated: 2026-04-27 (session 54)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -48,6 +48,7 @@ Current core modules:
 - **SMS Notifications** (Twilio) — see `Context/context_sms.md`
 - **Document Templates** (admin-managed, PDF generation) — see `Context/context_document_templates.md`
 - **Invoices** (progress billing, payments) — see `Context/context_invoices.md`
+- **Quick Sale / Cash & Carry** — walk-in sales, bypasses opportunity/estimate flow (see section below)
 - Users / Roles / Employees
 - Admin pages (tax groups, settings, email management)
 - **Inventory / Warehouse / Pick Tickets** — see `Context/context_warehouse_pick_tickets.md`
@@ -462,17 +463,76 @@ Tax is snapshotted from `sale.tax_rate_percent` at invoice creation. Each invoic
 ### Invoice show page features
 - Status badge, financial summary (total / paid / balance due), voided date + reason
 - Line items grouped by room with room subtotals
-- Payments table with remove button
+- Payments table with remove button; admin role sees a "View" link per payment row (→ `admin.payments.show`)
 - Add Payment modal (pre-fills balance due amount)
 - Void modal with optional reason
 - Send Email modal (auto-attaches PDF; marks status `sent` if was `draft`)
 - Print/PDF button
+
+### Payment methods
+`InvoicePayment::PAYMENT_METHODS`: cash, cheque, e-transfer, visa, mastercard, other. `credit_card` kept in DB enum for backward compat; `method_label` accessor uses `ucwords(str_replace('_',' ',...))` fallback so old records display as "Credit Card".
+
+### Admin Payments Received pages
+- Controller: `app/Http/Controllers/Admin/PaymentController.php`
+- Index: `GET admin/payments` → `admin.payments.index` — search (invoice #, sale #, job, homeowner, ref #), filter by method + date range, sortable, paginated 30/page, filtered total shown
+- Show: `GET admin/payments/{payment}` → `admin.payments.show` — payment details + invoice card + sale card with direct links
+- Edit: `GET admin/payments/{payment}/edit` → `admin.payments.edit` — edit amount, date, method, reference #, notes
+- Update: `PUT admin/payments/{payment}` → `admin.payments.update` — calls `InvoiceService::recalculateAfterPayment()` to keep invoice status/amount_paid in sync
+- Views: `resources/views/admin/payments/{index,show,edit}.blade.php`
+- Sidebar: "Payments Received" link in Admin nav section
 
 ### Open items
 - Index page for invoices (list all invoices across all sales)
 - Sidebar link for invoices
 - Overdue auto-detection (cron/scheduler to flip `sent` → `overdue` when due_date passes)
 - Invoice edit should allow re-selecting line items (currently only edits header fields)
+
+---
+
+## Quick Sale / Cash & Carry (session 54, 2026-04-27)
+
+Walk-in / cash-and-carry sales that don't need a full opportunity → estimate → sale flow.
+
+### Overview
+- Creates a `Sale` with `is_quick_sale = true` + a direct `customer_id` FK (bypasses Opportunity/Estimate)
+- Auto-creates an `Invoice` (status = `paid`) + `InvoicePayment` in the same transaction
+- Sale status set to `completed`, locked immediately
+
+### DB changes
+- Migration `2026_04_23_111220_add_quick_sale_fields_to_sales_table`: adds `is_quick_sale boolean default false` and `customer_id nullable FK → customers` to `sales`
+- `Sale` model: added `customer()` belongsTo relationship (same namespace, no import needed)
+
+### Controller: `app/Http/Controllers/Pages/QuickSaleController.php`
+| Method | Route | Notes |
+|--------|-------|-------|
+| `create` | GET pages/quick-sales/create | Returns tax groups |
+| `store` | POST pages/quick-sales | Full transaction: customer → sale → room → items → invoice → invoice room/items → payment |
+| `show` | GET pages/quick-sales/{sale} | Receipt/confirmation page; aborts 404 if not quick sale |
+| `receipt` | GET pages/quick-sales/{sale}/receipt | DomPDF 80mm thermal receipt |
+| `searchCustomers` | GET pages/quick-sales/api/customers | AJAX: search by name/phone/email, returns 15 |
+| `searchProducts` | GET pages/quick-sales/api/products | AJAX: search product catalog by name/SKU/color/line/manufacturer, returns 20 |
+
+### Routes (under `pages` middleware group, static before wildcard)
+- `GET  pages/quick-sales/create` → `pages.quick-sales.create` (middleware: `role_or_permission:admin|create sales`)
+- `POST pages/quick-sales` → `pages.quick-sales.store`
+- `GET  pages/quick-sales/api/customers` → `pages.quick-sales.api.customers`
+- `GET  pages/quick-sales/api/products` → `pages.quick-sales.api.products`
+- `GET  pages/quick-sales/{sale}` → `pages.quick-sales.show` (middleware: `role_or_permission:admin|view sales`)
+- `GET  pages/quick-sales/{sale}/receipt` → `pages.quick-sales.receipt`
+
+### Views
+- `resources/views/pages/quick-sales/create.blade.php` — 3-column layout: customer panel (existing search or new), items panel (catalog typeahead per row, qty/unit/price), right sidebar (tax group select, live summary, payment panel with cash change-due display). Alpine.js + shared `window._qs` state for live totals.
+- `resources/views/pages/quick-sales/show.blade.php` — receipt card showing customer, date, items table, totals, payment method + change due, PAID badge. "Print Receipt" button + "New Quick Sale" link.
+- `resources/views/pdf/quick-sale-receipt.blade.php` — 80mm thermal paper layout (DomPDF, `[0,0,226.77,700]`). Logo, company info, items table, totals, payment, PAID stamp, thank-you footer.
+
+### Tax rate fetch
+JS calls `/pages/estimates/api/tax-groups/{id}/rate` → reads `d.tax_rate_percent` and `d.group_name` (bug fix: was incorrectly using `d.rate` and `d.name`).
+
+### Payment method validation
+Uses `implode(',', array_keys(InvoicePayment::PAYMENT_METHODS))` — stays in sync with the model constant automatically.
+
+### Sidebar
+"Quick Sale" sub-item under Sales accordion (`@can('create sales')` gated), `pages.quick-sales.*` route-active detection.
 
 ---
 
