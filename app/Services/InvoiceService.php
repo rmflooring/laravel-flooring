@@ -229,7 +229,7 @@ class InvoiceService
     /**
      * Set invoice status based on payment amount vs total.
      */
-    private function derivePaymentStatus(Invoice $invoice): void
+    public function derivePaymentStatus(Invoice $invoice): void
     {
         $grand      = (float) $invoice->grand_total;
         $paid       = (float) $invoice->amount_paid;

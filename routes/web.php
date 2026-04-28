@@ -69,6 +69,11 @@ Route::post('/webhook/twilio/sms', [TwilioSmsWebhookController::class, 'handle']
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->name('webhook.twilio.sms');
 
+// QuickBooks Online webhook — no auth, no CSRF (verified via intuit-signature header)
+Route::post('/webhook/quickbooks', [\App\Http\Controllers\QuickBooksWebhookController::class, 'handle'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('webhook.quickbooks');
+
 // Dashboard (authenticated)
 Route::get('/dashboard', function () {
     return view('dashboard');

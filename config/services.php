@@ -36,10 +36,11 @@ return [
     ],
 	
     'quickbooks' => [
-        'client_id'     => env('QBO_CLIENT_ID'),
-        'client_secret' => env('QBO_CLIENT_SECRET'),
-        'redirect_uri'  => env('QBO_REDIRECT_URI'),
-        'environment'   => env('QBO_ENVIRONMENT', 'sandbox'),
+        'client_id'              => env('QBO_CLIENT_ID'),
+        'client_secret'          => env('QBO_CLIENT_SECRET'),
+        'redirect_uri'           => env('QBO_REDIRECT_URI'),
+        'environment'            => env('QBO_ENVIRONMENT', 'sandbox'),
+        'webhook_verifier_token' => env('QBO_WEBHOOK_VERIFIER_TOKEN'),
     ],
 
     'microsoft' => [

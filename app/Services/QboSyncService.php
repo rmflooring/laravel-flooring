@@ -6,6 +6,8 @@ use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Vendor;
+use App\Services\InvoiceService;
+use Illuminate\Support\Facades\Log;
 
 class QboSyncService
 {
@@ -457,6 +459,120 @@ class QboSyncService
         } catch (\Exception $e) {
             $this->qbo->log('invoice', $invoice->id, 'push', 'error', null, $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
+    }
+
+    // =========================================================================
+    // Webhook handlers (QBO → FM)
+    // =========================================================================
+
+    /**
+     * Called when QBO notifies us that a Bill entity was updated or deleted.
+     * Fetches the current Bill from QBO and syncs payment status back to FM.
+     */
+    public function handleBillUpdate(string $qboId, string $operation): void
+    {
+        $bill = Bill::where('qbo_id', $qboId)->first();
+
+        if (! $bill) {
+            Log::info("[QBO Webhook] Bill qbo_id={$qboId} not found in FM — skipping.");
+            return;
+        }
+
+        if ($operation === 'Delete') {
+            // Bill deleted in QBO — clear the sync link so it can be re-pushed if needed
+            $bill->update(['qbo_id' => null, 'qbo_sync_token' => null, 'qbo_synced_at' => null, 'qbo_paid_at' => null]);
+            $this->qbo->log('bill', $bill->id, 'pull', 'success', $qboId, 'Bill deleted in QBO — sync link cleared');
+            return;
+        }
+
+        try {
+            $response = $this->qbo->get("bill/{$qboId}");
+            $qboBill  = $response['Bill'] ?? null;
+
+            if (! $qboBill) {
+                Log::warning("[QBO Webhook] Bill #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            $balance = (float) ($qboBill['Balance'] ?? 0);
+            $updates = [
+                'qbo_sync_token' => $qboBill['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ];
+
+            if ($balance <= 0 && ! $bill->qbo_paid_at) {
+                // Fully paid in QBO
+                $updates['qbo_paid_at'] = now();
+                $updates['status']      = 'approved';
+                $message = 'Bill marked as paid via QBO webhook';
+            } elseif ($balance > 0 && $bill->qbo_paid_at) {
+                // Payment was reversed in QBO
+                $updates['qbo_paid_at'] = null;
+                $message = 'Bill payment reversed in QBO — qbo_paid_at cleared';
+            } else {
+                $message = 'Bill updated in QBO (no payment status change)';
+            }
+
+            $bill->update($updates);
+
+            $this->qbo->log('bill', $bill->id, 'pull', 'success', $qboId, $message);
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch Bill #{$qboId}: " . $e->getMessage());
+            $this->qbo->log('bill', $bill->id, 'pull', 'error', $qboId, $e->getMessage());
+        }
+    }
+
+    /**
+     * Called when QBO notifies us that an Invoice entity was updated or deleted.
+     * Fetches the current Invoice from QBO and syncs payment status back to FM.
+     */
+    public function handleInvoiceUpdate(string $qboId, string $operation): void
+    {
+        $invoice = Invoice::where('qbo_id', $qboId)->first();
+
+        if (! $invoice) {
+            Log::info("[QBO Webhook] Invoice qbo_id={$qboId} not found in FM — skipping.");
+            return;
+        }
+
+        if ($operation === 'Delete') {
+            $invoice->update(['qbo_id' => null, 'qbo_sync_token' => null, 'qbo_synced_at' => null]);
+            $this->qbo->log('invoice', $invoice->id, 'pull', 'success', $qboId, 'Invoice deleted in QBO — sync link cleared');
+            return;
+        }
+
+        try {
+            $response   = $this->qbo->get("invoice/{$qboId}");
+            $qboInvoice = $response['Invoice'] ?? null;
+
+            if (! $qboInvoice) {
+                Log::warning("[QBO Webhook] Invoice #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            $totalAmt   = (float) ($qboInvoice['TotalAmt'] ?? 0);
+            $balance    = (float) ($qboInvoice['Balance'] ?? 0);
+            $amountPaid = round($totalAmt - $balance, 2);
+
+            $invoice->update([
+                'qbo_sync_token' => $qboInvoice['SyncToken'],
+                'qbo_synced_at'  => now(),
+                'amount_paid'    => $amountPaid,
+            ]);
+
+            $invoice->refresh();
+
+            // Derive FM status from the updated amount_paid
+            app(InvoiceService::class)->derivePaymentStatus($invoice);
+
+            $this->qbo->log('invoice', $invoice->id, 'pull', 'success', $qboId,
+                "Invoice payment sync from QBO: paid={$amountPaid}, balance={$balance}");
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch Invoice #{$qboId}: " . $e->getMessage());
+            $this->qbo->log('invoice', $invoice->id, 'pull', 'error', $qboId, $e->getMessage());
         }
     }
 
