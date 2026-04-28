@@ -264,16 +264,16 @@ class QboSyncService
     /**
      * Push a bill to QBO as a Bill entity.
      * Vendor must be synced first (or will be auto-synced).
-     * $apAccountId = QBO Account ID for the AP expense account (e.g. "7" for Accounts Payable)
+     * $accountIds = ['product' => QBO ID, 'freight' => QBO ID, 'labour' => QBO ID]
      */
-    public function pushBill(Bill $bill, string $apAccountId): array
+    public function pushBill(Bill $bill, array $accountIds): array
     {
         try {
             if ($bill->bill_type !== 'vendor') {
                 return ['success' => false, 'message' => 'Only vendor bills can be pushed to QBO at this time.', 'qbo_id' => null];
             }
 
-            $bill->load(['vendor', 'items']);
+            $bill->load(['vendor', 'items.purchaseOrderItem.saleItem']);
 
             // Ensure vendor is synced to QBO first
             $vendor = $bill->vendor;
@@ -289,7 +289,7 @@ class QboSyncService
                 $vendor->refresh();
             }
 
-            $payload = $this->buildBillPayload($bill, $vendor->qbo_id, $apAccountId);
+            $payload = $this->buildBillPayload($bill, $vendor->qbo_id, $accountIds);
 
             if ($bill->qbo_id) {
                 $payload['Id']        = $bill->qbo_id;
@@ -320,43 +320,51 @@ class QboSyncService
         }
     }
 
-    private function buildBillPayload(Bill $bill, string $vendorQboId, string $apAccountId): array
+    private function buildBillPayload(Bill $bill, string $vendorQboId, array $accountIds): array
     {
         $lines = [];
 
         foreach ($bill->items as $item) {
+            // Resolve account by sale item type; fall back to product
+            $saleItemType = $item->purchaseOrderItem?->saleItem?->type ?? 'material';
+            $accountId = match ($saleItemType) {
+                'freight' => $accountIds['freight'],
+                'labour'  => $accountIds['labour'],
+                default   => $accountIds['product'],
+            };
+
             $lines[] = [
                 'Amount'      => (float) $item->line_total,
                 'DetailType'  => 'AccountBasedExpenseLineDetail',
                 'Description' => $item->item_name . ($item->quantity ? ' (Qty: ' . $item->quantity . ' @ $' . number_format($item->unit_cost, 2) . ')' : ''),
                 'AccountBasedExpenseLineDetail' => [
-                    'AccountRef'     => ['value' => $apAccountId],
+                    'AccountRef'     => ['value' => $accountId],
                     'BillableStatus' => 'NotBillable',
                 ],
             ];
         }
 
-        // GST tax line
+        // GST tax line — use product account
         if ($bill->gst_amount > 0) {
             $lines[] = [
                 'Amount'      => (float) $bill->gst_amount,
                 'DetailType'  => 'AccountBasedExpenseLineDetail',
                 'Description' => 'GST',
                 'AccountBasedExpenseLineDetail' => [
-                    'AccountRef' => ['value' => $apAccountId],
+                    'AccountRef' => ['value' => $accountIds['product']],
                     'BillableStatus' => 'NotBillable',
                 ],
             ];
         }
 
-        // PST tax line
+        // PST tax line — use product account
         if ($bill->pst_amount > 0) {
             $lines[] = [
                 'Amount'      => (float) $bill->pst_amount,
                 'DetailType'  => 'AccountBasedExpenseLineDetail',
                 'Description' => 'PST',
                 'AccountBasedExpenseLineDetail' => [
-                    'AccountRef' => ['value' => $apAccountId],
+                    'AccountRef' => ['value' => $accountIds['product']],
                     'BillableStatus' => 'NotBillable',
                 ],
             ];
@@ -387,9 +395,9 @@ class QboSyncService
     /**
      * Push an invoice to QBO as an Invoice entity.
      * Customer (job site) is auto-synced if not already in QBO.
-     * $incomeItemId = QBO Item ID (product/service) used for invoice line items
+     * $itemIds = ['material' => QBO ID, 'freight' => QBO ID, 'labour' => QBO ID]
      */
-    public function pushInvoice(Invoice $invoice, string $incomeItemId): array
+    public function pushInvoice(Invoice $invoice, array $itemIds): array
     {
         try {
             $invoice->load(['rooms.items', 'sale.opportunity.jobSiteCustomer.parent', 'sale.opportunity.parentCustomer']);
@@ -421,7 +429,7 @@ class QboSyncService
                 $jobSite->refresh();
             }
 
-            $payload = $this->buildInvoicePayload($invoice, $jobSite->qbo_id, $incomeItemId);
+            $payload = $this->buildInvoicePayload($invoice, $jobSite->qbo_id, $itemIds);
 
             if ($invoice->qbo_id) {
                 $payload['Id']        = $invoice->qbo_id;
@@ -452,18 +460,24 @@ class QboSyncService
         }
     }
 
-    private function buildInvoicePayload(Invoice $invoice, string $customerQboId, string $incomeItemId): array
+    private function buildInvoicePayload(Invoice $invoice, string $customerQboId, array $itemIds): array
     {
         $lines = [];
 
         foreach ($invoice->rooms as $room) {
             foreach ($room->items as $item) {
+                $itemId = match ($item->item_type) {
+                    'freight' => $itemIds['freight'],
+                    'labour'  => $itemIds['labour'],
+                    default   => $itemIds['material'],
+                };
+
                 $lines[] = [
                     'Amount'      => (float) $item->line_total,
                     'DetailType'  => 'SalesItemLineDetail',
                     'Description' => ($room->name ? $room->name . ' — ' : '') . $item->label,
                     'SalesItemLineDetail' => [
-                        'ItemRef'   => ['value' => $incomeItemId],
+                        'ItemRef'   => ['value' => $itemId],
                         'Qty'       => (float) $item->quantity,
                         'UnitPrice' => (float) $item->sell_price,
                     ],
@@ -471,14 +485,14 @@ class QboSyncService
             }
         }
 
-        // Tax line
+        // Tax line — use material item
         if ($invoice->tax_amount > 0) {
             $lines[] = [
                 'Amount'      => (float) $invoice->tax_amount,
                 'DetailType'  => 'SalesItemLineDetail',
                 'Description' => 'Tax',
                 'SalesItemLineDetail' => [
-                    'ItemRef' => ['value' => $incomeItemId],
+                    'ItemRef' => ['value' => $itemIds['material']],
                 ],
             ];
         }

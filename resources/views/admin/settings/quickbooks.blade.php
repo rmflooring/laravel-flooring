@@ -95,34 +95,85 @@
             {{-- Account Mapping --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
                 <h2 class="text-base font-semibold text-gray-800 mb-1">Account & Item Mapping</h2>
-                <p class="text-sm text-gray-500 mb-4">Configure the QBO accounts and items used when syncing bills and invoices.</p>
+                <p class="text-sm text-gray-500 mb-4">Configure the QBO accounts and items used when syncing bills and invoices. Find IDs in QuickBooks → Chart of Accounts or Products &amp; Services → hover the row → note the ID in the URL.</p>
 
-                <form method="POST" action="{{ route('admin.settings.quickbooks.save-settings') }}" class="space-y-4">
+                <form method="POST" action="{{ route('admin.settings.quickbooks.save-settings') }}" class="space-y-6">
                     @csrf
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Expense Account ID <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text"
-                                   name="qbo_ap_account_id"
-                                   value="{{ $apAccountId }}"
-                                   placeholder="e.g. 63"
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
-                            <p class="mt-1 text-xs text-gray-400">Used for bill (AP) line items. Find in QuickBooks → Chart of Accounts → hover account → note ID in URL.</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Income Item ID <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text"
-                                   name="qbo_income_item_id"
-                                   value="{{ $incomeItemId }}"
-                                   placeholder="e.g. 1"
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
-                            <p class="mt-1 text-xs text-gray-400">QBO <strong>Item</strong> (product/service) used for invoice lines. Find in QuickBooks → Products &amp; Services → hover item → note ID in URL.</p>
+
+                    {{-- Expense Accounts --}}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-100">Expense Accounts <span class="text-xs font-normal text-gray-400">(used for bill / AP line items)</span></h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Product <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text"
+                                       name="qbo_ap_product_account_id"
+                                       value="{{ $settings['qbo_ap_product_account_id'] }}"
+                                       placeholder="e.g. 63"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Freight <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text"
+                                       name="qbo_ap_freight_account_id"
+                                       value="{{ $settings['qbo_ap_freight_account_id'] }}"
+                                       placeholder="e.g. 64"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Labour <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text"
+                                       name="qbo_ap_labour_account_id"
+                                       value="{{ $settings['qbo_ap_labour_account_id'] }}"
+                                       placeholder="e.g. 65"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
                         </div>
                     </div>
+
+                    {{-- Income Items --}}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-100">Income Items <span class="text-xs font-normal text-gray-400">(QBO product/service items used for invoice lines)</span></h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Material <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text"
+                                       name="qbo_income_material_item_id"
+                                       value="{{ $settings['qbo_income_material_item_id'] }}"
+                                       placeholder="e.g. 1"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Freight <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text"
+                                       name="qbo_income_freight_item_id"
+                                       value="{{ $settings['qbo_income_freight_item_id'] }}"
+                                       placeholder="e.g. 2"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Labour <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text"
+                                       name="qbo_income_labour_item_id"
+                                       value="{{ $settings['qbo_income_labour_item_id'] }}"
+                                       placeholder="e.g. 3"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <button type="submit"
                                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">

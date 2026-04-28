@@ -1,5 +1,5 @@
 # QuickBooks Online Integration Context
-Updated: 2026-04-20 (session 52)
+Updated: 2026-04-27 (session 55)
 
 ## Overview
 Two-way sync between Floor Manager and QuickBooks Online (QBO). FM is the operational source of truth; QBO is the accounting source of truth.
@@ -137,7 +137,51 @@ QBO uses optimistic locking. Every entity has a `SyncToken` (version number). Up
 | 3 | | Push Bill (AP) to QBO — manual "Push to QBO" button on bill show page |
 | 4 | | Push Invoice (AR) + InvoicePayments to QBO |
 | 5 | | Webhook receiver — QBO → FM payment status sync |
-| 6 | | Tax code mapping UI + account mapping per entity type |
+| 6 | Planned | Per-type account/item mapping UI (product/freight/labour split for both expense accounts and income items) — see "Planned: Per-Type Account & Item Mapping" section above |
+
+---
+
+## Planned: Per-Type Account & Item Mapping
+
+Currently the settings page has a single **Expense Account ID** (`qbo_ap_account_id`) and a single **Income Item ID** (`qbo_income_item_id`), both applied to every line of every bill/invoice. The planned change is to split these into per-type mappings.
+
+### New settings keys (replace the two existing ones)
+
+| Old key | New keys |
+|---------|----------|
+| `qbo_ap_account_id` | `qbo_ap_product_account_id`, `qbo_ap_freight_account_id`, `qbo_ap_labour_account_id` |
+| `qbo_income_item_id` | `qbo_income_material_item_id`, `qbo_income_freight_item_id`, `qbo_income_labour_item_id` |
+
+All stored in `app_settings` via `Setting::get/set`, same as current.
+
+### Income (Invoice) mapping — clean
+
+`invoice_items` already has `item_type` enum (`material`, `labour`, `freight`). `buildInvoicePayload()` in `QboSyncService` loops through each item and sets `SalesItemLineDetail.ItemRef.value` — just select the correct item ID by `item_type`.
+
+### Expense (Bill) mapping — mostly clean
+
+`bill_items` does **not** have an `item_type` column, but:
+- **Labour bills**: `bill.bill_type = 'installer'` → all lines use `qbo_ap_labour_account_id`
+- **Vendor bills**: `bill.bill_type = 'vendor'` → lines come from PO items, which link to `sale_item_id` on `sale_items` (which has `type`: `material`/`freight`). Two options:
+  - **Option A (preferred)**: Add nullable `item_type` enum column to `bill_items` via migration, populated when the bill is created from a PO/WO.
+  - **Option B (no migration)**: In `buildBillPayload()`, if `bill_type = 'vendor'`, default all lines to `qbo_ap_product_account_id` (freight is rare on vendor bills and is already a separate PO).
+
+Option A is cleaner long-term. Option B is quicker to ship. Decision deferred to implementation session.
+
+### Files to change
+
+| File | Change |
+|------|--------|
+| `app/Http/Controllers/Admin/QuickBooksController.php` | `index()` loads 6 settings; `saveSettings()` validates + saves 6 keys |
+| `resources/views/admin/settings/quickbooks.blade.php` | Replace 2-field grid with two labelled sections (Expense Accounts / Income Items), 3 fields each |
+| `app/Http/Controllers/Admin/BillController.php` | `pushToQbo()` loads 3 expense account IDs, passes to sync service |
+| `app/Http/Controllers/Pages/InvoiceController.php` | `pushToQbo()` loads 3 income item IDs, passes to sync service |
+| `app/Services/QboSyncService.php` | `pushBill()` + `buildBillPayload()` accept array of 3 account IDs; select by type. `pushInvoice()` + `buildInvoicePayload()` accept array of 3 item IDs; select by `item_type`. |
+| *(optional)* new migration | Add `item_type` enum to `bill_items` if Option A chosen |
+
+### Validation note
+
+All 6 settings should be `required` on save (same as current). If any are missing, the push should fail with a clear error message naming which type is unconfigured.
 
 ---
 

@@ -355,12 +355,18 @@ class BillController extends Controller
             return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
         }
 
-        $apAccountId = Setting::get('qbo_ap_account_id');
-        if (! $apAccountId) {
-            return back()->with('error', 'No QBO expense account configured. Visit Settings → QuickBooks Online to set it up.');
+        $accountIds = [
+            'product' => Setting::get('qbo_ap_product_account_id'),
+            'freight' => Setting::get('qbo_ap_freight_account_id'),
+            'labour'  => Setting::get('qbo_ap_labour_account_id'),
+        ];
+
+        $missing = array_keys(array_filter($accountIds, fn($v) => ! $v));
+        if ($missing) {
+            return back()->with('error', 'Missing QBO expense account(s): ' . implode(', ', $missing) . '. Visit Settings → QuickBooks Online to set them up.');
         }
 
-        $result = $sync->pushBill($bill, $apAccountId);
+        $result = $sync->pushBill($bill, $accountIds);
 
         return back()->with(
             $result['success'] ? 'success' : 'error',
