@@ -786,6 +786,7 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy']);
 
+        $user       = auth()->user();
         $mailer     = app(GraphMailService::class);
         $cc         = array_filter($request->input('cc', []));
         $pdfContent = Pdf::loadView('pdf.purchase-order', compact('purchaseOrder'))->output();
@@ -797,19 +798,17 @@ class PurchaseOrderController extends Controller
 
         $pdfUrl = route('pages.purchase-orders.pdf', $purchaseOrder);
 
-        $sent = $mailer->send(
-            $request->input('to'),
-            $request->input('subject'),
-            $request->input('body'),
-            'purchase_order',
-            null,
-            $attachment,
-            $cc ?: null,
-            null,
-            $purchaseOrder->id,
-            'purchase_order',
-            $pdfUrl,
-        );
+        $to      = $request->input('to');
+        $subject = $request->input('subject');
+        $body    = $request->input('body');
+
+        $sent = $user->microsoftAccount?->mail_connected
+            ? $mailer->sendAsUser($user, $to, $subject, $body, 'purchase_order', $attachment, $cc ?: null, null, $purchaseOrder->id, 'purchase_order', $pdfUrl)
+            : false;
+
+        if (! $sent) {
+            $sent = $mailer->send($to, $subject, $body, 'purchase_order', null, $attachment, $cc ?: null, null, $purchaseOrder->id, 'purchase_order', $pdfUrl);
+        }
 
         if ($sent) {
             $purchaseOrder->update(['sent_at' => now()]);

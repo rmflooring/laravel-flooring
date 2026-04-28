@@ -554,6 +554,7 @@ class WorkOrderController extends Controller
 
         $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'sale', 'creator']);
 
+        $user       = auth()->user();
         $mailer     = app(GraphMailService::class);
         $cc         = array_filter($request->input('cc', []));
         $pdfContent = Pdf::loadView('pdf.work-order', compact('workOrder'))->output();
@@ -585,21 +586,18 @@ class WorkOrderController extends Controller
             );
         }
 
-        $pdfUrl = route('pages.sales.work-orders.pdf', [$sale, $workOrder]);
+        $pdfUrl  = route('pages.sales.work-orders.pdf', [$sale, $workOrder]);
+        $to      = $request->input('to');
+        $subject = $request->input('subject');
+        $body    = $request->input('body');
 
-        $sent = $mailer->send(
-            $request->input('to'),
-            $request->input('subject'),
-            $request->input('body'),
-            'work_order',
-            null,
-            $attachment,
-            $cc ?: null,
-            $icsContent,
-            $workOrder->id,
-            'work_order',
-            $pdfUrl,
-        );
+        $sent = $user->microsoftAccount?->mail_connected
+            ? $mailer->sendAsUser($user, $to, $subject, $body, 'work_order', $attachment, $cc ?: null, $icsContent, $workOrder->id, 'work_order', $pdfUrl)
+            : false;
+
+        if (! $sent) {
+            $sent = $mailer->send($to, $subject, $body, 'work_order', null, $attachment, $cc ?: null, $icsContent, $workOrder->id, 'work_order', $pdfUrl);
+        }
 
         if ($sent) {
             $workOrder->update(['sent_at' => now()]);
