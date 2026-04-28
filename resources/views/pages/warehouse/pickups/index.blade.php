@@ -93,19 +93,43 @@
                 </div>
             </form>
 
+            @php
+                $baseParams = array_filter([
+                    'q'          => $q,
+                    'type'       => $type,
+                    'status'     => $status,
+                    'date_from'  => $dateFrom,
+                    'date_to'    => $dateTo,
+                    'pt_sort'    => $ptSort !== 'scheduled_date' ? $ptSort : null,
+                    'pt_direction' => $ptDir !== 'asc' ? $ptDir : null,
+                ], fn ($v) => $v !== '' && $v !== null);
+
+                $sortLink = fn($col) => route('pages.warehouse.pickups.index', array_merge($baseParams, [
+                    'sort'      => $col,
+                    'direction' => ($sort === $col && $dir === 'asc') ? 'desc' : 'asc',
+                ]));
+
+                $thClass = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide';
+                $thLink  = fn($col, $label) =>
+                    '<a href="' . $sortLink($col) . '" class="inline-flex items-center gap-1 cursor-pointer select-none ' .
+                    ($sort === $col ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200') .
+                    '">' . $label . '<span class="' . ($sort === $col ? 'opacity-80' : 'opacity-30') . '">' .
+                    ($sort === $col ? ($dir === 'asc' ? '↑' : '↓') : '↕') . '</span></a>';
+            @endphp
+
             {{-- Table --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-700">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">PO #</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Vendor</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Scheduled Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Job / Type</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Install Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+                                <th class="{{ $thClass }}">{!! $thLink('po_number', 'PO #') !!}</th>
+                                <th class="{{ $thClass }}">{!! $thLink('type', 'Type') !!}</th>
+                                <th class="{{ $thClass }}">{!! $thLink('vendor', 'Vendor') !!}</th>
+                                <th class="{{ $thClass }}">{!! $thLink('scheduled_date', 'Scheduled Date') !!}</th>
+                                <th class="{{ $thClass }}">{!! $thLink('sale', 'Job / Type') !!}</th>
+                                <th class="{{ $thClass }}">{!! $thLink('install_date', 'Install Date') !!}</th>
+                                <th class="{{ $thClass }}">{!! $thLink('status', 'Status') !!}</th>
                                 <th class="px-4 py-3"></th>
                             </tr>
                         </thead>
@@ -259,6 +283,28 @@
             </div>
 
             {{-- Sale Pickups & Deliveries (direct-staged pick tickets) --}}
+            @php
+                $ptBaseParams = array_filter([
+                    'q'         => $q,
+                    'type'      => $type,
+                    'status'    => $status,
+                    'date_from' => $dateFrom,
+                    'date_to'   => $dateTo,
+                    'sort'      => $sort !== 'scheduled_date' ? $sort : null,
+                    'direction' => $dir !== 'asc' ? $dir : null,
+                ], fn ($v) => $v !== '' && $v !== null);
+
+                $ptSortLink = fn($col) => route('pages.warehouse.pickups.index', array_merge($ptBaseParams, [
+                    'pt_sort'      => $col,
+                    'pt_direction' => ($ptSort === $col && $ptDir === 'asc') ? 'desc' : 'asc',
+                ]));
+
+                $ptThLink = fn($col, $label) =>
+                    '<a href="' . $ptSortLink($col) . '" class="inline-flex items-center gap-1 cursor-pointer select-none ' .
+                    ($ptSort === $col ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200') .
+                    '">' . $label . '<span class="' . ($ptSort === $col ? 'opacity-80' : 'opacity-30') . '">' .
+                    ($ptSort === $col ? ($ptDir === 'asc' ? '↑' : '↓') : '↕') . '</span></a>';
+            @endphp
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                 <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 class="text-base font-semibold text-gray-900 dark:text-white">Sale Pickups &amp; Deliveries</h2>
@@ -269,12 +315,12 @@
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-700">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">PT #</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sale / Customer</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Scheduled Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Notes</th>
+                                <th class="{{ $thClass }}">{!! $ptThLink('pt_number', 'PT #') !!}</th>
+                                <th class="{{ $thClass }}">{!! $ptThLink('type', 'Type') !!}</th>
+                                <th class="{{ $thClass }} text-gray-500 dark:text-gray-400">Sale / Customer</th>
+                                <th class="{{ $thClass }}">{!! $ptThLink('scheduled_date', 'Scheduled Date') !!}</th>
+                                <th class="{{ $thClass }}">{!! $ptThLink('status', 'Status') !!}</th>
+                                <th class="{{ $thClass }} text-gray-500 dark:text-gray-400">Notes</th>
                                 <th class="px-4 py-3"></th>
                             </tr>
                         </thead>
