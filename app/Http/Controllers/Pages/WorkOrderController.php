@@ -8,6 +8,7 @@ use App\Models\ExternalEventLink;
 use App\Models\Installer;
 use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
+use App\Models\Bill;
 use App\Models\PickTicket;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -331,7 +332,45 @@ class WorkOrderController extends Controller
         $installers = Installer::where('status', 'active')->orderBy('company_name')->get(['id', 'company_name', 'email']);
         $maxQtys    = $this->maxQtys($workOrder);
 
-        return view('pages.work-orders.edit', compact('sale', 'workOrder', 'installers', 'maxQtys'));
+        // Bill lock: if a non-voided bill is recorded, adding new items is blocked
+        $billLocked = Bill::where('work_order_id', $workOrder->id)
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', ['voided'])
+            ->exists();
+
+        // Compute available labour items (not yet on this WO, with remaining qty)
+        $availableRooms = collect();
+        if (! $billLocked) {
+            $existingWoSaleItemIds = $workOrder->items->pluck('sale_item_id')->toArray();
+            $scheduledByOthers     = $this->scheduledQtys($sale->id, $workOrder->id);
+
+            $saleRooms = $sale->rooms()
+                ->with(['items' => fn($q) => $q->whereIn('item_type', ['labour', 'material'])
+                    ->where('is_removed', false)
+                    ->orderBy('sort_order')])
+                ->orderBy('sort_order')
+                ->get();
+
+            $availableRooms = $saleRooms->map(function ($room) use ($existingWoSaleItemIds, $scheduledByOthers) {
+                $labourItems = $room->items
+                    ->filter(fn($i) => $i->item_type === 'labour')
+                    ->reject(fn($i) => in_array($i->id, $existingWoSaleItemIds))
+                    ->map(function ($item) use ($scheduledByOthers) {
+                        $effectiveQty        = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                        $scheduled           = (float) ($scheduledByOthers[$item->id] ?? 0);
+                        $item->remaining_qty = round($effectiveQty - $scheduled, 2);
+                        return $item;
+                    })
+                    ->filter(fn($i) => $i->remaining_qty > 0)
+                    ->values();
+
+                $room->availableLabourItems = $labourItems;
+                $room->materialItems        = $room->items->filter(fn($i) => $i->item_type === 'material')->values();
+                return $room;
+            })->filter(fn($r) => $r->availableLabourItems->isNotEmpty())->values();
+        }
+
+        return view('pages.work-orders.edit', compact('sale', 'workOrder', 'installers', 'maxQtys', 'billLocked', 'availableRooms'));
     }
 
     public function update(Sale $sale, WorkOrder $workOrder, Request $request)
@@ -355,7 +394,54 @@ class WorkOrderController extends Controller
             'wo_materials'          => ['nullable', 'array'],
             'wo_materials.*'        => ['nullable', 'array'],
             'wo_materials.*.*'      => ['nullable', 'integer', 'exists:sale_items,id'],
+            'new_items'             => ['nullable', 'array'],
+            'new_qty'               => ['nullable', 'array'],
+            'new_qty.*'             => ['nullable', 'numeric', 'min:0.01'],
+            'new_cost'              => ['nullable', 'array'],
+            'new_cost.*'            => ['nullable', 'numeric', 'min:0'],
+            'new_wo_notes'          => ['nullable', 'array'],
+            'new_wo_notes.*'        => ['nullable', 'string'],
+            'new_materials'         => ['nullable', 'array'],
+            'new_materials.*'       => ['nullable', 'array'],
+            'new_materials.*.*'     => ['nullable', 'integer', 'exists:sale_items,id'],
         ]);
+
+        // Bill lock check
+        $billLocked = Bill::where('work_order_id', $workOrder->id)
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', ['voided'])
+            ->exists();
+
+        // Handle new items — validate before we touch anything
+        $newSelectedItems = array_keys($request->input('new_items', []));
+        $newSaleItems     = collect();
+
+        if (! empty($newSelectedItems)) {
+            if ($billLocked) {
+                return back()->withInput()->withErrors([
+                    'new_items' => 'This work order has a bill recorded against it. New items cannot be added — create a new Work Order instead.',
+                ]);
+            }
+
+            $newSaleItems = SaleItem::whereIn('id', $newSelectedItems)->get()->keyBy('id');
+
+            // Validate qty doesn't exceed remaining (schedules for this WO count too)
+            $scheduledQtysAll = $this->scheduledQtys($sale->id);
+            foreach ($newSelectedItems as $saleItemId) {
+                $saleItem = $newSaleItems[$saleItemId] ?? null;
+                if (! $saleItem) continue;
+
+                $effectiveQty = $saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity;
+                $qty          = (float) ($request->input("new_qty.{$saleItemId}") ?? $effectiveQty);
+                $remaining    = $effectiveQty - (float) ($scheduledQtysAll[$saleItemId] ?? 0);
+
+                if ($qty > $remaining) {
+                    return back()->withInput()->withErrors([
+                        "new_qty.{$saleItemId}" => "Qty for \"{$saleItem->description}\" exceeds remaining ({$remaining} {$saleItem->unit}).",
+                    ]);
+                }
+            }
+        }
 
         // Enforce: scheduled requires installer + date
         if ($data['status'] === 'scheduled' && $workOrder->status === 'created') {
@@ -372,8 +458,9 @@ class WorkOrderController extends Controller
             }
         }
 
-        // Guard: must keep at least one item
-        if (count($deleteItemIds) >= $workOrder->items->count()) {
+        // Guard: must keep at least one item (accounting for adds and deletes)
+        $remainingAfterChanges = $workOrder->items->count() - count($deleteItemIds) + count($newSelectedItems);
+        if ($remainingAfterChanges < 1) {
             return back()->withInput()->withErrors(['wo_items' => 'At least one labour item must remain on the work order.']);
         }
 
@@ -400,7 +487,7 @@ class WorkOrderController extends Controller
         $wasCancelled   = $workOrder->status === 'cancelled';
         $beingCancelled = $data['status'] === 'cancelled';
 
-        DB::transaction(function () use ($workOrder, $data, $request, $deleteItemIds) {
+        DB::transaction(function () use ($workOrder, $data, $request, $deleteItemIds, $newSelectedItems, $newSaleItems) {
             $workOrder->update([
                 'installer_id'   => $data['installer_id'] ?? null,
                 'scheduled_date' => $data['scheduled_date'] ?? null,
@@ -436,6 +523,37 @@ class WorkOrderController extends Controller
                         'work_order_item_id' => $item->id,
                         'sale_item_id'       => (int) $matId,
                     ]);
+                }
+            }
+
+            // Add new labour items from the sale
+            if (! empty($newSelectedItems)) {
+                $nextSortOrder = ($workOrder->items->max('sort_order') ?? -1) + 1;
+                foreach ($newSelectedItems as $saleItemId) {
+                    $saleItem = $newSaleItems[$saleItemId] ?? null;
+                    if (! $saleItem) continue;
+
+                    $qty     = (float) ($request->input("new_qty.{$saleItemId}") ?? $saleItem->quantity);
+                    $cost    = (float) ($request->input("new_cost.{$saleItemId}") ?? $saleItem->cost_price ?? 0);
+                    $woNotes = $request->input("new_wo_notes.{$saleItemId}") ?: null;
+
+                    $woItem = WorkOrderItem::create([
+                        'work_order_id' => $workOrder->id,
+                        'sale_item_id'  => $saleItem->id,
+                        'item_name'     => $this->buildItemName($saleItem),
+                        'quantity'      => $qty,
+                        'unit'          => $saleItem->unit,
+                        'wo_notes'      => $woNotes,
+                        'cost_price'    => $cost,
+                        'sort_order'    => $nextSortOrder++,
+                    ]);
+
+                    foreach ($request->input("new_materials.{$saleItemId}", []) as $matId) {
+                        WorkOrderItemMaterial::create([
+                            'work_order_item_id' => $woItem->id,
+                            'sale_item_id'       => (int) $matId,
+                        ]);
+                    }
                 }
             }
         });

@@ -209,6 +209,126 @@
                     </div>
                 </div>
 
+                {{-- Add Labour Items --}}
+                <div id="add-items" class="mb-6">
+                @if($billLocked)
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-gray-800">
+                        <div class="flex items-start gap-3">
+                            <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-amber-800 dark:text-amber-300">A bill has been recorded against this work order.</p>
+                                <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-400">New labour items cannot be added to a billed WO. Create a new Work Order for any additional work.</p>
+                            </div>
+                        </div>
+                    </div>
+                @elseif($availableRooms->isEmpty())
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 px-6 py-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                        All labour items on this sale are fully scheduled.
+                    </div>
+                @else
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Add Labour Items</h2>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Select additional labour items from this sale to add to this work order.</p>
+                        </div>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($availableRooms as $room)
+                                <div class="px-6 py-4">
+                                    <p class="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                        </svg>
+                                        {{ $room->room_name }}
+                                    </p>
+                                    <div class="space-y-3">
+                                        @foreach($room->availableLabourItems as $item)
+                                            @php $saleItemId = $item->id; @endphp
+                                            <div x-data="{ checked: false, qty: {{ $item->remaining_qty }}, cost: {{ (float)($item->cost_price ?? 0) }} }"
+                                                 class="rounded-lg border transition-colors"
+                                                 :class="checked ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-gray-700' : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-750'">
+
+                                                <label class="flex cursor-pointer items-start gap-3 px-4 py-3">
+                                                    <input type="checkbox"
+                                                           name="new_items[{{ $saleItemId }}]"
+                                                           value="1"
+                                                           x-model="checked"
+                                                           class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                    <div class="min-w-0 flex-1">
+                                                        <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                                            {{ implode(' — ', array_filter([$item->labour_type, $item->description])) ?: 'Labour Item' }}
+                                                        </p>
+                                                        <p class="mt-0.5 text-xs text-gray-400">
+                                                            Available: {{ number_format($item->remaining_qty, 2) }} {{ $item->unit }}
+                                                        </p>
+                                                    </div>
+                                                </label>
+
+                                                <div x-show="checked" x-cloak class="border-t border-gray-200 px-4 py-3 dark:border-gray-600">
+                                                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                                                        <div>
+                                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Qty</label>
+                                                            <input type="number"
+                                                                   name="new_qty[{{ $saleItemId }}]"
+                                                                   x-model="qty"
+                                                                   step="0.01" min="0.01" max="{{ $item->remaining_qty }}"
+                                                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                            <p class="mt-0.5 text-xs text-gray-400">max {{ number_format($item->remaining_qty, 2) }}</p>
+                                                        </div>
+                                                        <div>
+                                                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Unit Cost</label>
+                                                            <input type="number"
+                                                                   name="new_cost[{{ $saleItemId }}]"
+                                                                   x-model="cost"
+                                                                   step="0.01" min="0"
+                                                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                        </div>
+                                                        <div class="flex items-end pb-1">
+                                                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                Total: $<span x-text="(parseFloat(qty||0) * parseFloat(cost||0)).toFixed(2)">0.00</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3">
+                                                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">WO Notes</label>
+                                                        <textarea name="new_wo_notes[{{ $saleItemId }}]"
+                                                                  rows="2"
+                                                                  placeholder="Optional notes for this item..."
+                                                                  class="block w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"></textarea>
+                                                    </div>
+                                                    @if($room->materialItems->isNotEmpty())
+                                                        <div class="mt-3">
+                                                            <p class="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">Related Materials</p>
+                                                            <div class="space-y-1">
+                                                                @foreach($room->materialItems as $mat)
+                                                                    @php $matName = implode(' — ', array_filter([$mat->product_type, $mat->manufacturer, $mat->style, $mat->color_item_number])) ?: 'Material'; @endphp
+                                                                    <label class="flex cursor-pointer items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
+                                                                        <input type="checkbox"
+                                                                               name="new_materials[{{ $saleItemId }}][]"
+                                                                               value="{{ $mat->id }}"
+                                                                               class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                                        <span class="text-xs text-gray-700 dark:text-gray-300">
+                                                                            {{ $matName }}
+                                                                            <span class="ml-1 text-gray-400">{{ number_format((float)$mat->quantity, 2) }} {{ $mat->unit }}</span>
+                                                                        </span>
+                                                                    </label>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                </div>
+
                 {{-- Hidden calendar override fields --}}
                 <input type="hidden" id="cal_title_hidden" name="calendar_title" value="{{ old('calendar_title') }}">
                 <input type="hidden" id="cal_description_hidden" name="calendar_description" value="{{ old('calendar_description') }}">

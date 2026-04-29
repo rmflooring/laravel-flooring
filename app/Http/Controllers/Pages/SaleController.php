@@ -252,6 +252,27 @@ class SaleController extends Controller
 
         $deleteBlockReason = $this->getDeleteBlockReason($sale);
 
+        // Count unscheduled labour items (drives the WO card badge)
+        $labourItems = $sale->rooms->flatMap(
+            fn($r) => $r->items->where('item_type', 'labour')->where('is_removed', false)
+        );
+        $unscheduledLabourCount = 0;
+        if ($labourItems->isNotEmpty()) {
+            $scheduledQtyMap = DB::table('work_order_items as woi')
+                ->join('work_orders as wo', 'woi.work_order_id', '=', 'wo.id')
+                ->where('wo.sale_id', $sale->id)
+                ->where('wo.status', '<>', 'cancelled')
+                ->whereNull('wo.deleted_at')
+                ->selectRaw('woi.sale_item_id, SUM(woi.quantity) as total_qty')
+                ->groupBy('woi.sale_item_id')
+                ->pluck('total_qty', 'sale_item_id');
+
+            $unscheduledLabourCount = $labourItems->filter(function ($item) use ($scheduledQtyMap) {
+                $effectiveQty = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                return ($effectiveQty - (float) ($scheduledQtyMap[$item->id] ?? 0)) > 0;
+            })->count();
+        }
+
         // Direct (no-WO) pick ticket for staging card
         $directPickTicket  = PickTicket::where('sale_id', $sale->id)
             ->whereNull('work_order_id')
@@ -265,6 +286,7 @@ class SaleController extends Controller
             'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'deleteBlockReason', 'customerContacts',
             'directPickTicket', 'materialSaleItems',
+            'unscheduledLabourCount',
         ));
     }
 	
