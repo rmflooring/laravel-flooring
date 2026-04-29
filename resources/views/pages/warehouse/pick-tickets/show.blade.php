@@ -225,6 +225,58 @@
                         @endif
                     </div>
 
+                    {{-- Add Items section --}}
+                    @if (in_array($pickTicket->status, ['staged', 'pending']) && $availableSaleItems->isNotEmpty())
+                    <div class="rounded-lg border border-blue-200 bg-white shadow-sm dark:border-blue-800 dark:bg-gray-800" id="add-items">
+                        <div class="border-b border-blue-100 px-6 py-4 dark:border-blue-900/50">
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Add More Items</h3>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                Select additional material items from this sale to include in the pick ticket.
+                            </p>
+                        </div>
+                        <form method="POST" action="{{ route('pages.warehouse.pick-tickets.add-items', $pickTicket) }}">
+                            @csrf
+                            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach ($availableSaleItems as $saleItem)
+                                    @php
+                                        $itemLabel = implode(' — ', array_filter([
+                                            $saleItem->product_type,
+                                            $saleItem->manufacturer,
+                                            $saleItem->style,
+                                            $saleItem->color_item_number,
+                                        ])) ?: 'Material';
+                                    @endphp
+                                    <label class="flex items-center gap-4 px-6 py-3 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10">
+                                        <input type="checkbox"
+                                               name="sale_item_ids[]"
+                                               value="{{ $saleItem->id }}"
+                                               class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                        <div class="min-w-0 flex-1">
+                                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $itemLabel }}</span>
+                                            @if ($saleItem->room)
+                                                <span class="ml-2 text-xs text-gray-400">{{ $saleItem->room->room_name }}</span>
+                                            @endif
+                                        </div>
+                                        <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">
+                                            {{ rtrim(rtrim(number_format((float)$saleItem->quantity, 2), '0'), '.') }}
+                                            {{ $saleItem->unit }}
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <div class="flex justify-end border-t border-blue-100 px-6 py-4 dark:border-blue-900/50">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Add Selected Items
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    @endif
+
                 </div>
 
                 {{-- Sidebar --}}

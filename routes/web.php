@@ -1028,6 +1028,10 @@ Route::prefix('pages')
 			Route::patch('pick-tickets/{pickTicket}/status', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'updateStatus'])
 				->middleware('role_or_permission:admin|view pick tickets')
 				->name('pick-tickets.update-status');
+
+			Route::post('pick-tickets/{pickTicket}/add-items', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'addItems'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.add-items');
 		});
 
 		// Purchase Orders — index

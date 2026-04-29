@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\PickTicket;
+use App\Models\PickTicketItem;
+use App\Models\SaleItem;
 use App\Services\PickTicketService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -50,7 +52,19 @@ class WarehousePickTicketController extends Controller
 
         $packingList = \App\Models\PackingList::where('pick_ticket_id', $pickTicket->id)->first();
 
-        return view('pages.warehouse.pick-tickets.show', compact('pickTicket', 'packingList'));
+        // Items from the sale that can still be added to this PT
+        $availableSaleItems = collect();
+        if (in_array($pickTicket->status, ['staged', 'pending']) && $pickTicket->sale_id) {
+            $existingSaleItemIds = $pickTicket->items->pluck('sale_item_id')->filter()->toArray();
+            $availableSaleItems = SaleItem::whereHas('room', fn ($q) => $q->where('sale_id', $pickTicket->sale_id))
+                ->where('item_type', 'material')
+                ->when(!empty($existingSaleItemIds), fn ($q) => $q->whereNotIn('id', $existingSaleItemIds))
+                ->with('room')
+                ->orderBy('id')
+                ->get();
+        }
+
+        return view('pages.warehouse.pick-tickets.show', compact('pickTicket', 'packingList', 'availableSaleItems'));
     }
 
     public function pdf(PickTicket $pickTicket): Response
@@ -73,6 +87,53 @@ class WarehousePickTicketController extends Controller
         $service->unstage($pickTicket, $request->input('unstage_reason'));
 
         return back()->with('success', 'Pick ticket has been unstaged.');
+    }
+
+    public function addItems(Request $request, PickTicket $pickTicket): RedirectResponse
+    {
+        abort_unless(in_array($pickTicket->status, ['staged', 'pending']), 422, 'Items can only be added when the pick ticket is staged or pending.');
+
+        $request->validate([
+            'sale_item_ids'   => ['required', 'array', 'min:1'],
+            'sale_item_ids.*' => ['required', 'integer'],
+        ]);
+
+        $existingSaleItemIds = $pickTicket->items()->pluck('sale_item_id')->filter()->toArray();
+
+        // Validate each requested sale item belongs to the PT's sale, is material, and isn't already on the PT
+        $saleItems = SaleItem::whereIn('id', $request->sale_item_ids)
+            ->whereHas('room', fn ($q) => $q->where('sale_id', $pickTicket->sale_id))
+            ->where('item_type', 'material')
+            ->whereNotIn('id', $existingSaleItemIds)
+            ->with('room')
+            ->get();
+
+        if ($saleItems->isEmpty()) {
+            return back()->withErrors(['sale_item_ids' => 'No valid items selected.']);
+        }
+
+        $nextSortOrder = $pickTicket->items()->max('sort_order') + 1;
+
+        foreach ($saleItems as $index => $saleItem) {
+            $itemName = implode(' — ', array_filter([
+                $saleItem->product_type,
+                $saleItem->manufacturer,
+                $saleItem->style,
+                $saleItem->color_item_number,
+            ])) ?: 'Material';
+
+            PickTicketItem::create([
+                'pick_ticket_id'          => $pickTicket->id,
+                'inventory_allocation_id' => null,
+                'sale_item_id'            => $saleItem->id,
+                'item_name'               => $itemName,
+                'unit'                    => $saleItem->unit ?? '',
+                'quantity'                => $saleItem->quantity,
+                'sort_order'              => $nextSortOrder + $index,
+            ]);
+        }
+
+        return back()->with('success', $saleItems->count() . ' ' . \Str::plural('item', $saleItems->count()) . ' added to pick ticket.');
     }
 
     public function updateStatus(Request $request, PickTicket $pickTicket, PickTicketService $service): RedirectResponse
