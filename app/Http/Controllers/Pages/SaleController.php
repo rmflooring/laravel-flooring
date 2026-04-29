@@ -427,6 +427,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                 ->get(['id', 'product_type', 'manufacturer', 'style', 'color_item_number']);
 
             $matLinkSnapshots = [];
+            $poItemSnaps      = [];
+            $allocSnaps       = [];
             if ($oldMaterialItems->isNotEmpty()) {
                 $matSigMap = $oldMaterialItems->keyBy('id')->map(
                     fn($m) => implode('|', [$m->product_type, $m->manufacturer, $m->style, $m->color_item_number])
@@ -438,6 +440,26 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                             'work_order_item_id' => $link->work_order_item_id,
                             'signature'          => $matSigMap[$link->sale_item_id] ?? null,
                         ];
+                    });
+
+                // PO items — nullOnDelete FK keeps the rows but clears sale_item_id
+                \App\Models\PurchaseOrderItem::whereIn('sale_item_id', $oldMaterialItems->pluck('id'))
+                    ->get(['id', 'sale_item_id'])
+                    ->each(function ($poi) use (&$poItemSnaps, $matSigMap) {
+                        $sig = $matSigMap[$poi->sale_item_id] ?? null;
+                        if ($sig) {
+                            $poItemSnaps[] = ['id' => $poi->id, 'signature' => $sig];
+                        }
+                    });
+
+                // Allocations — nullOnDelete FK keeps the rows but clears sale_item_id
+                \App\Models\InventoryAllocation::whereIn('sale_item_id', $oldMaterialItems->pluck('id'))
+                    ->get(['id', 'sale_item_id'])
+                    ->each(function ($alloc) use (&$allocSnaps, $matSigMap) {
+                        $sig = $matSigMap[$alloc->sale_item_id] ?? null;
+                        if ($sig) {
+                            $allocSnaps[] = ['id' => $alloc->id, 'signature' => $sig];
+                        }
                     });
             }
 
@@ -541,8 +563,8 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                 }
             }
 
-            // Materials: recreate work_order_item_materials that were cascade-deleted
-            if (!empty($matLinkSnapshots)) {
+            // Re-link all material-dependent records to the newly recreated sale_item IDs
+            if (!empty($matLinkSnapshots) || !empty($poItemSnaps) || !empty($allocSnaps)) {
                 $newMaterialItems = \App\Models\SaleItem::where('sale_id', $sale->id)
                     ->where('sale_room_id', $saleRoomId)
                     ->where('item_type', 'material')
@@ -552,12 +574,27 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     fn($m) => implode('|', [$m->product_type, $m->manufacturer, $m->style, $m->color_item_number])
                 );
 
+                // WO material links (cascade-deleted → recreate)
                 foreach ($matLinkSnapshots as $snap) {
                     if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
                     \App\Models\WorkOrderItemMaterial::create([
                         'work_order_item_id' => $snap['work_order_item_id'],
                         'sale_item_id'       => $newMatBySignature[$snap['signature']]->id,
                     ]);
+                }
+
+                // PO items (nulled via nullOnDelete → restore sale_item_id)
+                foreach ($poItemSnaps as $snap) {
+                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    \App\Models\PurchaseOrderItem::where('id', $snap['id'])
+                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
+                }
+
+                // Allocations (nulled via nullOnDelete → restore sale_item_id)
+                foreach ($allocSnaps as $snap) {
+                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    \App\Models\InventoryAllocation::where('id', $snap['id'])
+                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
                 }
             }
         }
