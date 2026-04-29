@@ -246,7 +246,22 @@
                                     <div class="space-y-3">
                                         @foreach($room->availableLabourItems as $item)
                                             @php $saleItemId = $item->id; @endphp
-                                            <div x-data="{ checked: false, qty: {{ $item->remaining_qty }}, cost: {{ (float)($item->cost_price ?? 0) }} }"
+                                            <div x-data="{
+                                                     checked: false,
+                                                     qty: {{ $item->remaining_qty }},
+                                                     cost: {{ (float)($item->cost_price ?? 0) }},
+                                                     init() {
+                                                         this.$watch('checked', val => {
+                                                             if (!val) {
+                                                                 const store = this.$store.woMaterials;
+                                                                 Object.keys(store.claimed).forEach(matId => {
+                                                                     if (store.claimed[matId] === {{ $saleItemId }}) store.release(parseInt(matId));
+                                                                 });
+                                                                 document.querySelectorAll('input[name=\"new_materials[{{ $saleItemId }}][]\"]').forEach(cb => { cb.checked = false; });
+                                                             }
+                                                         });
+                                                     }
+                                                 }"
                                                  class="rounded-lg border transition-colors"
                                                  :class="checked ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-gray-700' : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-750'">
 
@@ -304,10 +319,12 @@
                                                             <div class="space-y-1">
                                                                 @foreach($room->materialItems as $mat)
                                                                     @php $matName = implode(' — ', array_filter([$mat->product_type, $mat->manufacturer, $mat->style, $mat->color_item_number])) ?: 'Material'; @endphp
-                                                                    <label class="flex cursor-pointer items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
+                                                                    <label x-show="$store.woMaterials.isAvailable({{ $mat->id }}, {{ $saleItemId }})"
+                                                                           class="flex cursor-pointer items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 hover:bg-blue-50 dark:border-gray-600 dark:bg-gray-700">
                                                                         <input type="checkbox"
                                                                                name="new_materials[{{ $saleItemId }}][]"
                                                                                value="{{ $mat->id }}"
+                                                                               @change="$event.target.checked ? $store.woMaterials.claim({{ $mat->id }}, {{ $saleItemId }}) : $store.woMaterials.release({{ $mat->id }})"
                                                                                class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                                         <span class="text-xs text-gray-700 dark:text-gray-300">
                                                                             {{ $matName }}
@@ -431,6 +448,30 @@
     </div>
 
     <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('woMaterials', {
+            claimed: {
+                // Pre-claim materials already linked to existing WO items
+                @foreach($workOrder->items as $item)
+                    @foreach($item->relatedMaterials as $mat)
+                        {{ $mat->sale_item_id }}: {{ $item->id }},
+                    @endforeach
+                @endforeach
+            },
+            claim(matId, labourItemId) {
+                this.claimed = { ...this.claimed, [matId]: labourItemId };
+            },
+            release(matId) {
+                const c = { ...this.claimed };
+                delete c[matId];
+                this.claimed = c;
+            },
+            isAvailable(matId, labourItemId) {
+                return !(matId in this.claimed) || this.claimed[matId] === labourItemId;
+            },
+        });
+    });
+
     function woEdit() {
         return {
             installerId:   '{{ old('installer_id', $workOrder->installer_id ?? '') }}',
