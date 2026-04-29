@@ -95,7 +95,7 @@
                         @if($product_line->default_cost_price)
                             <div>
                                 <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Default Cost</div>
-                                <div class="font-medium text-gray-800 dark:text-gray-200">${{ number_format($product_line->default_cost_price, 2) }}</div>
+                                <div class="font-medium text-gray-800 dark:text-gray-200">${{ rtrim(rtrim(number_format($product_line->default_cost_price, 4), '0'), '.') }}</div>
                             </div>
                         @endif
                         <div>
@@ -207,7 +207,7 @@
                                             </td>
 
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                                {{ $style->cost_price !== null ? '$' . number_format($style->cost_price, 2) : '—' }}
+                                                {{ $style->cost_price !== null ? '$' . rtrim(rtrim(number_format($style->cost_price, 4), '0'), '.') : '—' }}
                                             </td>
 
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-200">

@@ -106,10 +106,10 @@
                                 <label for="default_cost_price" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Default Cost Price</label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">$</span>
-                                    <input type="number" step="0.01" min="0" name="default_cost_price" id="default_cost_price"
+                                    <input type="number" step="0.0001" min="0" name="default_cost_price" id="default_cost_price"
                                            value="{{ old('default_cost_price') }}"
                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                           placeholder="0.00">
+                                           placeholder="0.0000">
                                 </div>
                                 @error('default_cost_price')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
