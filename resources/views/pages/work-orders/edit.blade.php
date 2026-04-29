@@ -246,22 +246,7 @@
                                     <div class="space-y-3">
                                         @foreach($room->availableLabourItems as $item)
                                             @php $saleItemId = $item->id; @endphp
-                                            <div x-data="{
-                                                     checked: false,
-                                                     qty: {{ $item->remaining_qty }},
-                                                     cost: {{ (float)($item->cost_price ?? 0) }},
-                                                     init() {
-                                                         this.$watch('checked', val => {
-                                                             if (!val) {
-                                                                 const store = this.$store.woMaterials;
-                                                                 Object.keys(store.claimed).forEach(matId => {
-                                                                     if (store.claimed[matId] === {{ $saleItemId }}) store.release(parseInt(matId));
-                                                                 });
-                                                                 document.querySelectorAll('input[name=\"new_materials[{{ $saleItemId }}][]\"]').forEach(cb => { cb.checked = false; });
-                                                             }
-                                                         });
-                                                     }
-                                                 }"
+                                            <div x-data="newWoItem({{ $saleItemId }}, {{ $item->remaining_qty }}, {{ (float)($item->cost_price ?? 0) }})"
                                                  class="rounded-lg border transition-colors"
                                                  :class="checked ? 'border-blue-300 bg-blue-50 dark:border-blue-600 dark:bg-gray-700' : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-750'">
 
@@ -324,6 +309,7 @@
                                                                         <input type="checkbox"
                                                                                name="new_materials[{{ $saleItemId }}][]"
                                                                                value="{{ $mat->id }}"
+                                                                               data-new-mat-for="{{ $saleItemId }}"
                                                                                @change="$event.target.checked ? $store.woMaterials.claim({{ $mat->id }}, {{ $saleItemId }}) : $store.woMaterials.release({{ $mat->id }})"
                                                                                class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                                         <span class="text-xs text-gray-700 dark:text-gray-300">
@@ -471,6 +457,26 @@
             },
         });
     });
+
+    function newWoItem(saleItemId, maxQty, defaultCost) {
+        return {
+            checked: false,
+            qty:     maxQty,
+            cost:    defaultCost,
+            init() {
+                this.$watch('checked', val => {
+                    if (!val) {
+                        const store = this.$store.woMaterials;
+                        Object.keys(store.claimed).forEach(matId => {
+                            if (store.claimed[matId] === saleItemId) store.release(parseInt(matId));
+                        });
+                        document.querySelectorAll('[data-new-mat-for="' + saleItemId + '"]')
+                            .forEach(cb => { cb.checked = false; });
+                    }
+                });
+            },
+        };
+    }
 
     function woEdit() {
         return {
