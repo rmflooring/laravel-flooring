@@ -519,6 +519,14 @@
                     <div>
                         <h2 class="text-base font-semibold text-gray-900">Work Orders</h2>
                         <p class="text-xs text-gray-500 mt-0.5">Installation and labour tasks for this sale.</p>
+                        @if($unscheduledLabourCount > 0)
+                            <span class="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                                <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ $unscheduledLabourCount }} labour {{ Str::plural('item', $unscheduledLabourCount) }} not fully scheduled
+                            </span>
+                        @endif
                     </div>
                     @can('create work orders')
                     <a href="{{ route('pages.sales.work-orders.create', $sale) }}"
@@ -592,6 +600,13 @@
                                         <td class="px-5 py-3">
                                             <a href="{{ route('pages.sales.work-orders.show', [$sale, $wo]) }}"
                                                class="text-sm font-medium text-blue-600 hover:underline">View</a>
+                                            @can('edit work orders')
+                                            @if($unscheduledLabourCount > 0 && !in_array($wo->status, ['cancelled', 'completed']))
+                                            &nbsp;·&nbsp;
+                                            <a href="{{ route('pages.sales.work-orders.edit', [$sale, $wo]) }}#add-items"
+                                               class="text-sm font-medium text-amber-600 hover:underline">Add Items</a>
+                                            @endif
+                                            @endcan
                                         </td>
                                     </tr>
                                 @endforeach
