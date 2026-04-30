@@ -378,7 +378,7 @@
                     </div>
 
                     {{-- Job info grid --}}
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y divide-gray-100 dark:divide-gray-700 border-b border-gray-100 dark:border-gray-700">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-0 divide-x divide-y divide-gray-100 dark:divide-gray-700 border-b border-gray-100 dark:border-gray-700">
                         <div class="px-5 py-3">
                             <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Sale #</p>
                             <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $sale->sale_number }}</p>
@@ -406,6 +406,21 @@
                                 @endif
                             </p>
                         </div>
+                        <div class="px-5 py-3">
+                            <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                                {{ $stagingPickTicket->fulfillment_type === 'pickup' ? 'Pickup date' : 'Delivery date' }}
+                            </p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                @if ($stagingPickTicket->delivery_date)
+                                    {{ \Carbon\Carbon::parse($stagingPickTicket->delivery_date)->format('M j, Y') }}
+                                    @if ($stagingPickTicket->delivery_time)
+                                        <span class="text-gray-500 font-normal">· {{ \Carbon\Carbon::createFromFormat('H:i', $stagingPickTicket->delivery_time)->format('g:i A') }}</span>
+                                    @endif
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </p>
+                        </div>
                     </div>
 
                     {{-- Staging meta bar --}}
@@ -419,17 +434,6 @@
                             <span>
                                 <span class="font-medium text-gray-700 dark:text-gray-300">Type:</span>
                                 {{ $stagingPickTicket->fulfillment_type === 'pickup' ? 'Pickup from vendor' : 'Deliver to warehouse' }}
-                            </span>
-                        @endif
-                        @if ($stagingPickTicket->delivery_date)
-                            <span>
-                                <span class="font-medium text-gray-700 dark:text-gray-300">
-                                    {{ $stagingPickTicket->fulfillment_type === 'pickup' ? 'Pickup date:' : 'Delivery date:' }}
-                                </span>
-                                {{ \Carbon\Carbon::parse($stagingPickTicket->delivery_date)->format('M j, Y') }}
-                                @if ($stagingPickTicket->delivery_time)
-                                    · {{ \Carbon\Carbon::createFromFormat('H:i', $stagingPickTicket->delivery_time)->format('g:i A') }}
-                                @endif
                             </span>
                         @endif
                         @if ($stagingPickTicket->staging_notes)
