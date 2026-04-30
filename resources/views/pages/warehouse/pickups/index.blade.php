@@ -136,10 +136,10 @@
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             @forelse ($purchaseOrders as $po)
                                 @php
-                                    // Scheduled date: pickup_at for pickups, expected_delivery_date for deliveries
+                                    // Scheduled date: pickup_at for pickups (datetime), expected_delivery_date for deliveries (date only → end of day)
                                     $scheduledDate = $po->fulfillment_method === 'pickup'
                                         ? $po->pickup_at
-                                        : ($po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date) : null);
+                                        : ($po->expected_delivery_date ? $po->expected_delivery_date->copy()->endOfDay() : null);
 
                                     $isOverdue = $scheduledDate
                                         && $scheduledDate->isPast()
