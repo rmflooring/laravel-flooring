@@ -661,6 +661,10 @@ Route::prefix('pages')
 			->middleware('permission:create estimates')
 			->name('estimates.make-revision');
 
+		Route::post('estimates/{estimate}/duplicate', [EstimateController::class, 'duplicate'])
+			->middleware('permission:create estimates')
+			->name('estimates.duplicate');
+
 		Route::post('estimates/{estimate}/profits/save-costs', [EstimateController::class, 'saveProfitCosts'])
 			->name('estimates.profits.save-costs');
 

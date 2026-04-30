@@ -51,6 +51,17 @@
                         @endif
                     @endif
 
+                    @can('create estimates')
+                    <form method="POST" action="{{ route('pages.estimates.duplicate', $estimate) }}">
+                        @csrf
+                        <button type="submit"
+                                onclick="return confirm('Copy Estimate {{ $estimate->estimate_number }} to a new estimate?')"
+                                class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Copy to New Estimate
+                        </button>
+                    </form>
+                    @endcan
+
                     <button type="button"
                             onclick="window.dispatchEvent(new CustomEvent('open-send-email-modal'))"
                             class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800">
