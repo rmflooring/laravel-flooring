@@ -337,8 +337,13 @@
                                     ];
                                     $ptStatusColor = $ptStatusColors[$pt->status] ?? 'bg-gray-100 text-gray-700';
 
-                                    $isOverdue = $pt->delivery_date
-                                        && $pt->delivery_date->isPast()
+                                    $ptScheduled = $pt->delivery_date
+                                        ? ($pt->delivery_time
+                                            ? \Carbon\Carbon::parse($pt->delivery_date->format('Y-m-d') . ' ' . $pt->delivery_time)
+                                            : $pt->delivery_date->copy()->endOfDay())
+                                        : null;
+                                    $isOverdue = $ptScheduled
+                                        && $ptScheduled->isPast()
                                         && ! in_array($pt->status, ['delivered', 'cancelled', 'returned']);
                                 @endphp
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 {{ $isOverdue ? 'bg-red-50 dark:bg-red-950' : '' }}">
