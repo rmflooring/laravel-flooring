@@ -323,7 +323,7 @@
 <script>
 const QS_CUSTOMERS_URL = @json(route('pages.quick-sales.api.customers'));
 const QS_PRODUCTS_URL  = @json(route('pages.quick-sales.api.products'));
-const QS_TAX_RATE_URL  = '/pages/estimates/api/tax-groups/';
+const QS_TAX_RATE_URL  = '/estimates/api/tax-groups/';
 
 // ── Shared totals state ───────────────────────────────────────────────────
 window._qs = { rows: [], taxRate: 0, taxLabel: '—' };
