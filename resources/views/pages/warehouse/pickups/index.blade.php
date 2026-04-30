@@ -339,7 +339,7 @@
 
                                     $ptScheduled = $pt->delivery_date
                                         ? ($pt->delivery_time
-                                            ? \Carbon\Carbon::parse($pt->delivery_date->format('Y-m-d') . ' ' . $pt->delivery_time)
+                                            ? \Carbon\Carbon::createFromFormat('Y-m-d H:i', $pt->delivery_date->format('Y-m-d') . ' ' . $pt->delivery_time, config('app.timezone'))
                                             : $pt->delivery_date->copy()->endOfDay())
                                         : null;
                                     $isOverdue = $ptScheduled
