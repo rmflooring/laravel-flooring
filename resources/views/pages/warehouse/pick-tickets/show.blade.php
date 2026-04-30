@@ -54,6 +54,16 @@
                                    class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                                     Print PDF
                                 </a>
+                                @if (in_array($pickTicket->status, ['staged', 'pending']))
+                                    <button type="button"
+                                            onclick="document.getElementById('pt-edit-modal').classList.remove('hidden')"
+                                            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                                        <svg class="mr-1.5 h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                        Edit
+                                    </button>
+                                @endif
                                 @if (in_array($pickTicket->status, ['staged', 'partially_delivered']))
                                     <button type="button"
                                             onclick="document.getElementById('pt-deliver-modal').classList.remove('hidden')"
@@ -621,5 +631,89 @@
     </div>
     @endif
 
+    {{-- Edit Pick Ticket Modal --}}
+    @if (in_array($pickTicket->status, ['staged', 'pending']))
+    <div id="pt-edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Edit Pick Ticket</h3>
+                <button type="button" onclick="document.getElementById('pt-edit-modal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('pages.warehouse.pick-tickets.update', $pickTicket) }}"
+                  x-data="{ fulfillmentType: '{{ $pickTicket->fulfillment_type ?? 'delivery' }}' }">
+                @csrf @method('PATCH')
+                <div class="space-y-4 px-6 py-4">
+
+                    {{-- Fulfillment Type --}}
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="fulfillment_type" value="delivery"
+                                       x-model="fulfillmentType"
+                                       class="text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Deliver to warehouse</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="fulfillment_type" value="pickup"
+                                       x-model="fulfillmentType"
+                                       class="text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Pickup from vendor</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Date & Time --}}
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span x-text="fulfillmentType === 'pickup' ? 'Pickup Date' : 'Delivery Date'">Date</span>
+                                <span class="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <input type="date" name="delivery_date"
+                                   value="{{ $pickTicket->delivery_date?->format('Y-m-d') }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Time <span class="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <input type="time" name="delivery_time"
+                                   value="{{ $pickTicket->delivery_time }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        </div>
+                    </div>
+
+                    {{-- Staging Notes --}}
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Notes <span class="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <textarea name="staging_notes" rows="3"
+                                  placeholder="e.g. Deliver to the loading bay. Handle with care."
+                                  class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400">{{ $pickTicket->staging_notes }}</textarea>
+                    </div>
+
+                </div>
+                <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <button type="button"
+                            onclick="document.getElementById('pt-edit-modal').classList.add('hidden')"
+                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
 
 </x-app-layout>

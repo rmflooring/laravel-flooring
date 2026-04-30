@@ -89,6 +89,27 @@ class WarehousePickTicketController extends Controller
         return back()->with('success', 'Pick ticket has been unstaged.');
     }
 
+    public function update(Request $request, PickTicket $pickTicket): RedirectResponse
+    {
+        abort_unless(in_array($pickTicket->status, ['staged', 'pending']), 422);
+
+        $data = $request->validate([
+            'fulfillment_type' => ['nullable', 'in:pickup,delivery'],
+            'delivery_date'    => ['nullable', 'date'],
+            'delivery_time'    => ['nullable', 'date_format:H:i'],
+            'staging_notes'    => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $pickTicket->update([
+            'fulfillment_type' => $data['fulfillment_type'] ?: null,
+            'delivery_date'    => $data['delivery_date'] ?: null,
+            'delivery_time'    => $data['delivery_time'] ?: null,
+            'staging_notes'    => $data['staging_notes'] ?: null,
+        ]);
+
+        return back()->with('success', 'Pick ticket updated.');
+    }
+
     public function addItems(Request $request, PickTicket $pickTicket): RedirectResponse
     {
         abort_unless(in_array($pickTicket->status, ['staged', 'pending']), 422, 'Items can only be added when the pick ticket is staged or pending.');

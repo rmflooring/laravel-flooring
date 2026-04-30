@@ -1029,6 +1029,10 @@ Route::prefix('pages')
 				->middleware('role_or_permission:admin|view pick tickets')
 				->name('pick-tickets.update-status');
 
+			Route::patch('pick-tickets/{pickTicket}', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'update'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.update');
+
 			Route::post('pick-tickets/{pickTicket}/add-items', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'addItems'])
 				->middleware('role_or_permission:admin|view pick tickets')
 				->name('pick-tickets.add-items');
