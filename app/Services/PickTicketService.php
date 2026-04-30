@@ -103,8 +103,13 @@ class PickTicketService
      * Items are the material sale items linked to the WO via work_order_item_materials.
      * No inventory allocation is required — this is a staging/preparation ticket.
      */
-    public function createFromWorkOrder(WorkOrder $workOrder, ?string $stagingNotes = null): PickTicket
-    {
+    public function createFromWorkOrder(
+        WorkOrder $workOrder,
+        ?string $stagingNotes = null,
+        ?string $fulfillmentType = null,
+        ?string $deliveryDate = null,
+        ?string $deliveryTime = null,
+    ): PickTicket {
         $workOrder->loadMissing(['items.relatedMaterials.saleItem']);
 
         // Collect unique material sale items across all WO labour items
@@ -115,12 +120,15 @@ class PickTicketService
             ->unique('id')
             ->values();
 
-        return DB::transaction(function () use ($workOrder, $materialSaleItems, $stagingNotes) {
+        return DB::transaction(function () use ($workOrder, $materialSaleItems, $stagingNotes, $fulfillmentType, $deliveryDate, $deliveryTime) {
             $pt = PickTicket::create([
-                'sale_id'        => $workOrder->sale_id,
-                'work_order_id'  => $workOrder->id,
-                'status'         => 'staged',
-                'staging_notes'  => $stagingNotes ?: null,
+                'sale_id'          => $workOrder->sale_id,
+                'work_order_id'    => $workOrder->id,
+                'status'           => 'staged',
+                'fulfillment_type' => $fulfillmentType ?: null,
+                'staging_notes'    => $stagingNotes ?: null,
+                'delivery_date'    => $deliveryDate ?: null,
+                'delivery_time'    => $deliveryTime ?: null,
             ]);
 
             foreach ($materialSaleItems as $index => $saleItem) {

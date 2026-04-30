@@ -309,10 +309,19 @@ class WorkOrderController extends Controller
         }
 
         $request->validate([
-            'staging_notes' => ['nullable', 'string', 'max:2000'],
+            'staging_notes'   => ['nullable', 'string', 'max:2000'],
+            'fulfillment_type' => ['nullable', 'in:pickup,delivery'],
+            'delivery_date'   => ['nullable', 'date'],
+            'delivery_time'   => ['nullable', 'date_format:H:i'],
         ]);
 
-        $service->createFromWorkOrder($workOrder, $request->input('staging_notes'));
+        $service->createFromWorkOrder(
+            $workOrder,
+            $request->input('staging_notes'),
+            $request->input('fulfillment_type'),
+            $request->input('delivery_date'),
+            $request->input('delivery_time'),
+        );
 
         return back()->with('success', 'Staging pick ticket created.');
     }

@@ -415,6 +415,23 @@
                             {{ $stagingPickTicket->creator?->name ?? '—' }}
                             · {{ $stagingPickTicket->created_at->format('M j, Y g:i a') }}
                         </span>
+                        @if ($stagingPickTicket->fulfillment_type)
+                            <span>
+                                <span class="font-medium text-gray-700 dark:text-gray-300">Type:</span>
+                                {{ $stagingPickTicket->fulfillment_type === 'pickup' ? 'Pickup from vendor' : 'Deliver to warehouse' }}
+                            </span>
+                        @endif
+                        @if ($stagingPickTicket->delivery_date)
+                            <span>
+                                <span class="font-medium text-gray-700 dark:text-gray-300">
+                                    {{ $stagingPickTicket->fulfillment_type === 'pickup' ? 'Pickup date:' : 'Delivery date:' }}
+                                </span>
+                                {{ \Carbon\Carbon::parse($stagingPickTicket->delivery_date)->format('M j, Y') }}
+                                @if ($stagingPickTicket->delivery_time)
+                                    · {{ \Carbon\Carbon::createFromFormat('H:i', $stagingPickTicket->delivery_time)->format('g:i A') }}
+                                @endif
+                            </span>
+                        @endif
                         @if ($stagingPickTicket->staging_notes)
                             <span>
                                 <span class="font-medium text-gray-700 dark:text-gray-300">Notes:</span>
@@ -481,7 +498,8 @@
                     </svg>
                 </button>
             </div>
-            <form method="POST" action="{{ route('pages.sales.work-orders.stage-pick-ticket', [$sale, $workOrder]) }}">
+            <form method="POST" action="{{ route('pages.sales.work-orders.stage-pick-ticket', [$sale, $workOrder]) }}"
+                  x-data="{ fulfillmentType: '{{ old('fulfillment_type', 'delivery') }}' }">
                 @csrf
                 <div class="space-y-4 px-6 py-4">
                     <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -511,6 +529,44 @@
                             </div>
                         </div>
                     @endif
+
+                    {{-- Fulfillment Type --}}
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="fulfillment_type" value="delivery"
+                                       x-model="fulfillmentType"
+                                       class="text-orange-600 focus:ring-orange-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Deliver to warehouse</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="fulfillment_type" value="pickup"
+                                       x-model="fulfillmentType"
+                                       class="text-orange-600 focus:ring-orange-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Pickup from vendor</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Scheduled Date & Time --}}
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span x-text="fulfillmentType === 'pickup' ? 'Pickup Date' : 'Delivery Date'">Delivery Date</span>
+                                <span class="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <input type="date" name="delivery_date" value="{{ old('delivery_date') }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Time <span class="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <input type="time" name="delivery_time" value="{{ old('delivery_time') }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        </div>
+                    </div>
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
