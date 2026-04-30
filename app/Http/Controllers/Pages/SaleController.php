@@ -741,7 +741,7 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
         'sale_item_ids'    => ['required', 'array', 'min:1'],
         'sale_item_ids.*'  => ['required', 'integer'],
         'staging_notes'    => ['nullable', 'string', 'max:1000'],
-        'delivery_date'    => ['nullable', 'required_if:fulfillment_type,delivery', 'date'],
+        'delivery_date'    => ['nullable', 'date'],
         'delivery_time'    => ['nullable', 'date_format:H:i'],
         'sms_customer'     => ['nullable', 'boolean'],
     ]);
@@ -761,8 +761,8 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
         $data['sale_item_ids'],
         $data['fulfillment_type'],
         $data['staging_notes'] ?? null,
-        $data['fulfillment_type'] === 'delivery' ? ($data['delivery_date'] ?? null) : null,
-        $data['fulfillment_type'] === 'delivery' ? ($data['delivery_time'] ?? null) : null,
+        $data['delivery_date'] ?? null,
+        $data['delivery_time'] ?? null,
     );
 
     // Calendar sync — delivery only, date required
