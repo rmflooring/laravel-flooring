@@ -811,13 +811,13 @@
                                     @endif
                                     <div class="flex gap-3">
                                         <div class="flex-1">
-                                            <input type="date" name="pickup_date"
+                                            <input type="date" name="delivery_date"
                                                    x-model="pickupDate"
                                                    :disabled="fulfillmentType !== 'pickup'"
                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
                                         </div>
                                         <div class="w-32">
-                                            <input type="time" name="pickup_time"
+                                            <input type="time" name="delivery_time"
                                                    x-model="pickupTime"
                                                    :disabled="fulfillmentType !== 'pickup'"
                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
