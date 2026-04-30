@@ -7,6 +7,7 @@ use App\Models\InventoryReturnItem;
 use App\Models\MicrosoftAccount;
 use App\Models\MicrosoftCalendar;
 use App\Models\PickTicket;
+use App\Models\PickTicketItem;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Employee;
@@ -167,11 +168,26 @@ class SaleController extends Controller
 		$pmEmail          = $sale->opportunity?->projectManager?->email;
 		$customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
 
-        // Direct (no-WO) pick ticket for staging card
-        $directPickTicket  = PickTicket::where('sale_id', $sale->id)
+        // All pick tickets for this sale (direct + WO-linked), ordered active first then by id
+        $salePickTickets = PickTicket::where('sale_id', $sale->id)
+            ->with('workOrder')
+            ->orderByRaw("CASE status
+                WHEN 'staged'              THEN 0
+                WHEN 'pending'             THEN 1
+                WHEN 'ready'               THEN 2
+                WHEN 'picked'              THEN 3
+                WHEN 'partially_delivered' THEN 4
+                WHEN 'delivered'           THEN 5
+                WHEN 'returned'            THEN 6
+                WHEN 'cancelled'           THEN 7
+                ELSE 8 END")
+            ->orderBy('id')
+            ->get();
+
+        // Active direct (no-WO) PT — determines whether to show the Stage button
+        $directPickTicket  = $salePickTickets
             ->whereNull('work_order_id')
             ->whereIn('status', PickTicket::ACTIVE_STATUSES)
-            ->latest()
             ->first();
         $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
 
@@ -233,7 +249,7 @@ class SaleController extends Controller
             'sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs', 'customerContacts',
             'depositPayerOptions', 'depositPaymentMethods',
-            'directPickTicket', 'materialSaleItems',
+            'salePickTickets', 'directPickTicket', 'materialSaleItems',
             'unscheduledLabourCount',
         ));
 	}
@@ -451,6 +467,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
             $matLinkSnapshots = [];
             $poItemSnaps      = [];
             $allocSnaps       = [];
+            $ptItemSnaps      = [];
             if ($oldMaterialItems->isNotEmpty()) {
                 $matSigMap = $oldMaterialItems->keyBy('id')->map(
                     fn($m) => implode('|', [$m->product_type, $m->manufacturer, $m->style, $m->color_item_number])
@@ -481,6 +498,16 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                         $sig = $matSigMap[$alloc->sale_item_id] ?? null;
                         if ($sig) {
                             $allocSnaps[] = ['id' => $alloc->id, 'signature' => $sig];
+                        }
+                    });
+
+                // Pick ticket items — nullOnDelete FK keeps the rows but clears sale_item_id
+                \App\Models\PickTicketItem::whereIn('sale_item_id', $oldMaterialItems->pluck('id'))
+                    ->get(['id', 'sale_item_id'])
+                    ->each(function ($pti) use (&$ptItemSnaps, $matSigMap) {
+                        $sig = $matSigMap[$pti->sale_item_id] ?? null;
+                        if ($sig) {
+                            $ptItemSnaps[] = ['id' => $pti->id, 'signature' => $sig];
                         }
                     });
             }
@@ -586,7 +613,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
             }
 
             // Re-link all material-dependent records to the newly recreated sale_item IDs
-            if (!empty($matLinkSnapshots) || !empty($poItemSnaps) || !empty($allocSnaps)) {
+            if (!empty($matLinkSnapshots) || !empty($poItemSnaps) || !empty($allocSnaps) || !empty($ptItemSnaps)) {
                 $newMaterialItems = \App\Models\SaleItem::where('sale_id', $sale->id)
                     ->where('sale_room_id', $saleRoomId)
                     ->where('item_type', 'material')
@@ -616,6 +643,13 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                 foreach ($allocSnaps as $snap) {
                     if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
                     \App\Models\InventoryAllocation::where('id', $snap['id'])
+                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
+                }
+
+                // Pick ticket items (nulled via nullOnDelete → restore sale_item_id)
+                foreach ($ptItemSnaps as $snap) {
+                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    \App\Models\PickTicketItem::where('id', $snap['id'])
                         ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
                 }
             }

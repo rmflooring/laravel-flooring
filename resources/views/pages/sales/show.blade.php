@@ -620,7 +620,14 @@
             {{-- Stage for Delivery / Pickup --}}
             @can('edit work orders')
             @if ($materialSaleItems->isNotEmpty())
-            <div x-data="{ showStageModal: false, fulfillmentType: 'delivery' }" class="rounded-lg border border-gray-200 bg-white shadow-sm">
+            @php
+                $woInstallDate = $sale->workOrders
+                    ->where('status', '<>', 'cancelled')
+                    ->filter(fn ($wo) => $wo->scheduled_date)
+                    ->sortBy('scheduled_date')
+                    ->first()?->scheduled_date?->format('Y-m-d') ?? '';
+            @endphp
+            <div x-data="{ showStageModal: false, fulfillmentType: 'delivery', pickupDate: '{{ $woInstallDate }}', pickupTime: '09:00' }" class="rounded-lg border border-gray-200 bg-white shadow-sm">
 
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
@@ -637,8 +644,8 @@
                     @endif
                 </div>
 
-                {{-- Active PT info --}}
-                @if ($directPickTicket)
+                {{-- All pick tickets for this sale --}}
+                @if ($salePickTickets->isNotEmpty())
                     @php
                         $ptColors = [
                             'staged'              => '#ea580c',
@@ -646,55 +653,97 @@
                             'ready'               => '#2563eb',
                             'picked'              => '#7c3aed',
                             'partially_delivered' => '#ca8a04',
+                            'delivered'           => '#16a34a',
+                            'returned'            => '#0891b2',
+                            'cancelled'           => '#9ca3af',
                         ];
-                        $ptColor = $ptColors[$directPickTicket->status] ?? '#6b7280';
-                        $ftLabel = $directPickTicket->fulfillment_type_label ?? '—';
                     @endphp
-                    <div class="px-5 py-4 flex items-center justify-between gap-4">
-                        <div class="flex items-center gap-3">
-                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
-                                  style="background:{{ $ptColor }}">
-                                {{ $directPickTicket->status_label }}
-                            </span>
-                            <span class="text-sm text-gray-700 font-medium">{{ $directPickTicket->pt_number }}</span>
-                            <span class="text-sm text-gray-500">·</span>
-                            <span class="text-sm text-gray-500">{{ $ftLabel }}</span>
-                            @if ($directPickTicket->staging_notes)
-                                <span class="text-sm text-gray-400 italic">· {{ $directPickTicket->staging_notes }}</span>
-                            @endif
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <a href="{{ route('pages.warehouse.pick-tickets.show', $directPickTicket) }}"
-                               class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800">
-                                View Pick Ticket
-                            </a>
-                            @if ($directPickTicket->status === 'staged')
-                                <form method="POST"
-                                      action="{{ route('pages.warehouse.pick-tickets.unstage', $directPickTicket) }}"
-                                      onsubmit="return confirm('Unstage pick ticket {{ $directPickTicket->pt_number }}? The sale can then be re-staged.')">
-                                    @csrf
-                                    <button type="submit"
-                                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
-                                        Unstage
-                                    </button>
-                                </form>
-                            @elseif (in_array($directPickTicket->status, ['pending', 'ready', 'picked']))
-                                <form method="POST"
-                                      action="{{ route('pages.warehouse.pick-tickets.update-status', $directPickTicket) }}"
-                                      onsubmit="return confirm('Cancel pick ticket {{ $directPickTicket->pt_number }}? The sale can then be re-staged.')">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="action" value="cancel">
-                                    <button type="submit"
-                                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
-                                        Cancel PT
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-                    </div>
+                    <table class="min-w-full divide-y divide-gray-100">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">PT #</th>
+                                <th class="px-5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Type</th>
+                                <th class="px-5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Linked To</th>
+                                <th class="px-5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                                <th class="px-5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</th>
+                                <th class="px-5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Created</th>
+                                <th class="px-5 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach ($salePickTickets as $pt)
+                                @php
+                                    $ptColor     = $ptColors[$pt->status] ?? '#6b7280';
+                                    $isTerminal  = in_array($pt->status, ['delivered', 'returned', 'cancelled']);
+                                @endphp
+                                <tr class="{{ $isTerminal ? 'opacity-60' : '' }} hover:bg-gray-50">
+                                    <td class="px-5 py-3 text-sm font-semibold text-gray-900">
+                                        {{ $pt->pt_number }}
+                                    </td>
+                                    <td class="px-5 py-3 text-sm text-gray-600">
+                                        {{ $pt->fulfillment_type_label ?? ($pt->work_order_id ? 'WO Stage' : '—') }}
+                                    </td>
+                                    <td class="px-5 py-3 text-sm text-gray-600">
+                                        @if ($pt->workOrder)
+                                            <a href="{{ route('pages.sales.work-orders.show', [$sale, $pt->workOrder]) }}"
+                                               class="text-blue-600 hover:underline">
+                                                WO #{{ $pt->workOrder->wo_number }}
+                                            </a>
+                                        @else
+                                            <span class="text-gray-400">Direct</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+                                              style="background:{{ $ptColor }}">
+                                            {{ $pt->status_label }}
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-3 text-sm text-gray-400 italic">
+                                        {{ $pt->staging_notes ?? '—' }}
+                                    </td>
+                                    <td class="px-5 py-3 text-sm text-gray-500">
+                                        {{ $pt->created_at->format('M j, Y') }}
+                                    </td>
+                                    <td class="px-5 py-3 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <a href="{{ route('pages.warehouse.pick-tickets.show', $pt) }}"
+                                               class="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                                                View →
+                                            </a>
+                                            @if (!$isTerminal && is_null($pt->work_order_id))
+                                                @if ($pt->status === 'staged')
+                                                    <form method="POST"
+                                                          action="{{ route('pages.warehouse.pick-tickets.unstage', $pt) }}"
+                                                          onsubmit="return confirm('Unstage {{ $pt->pt_number }}?')">
+                                                        @csrf
+                                                        <button type="submit"
+                                                                class="text-sm font-medium text-red-600 hover:text-red-800">
+                                                            Unstage
+                                                        </button>
+                                                    </form>
+                                                @elseif (in_array($pt->status, ['pending', 'ready', 'picked']))
+                                                    <form method="POST"
+                                                          action="{{ route('pages.warehouse.pick-tickets.update-status', $pt) }}"
+                                                          onsubmit="return confirm('Cancel {{ $pt->pt_number }}?')">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="action" value="cancel">
+                                                        <button type="submit"
+                                                                class="text-sm font-medium text-red-600 hover:text-red-800">
+                                                            Cancel
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 @else
-                    <div class="px-5 py-4 text-sm text-gray-400">No active pick ticket. Use the button above to stage items.</div>
+                    <div class="px-5 py-4 text-sm text-gray-400">No pick tickets yet. Use the button above to stage items.</div>
                 @endif
 
                 {{-- Stage Modal --}}
@@ -752,6 +801,29 @@
                                         </div>
                                     </div>
                                     <p class="mt-1 text-xs text-gray-400">Syncs to the RM Warehouse calendar.</p>
+                                </div>
+
+                                {{-- Pickup Date/Time (pickup only) --}}
+                                <div x-show="fulfillmentType === 'pickup'" x-cloak>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Date & Time</label>
+                                    @if ($woInstallDate)
+                                        <p class="mb-2 text-xs text-amber-600">Pre-filled from scheduled install date. Adjust if pickup is on a different day.</p>
+                                    @endif
+                                    <div class="flex gap-3">
+                                        <div class="flex-1">
+                                            <input type="date" name="pickup_date"
+                                                   x-model="pickupDate"
+                                                   :disabled="fulfillmentType !== 'pickup'"
+                                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                        </div>
+                                        <div class="w-32">
+                                            <input type="time" name="pickup_time"
+                                                   x-model="pickupTime"
+                                                   :disabled="fulfillmentType !== 'pickup'"
+                                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                        </div>
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-400">Visible to warehouse staff on the pick ticket.</p>
                                 </div>
 
                                 {{-- SMS Customer (delivery only, when phone available) --}}
