@@ -280,7 +280,7 @@ class QuickSaleController extends Controller
 
         $pdf = Pdf::loadView('pdf.quick-sale-receipt', compact(
             'sale', 'invoice', 'payment', 'grandTotal', 'amountTendered', 'changeDue', 'settings', 'logoData'
-        ))->setPaper([0, 0, 226.77, 700], 'portrait');
+        ))->setPaper('letter', 'portrait');
 
         return $pdf->stream('receipt-' . $sale->sale_number . '.pdf');
     }

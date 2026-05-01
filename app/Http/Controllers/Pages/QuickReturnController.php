@@ -186,7 +186,7 @@ class QuickReturnController extends Controller
         }
 
         $pdf = Pdf::loadView('pdf.quick-return-receipt', compact('quickReturn', 'settings', 'logoData'))
-            ->setPaper([0, 0, 226.77, 700], 'portrait');
+            ->setPaper('letter', 'portrait');
 
         return $pdf->stream('return-' . $quickReturn->return_number . '.pdf');
     }
