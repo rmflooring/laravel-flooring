@@ -107,7 +107,7 @@
                 </li>
 
 			    {{-- Sales --}}
-                <li x-data="{ open: {{ request()->routeIs('pages.sales.*') || request()->routeIs('pages.quick-sales.*') ? 'true' : 'false' }} }">
+                <li x-data="{ open: {{ request()->routeIs('pages.sales.*') || request()->routeIs('pages.quick-sales.*') || request()->routeIs('pages.quick-returns.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open"
                             class="sidebar-link flex w-full items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 text-left">
                         <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400"
@@ -137,6 +137,12 @@
                             <a href="{{ route('pages.quick-sales.create') }}"
                                class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.quick-sales.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
                                 Quick Sale
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('pages.quick-returns.create') }}"
+                               class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.quick-returns.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                                Quick Return
                             </a>
                         </li>
                         @endcan

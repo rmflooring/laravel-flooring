@@ -706,6 +706,29 @@ Route::prefix('pages')
 			->name('quick-sales.receipt')
 			->middleware('role_or_permission:admin|view sales');
 
+		// Quick Returns
+		Route::get('quick-returns/create', [\App\Http\Controllers\Pages\QuickReturnController::class, 'create'])
+			->name('quick-returns.create')
+			->middleware('role_or_permission:admin|create sales');
+
+		Route::post('quick-returns', [\App\Http\Controllers\Pages\QuickReturnController::class, 'store'])
+			->name('quick-returns.store')
+			->middleware('role_or_permission:admin|create sales');
+
+		Route::get('quick-returns/api/customers', [\App\Http\Controllers\Pages\QuickReturnController::class, 'searchCustomers'])
+			->name('quick-returns.api.customers');
+
+		Route::get('quick-returns/api/products', [\App\Http\Controllers\Pages\QuickReturnController::class, 'searchProducts'])
+			->name('quick-returns.api.products');
+
+		Route::get('quick-returns/{quickReturn}', [\App\Http\Controllers\Pages\QuickReturnController::class, 'show'])
+			->name('quick-returns.show')
+			->middleware('role_or_permission:admin|view sales');
+
+		Route::get('quick-returns/{quickReturn}/receipt', [\App\Http\Controllers\Pages\QuickReturnController::class, 'receipt'])
+			->name('quick-returns.receipt')
+			->middleware('role_or_permission:admin|view sales');
+
 		Route::get('sales/{sale}/pdf', [\App\Http\Controllers\Pages\SaleController::class, 'previewPdf'])
 			->name('sales.pdf');
 
