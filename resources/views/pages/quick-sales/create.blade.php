@@ -19,8 +19,40 @@
         </div>
     @endif
 
-    <form action="{{ route('pages.quick-sales.store') }}" method="POST" id="quick-sale-form">
+    <form action="{{ route('pages.quick-sales.store') }}" method="POST" id="quick-sale-form"
+          x-data="quickSaleForm()">
         @csrf
+
+        {{-- Fulfillment Mode Toggle --}}
+        <div class="mb-6 bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+            <h2 class="text-base font-semibold text-gray-800 mb-3">Sale Type</h2>
+            <div class="flex gap-3">
+                <button type="button"
+                    @click="setMode('complete_now')"
+                    :class="mode === 'complete_now'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'"
+                    class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Complete & Pay Now
+                </button>
+                <button type="button"
+                    @click="setMode('open_sale')"
+                    :class="mode === 'open_sale'
+                        ? 'bg-amber-500 text-white border-amber-500'
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'"
+                    class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    Save & Order Material
+                </button>
+            </div>
+            <p class="mt-2 text-xs text-gray-500"
+               x-text="mode === 'complete_now'
+                   ? 'Customer pays now. Invoice is created immediately and receipt can be printed.'
+                   : 'Creates an open sale. You can add purchase orders, work orders, and collect payment later.'">
+            </p>
+            <input type="hidden" name="fulfillment_mode" :value="mode">
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -258,8 +290,9 @@
                     </div>
                 </div>
 
-                {{-- Payment --}}
-                <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-5"
+                {{-- Payment (complete now only) --}}
+                <div x-show="mode === 'complete_now'" x-cloak
+                     class="bg-white border border-gray-200 rounded-xl shadow-sm p-5"
                      x-data="paymentPanel()">
 
                     <h2 class="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -309,11 +342,21 @@
                     </div>
                 </div>
 
+                {{-- Open sale info banner --}}
+                <div x-show="mode === 'open_sale'" x-cloak
+                     class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                    <p class="font-semibold mb-1">No payment collected yet</p>
+                    <p class="text-xs">The sale will be created as open. You can add purchase orders, record deposits, and collect payment from the sale page.</p>
+                </div>
+
                 {{-- Submit --}}
                 <button type="submit"
-                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-3 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
+                    :class="mode === 'complete_now'
+                        ? 'bg-indigo-600 hover:bg-indigo-700'
+                        : 'bg-amber-500 hover:bg-amber-600'"
+                    class="w-full text-white font-semibold text-sm py-3 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Complete Sale & Print Receipt
+                    <span x-text="mode === 'complete_now' ? 'Complete Sale & Print Receipt' : 'Save Sale & Order Material'"></span>
                 </button>
             </div>
         </div>
@@ -362,6 +405,14 @@ async function fetchTaxRate(groupId) {
         window._qs.taxLabel = d.group_name || '';
         recalcTotals();
     } catch {}
+}
+
+// ── Top-level form Alpine component ──────────────────────────────────────
+function quickSaleForm() {
+    return {
+        mode: '{{ old('fulfillment_mode', 'complete_now') }}',
+        setMode(m) { this.mode = m; },
+    };
 }
 
 // ── Customer panel ────────────────────────────────────────────────────────
@@ -418,7 +469,6 @@ function rowCatalog(row) {
         catalogResults: [],
         catalogOpen: false,
         syncRow() {
-            // Ensure shared state stays in sync after Alpine renders
             window._qs.rows = window._qs.rows;
         },
         async searchCatalog() {

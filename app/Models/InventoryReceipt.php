@@ -80,15 +80,15 @@ class InventoryReceipt extends Model
 
     /**
      * Quantity still available:
-     *   received − allocated − returned_to_vendor (negative transactions)
+     *   received − allocated − outbound transactions (return_to_vendor, fulfilled)
      */
     public function getAvailableQtyAttribute(): float
     {
-        $allocated  = $this->allocations->sum('quantity');
-        $rtvReturned = $this->transactions
-            ->where('type', 'return_to_vendor')
+        $allocated = $this->allocations->sum('quantity');
+        $outbound  = $this->transactions
+            ->whereIn('type', ['return_to_vendor', 'fulfilled'])
             ->sum(fn ($t) => abs((float) $t->quantity));
 
-        return max(0, (float) $this->quantity_received - (float) $allocated - (float) $rtvReturned);
+        return max(0, (float) $this->quantity_received - (float) $allocated - (float) $outbound);
     }
 }

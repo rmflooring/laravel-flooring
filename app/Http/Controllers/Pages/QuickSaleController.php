@@ -8,6 +8,8 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\InvoicePayment;
 use App\Models\InvoiceRoom;
+use App\Models\InventoryReceipt;
+use App\Models\InventoryTransaction;
 use App\Models\ProductStyle;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -32,7 +34,11 @@ class QuickSaleController extends Controller
 
     public function store(Request $request)
     {
+        $paymentMethods = implode(',', array_keys(\App\Models\InvoicePayment::PAYMENT_METHODS));
+
         $request->validate([
+            'fulfillment_mode'   => ['required', 'in:complete_now,open_sale'],
+
             // Customer — either existing or new
             'customer_mode'      => ['required', 'in:existing,new'],
             'customer_id'        => ['required_if:customer_mode,existing', 'nullable', 'exists:customers,id'],
@@ -51,15 +57,15 @@ class QuickSaleController extends Controller
             // Tax
             'tax_group_id' => ['required', 'exists:tax_rate_groups,id'],
 
-            // Payment
-            'payment_method'   => ['required', 'in:' . implode(',', array_keys(\App\Models\InvoicePayment::PAYMENT_METHODS))],
-            'amount_tendered'  => ['required', 'numeric', 'min:0'],
+            // Payment — only required when completing now
+            'payment_method'   => ['required_if:fulfillment_mode,complete_now', 'nullable', 'in:' . $paymentMethods],
+            'amount_tendered'  => ['required_if:fulfillment_mode,complete_now', 'nullable', 'numeric', 'min:0'],
             'reference_number' => ['nullable', 'string', 'max:100'],
 
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $sale = DB::transaction(function () use ($request) {
+        $result = DB::transaction(function () use ($request) {
             // 1. Resolve or create customer
             if ($request->customer_mode === 'existing') {
                 $customer = Customer::findOrFail($request->customer_id);
@@ -74,7 +80,7 @@ class QuickSaleController extends Controller
                 ]);
             }
 
-            // 2. Resolve tax — sum rates from group items (same pattern as EstimateController)
+            // 2. Resolve tax
             $taxGroupId = $request->tax_group_id;
             $taxGroup   = DB::table('tax_rate_groups')->where('id', $taxGroupId)->first();
             $rateCol    = Schema::hasColumn('tax_rates', 'tax_rate_sales') ? 'tax_rate_sales' : 'sales_rate';
@@ -92,6 +98,8 @@ class QuickSaleController extends Controller
             $taxAmount  = round($pretaxTotal * $taxDecimal, 2);
             $grandTotal = $pretaxTotal + $taxAmount;
 
+            $completing = $request->fulfillment_mode === 'complete_now';
+
             // 4. Create Sale
             $sale = Sale::create([
                 'is_quick_sale'     => true,
@@ -100,13 +108,13 @@ class QuickSaleController extends Controller
                 'tax_group_id'      => $taxGroup->id,
                 'tax_rate_percent'  => $taxRate,
                 'grand_total'       => $grandTotal,
-                'status'            => 'completed',
-                'locked_at'         => now(),
-                'locked_by'         => auth()->id(),
-                'locked_pretax_total'   => $pretaxTotal,
-                'locked_tax_rate_percent' => $taxRate,
-                'locked_tax_amount' => $taxAmount,
-                'locked_grand_total'=> $grandTotal,
+                'status'            => $completing ? 'completed' : 'open',
+                'locked_at'         => $completing ? now() : null,
+                'locked_by'         => $completing ? auth()->id() : null,
+                'locked_pretax_total'     => $completing ? $pretaxTotal : null,
+                'locked_tax_rate_percent' => $completing ? $taxRate : null,
+                'locked_tax_amount'       => $completing ? $taxAmount : null,
+                'locked_grand_total'      => $completing ? $grandTotal : null,
                 'notes'             => $request->notes,
                 'created_by'        => auth()->id(),
                 'updated_by'        => auth()->id(),
@@ -120,15 +128,15 @@ class QuickSaleController extends Controller
             ]);
 
             // 6. Create sale items
+            $saleItems = [];
             foreach ($request->items as $idx => $item) {
                 $lineTotal = round((float) $item['quantity'] * (float) $item['sell_price'], 2);
 
-                // Optionally pull style/manufacturer from catalog
                 $style = isset($item['product_style_id'])
                     ? ProductStyle::with('productLine')->find($item['product_style_id'])
                     : null;
 
-                SaleItem::create([
+                $saleItems[] = SaleItem::create([
                     'sale_id'          => $sale->id,
                     'sale_room_id'     => $room->id,
                     'item_type'        => 'material',
@@ -145,62 +153,81 @@ class QuickSaleController extends Controller
                 ]);
             }
 
-            // 7. Create Invoice (status = paid)
-            $invoice = Invoice::create([
-                'sale_id'     => $sale->id,
-                'status'      => 'paid',
-                'due_date'    => today(),
-                'subtotal'    => $pretaxTotal,
-                'tax_amount'  => $taxAmount,
-                'grand_total' => $grandTotal,
-                'amount_paid' => $grandTotal,
-            ]);
+            $stockWarning = null;
 
-            // 8. Create InvoiceRoom + InvoiceItems (mirroring sale structure)
-            $invoiceRoom = InvoiceRoom::create([
-                'invoice_id'   => $invoice->id,
-                'sale_room_id' => $room->id,
-                'name'         => 'Items',
-                'sort_order'   => 0,
-            ]);
+            if ($completing) {
+                // 7. Deduct inventory (FIFO, warn but don't block)
+                $stockWarning = $this->deductInventory($sale, $saleItems);
 
-            $saleItems = $room->items()->orderBy('sort_order')->get();
-            foreach ($saleItems as $idx => $saleItem) {
-                $lineTotal = round($saleItem->quantity * $saleItem->sell_price, 2);
-                $taxAmt    = round($lineTotal * $taxDecimal, 2);
+                // 8. Create Invoice (status = paid)
+                $invoice = Invoice::create([
+                    'sale_id'     => $sale->id,
+                    'status'      => 'paid',
+                    'due_date'    => today(),
+                    'subtotal'    => $pretaxTotal,
+                    'tax_amount'  => $taxAmount,
+                    'grand_total' => $grandTotal,
+                    'amount_paid' => $grandTotal,
+                ]);
 
-                InvoiceItem::create([
-                    'invoice_id'      => $invoice->id,
-                    'invoice_room_id' => $invoiceRoom->id,
-                    'sale_item_id'    => $saleItem->id,
-                    'item_type'       => 'material',
-                    'label'           => $saleItem->style ?? $saleItem->description ?? 'Item',
-                    'quantity'        => $saleItem->quantity,
-                    'unit'            => $saleItem->unit,
-                    'sell_price'      => $saleItem->sell_price,
-                    'line_total'      => $lineTotal,
-                    'tax_rate'        => $taxRate,
-                    'tax_amount'      => $taxAmt,
-                    'tax_group_id'    => $taxGroup->id,
-                    'sort_order'      => $idx,
+                // 9. Create InvoiceRoom + InvoiceItems
+                $invoiceRoom = InvoiceRoom::create([
+                    'invoice_id'   => $invoice->id,
+                    'sale_room_id' => $room->id,
+                    'name'         => 'Items',
+                    'sort_order'   => 0,
+                ]);
+
+                foreach ($saleItems as $idx => $saleItem) {
+                    $lineTotal = round($saleItem->quantity * $saleItem->sell_price, 2);
+                    $taxAmt    = round($lineTotal * $taxDecimal, 2);
+
+                    InvoiceItem::create([
+                        'invoice_id'      => $invoice->id,
+                        'invoice_room_id' => $invoiceRoom->id,
+                        'sale_item_id'    => $saleItem->id,
+                        'item_type'       => 'material',
+                        'label'           => $saleItem->style ?? $saleItem->description ?? 'Item',
+                        'quantity'        => $saleItem->quantity,
+                        'unit'            => $saleItem->unit,
+                        'sell_price'      => $saleItem->sell_price,
+                        'line_total'      => $lineTotal,
+                        'tax_rate'        => $taxRate,
+                        'tax_amount'      => $taxAmt,
+                        'tax_group_id'    => $taxGroup->id,
+                        'sort_order'      => $idx,
+                    ]);
+                }
+
+                // 10. Create InvoicePayment
+                InvoicePayment::create([
+                    'invoice_id'       => $invoice->id,
+                    'amount'           => min((float) $request->amount_tendered, $grandTotal),
+                    'payment_date'     => today(),
+                    'payment_method'   => $request->payment_method,
+                    'reference_number' => $request->reference_number,
+                    'recorded_by'      => auth()->id(),
                 ]);
             }
 
-            // 9. Create InvoicePayment
-            InvoicePayment::create([
-                'invoice_id'       => $invoice->id,
-                'amount'           => min((float) $request->amount_tendered, $grandTotal),
-                'payment_date'     => today(),
-                'payment_method'   => $request->payment_method,
-                'reference_number' => $request->reference_number,
-                'recorded_by'      => auth()->id(),
-            ]);
-
-            return $sale;
+            return compact('sale', 'stockWarning', 'completing');
         });
 
-        return redirect()->route('pages.quick-sales.show', $sale)
-            ->with('success', 'Quick sale #' . $sale->sale_number . ' completed.');
+        $sale         = $result['sale'];
+        $stockWarning = $result['stockWarning'];
+        $completing   = $result['completing'];
+
+        if ($stockWarning) {
+            session()->flash('warning', $stockWarning);
+        }
+
+        if ($completing) {
+            return redirect()->route('pages.quick-sales.show', $sale)
+                ->with('success', 'Quick sale #' . $sale->sale_number . ' completed.');
+        }
+
+        return redirect()->route('pages.sales.show', $sale)
+            ->with('success', 'Sale #' . $sale->sale_number . ' created. Add purchase orders or other details as needed.');
     }
 
     public function show(Sale $sale)
@@ -222,16 +249,7 @@ class QuickSaleController extends Controller
             ? max(0, $amountTendered - $grandTotal)
             : 0;
 
-        $settings = [
-            'branding_company_name' => Setting::get('branding_company_name', ''),
-            'branding_phone'        => Setting::get('branding_phone', ''),
-            'branding_email'        => Setting::get('branding_email', ''),
-            'branding_street'       => Setting::get('branding_street', ''),
-            'branding_city'         => Setting::get('branding_city', ''),
-            'branding_province'     => Setting::get('branding_province', ''),
-            'branding_postal'       => Setting::get('branding_postal', ''),
-            'branding_logo_path'    => Setting::get('branding_logo_path', ''),
-        ];
+        $settings = $this->brandingSettings();
 
         return view('pages.quick-sales.show', compact(
             'sale', 'invoice', 'payment', 'grandTotal', 'amountTendered', 'changeDue', 'settings'
@@ -252,16 +270,7 @@ class QuickSaleController extends Controller
             ? max(0, $amountTendered - $grandTotal)
             : 0;
 
-        $settings = [
-            'branding_company_name' => Setting::get('branding_company_name', ''),
-            'branding_phone'        => Setting::get('branding_phone', ''),
-            'branding_email'        => Setting::get('branding_email', ''),
-            'branding_street'       => Setting::get('branding_street', ''),
-            'branding_city'         => Setting::get('branding_city', ''),
-            'branding_province'     => Setting::get('branding_province', ''),
-            'branding_postal'       => Setting::get('branding_postal', ''),
-            'branding_logo_path'    => Setting::get('branding_logo_path', ''),
-        ];
+        $settings = $this->brandingSettings();
 
         $logoData = null;
         if (!empty($settings['branding_logo_path']) && file_exists(storage_path('app/public/' . $settings['branding_logo_path']))) {
@@ -271,7 +280,7 @@ class QuickSaleController extends Controller
 
         $pdf = Pdf::loadView('pdf.quick-sale-receipt', compact(
             'sale', 'invoice', 'payment', 'grandTotal', 'amountTendered', 'changeDue', 'settings', 'logoData'
-        ))->setPaper([0, 0, 226.77, 700], 'portrait'); // ~80mm wide receipt paper
+        ))->setPaper([0, 0, 226.77, 700], 'portrait');
 
         return $pdf->stream('receipt-' . $sale->sale_number . '.pdf');
     }
@@ -330,5 +339,75 @@ class QuickSaleController extends Controller
             'line_name'    => $s->productLine?->name,
             'manufacturer' => $s->productLine?->manufacturer,
         ]));
+    }
+
+    /**
+     * Deduct stock FIFO for completed quick sale items.
+     * Warns but does not block if stock is insufficient.
+     * Returns a warning string if any item had low stock, null otherwise.
+     */
+    private function deductInventory(Sale $sale, array $saleItems): ?string
+    {
+        $warnings = [];
+
+        foreach ($saleItems as $saleItem) {
+            if (!$saleItem->product_style_id) {
+                continue;
+            }
+
+            $needed = (float) $saleItem->quantity;
+
+            // Load all receipts for this product FIFO (oldest first)
+            $receipts = InventoryReceipt::with(['allocations', 'transactions'])
+                ->where('product_style_id', $saleItem->product_style_id)
+                ->orderBy('received_date')
+                ->orderBy('id')
+                ->get();
+
+            $totalAvailable = $receipts->sum('available_qty');
+
+            if ($totalAvailable < $needed) {
+                $label = $saleItem->style ?? $saleItem->description ?? 'Item';
+                $warnings[] = "Low stock for \"{$label}\": {$totalAvailable} available, {$needed} sold.";
+            }
+
+            $remaining = $needed;
+            foreach ($receipts as $receipt) {
+                if ($remaining <= 0) break;
+
+                $avail = $receipt->available_qty;
+                if ($avail <= 0) continue;
+
+                $deduct = min($avail, $remaining);
+
+                InventoryTransaction::create([
+                    'inventory_receipt_id' => $receipt->id,
+                    'type'                 => 'fulfilled',
+                    'quantity'             => -$deduct,
+                    'reference_type'       => Sale::class,
+                    'reference_id'         => $sale->id,
+                    'note'                 => "Quick Sale #{$sale->sale_number}",
+                    'created_by_user_id'   => auth()->id(),
+                ]);
+
+                $remaining -= $deduct;
+            }
+        }
+
+        return empty($warnings) ? null : implode(' ', $warnings);
+    }
+
+    private function brandingSettings(): array
+    {
+        return [
+            'branding_company_name' => Setting::get('branding_company_name', ''),
+            'branding_phone'        => Setting::get('branding_phone', ''),
+            'branding_email'        => Setting::get('branding_email', ''),
+            'branding_street'       => Setting::get('branding_street', ''),
+            'branding_city'         => Setting::get('branding_city', ''),
+            'branding_province'     => Setting::get('branding_province', ''),
+            'branding_postal'       => Setting::get('branding_postal', ''),
+            'branding_logo_path'    => Setting::get('branding_logo_path', ''),
+        ];
     }
 }

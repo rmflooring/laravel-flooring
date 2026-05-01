@@ -201,6 +201,9 @@
         <tr class="{{ $sale->trashed() ? 'bg-red-50 border-b opacity-75' : 'bg-white border-b hover:bg-gray-50' }}">
             <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                 {{ $sale->sale_number ?? $sale->id }}
+                @if ($sale->is_quick_sale)
+                    <div class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 mt-0.5">Quick</div>
+                @endif
                 @if ($sale->trashed())
                     <div class="text-xs text-red-600 font-medium mt-0.5">Deleted {{ optional($sale->deleted_at)->format('Y-m-d') }}</div>
                 @endif
