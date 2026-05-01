@@ -140,7 +140,7 @@ class QuickReturnController extends Controller
                     $receipt = InventoryReceipt::create([
                         'product_style_id' => $style->id,
                         'item_name'        => $returnItem->description,
-                        'unit'             => $returnItem->unit,
+                        'unit'             => $returnItem->unit ?? '',
                         'quantity_received'=> $returnItem->quantity,
                         'received_date'    => today()->toDateString(),
                         'notes'            => 'Quick Return ' . $quickReturn->return_number
