@@ -715,11 +715,11 @@ Route::prefix('pages')
 			->name('quick-returns.store')
 			->middleware('role_or_permission:admin|create sales');
 
-		Route::get('quick-returns/api/customers', [\App\Http\Controllers\Pages\QuickReturnController::class, 'searchCustomers'])
-			->name('quick-returns.api.customers');
+		Route::get('quick-returns/api/sales', [\App\Http\Controllers\Pages\QuickReturnController::class, 'searchSales'])
+			->name('quick-returns.api.sales');
 
-		Route::get('quick-returns/api/products', [\App\Http\Controllers\Pages\QuickReturnController::class, 'searchProducts'])
-			->name('quick-returns.api.products');
+		Route::get('quick-returns/api/sales/{sale}/items', [\App\Http\Controllers\Pages\QuickReturnController::class, 'getSaleItems'])
+			->name('quick-returns.api.sale-items');
 
 		Route::get('quick-returns/{quickReturn}', [\App\Http\Controllers\Pages\QuickReturnController::class, 'show'])
 			->name('quick-returns.show')

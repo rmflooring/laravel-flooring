@@ -57,8 +57,8 @@
                     <p class="text-xs text-gray-400 uppercase tracking-wide font-medium mb-0.5">Date</p>
                     <p class="font-semibold text-gray-800">{{ $quickReturn->created_at->format('M j, Y') }}</p>
                     <p class="text-gray-500 text-xs">{{ $quickReturn->return_number }}</p>
-                    @if ($quickReturn->original_sale_number)
-                        <p class="text-gray-500 text-xs">Re: Sale #{{ $quickReturn->original_sale_number }}</p>
+                    @if ($quickReturn->sale)
+                        <p class="text-gray-500 text-xs">Re: Sale #{{ $quickReturn->sale->sale_number }}</p>
                     @endif
                 </div>
             </div>

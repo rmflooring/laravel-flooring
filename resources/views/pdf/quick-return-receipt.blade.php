@@ -191,8 +191,8 @@
             <p class="receipt-meta">{{ $quickReturn->return_number }}</p>
             <p class="receipt-meta">{{ $quickReturn->created_at->format('F j, Y') }}</p>
             <p class="receipt-meta">{{ $quickReturn->created_at->format('g:i A') }}</p>
-            @if ($quickReturn->original_sale_number)
-                <p class="receipt-meta">Re: Sale #{{ $quickReturn->original_sale_number }}</p>
+            @if ($quickReturn->sale)
+                <p class="receipt-meta">Re: Sale #{{ $quickReturn->sale->sale_number }}</p>
             @endif
         </div>
     </div>

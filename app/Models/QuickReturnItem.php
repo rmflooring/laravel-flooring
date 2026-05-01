@@ -14,6 +14,11 @@ class QuickReturnItem extends Model
         return $this->belongsTo(QuickReturn::class);
     }
 
+    public function saleItem(): BelongsTo
+    {
+        return $this->belongsTo(SaleItem::class);
+    }
+
     public function productStyle(): BelongsTo
     {
         return $this->belongsTo(ProductStyle::class);
