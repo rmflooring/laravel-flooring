@@ -1,7 +1,7 @@
 # Master Dev Handoff Context — RM Flooring / Floor Manager
 
 Owner: Richard
-Updated: 2026-04-27 (session 54)
+Updated: 2026-05-04 (session 56)
 
 ## Working style rules
 - Flowbite UI required for all new pages/components.
@@ -1085,28 +1085,38 @@ Separate long-lived auth system for all `/m/` and `/installer/` routes.
 
 ---
 
-## QuickBooks Online Integration (session 52, 2026-04-20)
+## QuickBooks Online Integration (session 52–56, 2026-04-20 → 2026-05-04)
 Full details in `Context/context_quickbooks.md`.
 
-### Phase 1 — Complete ✅
-- OAuth connect/disconnect flow via Intuit OAuth 2.0
-- `qbo_connections` table — single row, stores encrypted access + refresh tokens, realm ID
-- `qbo_sync_log` table — audit trail for every push/pull
-- `QuickBooksService` — token management, auto-refresh, API GET/POST/query wrapper, sync logger
-- `QuickBooksController` — connect redirect, OAuth callback, disconnect
-- Admin settings page: `/admin/settings/quickbooks` — connection status + sync log
-- Sidebar + admin settings page links added
+### Phases 1–4 — Complete ✅ (tested working in sandbox)
+- **Phase 1**: OAuth connect/disconnect, `qbo_connections` + `qbo_sync_log` tables, `QuickBooksService`, admin settings page
+- **Phase 2**: Push Vendor + Customer to QBO — manual button on vendor/customer show pages; auto-pushes parent customer before job-site customer
+- **Phase 3**: Push Bill (AP) to QBO — manual button on bill show page; auto-pushes vendor first if not synced
+- **Phase 4**: Push Invoice (AR) to QBO — manual button on invoice show page; auto-pushes customer chain first
+- All 4 phases tested end-to-end against QBO sandbox ✓
+- `QboSyncService` handles all entity push logic + webhook pull handlers
+- Account & Item Mapping: 6 per-type settings (`qbo_ap_product/freight/labour_account_id`, `qbo_income_material/freight/labour_item_id`) stored in `app_settings`, configured at `/admin/settings/quickbooks`
 - SDK: `quickbooks/v3-php-sdk`
-- OAuth must be done from live server (fm.rmflooring.ca) — Intuit rejects localhost with port / IP addresses
+- OAuth must be done from live server (fm.rmflooring.ca)
 - Sandbox company realm ID: `9341456914584979`
 - `.env` keys: `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, `QBO_ENVIRONMENT`, `QBO_WEBHOOK_VERIFIER_TOKEN`
 
+### Key push routes
+- `POST admin/vendors/{vendor}/push-to-qbo` → `admin.vendors.push-to-qbo`
+- `POST admin/customers/{customer}/push-to-qbo` → `admin.customers.push-to-qbo`
+- `POST admin/bills/{bill}/push-to-qbo` → `admin.bills.push-to-qbo`
+- `POST pages/sales/{sale}/invoices/{invoice}/push-to-qbo` → `pages.sales.invoices.push-to-qbo`
+
 ### Phase roadmap
-- Phase 2 (next): Push Vendor + Customer to QBO
-- Phase 3: Push Bills (AP) — manual "Push to QBO" button on bill show page
-- Phase 4: Push Invoices (AR) + Payments
-- Phase 5: Webhook receiver — QBO payment status → FM
-- Phase 6: Tax code mapping + account mapping UI
+- Phase 5 (next): Webhook receiver — QBO → FM payment status sync. Code is written (`QuickBooksWebhookController`, `ProcessQboWebhook` job, route `POST /webhook/quickbooks`). Needs `QBO_WEBHOOK_VERIFIER_TOKEN` in `.env` + endpoint registered in Intuit Developer Portal → Webhooks (entities: Bill, Invoice).
+- Phase 6: Installer bill push (currently blocked — `pushBill()` rejects `bill_type = 'installer'`)
+
+### Production go-live checklist
+1. Note real QBO expense account IDs (Chart of Accounts → Edit → URL `accountId=`)
+2. Note real QBO income item IDs (Products & Services → Edit → URL `id=`)
+3. `.env` → `QBO_ENVIRONMENT=production`
+4. `/admin/settings/quickbooks` → Disconnect → Reconnect
+5. Update all 6 account/item IDs in settings page
 
 ---
 
