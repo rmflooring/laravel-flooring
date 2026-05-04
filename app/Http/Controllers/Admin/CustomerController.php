@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Services\QboSyncService;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -334,6 +335,20 @@ public function toggleSmsOptOut(Customer $customer)
     }
 
     return back()->with('success', $message);
+}
+
+public function pushToQbo(Customer $customer, QboSyncService $sync)
+{
+    if (! app(\App\Services\QuickBooksService::class)->isConnected()) {
+        return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
+    }
+
+    $result = $sync->pushCustomer($customer);
+
+    return back()->with(
+        $result['success'] ? 'success' : 'error',
+        $result['message']
+    );
 }
 
 }

@@ -320,6 +320,10 @@ Route::prefix('admin')
             ->middleware('role_or_permission:admin|edit customers')
             ->name('customers.sms-opt-out.toggle');
 
+        Route::post('customers/{customer}/push-to-qbo', [CustomerController::class, 'pushToQbo'])
+            ->middleware('role_or_permission:admin|edit customers')
+            ->name('customers.push-to-qbo');
+
         // Customer Contacts
         Route::post('customers/{customer}/contacts', [CustomerContactController::class, 'store'])
             ->middleware('role_or_permission:admin|edit customers')
