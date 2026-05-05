@@ -546,13 +546,15 @@ function parentCustomerTypeahead() {
 
             // Restore state after job site modal redirect
             const params = new URLSearchParams(window.location.search);
-            const savedId    = params.get('_parent_id');
-            const savedLabel = params.get('_parent_label');
+            const savedId      = params.get('_parent_id');
+            const savedLabel   = params.get('_parent_label');
+            const newJobSiteId = params.get('new_js_id') || null;
+            const savedPmId    = params.get('_pm_id') || null;
             if (savedId && savedLabel) {
                 this.selectedId    = savedId;
                 this.selectedLabel = decodeURIComponent(savedLabel);
                 this.query         = this.selectedLabel;
-                this.$nextTick(() => window.onParentCustomerSelected(savedId, this.selectedLabel));
+                this.$nextTick(() => window.onParentCustomerSelected(savedId, this.selectedLabel, newJobSiteId, savedPmId));
             }
         },
 
