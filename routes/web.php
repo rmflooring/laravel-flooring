@@ -608,6 +608,13 @@ Route::prefix('pages')
     ->middleware(['auth', 'verified'])
     ->name('pages.')
     ->group(function () {
+        // Opportunity API (static routes before the {opportunity} wildcard)
+        Route::get('opportunities/api/parent-customers', [OpportunityController::class, 'searchParentCustomers'])
+            ->name('opportunities.api.parent-customers.search');
+        Route::post('opportunities/api/parent-customers', [OpportunityController::class, 'storeParentCustomer'])
+            ->middleware('role_or_permission:admin|create customers')
+            ->name('opportunities.api.parent-customers.store');
+
         Route::resource('opportunities', OpportunityController::class);
         Route::post('opportunities/{opportunity}/deactivate', [OpportunityController::class, 'deactivate'])
             ->name('opportunities.deactivate');

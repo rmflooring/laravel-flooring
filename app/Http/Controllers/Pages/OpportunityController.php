@@ -173,6 +173,60 @@ $employees = Employee::query()
     return response()->json($pms);
 }
 
+    public function searchParentCustomers(Request $request)
+    {
+        $q = $request->input('q', '');
+
+        $customers = Customer::whereNull('parent_id')
+            ->where(function ($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                      ->orWhere('company_name', 'like', "%{$q}%");
+            })
+            ->orderBy('company_name')
+            ->orderBy('name')
+            ->limit(25)
+            ->get(['id', 'name', 'company_name']);
+
+        return response()->json($customers->map(fn($c) => [
+            'id'    => $c->id,
+            'label' => $c->company_name ?: $c->name,
+        ]));
+    }
+
+    public function storeParentCustomer(Request $request)
+    {
+        $validated = $request->validate([
+            'name'            => 'nullable|string|max:255',
+            'company_name'    => 'nullable|string|max:255',
+            'email'           => 'nullable|email|max:255',
+            'phone'           => 'nullable|string|max:50',
+            'mobile'          => 'nullable|string|max:50',
+            'customer_type'   => 'nullable|string|in:individual,company,restoration,builder,property_manager',
+            'customer_status' => 'nullable|string|in:Active,Inactive,Archived',
+        ]);
+
+        if (empty($validated['name']) && empty($validated['company_name'])) {
+            return response()->json(['error' => 'Either Name or Company Name is required.'], 422);
+        }
+
+        $customer = Customer::create([
+            'parent_id'       => null,
+            'name'            => $validated['name'] ?? null,
+            'company_name'    => $validated['company_name'] ?? null,
+            'email'           => $validated['email'] ?? null,
+            'phone'           => $validated['phone'] ?? null,
+            'mobile'          => $validated['mobile'] ?? null,
+            'customer_type'   => $validated['customer_type'] ?? 'individual',
+            'customer_status' => $validated['customer_status'] ?? 'Active',
+            'created_by'      => auth()->id(),
+        ]);
+
+        return response()->json([
+            'id'    => $customer->id,
+            'label' => $customer->company_name ?: $customer->name,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
