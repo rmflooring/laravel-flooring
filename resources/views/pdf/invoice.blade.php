@@ -75,6 +75,7 @@
     $city        = $settings['branding_city'] ?? '';
     $province    = $settings['branding_province'] ?? '';
     $postal      = $settings['branding_postal'] ?? '';
+    $gstNumber   = $settings['branding_gst_number'] ?? '';
 
     $statusLabel = match($invoice->status) {
         'draft'          => 'DRAFT',
@@ -117,6 +118,9 @@
                 <div style="margin-top:2px; font-size:10px; color:#555;">
                     {{ $phone }}{{ $phone && $email ? ' · ' : '' }}{{ $email }}
                 </div>
+            @endif
+            @if($gstNumber)
+                <div style="margin-top:2px; font-size:10px; color:#555;">GST #: {{ $gstNumber }}</div>
             @endif
         </div>
         <div style="display:table-cell; vertical-align:top; text-align:right;">

@@ -22,6 +22,7 @@ class BrandingController extends Controller
             'email'           => Setting::get('branding_email', ''),
             'website'         => Setting::get('branding_website', ''),
             'logo_path'       => Setting::get('branding_logo_path', ''),
+            'gst_number'      => Setting::get('branding_gst_number', ''),
         ]);
     }
 
@@ -37,6 +38,7 @@ class BrandingController extends Controller
             'phone'        => ['nullable', 'string', 'max:50'],
             'email'        => ['nullable', 'email', 'max:120'],
             'website'      => ['nullable', 'string', 'max:120'],
+            'gst_number'   => ['nullable', 'string', 'max:50'],
         ]);
 
         Setting::set('branding_company_name', $request->input('company_name'));
@@ -48,6 +50,7 @@ class BrandingController extends Controller
         Setting::set('branding_phone',        $request->input('phone', ''));
         Setting::set('branding_email',        $request->input('email', ''));
         Setting::set('branding_website',      $request->input('website', ''));
+        Setting::set('branding_gst_number',   $request->input('gst_number', ''));
 
         return back()->with('success', 'Branding settings saved.');
     }

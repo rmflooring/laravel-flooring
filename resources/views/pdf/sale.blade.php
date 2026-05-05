@@ -164,6 +164,7 @@
         $brandEmail   = Setting::get('branding_email', '');
         $brandWebsite = Setting::get('branding_website', '');
         $logoPath     = Setting::get('branding_logo_path', '');
+        $brandGst     = Setting::get('branding_gst_number', '');
         $logoData     = null;
         $logoMime     = 'image/png';
         if ($logoPath) {
@@ -187,12 +188,13 @@
                     <div class="company-sub">{{ $brandTagline }}</div>
                 @endif
             @endif
-            @if ($brandAddress || $brandPhone || $brandWebsite)
+            @if ($brandAddress || $brandPhone || $brandWebsite || $brandGst)
                 <div class="company-sub" style="margin-top: 4px;">
                     @if ($brandAddress) {{ $brandAddress }}<br> @endif
                     @if ($brandPhone) {{ $brandPhone }} @endif
                     @if ($brandPhone && $brandWebsite)  &nbsp;|&nbsp;  @endif
                     @if ($brandWebsite) {{ $brandWebsite }} @endif
+                    @if ($brandGst) <br>GST #: {{ $brandGst }} @endif
                 </div>
             @endif
         </div>

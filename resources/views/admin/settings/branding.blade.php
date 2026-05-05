@@ -149,6 +149,15 @@
                                    placeholder="e.g. rmflooring.ca"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                         </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">GST Number</label>
+                            <input type="text" name="gst_number"
+                                   value="{{ old('gst_number', $gst_number) }}"
+                                   placeholder="e.g. 123456789 RT0001"
+                                   class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                            <p class="text-xs text-gray-400 mt-1">Printed on invoices, estimates, and sales PDFs.</p>
+                        </div>
                     </div>
 
                     <div class="pt-2">
