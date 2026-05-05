@@ -332,6 +332,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
 {
     $data = $request->validate([
         'parent_customer_name' => ['nullable', 'string', 'max:255'],
+        'customer_po'          => ['nullable', 'string', 'max:255'],
         'homeowner_name'       => ['nullable', 'string', 'max:255'],
         'homeowner_phone'      => ['nullable', 'string', 'max:50'],
         'homeowner_mobile'     => ['nullable', 'string', 'max:50'],
@@ -368,6 +369,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
         // 1) Header
         $sale->fill([
             'customer_name'      => $data['parent_customer_name'] ?? $sale->customer_name,
+            'customer_po'        => array_key_exists('customer_po', $data) ? ($data['customer_po'] ?? null) : $sale->customer_po,
             'homeowner_name'     => $data['homeowner_name'] ?? $sale->homeowner_name,
             'job_phone'          => $data['homeowner_phone'] ?? $sale->job_phone,
             'job_mobile'         => $data['homeowner_mobile'] ?? $sale->job_mobile,

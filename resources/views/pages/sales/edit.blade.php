@@ -175,6 +175,14 @@
     </div>
 
     <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Customer PO #</label>
+        <input type="text" name="customer_po"
+               value="{{ old('customer_po', $sale->customer_po) }}"
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+               placeholder="Customer PO number">
+    </div>
+
+    <div>
         <label class="block mb-1 text-sm font-medium text-gray-700">Project Manager (PM)</label>
         <input type="text" name="pm_name"
                value="{{ old('pm_name', $sale->pm_name) }}"

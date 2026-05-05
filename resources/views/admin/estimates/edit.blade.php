@@ -180,6 +180,17 @@
                placeholder="Restoration Company Name">
     </div>
 
+    <div id="customer-po-wrapper">
+        <label class="block mb-1 text-sm font-medium text-gray-700">
+            Customer PO #
+            <span id="customer-po-badge" class="ml-1 hidden text-xs font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">PO missing</span>
+        </label>
+        <input type="text" name="customer_po" id="customer_po"
+               value="{{ old('customer_po', $estimate->customer_po) }}"
+               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+               placeholder="Customer PO number">
+    </div>
+
     <div>
         <label class="block mb-1 text-sm font-medium text-gray-700">Project Manager (PM)</label>
         <input type="text" name="pm_name"
@@ -2154,6 +2165,46 @@
         if (!e.target.matches('input[name*="[order_qty]"]')) return;
         e.target.dataset.synced = 'false';
     });
+}());
+</script>
+
+<script>
+(function () {
+    var statusSelect = document.querySelector('select[name="status"]');
+    var poInput      = document.getElementById('customer_po');
+    var poBadge      = document.getElementById('customer-po-badge');
+    var estimateForm = document.querySelector('form[action*="estimates"]');
+
+    function updatePoState() {
+        if (!statusSelect || !poInput) return;
+        var isApproved = statusSelect.value === 'approved';
+        var poFilled   = poInput.value.trim() !== '';
+
+        if (isApproved && !poFilled) {
+            poInput.style.borderColor = '#f59e0b';
+            poInput.style.backgroundColor = '#fffbeb';
+            if (poBadge) poBadge.classList.remove('hidden');
+        } else {
+            poInput.style.borderColor = '';
+            poInput.style.backgroundColor = '';
+            if (poBadge) poBadge.classList.add('hidden');
+        }
+    }
+
+    if (statusSelect) statusSelect.addEventListener('change', updatePoState);
+    if (poInput)      poInput.addEventListener('input', updatePoState);
+    updatePoState();
+
+    if (estimateForm) {
+        estimateForm.addEventListener('submit', function (e) {
+            if (!statusSelect || !poInput) return;
+            if (statusSelect.value === 'approved' && poInput.value.trim() === '') {
+                if (!confirm('No Customer PO number has been entered. Do you want to continue saving?')) {
+                    e.preventDefault();
+                }
+            }
+        }, true);
+    }
 }());
 </script>
 

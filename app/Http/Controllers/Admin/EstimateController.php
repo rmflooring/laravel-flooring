@@ -464,7 +464,8 @@ public function update(Request $request, Estimate $estimate)
         'notes'                => ['nullable', 'string'],
         'condition_id'         => ['nullable', 'integer', 'exists:conditions,id'],
         'condition_body'       => ['nullable', 'string'],
-		'status' => ['required', 'in:draft,sent,revised,approved,rejected'],
+		'status'       => ['required', 'in:draft,sent,revised,approved,rejected'],
+		'customer_po'  => ['nullable', 'string', 'max:255'],
 
 		'homeowner_name'  => ['nullable', 'string', 'max:255'],
 		'homeowner_phone'  => ['nullable', 'string', 'max:255'],
@@ -619,6 +620,7 @@ if ($taxGroupId) {
         // 1) Update estimate header + totals
         $estimate->forceFill([
             'customer_name'      => $data['parent_customer_name'] ?? $estimate->customer_name,
+            'customer_po'        => array_key_exists('customer_po', $data) ? ($data['customer_po'] ?? null) : $estimate->customer_po,
             'pm_name'            => $data['pm_name'] ?? $estimate->pm_name,
 			'salesperson_1_employee_id' => $data['salesperson_1_employee_id'] ?? null,
 			'salesperson_2_employee_id' => $data['salesperson_2_employee_id'] ?? null,
@@ -993,6 +995,7 @@ public function apiStyles(Request $request)
             'pm_name'                   => $estimate->pm_name ?? null,
 
             'homeowner_name'            => $estimate->homeowner_name ?? null,
+            'customer_po'               => $estimate->customer_po ?? null,
             'job_phone'                 => $estimate->homeowner_phone ?? null,
             'job_email'                 => $estimate->homeowner_email ?? null,
 

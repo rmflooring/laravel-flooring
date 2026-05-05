@@ -14,6 +14,7 @@ class Estimate extends Model
         'estimate_number',
         'revision_no',
         'status',
+        'customer_po',
 
         'customer_name',
         'job_name',
