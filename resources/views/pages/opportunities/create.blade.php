@@ -132,14 +132,7 @@
 
                         <div class="lg:col-span-6">
                             <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h2 class="text-lg font-semibold">Parent Customer</h2>
-                                    <button type="button"
-                                            onclick="document.getElementById('create-parent-customer-modal').classList.remove('hidden')"
-                                            class="px-3 py-1.5 text-xs font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
-                                        + New Customer
-                                    </button>
-                                </div>
+                                <h2 class="text-lg font-semibold mb-3">Parent Customer</h2>
 
                                 <div x-data="parentCustomerTypeahead()" @click.outside="isOpen = false">
 
@@ -184,6 +177,15 @@
                                                 + Create New Parent Customer
                                             </button>
                                         </div>
+                                    </div>
+
+                                    {{-- Always-visible create link --}}
+                                    <div x-show="!selectedId" class="mt-2 text-right">
+                                        <button type="button"
+                                                onclick="document.getElementById('create-parent-customer-modal').classList.remove('hidden')"
+                                                class="text-sm text-blue-700 hover:underline font-medium">
+                                            + Create a new parent customer
+                                        </button>
                                     </div>
 
                                     {{-- Selected customer chip --}}
