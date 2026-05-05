@@ -42,7 +42,8 @@ class EstimateController extends Controller
                     ->orWhere('job_no', 'like', "%{$q}%")
                     ->orWhere('pm_name', 'like', "%{$q}%")
                     ->orWhereHas('opportunity.jobSiteCustomer', function ($js) use ($q) {
-                        $js->where('name', 'like', "%{$q}%");
+                        $js->where('name', 'like', "%{$q}%")
+                           ->orWhere('company_name', 'like', "%{$q}%");
                     });
             });
         })
