@@ -74,6 +74,10 @@ Route::post('/webhook/quickbooks', [\App\Http\Controllers\QuickBooksWebhookContr
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->name('webhook.quickbooks');
 
+// Public legal pages (no auth required — needed for QBO integration approval)
+Route::get('/legal/eula', fn () => view('legal.eula'))->name('legal.eula');
+Route::get('/legal/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
+
 // Dashboard (authenticated)
 Route::get('/dashboard', function () {
     return view('dashboard');
