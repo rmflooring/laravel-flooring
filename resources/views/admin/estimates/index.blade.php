@@ -152,7 +152,7 @@
                                         {{ $estimate->customer_name ?? '—' }}
                                     </td>
                                     <td class="px-6 py-4 text-gray-700">
-                                        {{ $estimate->opportunity?->jobSiteCustomer?->name ?? '—' }}
+                                        {{ $estimate->opportunity?->jobSiteCustomer?->name ?: ($estimate->opportunity?->jobSiteCustomer?->company_name ?? '—') }}
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-medium text-gray-900">{{ $estimate->job_name ?? '—' }}</div>
