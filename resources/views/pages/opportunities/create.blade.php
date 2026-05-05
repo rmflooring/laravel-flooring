@@ -791,6 +791,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ----- Callback invoked by Alpine when parent changes -----
     window.onParentCustomerSelected = function(parentId, parentLabel, preselectJobSiteId = null, preselectPmId = null) {
+        // Write directly to the hidden input so getParentId() reads correctly
+        // (Alpine's :value binding is async and won't have updated the DOM yet)
+        const hiddenInput = document.getElementById('parent_customer_id_input');
+        if (hiddenInput) hiddenInput.value = parentId || '';
+
         filterJobSites(preselectJobSiteId);
         loadProjectManagers(preselectPmId);
         syncModalParent(parentId, parentLabel);
