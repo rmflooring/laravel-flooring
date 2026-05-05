@@ -1401,6 +1401,9 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             Route::get('documents/{document}/pdf', [OpportunityDocumentController::class, 'downloadPdf'])
                 ->name('opportunities.documents.pdf');
 
+            Route::post('documents/{document}/send-email', [OpportunityDocumentController::class, 'sendEmail'])
+                ->name('opportunities.documents.send-email');
+
             // Flooring Sign-Off routes
             Route::get('sign-offs/create', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'create'])
                 ->name('opportunities.sign-offs.create');

@@ -10,6 +10,7 @@ use App\Models\OpportunityDocumentLabel;
 use App\Models\Sale;
 use App\Services\DocumentStorageService;
 use App\Services\DocumentTemplateService;
+use App\Services\GraphMailService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -502,9 +503,23 @@ public function index(Opportunity $opportunity, Request $request)
         abort_if($document->category !== 'generated_document', 404);
         abort_if(! $document->rendered_body, 404);
 
+        $opportunity->loadMissing(['jobSiteCustomer', 'projectManager', 'parentCustomer.contacts']);
+
         $template = DocumentTemplate::find($document->template_id);
 
-        return view('pages.opportunities.documents.show-generated', compact('opportunity', 'document', 'template'));
+        $jobSiteEmail     = $opportunity->jobSiteCustomer?->email;
+        $pmEmail          = $opportunity->projectManager?->email;
+        $customerContacts = $opportunity->parentCustomer?->contacts ?? collect();
+
+        $emailSubject = $document->original_name
+            . ($opportunity->job_no ? ' — Job #' . $opportunity->job_no : '');
+        $emailBody = 'Please find the attached document: ' . $document->original_name . '.';
+
+        return view('pages.opportunities.documents.show-generated', compact(
+            'opportunity', 'document', 'template',
+            'jobSiteEmail', 'pmEmail', 'customerContacts',
+            'emailSubject', 'emailBody',
+        ));
     }
 
     public function editGenerated(Opportunity $opportunity, OpportunityDocument $document)
@@ -574,6 +589,55 @@ public function index(Opportunity $opportunity, Request $request)
         return redirect()
             ->route('pages.opportunities.documents.show-generated', [$opportunity->id, $document->id])
             ->with('success', 'Document updated successfully.');
+    }
+
+    public function sendEmail(Request $request, Opportunity $opportunity, OpportunityDocument $document)
+    {
+        $this->assertBelongsToOpportunity($opportunity, $document);
+        abort_if($document->category !== 'generated_document', 404);
+        abort_if(! $document->rendered_body, 404);
+
+        $request->validate([
+            'to'      => ['required', 'email'],
+            'subject' => ['required', 'string', 'max:255'],
+            'body'    => ['required', 'string'],
+            'cc'      => ['nullable', 'array'],
+            'cc.*'    => ['nullable', 'email'],
+        ]);
+
+        $template = DocumentTemplate::find($document->template_id);
+        $sale     = $document->sale_id ? Sale::find($document->sale_id) : null;
+
+        $pdfContent = Pdf::loadView('pdf.document-template', [
+            'template'    => $template,
+            'body'        => $document->rendered_body,
+            'opportunity' => $opportunity,
+            'sale'        => $sale,
+        ])->setPaper('letter', 'portrait')->output();
+
+        $filename   = Str::slug($document->original_name) . '.pdf';
+        $attachment = [
+            'filename' => $filename,
+            'content'  => base64_encode($pdfContent),
+        ];
+
+        $user   = auth()->user();
+        $mailer = app(GraphMailService::class);
+        $cc     = array_filter($request->input('cc', []));
+
+        $sent = $user->microsoftAccount?->mail_connected
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null)
+            : false;
+
+        if (! $sent) {
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null);
+        }
+
+        if (! $sent) {
+            return back()->with('error', 'Failed to send email. Check the mail log for details.');
+        }
+
+        return back()->with('success', 'Document emailed to ' . $request->input('to') . '.');
     }
 
     public function downloadPdf(Opportunity $opportunity, OpportunityDocument $document)

@@ -521,6 +521,14 @@
                                                    class="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-200 dark:border-emerald-700 dark:bg-gray-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20">
                                                     Open
                                                 </a>
+                                                <a href="{{ route('pages.opportunities.documents.show-generated', [$opportunity->id, $doc->id]) }}#send"
+                                                   onclick="sessionStorage.setItem('openDocSendModal', '1')"
+                                                   class="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-200 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/40">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+                                                    </svg>
+                                                    Send
+                                                </a>
                                             @else
                                                 {{-- Legacy stored-PDF document --}}
                                                 <a href="{{ route('pages.opportunities.documents.reprint', [$opportunity->id, $doc->id]) }}"
