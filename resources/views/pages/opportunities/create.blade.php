@@ -473,12 +473,12 @@
                                 <div>
                                     <label class="block text-sm font-medium mb-1">Phone</label>
                                     <input type="text" id="pc_phone"
-                                           class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                           class="phone-input w-full border border-gray-300 rounded-lg p-2 text-sm">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium mb-1">Mobile</label>
                                     <input type="text" id="pc_mobile"
-                                           class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                           class="phone-input w-full border border-gray-300 rounded-lg p-2 text-sm">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium mb-1">Customer Type</label>
