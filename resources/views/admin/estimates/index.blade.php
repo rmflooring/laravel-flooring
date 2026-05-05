@@ -45,7 +45,7 @@
                                 </svg>
                             </div>
                             <input type="text" name="q" value="{{ $q }}"
-                                   placeholder="Estimate #, customer, job name, job #, PM..."
+                                   placeholder="Estimate #, customer, job site, job name, job #, PM..."
                                    class="block w-full pl-10 p-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
@@ -109,6 +109,7 @@
                                 <th class="px-6 py-3">
                                     @include('admin.partials.sort-link', ['label' => 'Customer', 'field' => 'customer_name'])
                                 </th>
+                                <th class="px-6 py-3">Job Site</th>
                                 <th class="px-6 py-3">
                                     @include('admin.partials.sort-link', ['label' => 'Job', 'field' => 'job_name'])
                                 </th>
@@ -149,6 +150,9 @@
                                     </td>
                                     <td class="px-6 py-4">
                                         {{ $estimate->customer_name ?? '—' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-700">
+                                        {{ $estimate->opportunity?->jobSiteCustomer?->name ?? '—' }}
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-medium text-gray-900">{{ $estimate->job_name ?? '—' }}</div>
@@ -204,7 +208,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-6 py-10 text-center text-gray-500">
+                                    <td colspan="9" class="px-6 py-10 text-center text-gray-500">
                                         No estimates found.
                                     </td>
                                 </tr>

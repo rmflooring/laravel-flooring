@@ -33,14 +33,17 @@ class EstimateController extends Controller
     ];
 
     $estimatesQuery = Estimate::query()
-        ->with(['sale:id,source_estimate_id'])
+        ->with(['sale:id,source_estimate_id', 'opportunity.jobSiteCustomer:id,name'])
         ->when($q !== '', function ($query) use ($q) {
             $query->where(function ($sub) use ($q) {
                 $sub->where('estimate_number', 'like', "%{$q}%")
                     ->orWhere('customer_name', 'like', "%{$q}%")
                     ->orWhere('job_name', 'like', "%{$q}%")
                     ->orWhere('job_no', 'like', "%{$q}%")
-                    ->orWhere('pm_name', 'like', "%{$q}%");
+                    ->orWhere('pm_name', 'like', "%{$q}%")
+                    ->orWhereHas('opportunity.jobSiteCustomer', function ($js) use ($q) {
+                        $js->where('name', 'like', "%{$q}%");
+                    });
             });
         })
         ->when($status !== '', fn($query) => $query->where('status', $status))
