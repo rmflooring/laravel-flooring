@@ -463,6 +463,88 @@ class QboSyncService
         }
     }
 
+    /**
+     * Push an InvoicePayment to QBO. The linked invoice must already have a qbo_id.
+     */
+    public function pushPayment(\App\Models\InvoicePayment $payment): array
+    {
+        try {
+            $payment->load(['invoice.sale.opportunity.jobSiteCustomer.parent', 'invoice.sale.opportunity.parentCustomer']);
+
+            $invoice     = $payment->invoice;
+            $sale        = $invoice->sale;
+            $opportunity = $sale?->opportunity;
+            $jobSite     = $opportunity?->jobSiteCustomer;
+            $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
+            $billTo      = $jobSite ?? $parent;
+
+            if (! $invoice->qbo_id) {
+                return ['success' => false, 'message' => 'Invoice must be synced to QBO before pushing a payment.'];
+            }
+
+            if (! $billTo?->qbo_id) {
+                return ['success' => false, 'message' => 'Customer must be synced to QBO before pushing a payment.'];
+            }
+
+            $payload = [
+                'CustomerRef' => ['value' => $billTo->qbo_id],
+                'TotalAmt'    => (float) $payment->amount,
+                'TxnDate'     => $payment->payment_date->toDateString(),
+                'Line'        => [[
+                    'Amount'    => (float) $payment->amount,
+                    'LinkedTxn' => [[
+                        'TxnId'   => $invoice->qbo_id,
+                        'TxnType' => 'Invoice',
+                    ]],
+                ]],
+            ];
+
+            $methodId = $this->mapPaymentMethod($payment->payment_method);
+            if ($methodId) {
+                $payload['PaymentMethodRef'] = ['value' => $methodId];
+            }
+
+            if ($payment->qbo_id) {
+                $payload['Id']        = $payment->qbo_id;
+                $payload['SyncToken'] = '0';
+                $response   = $this->qbo->post('payment', $payload);
+                $qboPayment = $response['Payment'];
+                $action     = 'updated';
+            } else {
+                $response   = $this->qbo->post('payment', $payload);
+                $qboPayment = $response['Payment'];
+                $action     = 'created';
+            }
+
+            $payment->update([
+                'qbo_id'        => $qboPayment['Id'],
+                'qbo_synced_at' => now(),
+            ]);
+
+            $this->qbo->log('payment', $payment->id, 'push', 'success', $qboPayment['Id'],
+                ucfirst($action) . ' payment in QBO', $payload, $qboPayment);
+
+            return ['success' => true, 'message' => 'Payment ' . $action . ' in QuickBooks.'];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('payment', $payment->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    private function mapPaymentMethod(string $method): ?string
+    {
+        return match ($method) {
+            'cash'                  => '16',
+            'cheque'                => '17',
+            'e-transfer'            => '1000000001',
+            'visa'                  => '20',
+            'mastercard'            => '19',
+            'other', 'credit_card'  => '21',
+            default                 => null,
+        };
+    }
+
     // =========================================================================
     // Webhook handlers (QBO → FM)
     // =========================================================================

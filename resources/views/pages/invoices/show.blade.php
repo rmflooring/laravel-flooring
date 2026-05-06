@@ -296,6 +296,16 @@
                             <td class="px-5 py-3 text-right font-semibold text-green-700 dark:text-green-400">${{ number_format((float)$payment->amount, 2) }}</td>
                             <td class="px-5 py-3 text-right">
                                 <div class="flex items-center justify-end gap-3">
+                                    @if(app(\App\Services\QuickBooksService::class)->isConnected())
+                                        @if($payment->qbo_id)
+                                            <span class="text-xs text-green-600 dark:text-green-400" title="Synced to QBO {{ $payment->qbo_synced_at?->format('M j, Y') }}">QBO ✓</span>
+                                        @else
+                                            <form method="POST" action="{{ route('pages.sales.invoices.payments.push-to-qbo', [$sale, $invoice, $payment]) }}">
+                                                @csrf
+                                                <button type="submit" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline">Push to QBO</button>
+                                            </form>
+                                        @endif
+                                    @endif
                                     @role('admin')
                                         <a href="{{ route('admin.payments.show', $payment) }}"
                                            class="text-xs text-blue-600 hover:underline">View</a>

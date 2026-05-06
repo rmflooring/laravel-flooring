@@ -10,8 +10,9 @@ class InvoicePayment extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'amount'       => 'decimal:2',
-        'payment_date' => 'date',
+        'amount'         => 'decimal:2',
+        'payment_date'   => 'date',
+        'qbo_synced_at'  => 'datetime',
     ];
 
     public const PAYMENT_METHODS = [

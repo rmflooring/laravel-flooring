@@ -206,11 +206,21 @@ class InvoiceController extends Controller
         $data['invoice_id']   = $invoice->id;
         $data['recorded_by']  = Auth::id();
 
-        InvoicePayment::create($data);
+        $payment = InvoicePayment::create($data);
 
         $this->service->recalculateAfterPayment($invoice);
 
+        if ($invoice->qbo_id && app(\App\Services\QuickBooksService::class)->isConnected()) {
+            app(\App\Services\QboSyncService::class)->pushPayment($payment);
+        }
+
         return back()->with('success', 'Payment recorded.');
+    }
+
+    public function pushPaymentToQbo(Sale $sale, Invoice $invoice, InvoicePayment $payment)
+    {
+        $result = app(\App\Services\QboSyncService::class)->pushPayment($payment);
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     public function destroyPayment(Sale $sale, Invoice $invoice, InvoicePayment $payment)
