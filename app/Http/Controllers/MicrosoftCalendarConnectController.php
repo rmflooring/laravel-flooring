@@ -348,12 +348,6 @@ $params = [
 
 // NO FILTER — Graph does not support filtering by calendarId
 
-Log::error('Microsoft syncNow request debug', [
-    'calendar_name' => $cal->name,
-    'url' => $baseUrl,
-    'params' => $params,
-]);
-
 $resp = Http::withToken($accessToken)
     ->acceptJson()
     ->get($baseUrl, $params);
