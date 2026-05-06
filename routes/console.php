@@ -49,16 +49,28 @@ Schedule::call(function () {
     })->get();
 
     foreach ($users as $user) {
-        // Fake a request for THIS user, so syncNow() uses their Microsoft account + enabled calendars
         \Log::info('Auto-sync starting', ['user_id' => $user->id]);
 
         try {
+            $account = $user->microsoftAccount;
+
+            // Check enabled calendars before invoking syncNow so we can log the skip reason
+            $enabledCount = \App\Models\MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                ->where('is_enabled', true)
+                ->count();
+
+            if ($enabledCount === 0) {
+                \Log::info('Auto-sync skipped — no enabled calendars', ['user_id' => $user->id]);
+                continue;
+            }
+
             $request = Request::create('/settings/integrations/microsoft/sync-now', 'POST');
             $request->setUserResolver(fn () => $user);
 
             app(MicrosoftCalendarConnectController::class)->syncNow($request);
+
+            \Log::info('Auto-sync completed', ['user_id' => $user->id]);
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            // Token was encrypted with a different APP_KEY — mark account as disconnected
             \Log::warning('Auto-sync: could not decrypt tokens for user, disconnecting account', [
                 'user_id' => $user->id,
                 'error'   => $e->getMessage(),
