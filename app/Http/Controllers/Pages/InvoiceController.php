@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\InvoicePayment;
+use App\Models\InvoiceRoom;
 use App\Models\PaymentTerm;
 use App\Models\Sale;
 use App\Models\Setting;
@@ -118,10 +120,9 @@ class InvoiceController extends Controller
 
     public function edit(Sale $sale, Invoice $invoice)
     {
-
-        if ($invoice->status === 'voided') {
+        if (! in_array($invoice->status, ['draft', 'sent'])) {
             return redirect()->route('pages.sales.invoices.show', [$sale, $invoice])
-                ->with('error', 'Voided invoices cannot be edited.');
+                ->with('error', 'Only draft or sent invoices can be edited.');
         }
 
         $invoice->load(['rooms.items', 'paymentTerm']);
@@ -132,30 +133,100 @@ class InvoiceController extends Controller
 
     public function update(Request $request, Sale $sale, Invoice $invoice)
     {
-
-        if ($invoice->status === 'voided') {
-            return back()->with('error', 'Voided invoices cannot be edited.');
+        if (! in_array($invoice->status, ['draft', 'sent'])) {
+            return back()->with('error', 'Only draft or sent invoices can be edited.');
         }
 
-        $data = $request->validate([
-            'payment_term_id'    => ['nullable', 'exists:payment_terms,id'],
-            'due_date'           => ['nullable', 'date'],
-            'customer_po_number' => ['nullable', 'string', 'max:100'],
-            'notes'              => ['nullable', 'string', 'max:2000'],
-            'status'             => ['nullable', 'in:draft,sent,paid,overdue,partially_paid,voided'],
+        $request->validate([
+            'status'                             => ['required', 'in:draft,sent'],
+            'payment_term_id'                    => ['nullable', 'exists:payment_terms,id'],
+            'due_date'                           => ['nullable', 'date'],
+            'customer_po_number'                 => ['nullable', 'string', 'max:100'],
+            'notes'                              => ['nullable', 'string', 'max:2000'],
+            'rooms'                              => ['nullable', 'array'],
+            'rooms.*.name'                       => ['required', 'string', 'max:255'],
+            'rooms.*.items'                      => ['nullable', 'array'],
+            'rooms.*.items.*.item_type'          => ['required', 'in:material,labour,freight'],
+            'rooms.*.items.*.label'              => ['required', 'string', 'max:500'],
+            'rooms.*.items.*.quantity'           => ['required', 'numeric', 'min:0'],
+            'rooms.*.items.*.unit'               => ['nullable', 'string', 'max:20'],
+            'rooms.*.items.*.sell_price'         => ['required', 'numeric', 'min:0'],
         ]);
 
-        if (($data['status'] ?? null) === 'voided' && $invoice->status !== 'voided') {
-            $data['voided_at']   = now();
-            $data['void_reason'] = $request->input('void_reason');
+        $invoice->update([
+            'status'             => $request->status,
+            'payment_term_id'    => $request->payment_term_id,
+            'due_date'           => $request->due_date,
+            'customer_po_number' => $request->customer_po_number,
+            'notes'              => $request->notes,
+        ]);
+
+        $taxRate        = (float) ($sale->tax_rate_percent ?? 0) / 100;
+        $submittedRoomIds = [];
+        $subtotal       = 0;
+
+        foreach ($request->input('rooms', []) as $ri => $roomData) {
+            $roomId = $roomData['id'] ?? null;
+
+            if ($roomId && $room = InvoiceRoom::where('id', $roomId)->where('invoice_id', $invoice->id)->first()) {
+                $room->update(['name' => $roomData['name'], 'sort_order' => $ri]);
+            } else {
+                $room = InvoiceRoom::create([
+                    'invoice_id' => $invoice->id,
+                    'name'       => $roomData['name'],
+                    'sort_order' => $ri,
+                ]);
+            }
+
+            $submittedRoomIds[] = $room->id;
+            $submittedItemIds   = [];
+
+            foreach ($roomData['items'] ?? [] as $ii => $itemData) {
+                $lineTotal = round((float) $itemData['quantity'] * (float) $itemData['sell_price'], 2);
+                $taxAmount = round($lineTotal * $taxRate, 2);
+
+                $payload = [
+                    'invoice_id'      => $invoice->id,
+                    'invoice_room_id' => $room->id,
+                    'item_type'       => $itemData['item_type'],
+                    'label'           => $itemData['label'],
+                    'quantity'        => $itemData['quantity'],
+                    'unit'            => $itemData['unit'] ?? null,
+                    'sell_price'      => $itemData['sell_price'],
+                    'line_total'      => $lineTotal,
+                    'tax_rate'        => $sale->tax_rate_percent ?? 0,
+                    'tax_amount'      => $taxAmount,
+                    'tax_group_id'    => $sale->tax_group_id,
+                    'sort_order'      => $ii,
+                ];
+
+                $itemId = $itemData['id'] ?? null;
+                if ($itemId && $item = InvoiceItem::where('id', $itemId)->where('invoice_room_id', $room->id)->first()) {
+                    $item->update($payload);
+                } else {
+                    $item = InvoiceItem::create($payload);
+                }
+
+                $submittedItemIds[] = $item->id;
+                $subtotal += $lineTotal;
+            }
+
+            $room->items()->whereNotIn('id', $submittedItemIds)->delete();
         }
 
-        $invoice->update($data);
+        $invoice->rooms()->whereNotIn('id', $submittedRoomIds)->delete();
 
-        // If voided, sync sale status
-        if (($data['status'] ?? null) === 'voided') {
-            $this->service->syncSaleInvoiceStatus($sale);
-        }
+        $taxTotal   = round($subtotal * $taxRate, 2);
+        $grandTotal = round($subtotal + $taxTotal, 2);
+
+        $invoice->update([
+            'subtotal'    => round($subtotal, 2),
+            'tax_amount'  => $taxTotal,
+            'grand_total' => $grandTotal,
+        ]);
+
+        $this->service->recalculateAfterPayment($invoice);
+        $this->service->syncSaleInvoiceStatus($sale);
 
         return redirect()->route('pages.sales.invoices.show', [$sale, $invoice])
             ->with('success', 'Invoice updated.');
