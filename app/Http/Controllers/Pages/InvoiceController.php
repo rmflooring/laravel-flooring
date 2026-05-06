@@ -98,6 +98,7 @@ class InvoiceController extends Controller
     {
 
         $invoice->load(['rooms.items', 'payments.recordedBy', 'payments.salePayment', 'paymentTerm']);
+        $sale->load(['opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
 
         $paymentMethods = InvoicePayment::PAYMENT_METHODS;
 

@@ -139,6 +139,46 @@
             </div>
         </div>
 
+        {{-- Customer info --}}
+        @php
+            $parentCustomer  = $sale->opportunity?->parentCustomer;
+            $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+        @endphp
+        @if($parentCustomer || $jobSiteCustomer)
+            <div class="mt-5 pt-5 border-t border-gray-200 dark:border-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                @if($parentCustomer)
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Bill To</div>
+                        <div class="font-medium text-gray-900 dark:text-white">{{ $parentCustomer->company_name ?: $parentCustomer->name }}</div>
+                        @if($parentCustomer->company_name && $parentCustomer->name !== $parentCustomer->company_name)
+                            <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->name }}</div>
+                        @endif
+                        @if($parentCustomer->email)
+                            <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->email }}</div>
+                        @endif
+                        @if($parentCustomer->phone)
+                            <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->phone }}</div>
+                        @endif
+                    </div>
+                @endif
+                @if($jobSiteCustomer)
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Job Site</div>
+                        <div class="font-medium text-gray-900 dark:text-white">{{ $jobSiteCustomer->name }}</div>
+                        @if($sale->job_address)
+                            <div class="text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $sale->job_address }}</div>
+                        @endif
+                        @if($sale->job_phone)
+                            <div class="text-gray-500 dark:text-gray-400">{{ $sale->job_phone }}</div>
+                        @endif
+                        @if($sale->job_email)
+                            <div class="text-gray-500 dark:text-gray-400">{{ $sale->job_email }}</div>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        @endif
+
         @if($invoice->notes)
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400">
                 {{ $invoice->notes }}
