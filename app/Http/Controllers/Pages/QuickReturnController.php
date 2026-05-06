@@ -195,7 +195,7 @@ class QuickReturnController extends Controller
             ->with('customer')
             ->orderByRaw("CAST(sale_number AS UNSIGNED) DESC")
             ->limit(10)
-            ->get(['id', 'sale_number', 'homeowner_name', 'customer_name', 'job_name', 'customer_id', 'is_quick_sale', 'created_at', 'status']);
+            ->get(['id', 'sale_number', 'homeowner_name', 'customer_name', 'job_name', 'customer_id', 'is_quick_sale', 'created_at', 'status', 'tax_rate_percent']);
 
         return response()->json($sales->map(fn ($s) => [
             'id'               => $s->id,
