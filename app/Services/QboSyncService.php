@@ -581,6 +581,12 @@ class QboSyncService
     {
         $lines = [];
 
+        // If any labour item has a value, the job is supply-and-install (service) — GST only on everything.
+        // Otherwise it's a materials-only sale — GST+PST BC on material/freight, GST on labour.
+        $hasLabour = $invoice->rooms->flatMap->items->contains(
+            fn($i) => $i->item_type === 'labour' && $i->line_total > 0
+        );
+
         foreach ($invoice->rooms as $room) {
             foreach ($room->items as $item) {
                 $itemId = match ($item->item_type) {
@@ -589,29 +595,27 @@ class QboSyncService
                     default   => $itemIds['material'],
                 };
 
+                // QBO Canada requires TaxCodeRef on every line.
+                // 39 = GST/PST BC, 37 = GST only, 25 = Exempt
+                $taxCodeId = match (true) {
+                    $item->tax_amount <= 0 => '25',
+                    $hasLabour             => '37',
+                    $item->item_type === 'labour' => '37',
+                    default                => '39',
+                };
+
                 $lines[] = [
                     'Amount'      => (float) $item->line_total,
                     'DetailType'  => 'SalesItemLineDetail',
                     'Description' => ($room->name ? $room->name . ' — ' : '') . $item->label,
                     'SalesItemLineDetail' => [
-                        'ItemRef'   => ['value' => $itemId],
-                        'Qty'       => (float) $item->quantity,
-                        'UnitPrice' => (float) $item->sell_price,
+                        'ItemRef'    => ['value' => $itemId],
+                        'Qty'        => (float) $item->quantity,
+                        'UnitPrice'  => (float) $item->sell_price,
+                        'TaxCodeRef' => ['value' => $taxCodeId],
                     ],
                 ];
             }
-        }
-
-        // Tax line — use material item
-        if ($invoice->tax_amount > 0) {
-            $lines[] = [
-                'Amount'      => (float) $invoice->tax_amount,
-                'DetailType'  => 'SalesItemLineDetail',
-                'Description' => 'Tax',
-                'SalesItemLineDetail' => [
-                    'ItemRef' => ['value' => $itemIds['material']],
-                ],
-            ];
         }
 
         $payload = [
