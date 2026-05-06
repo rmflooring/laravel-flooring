@@ -125,7 +125,7 @@ class InvoiceController extends Controller
                 ->with('error', 'Only draft or sent invoices can be edited.');
         }
 
-        $invoice->load(['rooms.items', 'paymentTerm']);
+        $invoice->load(['rooms' => fn ($q) => $q->orderBy('sort_order'), 'rooms.items' => fn ($q) => $q->orderBy('sort_order'), 'paymentTerm']);
         $paymentTerms = PaymentTerm::where('is_active', true)->orderBy('name')->get();
 
         return view('pages.invoices.edit', compact('sale', 'invoice', 'paymentTerms'));
@@ -138,19 +138,12 @@ class InvoiceController extends Controller
         }
 
         $request->validate([
-            'status'                             => ['required', 'in:draft,sent'],
-            'payment_term_id'                    => ['nullable', 'exists:payment_terms,id'],
-            'due_date'                           => ['nullable', 'date'],
-            'customer_po_number'                 => ['nullable', 'string', 'max:100'],
-            'notes'                              => ['nullable', 'string', 'max:2000'],
-            'rooms'                              => ['nullable', 'array'],
-            'rooms.*.name'                       => ['required', 'string', 'max:255'],
-            'rooms.*.items'                      => ['nullable', 'array'],
-            'rooms.*.items.*.item_type'          => ['required', 'in:material,labour,freight'],
-            'rooms.*.items.*.label'              => ['required', 'string', 'max:500'],
-            'rooms.*.items.*.quantity'           => ['required', 'numeric', 'min:0'],
-            'rooms.*.items.*.unit'               => ['nullable', 'string', 'max:20'],
-            'rooms.*.items.*.sell_price'         => ['required', 'numeric', 'min:0'],
+            'status'             => ['required', 'in:draft,sent'],
+            'payment_term_id'    => ['nullable', 'exists:payment_terms,id'],
+            'due_date'           => ['nullable', 'date'],
+            'customer_po_number' => ['nullable', 'string', 'max:100'],
+            'notes'              => ['nullable', 'string', 'max:2000'],
+            'rooms'              => ['nullable', 'array'],
         ]);
 
         $invoice->update([
@@ -161,46 +154,133 @@ class InvoiceController extends Controller
             'notes'              => $request->notes,
         ]);
 
-        $taxRate        = (float) ($sale->tax_rate_percent ?? 0) / 100;
+        $taxRate          = (float) ($sale->tax_rate_percent ?? 0) / 100;
         $submittedRoomIds = [];
-        $subtotal       = 0;
+        $subtotal         = 0;
 
         foreach ($request->input('rooms', []) as $ri => $roomData) {
-            $roomId = $roomData['id'] ?? null;
+            // Handle soft-deleted rooms (flag set by JS when existing room is removed)
+            if (($roomData['_delete'] ?? '0') === '1') {
+                if ($roomId = $roomData['id'] ?? null) {
+                    InvoiceRoom::where('id', $roomId)->where('invoice_id', $invoice->id)->delete();
+                }
+                continue;
+            }
+
+            $roomId   = $roomData['id'] ?? null;
+            $roomName = $roomData['room_name'] ?? $roomData['name'] ?? '';
 
             if ($roomId && $room = InvoiceRoom::where('id', $roomId)->where('invoice_id', $invoice->id)->first()) {
-                $room->update(['name' => $roomData['name'], 'sort_order' => $ri]);
+                $room->update(['name' => $roomName, 'sort_order' => $ri]);
             } else {
                 $room = InvoiceRoom::create([
                     'invoice_id' => $invoice->id,
-                    'name'       => $roomData['name'],
+                    'name'       => $roomName,
                     'sort_order' => $ri,
                 ]);
             }
 
             $submittedRoomIds[] = $room->id;
             $submittedItemIds   = [];
+            $sortOrder          = 0;
 
-            foreach ($roomData['items'] ?? [] as $ii => $itemData) {
-                $lineTotal = round((float) $itemData['quantity'] * (float) $itemData['sell_price'], 2);
-                $taxAmount = round($lineTotal * $taxRate, 2);
+            // ── Materials ────────────────────────────────────────────────────
+            foreach ($roomData['materials'] ?? [] as $mat) {
+                $parts = array_filter([
+                    trim($mat['product_type'] ?? ''),
+                    trim($mat['manufacturer'] ?? ''),
+                    trim($mat['style'] ?? ''),
+                    trim($mat['color_item_number'] ?? ''),
+                ]);
+                $label     = implode(' — ', $parts) ?: 'Material';
+                $qty       = (float) ($mat['quantity'] ?? 0);
+                $sell      = (float) ($mat['sell_price'] ?? 0);
+                $lineTotal = round($qty * $sell, 2);
 
                 $payload = [
                     'invoice_id'      => $invoice->id,
                     'invoice_room_id' => $room->id,
-                    'item_type'       => $itemData['item_type'],
-                    'label'           => $itemData['label'],
-                    'quantity'        => $itemData['quantity'],
-                    'unit'            => $itemData['unit'] ?? null,
-                    'sell_price'      => $itemData['sell_price'],
+                    'item_type'       => 'material',
+                    'label'           => $label,
+                    'quantity'        => $qty,
+                    'unit'            => $mat['unit'] ?? null,
+                    'sell_price'      => $sell,
                     'line_total'      => $lineTotal,
                     'tax_rate'        => $sale->tax_rate_percent ?? 0,
-                    'tax_amount'      => $taxAmount,
+                    'tax_amount'      => round($lineTotal * $taxRate, 2),
                     'tax_group_id'    => $sale->tax_group_id,
-                    'sort_order'      => $ii,
+                    'sort_order'      => $sortOrder++,
                 ];
 
-                $itemId = $itemData['id'] ?? null;
+                $itemId = $mat['id'] ?? null;
+                if ($itemId && $item = InvoiceItem::where('id', $itemId)->where('invoice_room_id', $room->id)->first()) {
+                    $item->update($payload);
+                } else {
+                    $item = InvoiceItem::create($payload);
+                }
+
+                $submittedItemIds[] = $item->id;
+                $subtotal += $lineTotal;
+            }
+
+            // ── Freight ──────────────────────────────────────────────────────
+            foreach ($roomData['freight'] ?? [] as $fr) {
+                $label     = trim($fr['freight_description'] ?? '') ?: 'Freight';
+                $qty       = (float) ($fr['quantity'] ?? 0);
+                $sell      = (float) ($fr['sell_price'] ?? 0);
+                $lineTotal = round($qty * $sell, 2);
+
+                $payload = [
+                    'invoice_id'      => $invoice->id,
+                    'invoice_room_id' => $room->id,
+                    'item_type'       => 'freight',
+                    'label'           => $label,
+                    'quantity'        => $qty,
+                    'unit'            => null,
+                    'sell_price'      => $sell,
+                    'line_total'      => $lineTotal,
+                    'tax_rate'        => $sale->tax_rate_percent ?? 0,
+                    'tax_amount'      => round($lineTotal * $taxRate, 2),
+                    'tax_group_id'    => $sale->tax_group_id,
+                    'sort_order'      => $sortOrder++,
+                ];
+
+                $itemId = $fr['id'] ?? null;
+                if ($itemId && $item = InvoiceItem::where('id', $itemId)->where('invoice_room_id', $room->id)->first()) {
+                    $item->update($payload);
+                } else {
+                    $item = InvoiceItem::create($payload);
+                }
+
+                $submittedItemIds[] = $item->id;
+                $subtotal += $lineTotal;
+            }
+
+            // ── Labour ───────────────────────────────────────────────────────
+            foreach ($roomData['labour'] ?? [] as $lab) {
+                $labType = trim($lab['labour_type'] ?? '');
+                $desc    = trim($lab['description'] ?? '');
+                $label   = ($labType && $desc) ? "{$labType} — {$desc}" : ($labType ?: ($desc ?: 'Labour'));
+                $qty       = (float) ($lab['quantity'] ?? 0);
+                $sell      = (float) ($lab['sell_price'] ?? 0);
+                $lineTotal = round($qty * $sell, 2);
+
+                $payload = [
+                    'invoice_id'      => $invoice->id,
+                    'invoice_room_id' => $room->id,
+                    'item_type'       => 'labour',
+                    'label'           => $label,
+                    'quantity'        => $qty,
+                    'unit'            => $lab['unit'] ?? null,
+                    'sell_price'      => $sell,
+                    'line_total'      => $lineTotal,
+                    'tax_rate'        => $sale->tax_rate_percent ?? 0,
+                    'tax_amount'      => round($lineTotal * $taxRate, 2),
+                    'tax_group_id'    => $sale->tax_group_id,
+                    'sort_order'      => $sortOrder++,
+                ];
+
+                $itemId = $lab['id'] ?? null;
                 if ($itemId && $item = InvoiceItem::where('id', $itemId)->where('invoice_room_id', $room->id)->first()) {
                     $item->update($payload);
                 } else {

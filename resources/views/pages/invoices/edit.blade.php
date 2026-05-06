@@ -1,62 +1,57 @@
 <x-app-layout>
-<div class="py-8">
-<div class="max-w-screen-xl mx-auto sm:px-6 lg:px-8 space-y-6">
+<div class="py-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-    <div class="flex items-center gap-3">
-        <a href="{{ route('pages.sales.invoices.show', [$sale, $invoice]) }}"
-            class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">&larr; Invoice {{ $invoice->invoice_number }}</a>
+    {{-- Page header --}}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Edit Invoice {{ $invoice->invoice_number }}</h1>
+            <p class="text-sm text-gray-600 mt-0.5">Sale #{{ $sale->sale_number }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('pages.sales.invoices.show', [$sale, $invoice]) }}"
+               class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                ← View Invoice
+            </a>
+            <button type="submit" form="invoice-edit-form"
+                    class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                Save Invoice
+            </button>
+        </div>
     </div>
 
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Invoice {{ $invoice->invoice_number }}</h1>
-
     @if (session('error'))
-        <div class="p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400">{{ session('error') }}</div>
+        <div class="p-4 text-sm text-red-800 rounded-lg bg-red-50">{{ session('error') }}</div>
     @endif
     @if ($errors->any())
-        <div class="p-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400">
+        <div class="p-4 text-sm text-red-800 rounded-lg bg-red-50">
             <ul class="list-disc list-inside space-y-1">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
         </div>
     @endif
 
-@php
-    $roomsJson = $invoice->rooms->map(fn($room) => [
-        'id'    => $room->id,
-        'name'  => $room->name,
-        'items' => $room->items->map(fn($item) => [
-            'id'         => $item->id,
-            'item_type'  => $item->item_type,
-            'label'      => $item->label,
-            'quantity'   => (float) $item->quantity,
-            'unit'       => $item->unit ?? '',
-            'sell_price' => (float) $item->sell_price,
-            'tax_rate'   => (float) $item->tax_rate,
-        ])->values()->all(),
-    ])->values()->all();
-    $taxRate = (float) ($sale->tax_rate_percent ?? 0);
-@endphp
+    {{-- Main form --}}
+    <form id="invoice-edit-form" method="POST" action="{{ route('pages.sales.invoices.update', [$sale, $invoice]) }}">
+    @csrf
+    @method('PUT')
 
-<div x-data="invoiceEditor({{ json_encode($roomsJson) }}, {{ $taxRate }})" x-init="init({{ json_encode($roomsJson) }})">
-<form action="{{ route('pages.sales.invoices.update', [$sale, $invoice]) }}" method="POST">
-    @csrf @method('PUT')
-
-    {{-- Header card --}}
-    <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 space-y-5 mb-6">
-        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Invoice Details</h2>
-
+    {{-- Invoice Details card --}}
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Invoice Details</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
             <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Status</label>
                 <select name="status"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                     <option value="draft" {{ old('status', $invoice->status) === 'draft' ? 'selected' : '' }}>Draft</option>
                     <option value="sent"  {{ old('status', $invoice->status) === 'sent'  ? 'selected' : '' }}>Sent</option>
                 </select>
             </div>
 
             <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Payment Terms</label>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Payment Terms</label>
                 <select name="payment_term_id" id="payment_term_id"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                     <option value="">— None —</option>
                     @foreach ($paymentTerms as $term)
                         <option value="{{ $term->id }}"
@@ -70,260 +65,876 @@
             </div>
 
             <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Due Date</label>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Due Date</label>
                 <input type="date" name="due_date" id="due_date"
                     value="{{ old('due_date', $invoice->due_date?->format('Y-m-d')) }}"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
             </div>
 
             <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Customer PO #</label>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Customer PO #</label>
                 <input type="text" name="customer_po_number"
                     value="{{ old('customer_po_number', $invoice->customer_po_number) }}"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
             </div>
 
             <div class="sm:col-span-2">
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Notes</label>
                 <textarea name="notes" rows="2"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">{{ old('notes', $invoice->notes) }}</textarea>
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">{{ old('notes', $invoice->notes) }}</textarea>
             </div>
+
         </div>
     </div>
 
     {{-- Rooms --}}
-    <template x-for="(room, ri) in rooms" :key="room._key">
-        <div class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 mb-4 overflow-hidden">
+    <div id="rooms-container" class="space-y-6">
 
-            {{-- Room header --}}
-            <div class="flex items-center gap-3 px-5 py-3 bg-blue-700">
-                <svg class="h-4 w-4 text-white flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.5L12 4l9 5.5V20H3V9.5z"/>
-                </svg>
-                <input type="hidden" :name="`rooms[${ri}][id]`" :value="room.id ?? ''">
-                <input :name="`rooms[${ri}][name]`" x-model="room.name"
-                    placeholder="Room name"
-                    class="flex-1 bg-transparent border-0 border-b border-blue-400 text-white placeholder-blue-300 text-sm font-semibold focus:outline-none focus:border-white py-0.5">
-                <button type="button" @click="removeRoom(ri)"
-                    class="ml-auto text-blue-200 hover:text-white flex-shrink-0"
-                    title="Remove room">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                </button>
+    @foreach ($invoice->rooms as $roomIndex => $room)
+    @php
+        $materials = $room->items->where('item_type', 'material')->values();
+        $freightItems = $room->items->where('item_type', 'freight')->values();
+        $labourItems  = $room->items->where('item_type', 'labour')->values();
+    @endphp
+
+    <div class="room-card w-full bg-white border border-gray-200 rounded-lg shadow-sm overflow-visible" data-room-index="{{ $roomIndex }}">
+
+        {{-- Room header --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+            <div class="flex items-center gap-3">
+                <h2 class="room-title text-lg font-semibold text-gray-900">Room {{ $roomIndex + 1 }}</h2>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" class="move-up {{ $roomIndex === 0 ? 'hidden' : '' }} inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">↑</button>
+                <button type="button" class="move-down {{ $roomIndex === $invoice->rooms->count() - 1 ? 'hidden' : '' }} inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">↓</button>
+                <button type="button" class="delete-room inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete Room</button>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-8">
+
+            {{-- Room name --}}
+            <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Room Name</label>
+                <input type="hidden" name="rooms[{{ $roomIndex }}][id]" value="{{ $room->id }}">
+                <input type="hidden" class="room-delete-flag" name="rooms[{{ $roomIndex }}][_delete]" value="0">
+                <input type="hidden" class="room-subtotal-materials-input" name="rooms[{{ $roomIndex }}][subtotal_materials]" value="{{ number_format((float)$room->items->where('item_type','material')->sum('line_total'), 2, '.', '') }}">
+                <input type="hidden" class="room-subtotal-freight-input"   name="rooms[{{ $roomIndex }}][subtotal_freight]"   value="{{ number_format((float)$room->items->where('item_type','freight')->sum('line_total'), 2, '.', '') }}">
+                <input type="hidden" class="room-subtotal-labour-input"    name="rooms[{{ $roomIndex }}][subtotal_labour]"    value="{{ number_format((float)$room->items->where('item_type','labour')->sum('line_total'), 2, '.', '') }}">
+                <input type="hidden" class="room-total-input"              name="rooms[{{ $roomIndex }}][room_total]"         value="{{ number_format((float)$room->items->sum('line_total'), 2, '.', '') }}">
+                <input type="text" name="rooms[{{ $roomIndex }}][room_name]"
+                    value="{{ old("rooms.$roomIndex.room_name", $room->name) }}"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    placeholder="e.g. Living Room">
             </div>
 
-            {{-- Items table --}}
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-xs uppercase text-gray-500 bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                        <th class="px-4 py-2 text-left w-28">Type</th>
-                        <th class="px-4 py-2 text-left">Description</th>
-                        <th class="px-4 py-2 text-center w-20">Qty</th>
-                        <th class="px-4 py-2 text-center w-20">Unit</th>
-                        <th class="px-4 py-2 text-right w-28">Unit Price</th>
-                        <th class="px-4 py-2 text-right w-28">Line Total</th>
-                        <th class="px-4 py-2 w-10"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    <template x-for="(item, ii) in room.items" :key="item._key">
-                        <tr>
-                            <td class="px-4 py-2">
-                                <input type="hidden" :name="`rooms[${ri}][items][${ii}][id]`" :value="item.id ?? ''">
-                                <select :name="`rooms[${ri}][items][${ii}][item_type]`" x-model="item.item_type"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                    <option value="material">Material</option>
-                                    <option value="labour">Labour</option>
-                                    <option value="freight">Freight</option>
-                                </select>
+            {{-- Materials --}}
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Materials</h3>
+                    <button type="button"
+                        class="add-material-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                        + Add Material Row
+                    </button>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+                    <table class="min-w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3">Product Type</th>
+                                <th class="px-3 py-3">Qty</th>
+                                <th class="px-3 py-3">Unit</th>
+                                <th class="px-3 py-3">Manufacturer</th>
+                                <th class="px-3 py-3">Style</th>
+                                <th class="px-3 py-3">Color / Item #</th>
+                                <th class="px-3 py-3">Sell</th>
+                                <th class="px-3 py-3 w-28 text-right">Total</th>
+                                <th class="px-3 py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="materials-tbody">
+                        @foreach ($materials as $i => $item)
+                        @php
+                            $qty  = (float)($item->quantity ?? 0);
+                            $sell = (float)($item->sell_price ?? 0);
+                            $line = (float)($item->line_total ?? ($qty * $sell));
+                        @endphp
+                        <tr class="bg-white border-t">
+                            <td class="px-3 py-2 relative">
+                                <input type="hidden" name="rooms[{{ $roomIndex }}][materials][{{ $i }}][id]" value="{{ $item->id }}">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][product_type]"
+                                    value="{{ old("rooms.$roomIndex.materials.$i.product_type", $item->label) }}"
+                                    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    autocomplete="off"
+                                    data-product-type-input>
+                                <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                    data-product-type-dropdown>
+                                    <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
+                                </div>
                             </td>
-                            <td class="px-4 py-2">
-                                <input :name="`rooms[${ri}][items][${ii}][label]`" x-model="item.label"
-                                    placeholder="Description"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <td class="px-3 py-2">
+                                <input type="number" step="0.01"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
+                                    value="{{ old("rooms.$roomIndex.materials.$i.quantity", $qty) }}"
+                                    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
                             </td>
-                            <td class="px-4 py-2">
-                                <input type="number" :name="`rooms[${ri}][items][${ii}][quantity]`" x-model="item.quantity"
-                                    min="0" step="0.01"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5 text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <td class="px-3 py-2">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][unit]"
+                                    value="{{ old("rooms.$roomIndex.materials.$i.unit", $item->unit ?? '') }}"
+                                    class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2">
                             </td>
-                            <td class="px-4 py-2">
-                                <input :name="`rooms[${ri}][items][${ii}][unit]`" x-model="item.unit"
-                                    placeholder="SF"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5 text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <td class="px-3 py-2 relative">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][manufacturer]"
+                                    value="{{ old("rooms.$roomIndex.materials.$i.manufacturer", '') }}"
+                                    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    autocomplete="off"
+                                    placeholder="Manufacturer"
+                                    data-manufacturer-input>
+                                <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                    data-manufacturer-dropdown>
+                                    <ul class="py-1 text-sm text-gray-700" data-manufacturer-options></ul>
+                                </div>
                             </td>
-                            <td class="px-4 py-2">
-                                <input type="number" :name="`rooms[${ri}][items][${ii}][sell_price]`" x-model="item.sell_price"
-                                    min="0" step="0.01"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5 text-right dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <td class="px-3 py-2 relative">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][style]"
+                                    value="{{ old("rooms.$roomIndex.materials.$i.style", '') }}"
+                                    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    autocomplete="off"
+                                    placeholder="Style"
+                                    data-style-input>
+                                <input type="hidden"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][product_line_id]"
+                                    class="js-product-line-id-input" value="">
+                                <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                    data-style-dropdown>
+                                    <ul class="py-1 text-sm text-gray-700" data-style-options></ul>
+                                </div>
                             </td>
-                            <td class="px-4 py-2 text-right font-medium text-gray-800 dark:text-gray-200"
-                                x-text="'$' + lineTotal(item).toFixed(2)"></td>
-                            <td class="px-4 py-2 text-center">
-                                <button type="button" @click="removeItem(ri, ii)"
-                                    class="text-red-400 hover:text-red-600">
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
+                            <td class="px-3 py-2 relative">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][color_item_number]"
+                                    value="{{ old("rooms.$roomIndex.materials.$i.color_item_number", '') }}"
+                                    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    autocomplete="off"
+                                    placeholder="Color / Item #"
+                                    data-color-input>
+                                <input type="hidden"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][product_style_id]"
+                                    class="js-product-style-id-input" value="">
+                                <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
+                                    data-color-dropdown>
+                                    <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="number" step="0.0001"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][sell_price]"
+                                    value="{{ old("rooms.$roomIndex.materials.$i.sell_price", number_format($sell, 4, '.', '')) }}"
+                                    class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
+                            </td>
+                            <td class="px-3 py-2">
+                                <span class="line-total-display inline-block w-28 text-right font-medium">${{ number_format($line, 2) }}</span>
+                                <input type="hidden"
+                                    name="rooms[{{ $roomIndex }}][materials][{{ $i }}][line_total]"
+                                    value="{{ number_format($line, 2, '.', '') }}">
+                            </td>
+                            <td class="px-3 py-2">
+                                <button type="button" class="delete-material-row text-red-600 hover:underline">Delete</button>
                             </td>
                         </tr>
-                    </template>
-                </tbody>
-                <tfoot>
-                    <tr class="bg-gray-50 dark:bg-gray-700 text-sm">
-                        <td colspan="4" class="px-4 py-2">
-                            <button type="button" @click="addItem(ri)"
-                                class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium">
-                                + Add Item
-                            </button>
-                        </td>
-                        <td class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Room Subtotal</td>
-                        <td class="px-4 py-2 text-right font-bold text-gray-900 dark:text-white"
-                            x-text="'$' + roomSubtotal(ri).toFixed(2)"></td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </template>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
 
-    {{-- Add room button --}}
-    <div class="mb-6">
-        <button type="button" @click="addRoom()"
-            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-600 dark:hover:bg-gray-700">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Add Room
+                {{-- Material row template --}}
+                <template class="material-row-template">
+                    <tr class="bg-white border-t">
+                        <td class="px-3 py-2 relative">
+                            <input type="text"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][product_type]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Product Type"
+                                autocomplete="off"
+                                data-product-type-input>
+                            <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                data-product-type-dropdown>
+                                <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="number" step="0.01"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][quantity]"
+                                class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0">
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="text"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][unit]"
+                                class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="SF">
+                        </td>
+                        <td class="px-3 py-2 relative">
+                            <input type="text"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][manufacturer]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Manufacturer"
+                                autocomplete="off"
+                                data-manufacturer-input>
+                            <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                data-manufacturer-dropdown>
+                                <ul class="py-1 text-sm text-gray-700" data-manufacturer-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2 relative">
+                            <input type="text"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][style]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Style"
+                                autocomplete="off"
+                                data-style-input>
+                            <input type="hidden"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][product_line_id]"
+                                class="js-product-line-id-input" value="">
+                            <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                data-style-dropdown>
+                                <ul class="py-1 text-sm text-gray-700" data-style-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2 relative">
+                            <input type="text"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][color_item_number]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="Color / Item #"
+                                autocomplete="off"
+                                data-color-input>
+                            <input type="hidden"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][product_style_id]"
+                                class="js-product-style-id-input" value="">
+                            <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden"
+                                data-color-dropdown>
+                                <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="number" step="0.0001"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][sell_price]"
+                                class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0.00">
+                        </td>
+                        <td class="px-3 py-2">
+                            <span class="line-total-display inline-block w-28 text-right font-medium">$0.00</span>
+                            <input type="hidden"
+                                name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][line_total]"
+                                value="0">
+                        </td>
+                        <td class="px-3 py-2">
+                            <button type="button" class="delete-material-row text-red-600 hover:underline">Delete</button>
+                        </td>
+                    </tr>
+                </template>
+            </div>
+
+            {{-- Freight --}}
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Freight</h3>
+                    <button type="button"
+                        class="add-freight-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                        + Add Freight Row
+                    </button>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+                    <table class="min-w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3">Description</th>
+                                <th class="px-3 py-3">Qty</th>
+                                <th class="px-3 py-3">Sell</th>
+                                <th class="px-3 py-3 w-28 text-right">Total</th>
+                                <th class="px-3 py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="freight-tbody">
+                        @foreach ($freightItems as $i => $item)
+                        @php
+                            $qty  = (float)($item->quantity ?? 0);
+                            $sell = (float)($item->sell_price ?? 0);
+                            $line = (float)($item->line_total ?? ($qty * $sell));
+                        @endphp
+                        <tr class="bg-white border-t">
+                            <td class="px-3 py-2">
+                                <div class="relative">
+                                    <input type="hidden" name="rooms[{{ $roomIndex }}][freight][{{ $i }}][id]" value="{{ $item->id }}">
+                                    <input type="text"
+                                        name="rooms[{{ $roomIndex }}][freight][{{ $i }}][freight_description]"
+                                        value="{{ old("rooms.$roomIndex.freight.$i.freight_description", $item->label ?? '') }}"
+                                        class="w-80 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                        autocomplete="off"
+                                        data-freight-desc-input>
+                                    <div class="absolute z-50 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg hidden"
+                                        data-freight-desc-dropdown>
+                                        <ul class="max-h-56 overflow-auto p-1" data-freight-desc-options></ul>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="number" step="0.01"
+                                    name="rooms[{{ $roomIndex }}][freight][{{ $i }}][quantity]"
+                                    value="{{ old("rooms.$roomIndex.freight.$i.quantity", $qty) }}"
+                                    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="number" step="0.0001"
+                                    name="rooms[{{ $roomIndex }}][freight][{{ $i }}][sell_price]"
+                                    value="{{ old("rooms.$roomIndex.freight.$i.sell_price", number_format($sell, 4, '.', '')) }}"
+                                    class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
+                            </td>
+                            <td class="px-3 py-2">
+                                <span class="line-total-display inline-block w-28 text-right font-medium">${{ number_format($line, 2) }}</span>
+                                <input type="hidden"
+                                    name="rooms[{{ $roomIndex }}][freight][{{ $i }}][line_total]"
+                                    value="{{ number_format($line, 2, '.', '') }}">
+                            </td>
+                            <td class="px-3 py-2">
+                                <button type="button" class="delete-freight-row text-red-600 hover:underline">Delete</button>
+                            </td>
+                        </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Freight row template --}}
+                <template class="freight-row-template">
+                    <tr class="bg-white border-t">
+                        <td class="px-3 py-2">
+                            <div class="relative">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][freight_description]"
+                                    class="w-80 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    placeholder="Freight description"
+                                    autocomplete="off"
+                                    data-freight-desc-input>
+                                <div class="absolute z-50 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg hidden"
+                                    data-freight-desc-dropdown>
+                                    <ul class="max-h-56 overflow-auto p-1" data-freight-desc-options></ul>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="number" step="0.01"
+                                name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][quantity]"
+                                class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0">
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="number" step="0.0001"
+                                name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][sell_price]"
+                                class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0.00">
+                        </td>
+                        <td class="px-3 py-2">
+                            <span class="line-total-display inline-block w-28 text-right font-medium">$0.00</span>
+                            <input type="hidden"
+                                name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][line_total]"
+                                value="0">
+                        </td>
+                        <td class="px-3 py-2">
+                            <button type="button" class="delete-freight-row text-red-600 hover:underline">Delete</button>
+                        </td>
+                    </tr>
+                </template>
+            </div>
+
+            {{-- Labour --}}
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
+                    <button type="button"
+                        class="add-labour-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                        + Add Labour Row
+                    </button>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+                    <table class="min-w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3">Labour Type</th>
+                                <th class="px-3 py-3">Qty</th>
+                                <th class="px-3 py-3">Unit</th>
+                                <th class="px-3 py-3">Description</th>
+                                <th class="px-3 py-3">Sell</th>
+                                <th class="px-3 py-3 w-28 text-right">Total</th>
+                                <th class="px-3 py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="labour-tbody">
+                        @foreach ($labourItems as $i => $item)
+                        @php
+                            $qty  = (float)($item->quantity ?? 0);
+                            $sell = (float)($item->sell_price ?? 0);
+                            $line = (float)($item->line_total ?? ($qty * $sell));
+                        @endphp
+                        <tr class="bg-white border-t">
+                            <td class="px-3 py-2 overflow-visible">
+                                <div class="relative">
+                                    <input type="hidden" name="rooms[{{ $roomIndex }}][labour][{{ $i }}][id]" value="{{ $item->id }}">
+                                    <input type="text"
+                                        name="rooms[{{ $roomIndex }}][labour][{{ $i }}][labour_type]"
+                                        value="{{ old("rooms.$roomIndex.labour.$i.labour_type", '') }}"
+                                        class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                        autocomplete="off"
+                                        placeholder="Labour Type"
+                                        data-labour-type-input>
+                                    <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                        data-labour-type-dropdown>
+                                        <ul class="py-1 text-sm text-gray-700" data-labour-type-options></ul>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="number" step="0.01"
+                                    name="rooms[{{ $roomIndex }}][labour][{{ $i }}][quantity]"
+                                    value="{{ old("rooms.$roomIndex.labour.$i.quantity", $qty) }}"
+                                    class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][labour][{{ $i }}][unit]"
+                                    value="{{ old("rooms.$roomIndex.labour.$i.unit", $item->unit ?? '') }}"
+                                    class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    data-labour-unit-input>
+                            </td>
+                            <td class="px-3 py-2 overflow-visible">
+                                <div class="relative">
+                                    <input type="text"
+                                        name="rooms[{{ $roomIndex }}][labour][{{ $i }}][description]"
+                                        value="{{ old("rooms.$roomIndex.labour.$i.description", $item->label ?? '') }}"
+                                        class="w-64 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                        autocomplete="off"
+                                        data-labour-desc-input>
+                                    <div class="hidden absolute left-0 top-full z-50 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                        data-labour-desc-dropdown>
+                                        <ul class="py-1 text-sm text-gray-700" data-labour-desc-options></ul>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2">
+                                <input type="number" step="0.0001"
+                                    name="rooms[{{ $roomIndex }}][labour][{{ $i }}][sell_price]"
+                                    value="{{ old("rooms.$roomIndex.labour.$i.sell_price", number_format($sell, 4, '.', '')) }}"
+                                    class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
+                            </td>
+                            <td class="px-3 py-2">
+                                <span class="line-total-display inline-block w-28 text-right font-medium">${{ number_format($line, 2) }}</span>
+                                <input type="hidden"
+                                    name="rooms[{{ $roomIndex }}][labour][{{ $i }}][line_total]"
+                                    value="{{ number_format($line, 2, '.', '') }}">
+                            </td>
+                            <td class="px-3 py-2">
+                                <button type="button" class="delete-labour-row text-red-600 hover:underline">Delete</button>
+                            </td>
+                        </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Labour row template --}}
+                <template class="labour-row-template">
+                    <tr class="bg-white border-t">
+                        <td class="px-3 py-2 overflow-visible">
+                            <div class="relative">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][labour_type]"
+                                    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    placeholder="Labour Type"
+                                    autocomplete="off"
+                                    data-labour-type-input>
+                                <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                    data-labour-type-dropdown>
+                                    <ul class="py-1 text-sm text-gray-700" data-labour-type-options></ul>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="number" step="0.01"
+                                name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][quantity]"
+                                class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0">
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="text"
+                                name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][unit]"
+                                class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="SF"
+                                data-labour-unit-input>
+                        </td>
+                        <td class="px-3 py-2 overflow-visible">
+                            <div class="relative">
+                                <input type="text"
+                                    name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][description]"
+                                    class="w-64 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                    placeholder="Description"
+                                    autocomplete="off"
+                                    data-labour-desc-input>
+                                <div class="hidden absolute left-0 top-full z-50 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto"
+                                    data-labour-desc-dropdown>
+                                    <ul class="py-1 text-sm text-gray-700" data-labour-desc-options></ul>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2">
+                            <input type="number" step="0.0001"
+                                name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][sell_price]"
+                                class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
+                                placeholder="0.00">
+                        </td>
+                        <td class="px-3 py-2">
+                            <span class="line-total-display inline-block w-28 text-right font-medium">$0.00</span>
+                            <input type="hidden"
+                                name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][line_total]"
+                                value="0">
+                        </td>
+                        <td class="px-3 py-2">
+                            <button type="button" class="delete-labour-row text-red-600 hover:underline">Delete</button>
+                        </td>
+                    </tr>
+                </template>
+            </div>
+
+            {{-- Room summary --}}
+            <div class="border-t pt-4 mt-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="room-material-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Material Total</p>
+                        <p class="room-material-value text-lg font-semibold text-gray-900">${{ number_format((float)$room->items->where('item_type','material')->sum('line_total'), 2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="room-freight-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Freight Total</p>
+                        <p class="room-freight-value text-lg font-semibold text-gray-900">${{ number_format((float)$room->items->where('item_type','freight')->sum('line_total'), 2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="room-labour-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Labour Total</p>
+                        <p class="room-labour-value text-lg font-semibold text-gray-900">${{ number_format((float)$room->items->where('item_type','labour')->sum('line_total'), 2) }}</p>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <p class="room-total-label text-xs text-gray-500">Room {{ $roomIndex + 1 }} Total</p>
+                        <p class="room-total-value text-lg font-bold text-gray-900">${{ number_format((float)$room->items->sum('line_total'), 2) }}</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    @endforeach
+
+    </div>{{-- end #rooms-container --}}
+
+    {{-- Add Room button --}}
+    <div class="mt-4">
+        <button type="button" id="add-room-btn"
+            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+            + Add Room
         </button>
     </div>
 
-    {{-- Totals --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700 p-5 mb-6">
-        <div class="flex flex-col items-end gap-1 text-sm">
-            <div class="flex gap-8 text-gray-600 dark:text-gray-300">
+    {{-- Invoice totals --}}
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mt-6">
+        <div class="flex flex-col items-end gap-2 text-sm max-w-xs ml-auto">
+            <div class="flex justify-between w-full text-gray-600">
                 <span>Subtotal</span>
-                <span class="w-32 text-right" x-text="'$' + subtotal().toFixed(2)"></span>
+                <span class="invoice-subtotal-value font-medium">${{ number_format((float)$invoice->subtotal, 2) }}</span>
             </div>
-            <div class="flex gap-8 text-gray-600 dark:text-gray-300">
-                <span>Tax ({{ number_format($taxRate, 1) }}%)</span>
-                <span class="w-32 text-right" x-text="'$' + taxTotal().toFixed(2)"></span>
+            <div class="flex justify-between w-full text-gray-600">
+                <span>Tax ({{ number_format((float)($sale->tax_rate_percent ?? 0), 2) }}%)</span>
+                <span class="invoice-tax-value font-medium">${{ number_format((float)$invoice->tax_amount, 2) }}</span>
             </div>
-            <div class="flex gap-8 text-base font-bold text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
+            <div class="flex justify-between w-full text-base font-bold text-gray-900 border-t pt-2 mt-1">
                 <span>Total</span>
-                <span class="w-32 text-right" x-text="'$' + grandTotal().toFixed(2)"></span>
+                <span class="invoice-grand-total-value">${{ number_format((float)$invoice->grand_total, 2) }}</span>
             </div>
         </div>
+
+        <input type="hidden" id="subtotal_input" name="subtotal" value="{{ number_format((float)$invoice->subtotal, 2, '.', '') }}">
+        <input type="hidden" id="tax_amount_input" name="tax_amount" value="{{ number_format((float)$invoice->tax_amount, 2, '.', '') }}">
+        <input type="hidden" id="grand_total_input" name="grand_total" value="{{ number_format((float)$invoice->grand_total, 2, '.', '') }}">
     </div>
 
     {{-- Actions --}}
-    <div class="flex gap-3">
+    <div class="flex gap-3 mt-4">
         <button type="submit"
-            class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-6 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700">
+            class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
             Save Invoice
         </button>
         <a href="{{ route('pages.sales.invoices.show', [$sale, $invoice]) }}"
-            class="py-2.5 px-5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+            class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
             Cancel
         </a>
     </div>
 
-</form>
-</div>
+    </form>
+
+    {{-- Room template for new rooms --}}
+    <template id="room-template">
+    <div class="room-card w-full bg-white border border-gray-200 rounded-lg shadow-sm overflow-visible" data-room-index="__ROOM_INDEX__">
+
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+            <div class="flex items-center gap-3">
+                <h2 class="room-title text-lg font-semibold text-gray-900">Room</h2>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" class="move-up hidden inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">↑</button>
+                <button type="button" class="move-down hidden inline-flex items-center justify-center w-9 h-9 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">↓</button>
+                <button type="button" class="delete-room inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete Room</button>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-8">
+            <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Room Name</label>
+                <input type="hidden" class="room-delete-flag" name="rooms[__ROOM_INDEX__][_delete]" value="0">
+                <input type="hidden" class="room-subtotal-materials-input" name="rooms[__ROOM_INDEX__][subtotal_materials]" value="0.00">
+                <input type="hidden" class="room-subtotal-freight-input"   name="rooms[__ROOM_INDEX__][subtotal_freight]"   value="0.00">
+                <input type="hidden" class="room-subtotal-labour-input"    name="rooms[__ROOM_INDEX__][subtotal_labour]"    value="0.00">
+                <input type="hidden" class="room-total-input"              name="rooms[__ROOM_INDEX__][room_total]"         value="0.00">
+                <input type="text" name="rooms[__ROOM_INDEX__][room_name]"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                    placeholder="e.g. Living Room">
+            </div>
+
+            {{-- Materials --}}
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Materials</h3>
+                    <button type="button" class="add-material-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">+ Add Material Row</button>
+                </div>
+                <div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+                    <table class="min-w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3">Product Type</th>
+                                <th class="px-3 py-3">Qty</th>
+                                <th class="px-3 py-3">Unit</th>
+                                <th class="px-3 py-3">Manufacturer</th>
+                                <th class="px-3 py-3">Style</th>
+                                <th class="px-3 py-3">Color / Item #</th>
+                                <th class="px-3 py-3">Sell</th>
+                                <th class="px-3 py-3 w-28 text-right">Total</th>
+                                <th class="px-3 py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="materials-tbody"></tbody>
+                    </table>
+                </div>
+                <template class="material-row-template">
+                    <tr class="bg-white border-t">
+                        <td class="px-3 py-2 relative">
+                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_type]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="Product Type" autocomplete="off" data-product-type-input>
+                            <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto" data-product-type-dropdown>
+                                <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2"><input type="number" step="0.01" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
+                        <td class="px-3 py-2"><input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]" class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="SF"></td>
+                        <td class="px-3 py-2 relative">
+                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][manufacturer]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="Manufacturer" autocomplete="off" data-manufacturer-input>
+                            <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto" data-manufacturer-dropdown>
+                                <ul class="py-1 text-sm text-gray-700" data-manufacturer-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2 relative">
+                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][style]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="Style" autocomplete="off" data-style-input>
+                            <input type="hidden" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_line_id]" class="js-product-line-id-input" value="">
+                            <div class="hidden absolute left-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto" data-style-dropdown>
+                                <ul class="py-1 text-sm text-gray-700" data-style-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2 relative">
+                            <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][color_item_number]"
+                                class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="Color / Item #" autocomplete="off" data-color-input>
+                            <input type="hidden" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][product_style_id]" class="js-product-style-id-input" value="">
+                            <div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg hidden" data-color-dropdown>
+                                <ul class="py-1 max-h-56 overflow-auto" data-color-options></ul>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2"><input type="number" step="0.0001" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][sell_price]" class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0.00"></td>
+                        <td class="px-3 py-2">
+                            <span class="line-total-display inline-block w-28 text-right font-medium">$0.00</span>
+                            <input type="hidden" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][line_total]" value="0">
+                        </td>
+                        <td class="px-3 py-2"><button type="button" class="delete-material-row text-red-600 hover:underline">Delete</button></td>
+                    </tr>
+                </template>
+            </div>
+
+            {{-- Freight --}}
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Freight</h3>
+                    <button type="button" class="add-freight-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">+ Add Freight Row</button>
+                </div>
+                <div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+                    <table class="min-w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3">Description</th>
+                                <th class="px-3 py-3">Qty</th>
+                                <th class="px-3 py-3">Sell</th>
+                                <th class="px-3 py-3 w-28 text-right">Total</th>
+                                <th class="px-3 py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="freight-tbody"></tbody>
+                    </table>
+                </div>
+                <template class="freight-row-template">
+                    <tr class="bg-white border-t">
+                        <td class="px-3 py-2">
+                            <div class="relative">
+                                <input type="text" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][freight_description]"
+                                    class="w-80 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="Freight description" autocomplete="off" data-freight-desc-input>
+                                <div class="absolute z-50 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg hidden" data-freight-desc-dropdown>
+                                    <ul class="max-h-56 overflow-auto p-1" data-freight-desc-options></ul>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2"><input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
+                        <td class="px-3 py-2"><input type="number" step="0.0001" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][sell_price]" class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0.00"></td>
+                        <td class="px-3 py-2">
+                            <span class="line-total-display inline-block w-28 text-right font-medium">$0.00</span>
+                            <input type="hidden" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][line_total]" value="0">
+                        </td>
+                        <td class="px-3 py-2"><button type="button" class="delete-freight-row text-red-600 hover:underline">Delete</button></td>
+                    </tr>
+                </template>
+            </div>
+
+            {{-- Labour --}}
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-900">Labour</h3>
+                    <button type="button" class="add-labour-row inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">+ Add Labour Row</button>
+                </div>
+                <div class="border border-gray-200 rounded-lg overflow-x-auto overflow-y-visible">
+                    <table class="min-w-full text-sm text-left text-gray-700">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-3">Labour Type</th>
+                                <th class="px-3 py-3">Qty</th>
+                                <th class="px-3 py-3">Unit</th>
+                                <th class="px-3 py-3">Description</th>
+                                <th class="px-3 py-3">Sell</th>
+                                <th class="px-3 py-3 w-28 text-right">Total</th>
+                                <th class="px-3 py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="labour-tbody"></tbody>
+                    </table>
+                </div>
+                <template class="labour-row-template">
+                    <tr class="bg-white border-t">
+                        <td class="px-3 py-2 overflow-visible">
+                            <div class="relative">
+                                <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][labour_type]"
+                                    class="w-44 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="Labour Type" autocomplete="off" data-labour-type-input>
+                                <div class="hidden absolute left-0 top-full z-50 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto" data-labour-type-dropdown>
+                                    <ul class="py-1 text-sm text-gray-700" data-labour-type-options></ul>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2"><input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
+                        <td class="px-3 py-2"><input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][unit]" class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="SF" data-labour-unit-input></td>
+                        <td class="px-3 py-2 overflow-visible">
+                            <div class="relative">
+                                <input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][description]"
+                                    class="w-64 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="Description" autocomplete="off" data-labour-desc-input>
+                                <div class="hidden absolute left-0 top-full z-50 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto" data-labour-desc-dropdown>
+                                    <ul class="py-1 text-sm text-gray-700" data-labour-desc-options></ul>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-3 py-2"><input type="number" step="0.0001" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][sell_price]" class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0.00"></td>
+                        <td class="px-3 py-2">
+                            <span class="line-total-display inline-block w-28 text-right font-medium">$0.00</span>
+                            <input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][line_total]" value="0">
+                        </td>
+                        <td class="px-3 py-2"><button type="button" class="delete-labour-row text-red-600 hover:underline">Delete</button></td>
+                    </tr>
+                </template>
+            </div>
+
+            {{-- Room summary --}}
+            <div class="border-t pt-4 mt-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="room-material-label text-xs text-gray-500">Room Material Total</p>
+                        <p class="room-material-value text-lg font-semibold text-gray-900">$0.00</p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="room-freight-label text-xs text-gray-500">Room Freight Total</p>
+                        <p class="room-freight-value text-lg font-semibold text-gray-900">$0.00</p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="room-labour-label text-xs text-gray-500">Room Labour Total</p>
+                        <p class="room-labour-value text-lg font-semibold text-gray-900">$0.00</p>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <p class="room-total-label text-xs text-gray-500">Room Total</p>
+                        <p class="room-total-value text-lg font-bold text-gray-900">$0.00</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    </template>
 
 </div>
 </div>
 
 <script>
-function invoiceEditor(initialRooms, taxRate) {
-    return {
-        rooms: [],
-        taxRate: taxRate,
-        _nextKey: 1000,
+  // FM Catalog API URLs
+  window.FM_CATALOG_PRODUCT_TYPES_URL  = "{{ route('pages.estimates.api.product-types') }}";
+  window.FM_CATALOG_MANUFACTURERS_URL  = "{{ route('pages.estimates.api.manufacturers') }}";
+  window.FM_CATALOG_FREIGHT_ITEMS_URL  = "{{ route('pages.estimates.api.freight-items') }}";
+  window.FM_CATALOG_LABOUR_TYPES_URL   = "{{ route('pages.estimates.api.labour-types') }}";
+  window.FM_INVOICE_TAX_RATE           = {{ (float)($sale->tax_rate_percent ?? 0) }};
 
-        init(rooms) {
-            this.rooms = rooms.map(room => ({
-                ...room,
-                _key: this._nextKey++,
-                items: room.items.map(item => ({
-                    ...item,
-                    _key: this._nextKey++,
-                })),
-            }));
-        },
-
-        addRoom() {
-            this.rooms.push({
-                _key: this._nextKey++,
-                id: null,
-                name: '',
-                items: [],
-            });
-        },
-
-        removeRoom(ri) {
-            if (confirm('Remove this room and all its items?')) {
-                this.rooms.splice(ri, 1);
-            }
-        },
-
-        addItem(ri) {
-            this.rooms[ri].items.push({
-                _key: this._nextKey++,
-                id: null,
-                item_type: 'material',
-                label: '',
-                quantity: 1,
-                unit: '',
-                sell_price: 0,
-                tax_rate: this.taxRate,
-            });
-        },
-
-        removeItem(ri, ii) {
-            this.rooms[ri].items.splice(ii, 1);
-        },
-
-        lineTotal(item) {
-            return Math.round(parseFloat(item.quantity || 0) * parseFloat(item.sell_price || 0) * 100) / 100;
-        },
-
-        roomSubtotal(ri) {
-            return this.rooms[ri].items.reduce((sum, item) => sum + this.lineTotal(item), 0);
-        },
-
-        subtotal() {
-            return this.rooms.reduce((sum, room, ri) => sum + this.roomSubtotal(ri), 0);
-        },
-
-        taxTotal() {
-            return Math.round(this.subtotal() * this.taxRate / 100 * 100) / 100;
-        },
-
-        grandTotal() {
-            return Math.round((this.subtotal() + this.taxTotal()) * 100) / 100;
-        },
-    };
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('payment_term_id').addEventListener('change', function () {
+  // Payment terms: auto-calculate due date
+  document.addEventListener('DOMContentLoaded', function () {
+    const ptSelect = document.getElementById('payment_term_id');
+    const dueDateInput = document.getElementById('due_date');
+    if (ptSelect && dueDateInput) {
+      ptSelect.addEventListener('change', function () {
         const opt  = this.options[this.selectedIndex];
         const dom  = parseInt(opt.dataset.dom);
         const days = parseInt(opt.dataset.days);
-        const dueDateInput = document.getElementById('due_date');
         if (dom > 0) {
-            const d = new Date();
-            d.setMonth(d.getMonth() + 1, dom);
-            dueDateInput.value = d.toISOString().slice(0, 10);
+          const d = new Date();
+          d.setMonth(d.getMonth() + 1, dom);
+          dueDateInput.value = d.toISOString().slice(0, 10);
         } else if (days >= 0) {
-            const d = new Date();
-            d.setDate(d.getDate() + days);
-            dueDateInput.value = d.toISOString().slice(0, 10);
+          const d = new Date();
+          d.setDate(d.getDate() + days);
+          dueDateInput.value = d.toISOString().slice(0, 10);
         }
-    });
-});
+      });
+    }
+  });
 </script>
+
+<script src="{{ asset('assets/js/invoices/invoice_edit.js') }}" defer></script>
+
 </x-app-layout>
