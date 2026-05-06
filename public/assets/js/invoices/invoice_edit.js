@@ -28,6 +28,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
+  // Positions a dropdown panel using fixed positioning so it escapes
+  // any overflow:auto/hidden ancestor (e.g. the overflow-x-auto table wrapper).
+  function positionFixed(inputEl, dropdownEl, minWidth = 180) {
+    const rect = inputEl.getBoundingClientRect();
+    const w    = Math.max(rect.width, minWidth);
+    dropdownEl.style.position = "fixed";
+    dropdownEl.style.top      = (rect.bottom + 2) + "px";
+    dropdownEl.style.left     = rect.left + "px";
+    dropdownEl.style.width    = w + "px";
+    dropdownEl.style.margin   = "0";
+    dropdownEl.style.zIndex   = "9999";
+  }
+
+  // Close all open dropdown panels on scroll or resize so they don't
+  // float detached from their inputs.
+  document.addEventListener("scroll", () => {
+    document.querySelectorAll(
+      "[data-product-type-dropdown]:not(.hidden)," +
+      "[data-manufacturer-dropdown]:not(.hidden)," +
+      "[data-style-dropdown]:not(.hidden)," +
+      "[data-color-dropdown]:not(.hidden)," +
+      "[data-freight-desc-dropdown]:not(.hidden)," +
+      "[data-labour-type-dropdown]:not(.hidden)," +
+      "[data-labour-desc-dropdown]:not(.hidden)"
+    ).forEach(d => d.classList.add("hidden"));
+  }, true);
+
   function formatMoney(value) {
     const n = Number(value);
     return isNaN(n) ? "$0.00" : "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -299,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let productTypes = [];
       let activeIndex  = -1;
 
-      const open  = () => dropdown.classList.remove("hidden");
+      const open  = () => { dropdown.classList.remove("hidden"); positionFixed(input, dropdown, 176); };
       const close = () => { dropdown.classList.add("hidden"); activeIndex = -1; };
 
       function getOpts() { return Array.from(list.querySelectorAll("button[data-pt-id]")); }
@@ -412,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let manufacturers = [];
       let activeIndex   = -1;
 
-      const open  = () => dropdown.classList.remove("hidden");
+      const open  = () => { dropdown.classList.remove("hidden"); positionFixed(input, dropdown, 176); };
       const close = () => { dropdown.classList.add("hidden"); activeIndex = -1; };
 
       function getOpts() { return Array.from(list.querySelectorAll("button[data-manu-name]")); }
@@ -512,7 +539,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let productLines = [];
       let activeIndex  = -1;
 
-      const open  = () => dropdown.classList.remove("hidden");
+      const open  = () => { dropdown.classList.remove("hidden"); positionFixed(styleInput, dropdown, 176); };
       const close = () => { dropdown.classList.add("hidden"); activeIndex = -1; };
 
       function getOpts() { return Array.from(list.querySelectorAll("button[data-line-id]")); }
@@ -630,7 +657,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let styles      = [];
       let activeIndex = -1;
 
-      const open  = () => dropdown.classList.remove("hidden");
+      const open  = () => { dropdown.classList.remove("hidden"); positionFixed(colorInput, dropdown, 176); };
       const close = () => { dropdown.classList.add("hidden"); activeIndex = -1; };
 
       function getOpts() { return Array.from(list.querySelectorAll("button[data-style-id]")); }
@@ -772,13 +799,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       function openDropdown() {
         dropdown.classList.remove("hidden");
-        cell.style.position = "relative";
-        cell.style.overflow = "visible";
-        dropdown.style.position = "absolute";
-        dropdown.style.left = "0";
-        dropdown.style.top  = "100%";
-        dropdown.style.width = "100%";
-        dropdown.style.zIndex = "999999";
+        positionFixed(input, dropdown, 320);
       }
       const close = () => { dropdown.classList.add("hidden"); activeIndex = -1; };
 
@@ -892,7 +913,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let labourTypes = [];
     let activeIndex = -1;
 
-    const open  = () => dropdown.classList.remove("hidden");
+    const open  = () => { dropdown.classList.remove("hidden"); positionFixed(input, dropdown, 176); };
     const close = () => { dropdown.classList.add("hidden"); activeIndex = -1; };
 
     function getOpts() { return Array.from(list.querySelectorAll("button[data-labour-name]")); }
@@ -976,7 +997,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let items       = [];
     let activeIndex = -1;
 
-    const open  = () => dropdown.classList.remove("hidden");
+    const open  = () => { dropdown.classList.remove("hidden"); positionFixed(descInput, dropdown, 256); };
     const close = () => { dropdown.classList.add("hidden"); activeIndex = -1; };
 
     function getOpts() { return Array.from(list.querySelectorAll("button[data-labour-desc]")); }
