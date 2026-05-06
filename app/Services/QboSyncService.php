@@ -408,13 +408,14 @@ class QboSyncService
             $opportunity = $sale?->opportunity;
             $jobSite     = $opportunity?->jobSiteCustomer;
             $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
+            $billTo      = $jobSite ?? $parent;
 
-            if (! $jobSite) {
-                return ['success' => false, 'message' => 'Invoice has no job site customer linked.', 'qbo_id' => null];
+            if (! $billTo) {
+                return ['success' => false, 'message' => 'Invoice has no customer linked.', 'qbo_id' => null];
             }
 
-            // Ensure parent customer is synced first
-            if ($parent && ! $parent->qbo_id) {
+            // Ensure parent customer is synced first (only needed when billing to a job site sub-customer)
+            if ($jobSite && $parent && ! $parent->qbo_id) {
                 $parentResult = $this->pushCustomer($parent);
                 if (! $parentResult['success']) {
                     return ['success' => false, 'message' => 'Failed to sync parent customer: ' . $parentResult['message'], 'qbo_id' => null];
@@ -422,16 +423,16 @@ class QboSyncService
                 $parent->refresh();
             }
 
-            // Ensure job site customer is synced
-            if (! $jobSite->qbo_id) {
-                $customerResult = $this->pushCustomer($jobSite);
+            // Ensure bill-to customer is synced
+            if (! $billTo->qbo_id) {
+                $customerResult = $this->pushCustomer($billTo);
                 if (! $customerResult['success']) {
                     return ['success' => false, 'message' => 'Failed to sync customer: ' . $customerResult['message'], 'qbo_id' => null];
                 }
-                $jobSite->refresh();
+                $billTo->refresh();
             }
 
-            $payload = $this->buildInvoicePayload($invoice, $jobSite->qbo_id, $itemIds);
+            $payload = $this->buildInvoicePayload($invoice, $billTo->qbo_id, $itemIds);
 
             if ($invoice->qbo_id) {
                 $payload['Id']        = $invoice->qbo_id;
