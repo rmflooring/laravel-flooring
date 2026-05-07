@@ -104,6 +104,7 @@ class QuickSaleController extends Controller
             $sale = Sale::create([
                 'is_quick_sale'     => true,
                 'customer_id'       => $customer->id,
+                'customer_name'     => $customer->company_name,
                 'homeowner_name'    => $customer->company_name,
                 'tax_group_id'      => $taxGroup->id,
                 'tax_rate_percent'  => $taxRate,

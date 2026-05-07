@@ -122,8 +122,8 @@ class Customer extends Model
         return;
     }
 
-    // Fallback: store cleaned digits (so you don't lose data)
-    $this->attributes['phone'] = $digits;
+    // Fallback: store cleaned digits or null if empty
+    $this->attributes['phone'] = $digits ?: null;
 }
 
 }
