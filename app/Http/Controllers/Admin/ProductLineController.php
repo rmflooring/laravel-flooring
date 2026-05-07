@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductLine;
+use App\Models\ProductStyle;
 use App\Models\ProductType;
 use App\Models\UnitMeasure;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProductLineController extends Controller
 {
@@ -157,6 +160,249 @@ public function update(Request $request, ProductLine $product_line)
     return redirect()->route('admin.product_lines.index')
         ->with('success', 'Product line updated successfully.');
 }
+
+    public function importForm()
+    {
+        return view('admin.product_lines.import');
+    }
+
+    public function importTemplate()
+    {
+        $columns = [
+            'row_type', 'line_name', 'product_type', 'vendor', 'manufacturer',
+            'model', 'collection', 'default_cost_price', 'default_sell_price',
+            'unit', 'width', 'length', 'line_status',
+            'style_name', 'sku', 'style_number', 'color', 'pattern',
+            'description', 'cost_price', 'sell_price', 'thickness', 'units_per',
+            'use_box_qty', 'style_status',
+        ];
+
+        $sample = [
+            ['LINE', 'Hardwood Collection', 'Hardwood', 'Shaw Floors', 'Shaw', 'HW-2024', 'Premium', '3.50', '7.99', 'SF', '3.25', '', 'active', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['STYLE', '', '', '', '', '', '', '', '', '', '', '', '', 'Natural Oak', 'OAK-001', '001', 'Natural', 'Plain', '', '3.50', '7.99', '0.75', '20', '0', 'active'],
+            ['STYLE', '', '', '', '', '', '', '', '', '', '', '', '', 'Rustic Brown', 'OAK-002', '002', 'Brown', 'Rustic', '', '3.50', '7.99', '0.75', '20', '0', 'active'],
+            ['LINE', 'Luxury Vinyl Plank', 'LVP', 'Mohawk', 'Mohawk', 'LVP-2024', 'Luxury Series', '2.50', '5.99', 'SF', '', '', 'active', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['STYLE', '', '', '', '', '', '', '', '', '', '', '', '', 'Grey Ash', 'GRY-001', 'GA1', 'Grey', '', '', '2.50', '5.99', '', '', '0', 'active'],
+        ];
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="product-import-template.csv"',
+        ];
+
+        $callback = function () use ($columns, $sample) {
+            $fh = fopen('php://output', 'w');
+            fputcsv($fh, $columns);
+            foreach ($sample as $row) {
+                fputcsv($fh, $row);
+            }
+            fclose($fh);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function importStore(Request $request)
+    {
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt|max:5120',
+        ]);
+
+        $handle = fopen($request->file('csv_file')->getRealPath(), 'r');
+        $rawHeader = fgetcsv($handle);
+
+        if (!$rawHeader) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'The CSV file is empty.']);
+        }
+
+        $header = array_map(fn($h) => strtolower(trim($h)), $rawHeader);
+
+        if (!in_array('row_type', $header)) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'Missing required column: row_type. Download the template and use it as a starting point.']);
+        }
+
+        $allRows = [];
+        $rowNum  = 1;
+        while (($data = fgetcsv($handle)) !== false) {
+            $rowNum++;
+            if (!array_filter($data)) {
+                continue; // skip blank lines
+            }
+            if (count($data) !== count($header)) {
+                $allRows[] = ['num' => $rowNum, 'data' => null, 'parse_error' => "Row {$rowNum} has " . count($data) . " columns but the header has " . count($header) . "."];
+                continue;
+            }
+            $allRows[] = ['num' => $rowNum, 'data' => array_combine($header, array_map('trim', $data))];
+        }
+        fclose($handle);
+
+        // Build lookup tables (keyed by lowercase name)
+        $productTypes   = ProductType::all()->keyBy(fn($t) => strtolower(trim($t->name)));
+        $vendors        = Vendor::all()->keyBy(fn($v) => strtolower(trim($v->company_name)));
+        $unitsByCode    = UnitMeasure::all()->keyBy(fn($u) => strtolower(trim($u->code)));
+        $unitsByLabel   = UnitMeasure::all()->keyBy(fn($u) => strtolower(trim($u->label)));
+
+        $errors          = [];
+        $parsed          = [];
+        $currentLineIdx  = null;
+
+        foreach ($allRows as $row) {
+            if (isset($row['parse_error'])) {
+                $errors[] = $row['parse_error'];
+                $currentLineIdx = null;
+                continue;
+            }
+
+            $num  = $row['num'];
+            $d    = $row['data'];
+            $type = strtoupper($d['row_type'] ?? '');
+
+            if ($type === 'LINE') {
+                $lineName = $d['line_name'] ?? '';
+                if ($lineName === '') {
+                    $errors[] = "Row {$num}: LINE row is missing line_name.";
+                    $currentLineIdx = null;
+                    continue;
+                }
+
+                $ptKey = strtolower($d['product_type'] ?? '');
+                if ($ptKey === '' || !isset($productTypes[$ptKey])) {
+                    $errors[] = "Row {$num}: product_type '{$d['product_type']}' not found. It must match an existing product type name exactly.";
+                    $currentLineIdx = null;
+                    continue;
+                }
+                $productTypeId = $productTypes[$ptKey]->id;
+
+                $vendorId  = null;
+                $vendorKey = strtolower($d['vendor'] ?? '');
+                if ($vendorKey !== '') {
+                    if (!isset($vendors[$vendorKey])) {
+                        $errors[] = "Row {$num}: vendor '{$d['vendor']}' not found. It must match an existing vendor company name exactly.";
+                        $currentLineIdx = null;
+                        continue;
+                    }
+                    $vendorId = $vendors[$vendorKey]->id;
+                }
+
+                // Duplicate check
+                $dupQuery = ProductLine::where('name', $lineName)->where('product_type_id', $productTypeId);
+                if ($vendorId) {
+                    $dupQuery->where('vendor_id', $vendorId);
+                }
+                if ($dupQuery->exists()) {
+                    $label = "'{$lineName}'" . ($d['vendor'] ? " (vendor: {$d['vendor']})" : '');
+                    $errors[] = "Row {$num}: Product line {$label} already exists. Remove it from the CSV.";
+                    $currentLineIdx = null;
+                    continue;
+                }
+
+                $unitId  = null;
+                $unitKey = strtolower($d['unit'] ?? '');
+                if ($unitKey !== '') {
+                    if (isset($unitsByCode[$unitKey])) {
+                        $unitId = $unitsByCode[$unitKey]->id;
+                    } elseif (isset($unitsByLabel[$unitKey])) {
+                        $unitId = $unitsByLabel[$unitKey]->id;
+                    } else {
+                        $errors[] = "Row {$num}: unit '{$d['unit']}' not found. Use the unit code (e.g. SF, SY, EA).";
+                        $currentLineIdx = null;
+                        continue;
+                    }
+                }
+
+                $lineStatus = $d['line_status'] ?? 'active';
+                if (!in_array($lineStatus, ['active', 'inactive', 'dropped'], true)) {
+                    $lineStatus = 'active';
+                }
+
+                $parsed[] = [
+                    'row_num'            => $num,
+                    'product_type_id'    => $productTypeId,
+                    'name'               => $lineName,
+                    'vendor_id'          => $vendorId,
+                    'manufacturer'       => $d['manufacturer'] !== '' ? $d['manufacturer'] : null,
+                    'model'              => $d['model'] !== '' ? $d['model'] : null,
+                    'collection'         => $d['collection'] !== '' ? $d['collection'] : null,
+                    'default_cost_price' => is_numeric($d['default_cost_price']) ? (float) $d['default_cost_price'] : null,
+                    'default_sell_price' => is_numeric($d['default_sell_price']) ? (float) $d['default_sell_price'] : null,
+                    'unit_id'            => $unitId,
+                    'width'              => is_numeric($d['width']) ? (float) $d['width'] : null,
+                    'length'             => is_numeric($d['length']) ? (float) $d['length'] : null,
+                    'status'             => $lineStatus,
+                    'styles'             => [],
+                ];
+                $currentLineIdx = count($parsed) - 1;
+
+            } elseif ($type === 'STYLE') {
+                if ($currentLineIdx === null) {
+                    $errors[] = "Row {$num}: STYLE row has no valid preceding LINE row.";
+                    continue;
+                }
+
+                $styleName = $d['style_name'] ?? '';
+                if ($styleName === '') {
+                    $errors[] = "Row {$num}: STYLE row is missing style_name.";
+                    continue;
+                }
+
+                $styleStatus = $d['style_status'] ?? 'active';
+                if (!in_array($styleStatus, ['active', 'inactive', 'dropped'], true)) {
+                    $styleStatus = 'active';
+                }
+
+                $parsed[$currentLineIdx]['styles'][] = [
+                    'name'         => $styleName,
+                    'sku'          => $d['sku'] !== '' ? $d['sku'] : null,
+                    'style_number' => $d['style_number'] !== '' ? $d['style_number'] : null,
+                    'color'        => $d['color'] !== '' ? $d['color'] : null,
+                    'pattern'      => $d['pattern'] !== '' ? $d['pattern'] : null,
+                    'description'  => $d['description'] !== '' ? $d['description'] : null,
+                    'cost_price'   => is_numeric($d['cost_price']) ? (float) $d['cost_price'] : null,
+                    'sell_price'   => is_numeric($d['sell_price']) ? (float) $d['sell_price'] : null,
+                    'thickness'    => is_numeric($d['thickness']) ? (float) $d['thickness'] : null,
+                    'units_per'    => is_numeric($d['units_per']) ? (int) $d['units_per'] : null,
+                    'use_box_qty'  => in_array(strtolower($d['use_box_qty'] ?? '0'), ['1', 'yes', 'true'], true) ? 1 : 0,
+                    'status'       => $styleStatus,
+                ];
+
+            } elseif ($type !== '') {
+                $errors[] = "Row {$num}: row_type must be LINE or STYLE, got '{$d['row_type']}'.";
+            }
+        }
+
+        if (empty($parsed) && empty($errors)) {
+            $errors[] = 'No LINE rows found in the CSV.';
+        }
+
+        if (!empty($errors)) {
+            return back()->with('import_errors', $errors);
+        }
+
+        DB::transaction(function () use ($parsed) {
+            foreach ($parsed as $lineData) {
+                $styles = $lineData['styles'];
+                unset($lineData['styles'], $lineData['row_num']);
+
+                $line = ProductLine::create([...$lineData, 'created_by' => Auth::id()]);
+
+                foreach ($styles as $styleData) {
+                    $line->productStyles()->create([
+                        ...$styleData,
+                        'vendor_id'  => $line->vendor_id,
+                        'created_by' => Auth::id(),
+                    ]);
+                }
+            }
+        });
+
+        $lineCount  = count($parsed);
+        $styleCount = array_sum(array_map(fn($l) => count($l['styles']), $parsed));
+
+        return redirect()->route('admin.product_lines.index')
+            ->with('success', "Import successful: {$lineCount} product " . Str::plural('line', $lineCount) . " and {$styleCount} product " . Str::plural('style', $styleCount) . " created.");
+    }
 
     public function destroy(ProductLine $product_line)
     {

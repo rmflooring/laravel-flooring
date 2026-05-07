@@ -549,6 +549,16 @@ Route::prefix('admin')
                 'destroy' => 'product_types.destroy',
             ]);
 
+        Route::get('product-lines/import', [ProductLineController::class, 'importForm'])
+            ->middleware('role_or_permission:admin|view product lines')
+            ->name('product_lines.import');
+        Route::get('product-lines/import/template', [ProductLineController::class, 'importTemplate'])
+            ->middleware('role_or_permission:admin|view product lines')
+            ->name('product_lines.import.template');
+        Route::post('product-lines/import', [ProductLineController::class, 'importStore'])
+            ->middleware('role_or_permission:admin|view product lines')
+            ->name('product_lines.import.store');
+
         Route::resource('product-lines', ProductLineController::class)
             ->middleware('role_or_permission:admin|view product lines')
             ->names([
