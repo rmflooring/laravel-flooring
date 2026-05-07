@@ -269,7 +269,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'unit'               => $item['unit'] ?? null,
 						'cost_price' => (float)($item['cost_price'] ?? 0),
 						'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                        'sell_price'         => (float)($item['sell_price'] ?? 0),
+                        'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
                     ]);
@@ -278,7 +278,7 @@ $data['tax_rate_percent'] = $groupPercent;
     'estimate_id' => $estimate->id,
     'room_id'     => $roomModel->id,
     'qty'         => (float)($item['quantity'] ?? 0),
-    'sell_price'  => (float)($item['sell_price'] ?? 0),
+    'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
     'cost_price'  => (float)($item['cost_price'] ?? 0),
 ]);
                 }
@@ -304,7 +304,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'unit'               => $item['unit'] ?? null,
 						'cost_price'          => (float)($item['cost_price'] ?? 0),
 						'cost_total'          => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                        'sell_price'         => (float)($item['sell_price'] ?? 0),
+                        'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
                     ]);
@@ -334,7 +334,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'unit'               => $item['unit'] ?? null,
 						'cost_price'       => (float)($item['cost_price'] ?? 0),
 						'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                        'sell_price'         => (float)($item['sell_price'] ?? 0),
+                        'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
                     ]);
@@ -763,7 +763,7 @@ $roomId = $room->id;
                     'unit'              => $item['unit'] ?? null,
 					'cost_price'        => (float)($item['cost_price'] ?? 0),
 					'cost_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                    'sell_price'        => (float)($item['sell_price'] ?? 0),
+                    'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'             => $item['notes'] ?? null,
                 ]);
@@ -783,7 +783,7 @@ $roomId = $room->id;
                     'unit'               => $item['unit'] ?? null,
 					'cost_price' => (float)($item['cost_price'] ?? 0),
 					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                    'sell_price'         => (float)($item['sell_price'] ?? 0),
+                    'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'              => $item['notes'] ?? null,
                 ]);
@@ -805,7 +805,7 @@ $roomId = $room->id;
                     'unit'             => $item['unit'] ?? null,
 					'cost_price' => (float)($item['cost_price'] ?? 0),
 					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                    'sell_price'       => (float)($item['sell_price'] ?? 0),
+                    'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'            => $item['notes'] ?? null,
                 ]);

@@ -542,7 +542,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'unit'             => $item['unit'] ?? null,
 					'cost_price'        => (float)($item['cost_price'] ?? 0),
 					'cost_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                    'sell_price'       => (float)($item['sell_price'] ?? 0),
+                    'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
                     'notes'            => $item['notes'] ?? null,
@@ -564,7 +564,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'unit'               => $item['unit'] ?? null,
 					'cost_price'       => (float)($item['cost_price'] ?? 0),
 					'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                    'sell_price'         => (float)($item['sell_price'] ?? 0),
+                    'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
                     'notes'              => $item['notes'] ?? null,
@@ -588,7 +588,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'unit'         => $item['unit'] ?? null,
 					'cost_price'       => (float)($item['cost_price'] ?? 0),
 					'cost_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
-                    'sell_price'   => (float)($item['sell_price'] ?? 0),
+                    'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'   => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
                     'notes'        => $item['notes'] ?? null,
