@@ -479,6 +479,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
             $poItemSnaps      = [];
             $allocSnaps       = [];
             $ptItemSnaps      = [];
+            $rtvItemSnaps     = [];
             if ($oldMaterialItems->isNotEmpty()) {
                 $matSigMap = $oldMaterialItems->keyBy('id')->map(
                     fn($m) => implode('|', [$m->product_type, $m->manufacturer, $m->style, $m->color_item_number])
@@ -519,6 +520,16 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                         $sig = $matSigMap[$pti->sale_item_id] ?? null;
                         if ($sig) {
                             $ptItemSnaps[] = ['id' => $pti->id, 'signature' => $sig];
+                        }
+                    });
+
+                // RTV items — nullOnDelete FK keeps the rows but clears sale_item_id
+                \App\Models\InventoryReturnItem::whereIn('sale_item_id', $oldMaterialItems->pluck('id'))
+                    ->get(['id', 'sale_item_id'])
+                    ->each(function ($rtvItem) use (&$rtvItemSnaps, $matSigMap) {
+                        $sig = $matSigMap[$rtvItem->sale_item_id] ?? null;
+                        if ($sig) {
+                            $rtvItemSnaps[] = ['id' => $rtvItem->id, 'signature' => $sig];
                         }
                     });
             }
@@ -661,6 +672,13 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                 foreach ($ptItemSnaps as $snap) {
                     if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
                     \App\Models\PickTicketItem::where('id', $snap['id'])
+                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
+                }
+
+                // RTV items (nulled via nullOnDelete → restore sale_item_id)
+                foreach ($rtvItemSnaps as $snap) {
+                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    \App\Models\InventoryReturnItem::where('id', $snap['id'])
                         ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
                 }
             }
