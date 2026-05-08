@@ -9,19 +9,19 @@
         .header { border-bottom: 2px solid #1d4ed8; padding-bottom: 14px; margin-bottom: 20px; }
         .company-name { font-size: 22px; font-weight: bold; letter-spacing: 0.5px; }
         .company-sub { font-size: 11px; color: #555; margin-top: 2px; }
-        .doc-title { font-size: 20px; font-weight: bold; text-align: right; color: #1d4ed8; }
+        .doc-title { font-size: 20px; font-weight: bold; text-align: right; }
         .doc-meta { text-align: right; font-size: 11px; color: #555; margin-top: 3px; }
         .doc-status { text-align: right; font-size: 11px; font-weight: bold; margin-top: 3px; }
 
         .info-grid { display: table; width: 100%; margin-bottom: 20px; }
         .info-col { display: table-cell; width: 50%; vertical-align: top; }
         .info-col:last-child { padding-left: 24px; }
-        .info-section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 6px; }
+        .info-section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 6px; }
         .info-row { margin-bottom: 3px; }
         .info-key { color: #666; }
 
-        .room { margin-bottom: 18px; page-break-inside: avoid; }
-        .room-header { background-color: #1d4ed8; color: #fff; padding: 6px 10px; font-weight: bold; font-size: 11px; }
+        .room { margin-bottom: 18px; }
+        .room-header { background-color: #1d4ed8; color: #fff; padding: 6px 10px; font-weight: bold; font-size: 11px; page-break-inside: avoid; page-break-after: avoid; }
 
         table { width: 100%; border-collapse: collapse; }
         .items-table th { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #666; padding: 5px 8px; border-bottom: 1px solid #ddd; background: #fafafa; text-align: left; }
@@ -105,7 +105,7 @@
                     $mime     = mime_content_type($fullPath);
                     $logoData = base64_encode(file_get_contents($fullPath));
                 @endphp
-                <img src="data:{{ $mime }};base64,{{ $logoData }}" style="height:70px; max-width:260px; object-fit:contain;">
+                <img src="data:{{ $mime }};base64,{{ $logoData }}" style="height:100px; max-width:320px; object-fit:contain;">
             @else
                 <div class="company-name">{{ $companyName }}</div>
                 @if($tagline)<div class="company-sub">{{ $tagline }}</div>@endif

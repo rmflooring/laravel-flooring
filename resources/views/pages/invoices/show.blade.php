@@ -193,11 +193,14 @@
         </div>
         @foreach ($invoice->rooms as $room)
             {{-- Room header --}}
-            <div class="flex items-center gap-3 px-5 py-2.5 bg-blue-700 text-white text-sm font-semibold">
-                <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.5L12 4l9 5.5V20H3V9.5z"/>
-                </svg>
-                {{ $room->name }}
+            <div class="flex items-center justify-between px-5 py-2.5 bg-blue-700 text-white text-sm font-semibold">
+                <div class="flex items-center gap-2">
+                    <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.5L12 4l9 5.5V20H3V9.5z"/>
+                    </svg>
+                    {{ $room->name }}
+                </div>
+                <span class="font-normal text-blue-100">${{ number_format($room->subtotal, 2) }}</span>
             </div>
             <table class="w-full text-sm">
                 <thead>

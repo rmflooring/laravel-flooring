@@ -31,7 +31,6 @@
             font-size: 18px;
             font-weight: bold;
             text-align: right;
-            margin-top: -28px;
         }
         .doc-meta {
             text-align: right;
@@ -179,31 +178,35 @@
     @endphp
 
     {{-- Header --}}
-    <div class="header clearfix">
-        <div>
-            @if ($logoData)
-                <img src="data:{{ $logoMime }};base64,{{ $logoData }}"
-                     style="height: 100px; max-width: 320px; object-fit: contain;">
-            @else
-                <div class="company-name">{{ $brandName }}</div>
-                @if ($brandTagline)
-                    <div class="company-sub">{{ $brandTagline }}</div>
+    <div class="header">
+        <div style="display:table; width:100%">
+            <div style="display:table-cell; vertical-align:top; width:60%">
+                @if ($logoData)
+                    <img src="data:{{ $logoMime }};base64,{{ $logoData }}"
+                         style="height: 100px; max-width: 320px; object-fit: contain;">
+                @else
+                    <div class="company-name">{{ $brandName }}</div>
+                    @if ($brandTagline)
+                        <div class="company-sub">{{ $brandTagline }}</div>
+                    @endif
                 @endif
-            @endif
-            @if ($brandAddress || $brandPhone || $brandWebsite || $brandGst)
-                <div class="company-sub" style="margin-top: 4px;">
-                    @if ($brandAddress) {{ $brandAddress }}<br> @endif
-                    @if ($brandPhone) {{ $brandPhone }} @endif
-                    @if ($brandPhone && $brandWebsite)  &nbsp;|&nbsp;  @endif
-                    @if ($brandWebsite) {{ $brandWebsite }} @endif
-                    @if ($brandGst) <br>GST #: {{ $brandGst }} @endif
+                @if ($brandAddress || $brandPhone || $brandWebsite || $brandGst)
+                    <div class="company-sub" style="margin-top: 4px;">
+                        @if ($brandAddress) {{ $brandAddress }}<br> @endif
+                        @if ($brandPhone) {{ $brandPhone }} @endif
+                        @if ($brandPhone && $brandWebsite)  &nbsp;|&nbsp;  @endif
+                        @if ($brandWebsite) {{ $brandWebsite }} @endif
+                        @if ($brandGst) <br>GST #: {{ $brandGst }} @endif
+                    </div>
+                @endif
+            </div>
+            <div style="display:table-cell; vertical-align:top; text-align:right;">
+                <div class="doc-title">SALE CONFIRMATION</div>
+                <div class="doc-meta">
+                    #{{ $sale->sale_number ?? '—' }}<br>
+                    {{ $sale->created_at?->format('F j, Y') }}
                 </div>
-            @endif
-        </div>
-        <div class="doc-title">SALE CONFIRMATION</div>
-        <div class="doc-meta">
-            #{{ $sale->sale_number ?? '—' }}<br>
-            {{ $sale->created_at?->format('F j, Y') }}
+            </div>
         </div>
     </div>
 
@@ -259,7 +262,7 @@
         @endphp
 
         <div class="room">
-            <div class="room-header clearfix">
+            <div class="room-header" style="overflow:hidden">
                 {{ $room->room_name ?: 'Unnamed Room' }}
                 @if ($showRoomTotal)
                     <span class="room-header-right">${{ number_format($roomTotal, 2) }}</span>

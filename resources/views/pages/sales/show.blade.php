@@ -247,9 +247,14 @@
 
                         <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
                             {{-- Room header --}}
-                            <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
-                                <span class="font-semibold text-gray-800 text-sm">{{ $room->room_name ?: 'Unnamed Room' }}</span>
-                                <span class="text-sm font-medium text-gray-600">${{ number_format($roomTotal, 2) }}</span>
+                            <div class="flex items-center justify-between px-5 py-2.5 bg-blue-700 text-white text-sm font-semibold">
+                                <div class="flex items-center gap-2">
+                                    <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.5L12 4l9 5.5V20H3V9.5z"/>
+                                    </svg>
+                                    {{ $room->room_name ?: 'Unnamed Room' }}
+                                </div>
+                                <span class="font-normal text-blue-100">${{ number_format($roomTotal, 2) }}</span>
                             </div>
 
                             <div class="divide-y divide-gray-100">
