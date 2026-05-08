@@ -1981,9 +1981,58 @@
 
 </div>
 
+
+
+
+<div id="copy-line-item-modal" tabindex="-1" aria-hidden="true"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+  <div class="relative w-full max-w-lg bg-white rounded-lg shadow">
+    <div class="flex items-center justify-between p-4 border-b rounded-t">
+      <h3 class="text-lg font-semibold text-gray-900">Copy line item</h3>
+      <button type="button"
+        class="text-gray-400 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex items-center justify-center"
+        data-modal-hide="copy-line-item-modal">✕</button>
+    </div>
+
+    <div class="p-4 space-y-4">
+      <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Copy to room</label>
+        <select id="copy-target-room"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"></select>
+      </div>
+
+      <div>
+        <label class="block mb-1 text-sm font-medium text-gray-700">Copy to section</label>
+        <select id="copy-target-section"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5">
+          <option value="materials">Materials</option>
+          <option value="freight">Freight</option>
+          <option value="labour">Labour</option>
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Defaults to the same section you copied from.</p>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 p-4 border-t rounded-b">
+      <button type="button"
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+        data-modal-hide="copy-line-item-modal">Cancel</button>
+
+      <button type="button" id="confirm-copy-line-item"
+        class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
+        Copy
+      </button>
+    </div>
+  </div>
+</div>
+
+</form>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-6">
+
+{{-- Deposits --}}
 {{-- Deposits Card --}}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
+<div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <h3 class="font-semibold text-gray-900 dark:text-white">Deposits</h3>
@@ -2068,144 +2117,11 @@
             </table>
         @endif
     </div>
-</div>
 
-{{-- Add Deposit Modal --}}
-<div id="add-deposit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Record Deposit</h2>
-            <button type="button" onclick="document.getElementById('add-deposit-modal').classList.add('hidden')"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
-        <form action="{{ route('pages.sales.deposits.store', $sale) }}" method="POST">
-            @csrf
-            <div class="px-6 py-5 space-y-4">
-                @if($depositPayerOptions->isNotEmpty())
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid by</label>
-                        <select name="payer_type" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            onchange="updatePayerCustomer(this)">
-                            <option value="">— Select payer —</option>
-                            @foreach($depositPayerOptions as $opt)
-                                <option value="{{ $opt['type'] }}" data-customer-id="{{ $opt['customer']->id }}">
-                                    {{ $opt['customer']->company_name ?: $opt['customer']->customer_name }}
-                                    ({{ $opt['type'] === 'parent' ? 'Parent Customer' : 'Job Site' }})
-                                </option>
-                            @endforeach
-                        </select>
-                        <input type="hidden" name="payer_customer_id" id="payer_customer_id_input">
-                    </div>
-                @endif
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount <span class="text-red-500">*</span></label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                            <input type="number" name="amount" step="0.01" min="0.01" required
-                                class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-7 pr-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                placeholder="0.00">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="payment_date" required value="{{ date('Y-m-d') }}"
-                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Method <span class="text-red-500">*</span></label>
-                        <select name="payment_method" required
-                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            @foreach($depositPaymentMethods as $key => $label)
-                                <option value="{{ $key }}" {{ $key === 'e-transfer' ? 'selected' : '' }}>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reference #</label>
-                        <input type="text" name="reference_number" maxlength="100"
-                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            placeholder="Cheque #, transaction ID…">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
-                    <input type="text" name="notes" maxlength="500"
-                        class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="Optional note…">
-                </div>
-                <p class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2">
-                    This deposit will automatically be applied as a payment when the next invoice is created for this sale.
-                </p>
-            </div>
-            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
-                <button type="button" onclick="document.getElementById('add-deposit-modal').classList.add('hidden')"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
-                    Cancel
-                </button>
-                <button type="submit"
-                    class="px-5 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">
-                    Record Deposit
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="copy-line-item-modal" tabindex="-1" aria-hidden="true"
-  class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-  <div class="relative w-full max-w-lg bg-white rounded-lg shadow">
-    <div class="flex items-center justify-between p-4 border-b rounded-t">
-      <h3 class="text-lg font-semibold text-gray-900">Copy line item</h3>
-      <button type="button"
-        class="text-gray-400 hover:text-gray-900 rounded-lg text-sm w-8 h-8 inline-flex items-center justify-center"
-        data-modal-hide="copy-line-item-modal">✕</button>
-    </div>
-
-    <div class="p-4 space-y-4">
-      <div>
-        <label class="block mb-1 text-sm font-medium text-gray-700">Copy to room</label>
-        <select id="copy-target-room"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5"></select>
-      </div>
-
-      <div>
-        <label class="block mb-1 text-sm font-medium text-gray-700">Copy to section</label>
-        <select id="copy-target-section"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5">
-          <option value="materials">Materials</option>
-          <option value="freight">Freight</option>
-          <option value="labour">Labour</option>
-        </select>
-        <p class="text-xs text-gray-500 mt-1">Defaults to the same section you copied from.</p>
-      </div>
-    </div>
-
-    <div class="flex justify-end gap-2 p-4 border-t rounded-b">
-      <button type="button"
-        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-        data-modal-hide="copy-line-item-modal">Cancel</button>
-
-      <button type="button" id="confirm-copy-line-item"
-        class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
-        Copy
-      </button>
-    </div>
-  </div>
-</div>
-
-</form>
 
 {{-- Purchase Orders --}}
 @can('view purchase orders')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
             <div>
                 <h2 class="text-base font-semibold text-gray-900">Purchase Orders</h2>
@@ -2282,13 +2198,11 @@
             </div>
         @endif
     </div>
-</div>
 @endcan
 
 {{-- Work Orders --}}
 @can('view work orders')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
             <div>
                 <h2 class="text-base font-semibold text-gray-900">Work Orders</h2>
@@ -2372,14 +2286,12 @@
             </div>
         @endif
     </div>
-</div>
 @endcan
 
 {{-- Stage for Delivery / Pickup --}}
 @can('edit work orders')
 @if ($materialSaleItems->isNotEmpty())
-<div x-data="{ showStageModal: false, fulfillmentType: 'delivery' }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-6">
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+<div x-data="{ showStageModal: false, fulfillmentType: 'delivery' }" class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
 
         {{-- Header --}}
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
@@ -2580,11 +2492,99 @@
             </div>
         </div>
 
-    </div>
 </div>
 @endif
 @endcan
 
+</div>{{-- /bottom cards wrapper --}}
+
+{{-- Add Deposit Modal --}}
+<div id="add-deposit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Record Deposit</h2>
+            <button type="button" onclick="document.getElementById('add-deposit-modal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form action="{{ route('pages.sales.deposits.store', $sale) }}" method="POST">
+            @csrf
+            <div class="px-6 py-5 space-y-4">
+                @if($depositPayerOptions->isNotEmpty())
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid by</label>
+                        <select name="payer_type" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            onchange="updatePayerCustomer(this)">
+                            <option value="">— Select payer —</option>
+                            @foreach($depositPayerOptions as $opt)
+                                <option value="{{ $opt['type'] }}" data-customer-id="{{ $opt['customer']->id }}">
+                                    {{ $opt['customer']->company_name ?: $opt['customer']->customer_name }}
+                                    ({{ $opt['type'] === 'parent' ? 'Parent Customer' : 'Job Site' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="payer_customer_id" id="payer_customer_id_input">
+                    </div>
+                @endif
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                            <input type="number" name="amount" step="0.01" min="0.01" required
+                                class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-7 pr-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                placeholder="0.00">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date <span class="text-red-500">*</span></label>
+                        <input type="date" name="payment_date" required value="{{ date('Y-m-d') }}"
+                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Method <span class="text-red-500">*</span></label>
+                        <select name="payment_method" required
+                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            @foreach($depositPaymentMethods as $key => $label)
+                                <option value="{{ $key }}" {{ $key === 'e-transfer' ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reference #</label>
+                        <input type="text" name="reference_number" maxlength="100"
+                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            placeholder="Cheque #, transaction ID…">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                    <input type="text" name="notes" maxlength="500"
+                        class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Optional note…">
+                </div>
+                <p class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2">
+                    This deposit will automatically be applied as a payment when the next invoice is created for this sale.
+                </p>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                <button type="button" onclick="document.getElementById('add-deposit-modal').classList.add('hidden')"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-5 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">
+                    Record Deposit
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 <script>
   // Neutral (shared) endpoints for both Estimates + Sales
   window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('pages.estimates.api.product-types') }}";
