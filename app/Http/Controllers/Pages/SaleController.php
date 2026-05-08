@@ -319,12 +319,21 @@ class SaleController extends Controller
             ->first();
         $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
 
+        $allSaleItemIds = $sale->rooms->flatMap(fn ($r) => $r->items)->pluck('id');
+        $rtvCreditSaleItemIds = \App\Models\InventoryReturnItem::whereIn('sale_item_id', $allSaleItemIds)
+            ->where('apply_to_sale_cost', true)
+            ->whereNotNull('cost_applied_at')
+            ->pluck('sale_item_id')
+            ->unique()
+            ->flip()
+            ->all();
+
         return view('pages.sales.edit', compact(
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
             'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'deleteBlockReason', 'customerContacts',
             'directPickTicket', 'materialSaleItems',
-            'unscheduledLabourCount',
+            'unscheduledLabourCount', 'rtvCreditSaleItemIds',
         ));
     }
 	

@@ -462,8 +462,14 @@
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][order_qty]"
           value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
           placeholder="—"
-          class="w-24 border rounded-lg p-2"
+          class="w-24 border rounded-lg p-2 js-order-qty-input"
           style="{{ $qtyStyle ?: 'background-color:#eef2ff; border-color:#a5b4fc;' }}">
+        @if(isset($rtvCreditSaleItemIds[$item->id]))
+          <div class="mt-1 flex items-center gap-1">
+            <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium" style="background-color:#fef3c7; color:#92400e; white-space:nowrap;">RTV credit</span>
+            <button type="button" class="js-apply-order-qty text-xs text-blue-600 hover:underline" title="Copy order qty to sale quantity" style="white-space:nowrap;">→ qty</button>
+          </div>
+        @endif
       </td>
 
       <td class="px-3 py-2">
@@ -2687,6 +2693,22 @@
     </div>
 </div>
 @include('components.modals.box-qty-modal')
+
+<script>
+document.addEventListener('click', function (e) {
+    if (!e.target.classList.contains('js-apply-order-qty')) return;
+    const row = e.target.closest('tr');
+    if (!row) return;
+    const orderQtyInput = row.querySelector('.js-order-qty-input');
+    const qtyInput = row.querySelector('input[name$="[quantity]"]');
+    if (!orderQtyInput || !qtyInput) return;
+    const val = orderQtyInput.value.trim();
+    if (!val) return;
+    qtyInput.value = val;
+    qtyInput.dispatchEvent(new Event('change', { bubbles: true }));
+    qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+});
+</script>
 
 <x-modals.sent-email-modal type="sale" :related-id="$sale->id" />
 </x-admin-layout>
