@@ -1584,7 +1584,7 @@
                             <option value="">— Select payer —</option>
                             @foreach($depositPayerOptions as $opt)
                                 <option value="{{ $opt['type'] }}" data-customer-id="{{ $opt['customer']->id }}">
-                                    {{ $opt['customer']->company_name ?: $opt['customer']->customer_name ?: '(unnamed)' }}
+                                    {{ $opt['customer']->company_name ?: $opt['customer']->name ?: '(unnamed)' }}
                                     @if(count($depositPayerOptions) > 1)
                                         — {{ $opt['type'] === 'parent' ? 'Parent' : 'Job Site' }}
                                     @endif
