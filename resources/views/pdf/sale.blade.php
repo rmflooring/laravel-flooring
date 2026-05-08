@@ -56,13 +56,15 @@
         .info-label { color: #666; display: inline; }
         .info-value { font-weight: bold; display: inline; }
 
-        .room { margin-bottom: 18px; page-break-inside: avoid; }
+        .room { margin-bottom: 18px; }
         .room-header {
             background-color: #1d4ed8;
             color: #fff;
             padding: 5px 10px;
             font-weight: bold;
             font-size: 11px;
+            page-break-inside: avoid;
+            page-break-after: avoid;
         }
         .room-header-right { float: right; font-weight: normal; }
 
