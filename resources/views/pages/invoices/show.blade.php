@@ -254,6 +254,16 @@
                 <span>Total</span>
                 <span class="w-28 text-right">${{ number_format((float)$invoice->grand_total, 2) }}</span>
             </div>
+            @if((float)$invoice->amount_paid > 0)
+            <div class="flex gap-8 text-sm text-green-700 dark:text-green-400 border-t border-dashed border-gray-300 dark:border-gray-500 pt-2 mt-1">
+                <span>Amount Paid</span>
+                <span class="w-28 text-right font-semibold">−${{ number_format((float)$invoice->amount_paid, 2) }}</span>
+            </div>
+            <div class="flex gap-8 text-sm font-bold border-t border-gray-300 dark:border-gray-500 pt-1 {{ $invoice->balance_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400' }}">
+                <span>Balance Due</span>
+                <span class="w-28 text-right">${{ number_format(max(0, (float)$invoice->balance_due), 2) }}</span>
+            </div>
+            @endif
         </div>
     </div>
 

@@ -662,6 +662,16 @@
                 <span>Total</span>
                 <span class="invoice-grand-total-value">${{ number_format((float)$invoice->grand_total, 2) }}</span>
             </div>
+            @if((float)$invoice->amount_paid > 0)
+            <div class="flex justify-between w-full text-sm text-green-700 border-t border-dashed border-gray-200 pt-2 mt-1">
+                <span>Amount Paid</span>
+                <span class="font-semibold">−${{ number_format((float)$invoice->amount_paid, 2) }}</span>
+            </div>
+            <div class="flex justify-between w-full text-sm font-bold border-t border-gray-200 pt-1 {{ $invoice->balance_due > 0 ? 'text-red-600' : 'text-green-700' }}">
+                <span>Balance Due</span>
+                <span>${{ number_format(max(0, (float)$invoice->balance_due), 2) }}</span>
+            </div>
+            @endif
         </div>
 
         <input type="hidden" id="subtotal_input" name="subtotal" value="{{ number_format((float)$invoice->subtotal, 2, '.', '') }}">
