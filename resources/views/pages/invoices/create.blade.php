@@ -1,6 +1,6 @@
-<x-app-layout>
-<div class="py-8">
-<div class="max-w-screen-xl mx-auto sm:px-6 lg:px-8 space-y-6">
+<x-admin-layout>
+<div class="py-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
     {{-- Header --}}
     <div class="flex items-center gap-3">
@@ -341,4 +341,4 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-</x-app-layout>
+</x-admin-layout>
