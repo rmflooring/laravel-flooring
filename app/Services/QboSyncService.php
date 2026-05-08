@@ -504,6 +504,14 @@ class QboSyncService
                 $payload['PaymentMethodRef'] = ['value' => $methodId];
             }
 
+            if ($payment->reference_number) {
+                $payload['PaymentRefNum'] = $payment->reference_number;
+            }
+
+            if ($payment->notes) {
+                $payload['PrivateNote'] = $payment->notes;
+            }
+
             if ($payment->qbo_id) {
                 $payload['Id']        = $payment->qbo_id;
                 $payload['SyncToken'] = '0';
