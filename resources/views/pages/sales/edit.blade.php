@@ -1861,6 +1861,22 @@
     <span class="estimate-grand-total-value text-base font-bold text-gray-900">$0.00</span>
 </div>
 
+@php $depositTotal = $sale->deposits->sum('amount'); @endphp
+@if($depositTotal > 0)
+<div class="flex items-center justify-between pt-2 border-t border-dashed border-gray-200 mt-2">
+    <span class="text-sm text-gray-500">Deposits Received</span>
+    <span class="text-sm font-semibold text-green-700">−${{ number_format($depositTotal, 2) }}</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+    <span class="text-sm font-semibold text-gray-700">Balance Owing</span>
+    <span id="summary-balance-owing"
+          data-deposit-total="{{ $depositTotal }}"
+          class="text-sm font-bold text-gray-900">
+        ${{ number_format(max(0, ($sale->grand_total ?? 0) - $depositTotal), 2) }}
+    </span>
+</div>
+@endif
+
 					<!-- Step 13: Hidden inputs for sale totals (used on save) -->
 <input type="hidden" name="subtotal_materials" id="subtotal_materials_input" value="0">
 <input type="hidden" name="subtotal_labour" id="subtotal_labour_input" value="0">

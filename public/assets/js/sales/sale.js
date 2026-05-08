@@ -2143,6 +2143,13 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     setHidden("pretax_total_input", pretax);
     setHidden("tax_amount_input", tax);
     setHidden("grand_total_input", grand);
+
+    const balanceEl = document.getElementById('summary-balance-owing');
+    if (balanceEl) {
+      const dep = parseFloat(balanceEl.dataset.depositTotal || 0);
+      const balance = Math.max(0, grand - dep);
+      balanceEl.textContent = '$' + balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
   }
 
   // ── Real-time line total calculation ────────────────────────────────────
