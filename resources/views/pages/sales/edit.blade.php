@@ -455,6 +455,12 @@
           value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
           class="w-24 border rounded-lg p-2"
           @if($boxAligned) style="background-color:#fed7aa; border-color:#fb923c;" @endif>
+        @if(isset($rtvCreditSaleItemIds[$item->id]))
+          <div class="mt-1 flex items-center gap-1">
+            <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium" style="background-color:#fef3c7; color:#92400e; white-space:nowrap;">RTV credit</span>
+            <button type="button" class="js-apply-order-qty text-xs text-blue-600 hover:underline" title="Copy order qty to sale quantity" style="white-space:nowrap;">→ qty</button>
+          </div>
+        @endif
       </td>
 
       <td class="px-3 py-2" data-order-qty-cell>
@@ -464,12 +470,6 @@
           placeholder="—"
           class="w-24 border rounded-lg p-2 js-order-qty-input"
           style="{{ $qtyStyle ?: 'background-color:#eef2ff; border-color:#a5b4fc;' }}">
-        @if(isset($rtvCreditSaleItemIds[$item->id]))
-          <div class="mt-1 flex items-center gap-1">
-            <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium" style="background-color:#fef3c7; color:#92400e; white-space:nowrap;">RTV credit</span>
-            <button type="button" class="js-apply-order-qty text-xs text-blue-600 hover:underline" title="Copy order qty to sale quantity" style="white-space:nowrap;">→ qty</button>
-          </div>
-        @endif
       </td>
 
       <td class="px-3 py-2">
