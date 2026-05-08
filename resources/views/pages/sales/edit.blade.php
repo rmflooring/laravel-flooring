@@ -2588,6 +2588,13 @@
     </div>
 </div>
 <script>
+function updatePayerCustomer(select) {
+    const opt = select.options[select.selectedIndex];
+    document.getElementById('payer_customer_id_input').value = opt.dataset.customerId || '';
+}
+</script>
+
+<script>
   // Neutral (shared) endpoints for both Estimates + Sales
   window.FM_CATALOG_PRODUCT_TYPES_URL = "{{ route('pages.estimates.api.product-types') }}";
   window.FM_CATALOG_MANUFACTURERS_URL = "{{ route('pages.estimates.api.manufacturers') }}";
