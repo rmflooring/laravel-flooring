@@ -266,10 +266,12 @@ class SaleController extends Controller
             'salesperson1Employee',
             'opportunity.projectManager',
             'opportunity.parentCustomer.contacts',
+            'opportunity.jobSiteCustomer',
             'purchaseOrders.vendor',
             'purchaseOrders.items',
             'workOrders.installer',
             'workOrders.items',
+            'deposits.payerCustomer',
         ]);
 
         $employees = Employee::orderBy('first_name')->orderBy('last_name')->get();
@@ -319,6 +321,17 @@ class SaleController extends Controller
             ->first();
         $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
 
+        $parentCustomer  = $sale->opportunity?->parentCustomer;
+        $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+        $depositPayerOptions = collect();
+        if ($parentCustomer) {
+            $depositPayerOptions->push(['type' => 'parent', 'customer' => $parentCustomer]);
+        }
+        if ($jobSiteCustomer && $jobSiteCustomer->id !== $parentCustomer?->id) {
+            $depositPayerOptions->push(['type' => 'job_site', 'customer' => $jobSiteCustomer]);
+        }
+        $depositPaymentMethods = \App\Models\SalePayment::PAYMENT_METHODS;
+
         $allSaleItemIds = $sale->rooms->flatMap(fn ($r) => $r->items)->pluck('id');
         $rtvCreditSaleItemIds = \App\Models\InventoryReturnItem::whereIn('sale_item_id', $allSaleItemIds)
             ->where('apply_to_sale_cost', true)
@@ -334,6 +347,7 @@ class SaleController extends Controller
             'deleteBlockReason', 'customerContacts',
             'directPickTicket', 'materialSaleItems',
             'unscheduledLabourCount', 'rtvCreditSaleItemIds',
+            'depositPayerOptions', 'depositPaymentMethods',
         ));
     }
 	
