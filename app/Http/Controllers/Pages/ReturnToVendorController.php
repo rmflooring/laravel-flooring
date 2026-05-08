@@ -220,6 +220,14 @@ class ReturnToVendorController extends Controller
             ->with('success', "RTV {$rtv->return_number} marked as shipped. Inventory adjusted.");
     }
 
+    public function unship(InventoryReturn $rtv, ReturnToVendorService $service): RedirectResponse
+    {
+        $service->unship($rtv);
+
+        return redirect()->route('pages.inventory.rtv.show', $rtv)
+            ->with('success', "RTV {$rtv->return_number} reverted to draft.");
+    }
+
     public function resolve(Request $request, InventoryReturn $rtv, ReturnToVendorService $service): RedirectResponse
     {
         $request->validate([

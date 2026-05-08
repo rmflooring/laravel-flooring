@@ -1025,6 +1025,8 @@ Route::prefix('pages')
 				->middleware('role_or_permission:admin|create rtvs')->name('ship');
 			Route::post('/{rtv}/resolve', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'resolve'])
 				->middleware('role_or_permission:admin|create rtvs')->name('resolve');
+			Route::post('/{rtv}/unship', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'unship'])
+				->middleware('role_or_permission:admin|create rtvs')->name('unship');
 			Route::delete('/{rtv}', [\App\Http\Controllers\Pages\ReturnToVendorController::class, 'destroy'])
 				->middleware('role_or_permission:admin|create rtvs')->name('destroy');
 		});

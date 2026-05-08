@@ -73,6 +73,55 @@ class ReturnToVendorService
     }
 
     /**
+     * Unship the RTV — reverses ship() and returns status to draft:
+     *
+     *  1. INVENTORY  — removes the negative InventoryTransactions created by ship()
+     *                  + restores InventoryAllocations per item (for items with a sale_item_id)
+     *  2. PO         — decrements purchase_order_items.returned_quantity
+     *  3. STATUS     — reset to draft so it can be edited/deleted
+     */
+    public function unship(InventoryReturn $rtv): void
+    {
+        abort_unless($rtv->status === 'shipped', 422, 'Only shipped RTVs can be reverted to draft.');
+
+        $rtv->loadMissing(['items.inventoryReceipt', 'items.purchaseOrderItem']);
+
+        DB::transaction(function () use ($rtv) {
+            // 1a. Remove the negative inventory transactions created during ship()
+            InventoryTransaction::where('reference_type', InventoryReturn::class)
+                ->where('reference_id', $rtv->id)
+                ->where('type', 'return_to_vendor')
+                ->delete();
+
+            foreach ($rtv->items as $rtvItem) {
+                $qty = (float) $rtvItem->quantity_returned;
+
+                // 1b. Restore allocation for items linked to a sale item
+                if ($rtvItem->sale_item_id) {
+                    $saleId = DB::table('sale_items')
+                        ->join('sale_rooms', 'sale_rooms.id', '=', 'sale_items.sale_room_id')
+                        ->where('sale_items.id', $rtvItem->sale_item_id)
+                        ->value('sale_rooms.sale_id');
+
+                    if ($saleId) {
+                        InventoryAllocation::create([
+                            'inventory_receipt_id' => $rtvItem->inventory_receipt_id,
+                            'sale_item_id'         => $rtvItem->sale_item_id,
+                            'sale_id'              => $saleId,
+                            'quantity'             => $qty,
+                        ]);
+                    }
+                }
+
+                // 2. Reverse the returned_quantity increment on the PO item
+                $rtvItem->purchaseOrderItem?->decrement('returned_quantity', $qty);
+            }
+
+            $rtv->update(['status' => 'draft']);
+        });
+    }
+
+    /**
      * Resolve the RTV — record the vendor's response (outcome + reference number).
      *
      * When outcome = credit_note, per-item credit_received amounts can be passed

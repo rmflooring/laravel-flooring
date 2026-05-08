@@ -73,6 +73,15 @@
                                 @if ($rtv->status === 'shipped')
                                     @can('create rtvs')
                                         <button type="button"
+                                                onclick="document.getElementById('unship-modal').classList.remove('hidden')"
+                                                class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12"/>
+                                            </svg>
+                                            Revert to Draft
+                                        </button>
+
+                                        <button type="button"
                                                 onclick="document.getElementById('resolve-modal').classList.remove('hidden')"
                                                 class="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -265,7 +274,7 @@
                     <li>Reduce sale coverage allocations for affected items</li>
                     <li>Update the PO item returned quantities</li>
                 </ul>
-                <p class="text-sm font-medium text-orange-700 dark:text-orange-400">This action cannot be undone.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">You can revert to draft after shipping if a correction is needed.</p>
             </div>
 
             <form method="POST" action="{{ route('pages.inventory.rtv.ship', $rtv) }}">
@@ -278,6 +287,52 @@
                     <button type="submit"
                             class="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-300">
                         Confirm — Mark as Shipped
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
+
+    {{-- Unship / Revert to Draft modal --}}
+    @if ($rtv->status === 'shipped')
+    <div id="unship-modal"
+         class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+         onclick="if(event.target===this) this.classList.add('hidden')">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
+
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Revert to Draft</h2>
+                <button onclick="document.getElementById('unship-modal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="px-6 py-5 space-y-3">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Reverting to draft will undo the shipment:
+                </p>
+                <ul class="text-sm text-gray-700 dark:text-gray-300 space-y-1 list-disc list-inside">
+                    <li>Restore the returned quantities back into inventory</li>
+                    <li>Re-create sale coverage allocations for affected items</li>
+                    <li>Reset PO item returned quantities</li>
+                </ul>
+                <p class="text-sm text-gray-600 dark:text-gray-400">The RTV will return to draft so you can edit or delete it.</p>
+            </div>
+
+            <form method="POST" action="{{ route('pages.inventory.rtv.unship', $rtv) }}">
+                @csrf
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 rounded-b-xl">
+                    <button type="button" onclick="document.getElementById('unship-modal').classList.add('hidden')"
+                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500">
+                        Confirm — Revert to Draft
                     </button>
                 </div>
             </form>
