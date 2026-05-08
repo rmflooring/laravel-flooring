@@ -181,7 +181,7 @@
                             @if ($rtv->vendor)
                                 <div class="flex justify-between gap-4">
                                     <dt class="text-gray-500 shrink-0">Vendor</dt>
-                                    <dd class="text-gray-900 dark:text-white text-right">{{ $rtv->vendor->name }}</dd>
+                                    <dd class="text-gray-900 dark:text-white text-right">{{ $rtv->vendor->company_name }}</dd>
                                 </div>
                             @endif
                             <div class="flex justify-between gap-4">

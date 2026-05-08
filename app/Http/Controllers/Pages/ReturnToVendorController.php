@@ -154,6 +154,7 @@ class ReturnToVendorController extends Controller
     public function show(InventoryReturn $rtv): View
     {
         $rtv->load([
+            'vendor',
             'purchaseOrder.vendor',
             'items.inventoryReceipt',
             'items.purchaseOrderItem',
