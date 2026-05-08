@@ -14,8 +14,8 @@
         .doc-status { text-align: right; font-size: 11px; font-weight: bold; margin-top: 3px; }
 
         .info-grid { display: table; width: 100%; margin-bottom: 20px; }
-        .info-col { display: table-cell; width: 50%; vertical-align: top; }
-        .info-col:last-child { padding-left: 24px; }
+        .info-col { display: table-cell; width: 33.33%; vertical-align: top; padding-right: 16px; }
+        .info-col:last-child { padding-right: 0; }
         .info-section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 6px; }
         .info-row { margin-bottom: 3px; }
         .info-key { color: #666; }
@@ -136,13 +136,41 @@
 </div>
 
 {{-- Info Grid --}}
+@php
+    $parentCustomer  = $sale->opportunity?->parentCustomer;
+    $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+@endphp
 <div class="info-grid">
+    {{-- Bill To --}}
     <div class="info-col">
         <div class="info-section-title">Bill To</div>
-        @if($sale->homeowner_name ?? $sale->opportunity?->customer?->company_name)
-            <div class="info-row" style="font-weight:bold; font-size:12px;">
-                {{ $sale->homeowner_name ?? $sale->opportunity?->customer?->company_name }}
-            </div>
+        @if($parentCustomer)
+            @if($parentCustomer->company_name)
+                <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $parentCustomer->company_name }}</div>
+                @if($parentCustomer->name && $parentCustomer->name !== $parentCustomer->company_name)
+                    <div class="info-row">{{ $parentCustomer->name }}</div>
+                @endif
+            @else
+                <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $parentCustomer->name }}</div>
+            @endif
+            @if($parentCustomer->email)
+                <div class="info-row">{{ $parentCustomer->email }}</div>
+            @endif
+            @if($parentCustomer->phone)
+                <div class="info-row">{{ $parentCustomer->phone }}</div>
+            @endif
+        @elseif($sale->customer_name)
+            <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $sale->customer_name }}</div>
+        @endif
+    </div>
+
+    {{-- Job Site --}}
+    <div class="info-col">
+        <div class="info-section-title">Job Site</div>
+        @if($jobSiteCustomer?->name)
+            <div class="info-row" style="font-weight:bold;">{{ $jobSiteCustomer->name }}</div>
+        @elseif($sale->homeowner_name ?? $sale->sourceEstimate?->homeowner_name)
+            <div class="info-row" style="font-weight:bold;">{{ $sale->homeowner_name ?? $sale->sourceEstimate?->homeowner_name }}</div>
         @endif
         @if($sale->job_address)
             <div class="info-row" style="margin-top:3px; white-space:pre-line;">{{ $sale->job_address }}</div>
@@ -154,6 +182,8 @@
             <div class="info-row">{{ $sale->job_email }}</div>
         @endif
     </div>
+
+    {{-- Invoice Details --}}
     <div class="info-col">
         <div class="info-section-title">Invoice Details</div>
         <div class="info-row"><span class="info-key">Invoice #: </span><strong>{{ $invoice->invoice_number }}</strong></div>

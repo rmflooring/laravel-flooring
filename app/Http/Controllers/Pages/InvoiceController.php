@@ -432,7 +432,7 @@ class InvoiceController extends Controller
     {
 
         $invoice->load(['rooms.items', 'paymentTerm', 'payments']);
-        $sale->load(['opportunity.projectManager', 'opportunity.customer']);
+        $sale->load(['opportunity.projectManager', 'opportunity.customer', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
 
         $taxRates = $sale->tax_group_id
             ? \DB::table('tax_rate_group_items')
