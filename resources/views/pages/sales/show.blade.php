@@ -1163,7 +1163,7 @@
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $deposit->payment_date->format('M j, Y') }}</td>
                                     <td class="px-5 py-3 text-gray-700 dark:text-gray-300">
-                                        {{ $deposit->payerCustomer?->company_name ?: $deposit->payerCustomer?->customer_name ?: '—' }}
+                                        {{ $deposit->payerCustomer?->company_name ?: $deposit->payerCustomer?->name ?: '—' }}
                                         @if($deposit->payer_type)
                                             <span class="ml-1 text-xs text-gray-400">({{ $deposit->payer_label }})</span>
                                         @endif
