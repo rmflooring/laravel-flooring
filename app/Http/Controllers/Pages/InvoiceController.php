@@ -10,6 +10,7 @@ use App\Models\InvoiceRoom;
 use App\Models\PaymentTerm;
 use App\Models\Sale;
 use App\Models\Setting;
+use App\Services\EmailTemplateService;
 use App\Services\GraphMailService;
 use App\Services\InvoiceService;
 use App\Services\QboSyncService;
@@ -98,11 +99,15 @@ class InvoiceController extends Controller
 
     public function show(Sale $sale, Invoice $invoice)
     {
-
         $invoice->load(['rooms.items', 'payments.recordedBy', 'payments.salePayment', 'paymentTerm']);
-        $sale->load(['opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
+        $sale->load(['opportunity.projectManager', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
 
-        $paymentMethods = InvoicePayment::PAYMENT_METHODS;
+        $paymentMethods   = InvoicePayment::PAYMENT_METHODS;
+        $pmEmail          = $sale->opportunity?->projectManager?->email;
+        $homeownerEmail   = $sale->job_email ?: ($sale->sourceEstimate?->homeowner_email ?? '');
+        $customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
+
+        [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale, $invoice);
 
         $taxRates = $sale->tax_group_id
             ? \DB::table('tax_rate_group_items')
@@ -111,7 +116,10 @@ class InvoiceController extends Controller
                 ->get(['tax_rates.name', 'tax_rates.sales_rate'])
             : collect();
 
-        return view('pages.invoices.show', compact('sale', 'invoice', 'paymentMethods', 'taxRates'));
+        return view('pages.invoices.show', compact(
+            'sale', 'invoice', 'paymentMethods', 'taxRates',
+            'pmEmail', 'homeownerEmail', 'customerContacts', 'emailSubject', 'emailBody'
+        ));
     }
 
     // -------------------------------------------------------------------------
@@ -477,6 +485,34 @@ class InvoiceController extends Controller
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private function resolveEmailTemplate(Sale $sale, Invoice $invoice): array
+    {
+        $user            = auth()->user();
+        $templateService = app(EmailTemplateService::class);
+        $template        = $templateService->getTemplate($user, 'invoice');
+
+        $vars = [
+            'customer_name'    => $sale->sourceEstimate?->homeowner_name ?: $sale->customer_name,
+            'invoice_number'   => $invoice->invoice_number,
+            'sale_number'      => $sale->sale_number,
+            'grand_total'      => '$' . number_format((float) $invoice->grand_total, 2),
+            'balance_due'      => '$' . number_format((float) max(0, $invoice->balance_due), 2),
+            'due_date'         => $invoice->due_date?->format('F j, Y') ?? '',
+            'job_name'         => $sale->job_name,
+            'job_no'           => $sale->job_no,
+            'job_address'      => $sale->job_address,
+            'job_phone'        => $sale->job_phone,
+            'pm_name'          => $sale->pm_name,
+            'sender_name'      => $user->name,
+            'sender_email'     => $user->email,
+        ];
+
+        return [
+            $templateService->render($template['subject'], $vars),
+            $templateService->render($template['body'], $vars),
+        ];
+    }
 
     private function buildPdfAttachment(Sale $sale, Invoice $invoice): ?array
     {

@@ -38,7 +38,7 @@
                     </form>
                 @endif
                 {{-- Send email button --}}
-                <button type="button" onclick="document.getElementById('send-modal').classList.remove('hidden')"
+                <button type="button" @click="window.dispatchEvent(new Event('open-send-invoice-modal'))"
                     class="inline-flex items-center gap-1.5 py-2 px-4 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -484,55 +484,155 @@
 </div>
 
 {{-- Send Email Modal --}}
-<div id="send-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg mx-4">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Send Invoice</h3>
-            <button type="button" onclick="document.getElementById('send-modal').classList.add('hidden')"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+<div x-data="{
+        open: false,
+        toEmail: '{{ $homeownerEmail }}',
+        customTo: '',
+        selected: '{{ $homeownerEmail ? 'jobsite' : 'custom' }}',
+        get finalTo() { return this.selected === 'custom' ? this.customTo : this.toEmail; },
+        select(val, email) { this.selected = val; this.toEmail = email; }
+     }"
+     @open-send-invoice-modal.window="open = true"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.5)">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl" @click.outside="open = false">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h5 class="text-base font-semibold text-gray-800">Send Invoice</h5>
+            <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
-        <form action="{{ route('pages.sales.invoices.send-email', [$sale, $invoice]) }}" method="POST" class="p-5 space-y-4">
+        <form method="POST" action="{{ route('pages.sales.invoices.send-email', [$sale, $invoice]) }}">
             @csrf
-            <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">To <span class="text-red-500">*</span></label>
-                @php $homeownerEmail = $sale->job_email ?? $sale->sourceEstimate?->homeowner_email; @endphp
-                <div class="flex gap-2 mb-2 flex-wrap">
-                    @if($homeownerEmail)
-                        <button type="button" onclick="document.getElementById('email-to').value = '{{ $homeownerEmail }}'"
-                            class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded px-2 py-1 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300">
-                            Job Site: {{ $homeownerEmail }}
+            <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                {{-- To --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        @if($homeownerEmail)
+                            <button type="button"
+                                    @click="select('jobsite', '{{ $homeownerEmail }}')"
+                                    :class="selected === 'jobsite' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                                Job Site — {{ $homeownerEmail }}
+                            </button>
+                        @endif
+                        @if(!empty($pmEmail))
+                            <button type="button"
+                                    @click="select('pm', '{{ $pmEmail }}')"
+                                    :class="selected === 'pm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                PM — {{ $pmEmail }}
+                            </button>
+                        @endif
+                        <button type="button"
+                                @click="select('custom', ''); $nextTick(() => $refs.customToInput.focus())"
+                                :class="selected === 'custom' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            Custom
                         </button>
+                    </div>
+                    <template x-if="selected !== 'custom'">
+                        <div class="w-full bg-gray-100 border border-gray-200 rounded-lg p-2.5 text-sm text-gray-700" x-text="toEmail"></div>
+                    </template>
+                    <template x-if="selected === 'custom'">
+                        <input type="email" x-ref="customToInput" x-model="customTo"
+                               placeholder="Enter email address"
+                               class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                    </template>
+                    <input type="hidden" name="to" :value="finalTo">
+                    @if(!$homeownerEmail && empty($pmEmail))
+                        <p class="mt-1.5 text-xs text-yellow-700">No job site or PM email on this sale. Use Custom to enter a recipient.</p>
                     @endif
                 </div>
-                <input type="email" id="email-to" name="to" value="{{ $homeownerEmail }}"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    required>
-            </div>
-            <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
-                <input type="text" name="subject"
-                    value="Invoice {{ $invoice->invoice_number }} — {{ $sale->job_name ?? 'Job #' . $sale->sale_number }}"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    required>
-            </div>
-            <div>
-                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
-                <textarea name="body" rows="5"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">Please find your invoice {{ $invoice->invoice_number }} attached.{{ $invoice->due_date ? "\n\nPayment due: " . $invoice->due_date->format('M j, Y') : '' }}
 
-Thank you for your business.</textarea>
+                {{-- CC --}}
+                <div x-data="{ ccEmails: [], ccInput: '' }">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">CC <span class="text-xs text-gray-400 font-normal">(optional)</span></label>
+                    @if($customerContacts->isNotEmpty())
+                    <div class="mb-2">
+                        <p class="text-xs text-gray-500 mb-1.5">Quick-add from contacts:</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach($customerContacts->filter(fn($c) => $c->email) as $contact)
+                            <button type="button"
+                                    @click="if(!ccEmails.includes('{{ $contact->email }}')) { ccEmails.push('{{ $contact->email }}') }"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full border border-gray-300 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors">
+                                {{ $contact->name }}@if($contact->title) <span class="text-gray-400">&middot; {{ $contact->title }}</span>@endif
+                            </button>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+                    <div class="flex flex-wrap gap-1.5 mb-2" x-show="ccEmails.length > 0">
+                        <template x-for="(email, i) in ccEmails" :key="i">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">
+                                <span x-text="email"></span>
+                                <input type="hidden" name="cc[]" :value="email">
+                                <button type="button" @click="ccEmails.splice(i, 1)" class="text-blue-400 hover:text-blue-600 leading-none ml-1">&times;</button>
+                            </span>
+                        </template>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="email" x-model="ccInput"
+                               @keydown.enter.prevent="if(ccInput.trim() && !ccEmails.includes(ccInput.trim())) { ccEmails.push(ccInput.trim()); ccInput = ''; }"
+                               placeholder="cc@example.com"
+                               class="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                        <button type="button"
+                                @click="if(ccInput.trim() && !ccEmails.includes(ccInput.trim())) { ccEmails.push(ccInput.trim()); ccInput = ''; }"
+                                class="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                            Add
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Subject --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <input type="text" name="subject" value="{{ $emailSubject }}"
+                           class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                </div>
+
+                {{-- Body --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                    <textarea name="body" rows="10"
+                              class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm font-mono">{{ $emailBody }}</textarea>
+                </div>
+
+                {{-- Attachment --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Attachment</label>
+                    <a href="{{ route('pages.sales.invoices.pdf', [$sale, $invoice]) }}" target="_blank"
+                       class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                        <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Invoice-{{ $invoice->invoice_number }}.pdf</span>
+                        <span class="text-xs text-gray-400 ml-1">— click to preview</span>
+                    </a>
+                </div>
+
+                <p class="text-xs text-gray-400">
+                    @if(auth()->user()->microsoftAccount?->mail_connected)
+                        Sending from <strong>{{ auth()->user()->microsoftAccount->email }}</strong> via your personal MS365 account (Track 2).
+                    @else
+                        Sending from the shared mailbox via Track 1.
+                    @endif
+                </p>
+
             </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">The invoice PDF will be attached automatically.</p>
-            <div class="flex gap-3 pt-1">
-                <button type="submit"
-                    class="flex-1 text-white bg-emerald-600 hover:bg-emerald-700 font-medium rounded-lg text-sm px-5 py-2.5">
-                    Send Invoice
-                </button>
-                <button type="button" onclick="document.getElementById('send-modal').classList.add('hidden')"
-                    class="flex-1 py-2.5 px-5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600">
+            <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+                <button type="button" @click="open = false"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                     Cancel
+                </button>
+                <button type="submit"
+                        class="px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
+                    Send Invoice
                 </button>
             </div>
         </form>
