@@ -262,6 +262,13 @@ Route::prefix('admin')
             Route::put('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'update'])
                 ->name('payments.update');
 
+            // Audit Log
+            Route::get('/audits', [\App\Http\Controllers\Admin\AuditController::class, 'index'])
+                ->name('audits.index');
+
+            Route::get('/audits/{audit}', [\App\Http\Controllers\Admin\AuditController::class, 'show'])
+                ->name('audits.show');
+
         });
 
         /*
