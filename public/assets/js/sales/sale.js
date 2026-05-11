@@ -2025,7 +2025,7 @@ function addRoom() {
 
   function sumRowTotals(tbody) {
     if (!tbody) return 0;
-    let sum = 0;
+    let cents = 0;
 
     tbody.querySelectorAll("tr").forEach(row => {
       // Use the class if present, otherwise fallback to name contains line_total
@@ -2035,10 +2035,10 @@ function addRoom() {
         row.querySelector(".labour-line-total-input") ||
         row.querySelector('input[name*="line_total"]');
 
-      if (hidden) sum += parseNumber(hidden.value || 0);
+      if (hidden) cents += Math.round(parseNumber(hidden.value || 0) * 100);
     });
 
-    return sum;
+    return cents / 100;
   }
 
   function updateRoomTotals(roomCard) {

@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class Estimate extends Model
+class Estimate extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
+
+    protected array $auditExclude = ['condition_body'];
     protected $fillable = [
 		'opportunity_id',
         'parent_estimate_id',

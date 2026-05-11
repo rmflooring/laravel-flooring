@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class InvoicePayment extends Model
+class InvoicePayment extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
     protected $guarded = ['id'];
 
     protected $casts = [

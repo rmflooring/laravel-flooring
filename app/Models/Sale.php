@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class Sale extends Model
+class Sale extends Model implements Auditable
 {
-    use SoftDeletes;
+    use SoftDeletes, \OwenIt\Auditing\Auditable;
+
+    protected array $auditExclude = ['condition_body'];
 
     // Protect sale_number from mass assignment (non-editable)
     protected $guarded = ['id', 'sale_number'];
