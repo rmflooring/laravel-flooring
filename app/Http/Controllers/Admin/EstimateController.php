@@ -358,6 +358,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'salesperson2Employee',
 			'sale',
 			'revisions' => fn($q) => $q->orderBy('revision_no'),
+			'opportunity.projectManager',
 			'opportunity.parentCustomer.contacts',
 			'parentEstimate',
 		]);
@@ -385,9 +386,10 @@ $data['tax_rate_percent'] = $groupPercent;
 		$emailSubject = $templateService->render($template['subject'], $templateVars);
 		$emailBody    = $templateService->render($template['body'], $templateVars);
 
+		$pmEmail          = $estimate->opportunity?->projectManager?->email;
 		$customerContacts = $estimate->opportunity?->parentCustomer?->contacts ?? collect();
 
-		return view('pages.estimates.show', compact('estimate', 'emailSubject', 'emailBody', 'customerContacts'));
+		return view('pages.estimates.show', compact('estimate', 'emailSubject', 'emailBody', 'pmEmail', 'customerContacts'));
 	}
 
 	public function edit(Estimate $estimate)
