@@ -23,6 +23,8 @@ class FreightItemController extends Controller
             'notes'       => ['nullable', 'string'],
         ]);
 
+        $data['cost_price'] = $data['cost_price'] ?? 0;
+        $data['sell_price'] = $data['sell_price'] ?? 0;
         $data['created_by'] = auth()->id();
         $data['updated_by'] = auth()->id();
 
@@ -40,6 +42,8 @@ class FreightItemController extends Controller
             'notes'       => ['nullable', 'string'],
         ]);
 
+        $data['cost_price'] = $data['cost_price'] ?? 0;
+        $data['sell_price'] = $data['sell_price'] ?? 0;
         $data['updated_by'] = auth()->id();
 
         $freightItem->update($data);
