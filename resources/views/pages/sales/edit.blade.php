@@ -552,7 +552,7 @@
       <td class="px-3 py-2">
         <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][sell_price]"
-          value="{{ old("rooms.$roomIndex.materials.$i.sell_price", $item->sell_price) }}"
+          value="{{ old("rooms.$roomIndex.materials.$i.sell_price", fmt_price($item->sell_price)) }}"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
@@ -813,7 +813,7 @@
       <td class="px-3 py-2">
         <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][freight][{{ $i }}][sell_price]"
-          value="{{ old("rooms.$roomIndex.freight.$i.sell_price", number_format($sell, 4, '.', '')) }}"
+          value="{{ old("rooms.$roomIndex.freight.$i.sell_price", fmt_price($sell)) }}"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
@@ -1061,7 +1061,7 @@
       <td class="px-3 py-2">
         <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][labour][{{ $i }}][sell_price]"
-          value="{{ old("rooms.$roomIndex.labour.$i.sell_price", number_format($sell, 4, '.', '')) }}"
+          value="{{ old("rooms.$roomIndex.labour.$i.sell_price", fmt_price($sell)) }}"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 

@@ -101,6 +101,13 @@ function applyWideMode(isWide) {
     return isNaN(n) ? "$0.00" : "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
+  function formatPrice(value) {
+    const s = parseFloat(value).toFixed(4);
+    const [int, dec] = s.split('.');
+    const trimmed = dec.replace(/0+$/, '').padEnd(2, '0');
+    return int + '.' + trimmed;
+  }
+
   function parseNumber(value) {
     const n = parseFloat(value);
     return isNaN(n) ? 0 : n;
@@ -1250,7 +1257,7 @@ function initManufacturerDropdownForRoom(roomCard) {
   const data = await resp.json();
   if (typeof data.sell_price !== 'number') return;
 
-  priceInput.value = data.sell_price.toFixed(4);
+  priceInput.value = formatPrice(data.sell_price);
 
   // trigger totals recalculation if your script listens to input events
   priceInput.dispatchEvent(new Event('input', { bubbles: true }));

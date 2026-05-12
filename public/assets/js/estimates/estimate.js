@@ -131,6 +131,13 @@ function applyWideMode(isWide) {
     return isNaN(n) ? "$0.00" : "$" + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
+  function formatPrice(value) {
+    const s = parseFloat(value).toFixed(4);
+    const [int, dec] = s.split('.');
+    const trimmed = dec.replace(/0+$/, '').padEnd(2, '0');
+    return int + '.' + trimmed;
+  }
+
   function parseNumber(value) {
     const n = parseFloat(value);
     return isNaN(n) ? 0 : n;
@@ -949,7 +956,7 @@ function initManufacturerDropdownForRoom(roomCard) {
       if (priceInput && priceInput.dataset.userOverridden !== '1') {
         const defaultSellPrice = parseFloat(btn.getAttribute('data-sell-price') || 0);
         if (defaultSellPrice > 0) {
-          priceInput.value = defaultSellPrice.toFixed(4);
+          priceInput.value = formatPrice(defaultSellPrice);
           priceInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
@@ -1199,7 +1206,7 @@ function initManufacturerDropdownForRoom(roomCard) {
 
   // --- SELL PRICE ---
   if (typeof data.sell_price === 'number') {
-    priceInput.value = data.sell_price.toFixed(4);
+    priceInput.value = formatPrice(data.sell_price);
     priceInput.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -1249,7 +1256,7 @@ function initManufacturerDropdownForRoom(roomCard) {
 			delete priceInput.dataset.userOverridden;
 			const styleSellPrice = parseFloat(btn.getAttribute('data-sell-price') || 0);
 			if (styleSellPrice > 0) {
-				priceInput.value = styleSellPrice.toFixed(4);
+				priceInput.value = formatPrice(styleSellPrice);
 				priceInput.dispatchEvent(new Event('input', { bubbles: true }));
 			}
 			// If styleSellPrice is 0, keep the line default already in the field
@@ -1558,7 +1565,7 @@ data-freight-cost="${escapeHtml(cost)}">
       if (priceInput && p !== '' && p != null) {
         const n = Number(p);
         if (!isNaN(n)) {
-          priceInput.value = n.toFixed(4);
+          priceInput.value = formatPrice(n);
           priceInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
