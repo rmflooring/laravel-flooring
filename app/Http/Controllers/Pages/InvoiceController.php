@@ -423,10 +423,13 @@ class InvoiceController extends Controller
             $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', null, $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl);
         }
 
-        // Mark as sent if still draft
+        $invoice->sent_at = now();
         if ($invoice->status === 'draft') {
-            $invoice->update(['status' => 'sent', 'sent_at' => now()]);
+            $invoice->status = 'sent';
+            $invoice->save();
             $this->service->syncSaleInvoiceStatus($sale);
+        } else {
+            $invoice->save();
         }
 
         return back()->with('success', 'Invoice emailed successfully.');

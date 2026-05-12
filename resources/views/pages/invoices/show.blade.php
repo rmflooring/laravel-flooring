@@ -83,6 +83,17 @@
                         };
                     @endphp
                     <span class="text-xs font-semibold px-2.5 py-1 rounded {{ $badgeClass }}">{{ $statusLabel }}</span>
+                    @if($invoice->sent_at)
+                        <button type="button"
+                                onclick="window.dispatchEvent(new Event('open-sent-email-modal'))"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 underline decoration-dotted underline-offset-2 cursor-pointer hover:opacity-80">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            Emailed {{ $invoice->sent_at->format('M j') }}
+                        </button>
+                    @endif
                 </div>
                 <div class="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
                     <div>Sale #{{ $sale->sale_number }}
@@ -98,19 +109,6 @@
                     @endif
                     @if($invoice->customer_po_number)
                         <div>Customer PO#: <span class="text-gray-700 dark:text-gray-300">{{ $invoice->customer_po_number }}</span></div>
-                    @endif
-                    @if($invoice->sent_at)
-                        <div>Sent:
-                            <button type="button"
-                                    onclick="window.dispatchEvent(new Event('open-sent-email-modal'))"
-                                    class="inline-flex items-center gap-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 underline decoration-dotted underline-offset-2 cursor-pointer">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                </svg>
-                                {{ $invoice->sent_at->format('M j, Y') }}
-                            </button>
-                        </div>
                     @endif
                 </div>
                 @if($invoice->voided_at)
