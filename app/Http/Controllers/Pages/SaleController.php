@@ -160,6 +160,7 @@ class SaleController extends Controller
 			'workOrders.items',
 			'changeOrders',
 			'invoices',
+			'invoices.payments',
 			'deposits.payerCustomer',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
@@ -271,6 +272,8 @@ class SaleController extends Controller
             'purchaseOrders.items',
             'workOrders.installer',
             'workOrders.items',
+            'invoices',
+            'invoices.payments',
             'deposits.payerCustomer',
         ]);
 

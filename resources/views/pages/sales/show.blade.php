@@ -1128,6 +1128,62 @@
             </div>
             @endcan
 
+            {{-- Payments Received Section --}}
+            @can('view invoices')
+            @php
+                $allInvoicePayments = $sale->invoices
+                    ->whereNotIn('status', ['voided'])
+                    ->flatMap(fn($inv) => $inv->payments->map(fn($p) => ['payment' => $p, 'invoice' => $inv]))
+                    ->sortBy(fn($row) => $row['payment']->payment_date);
+            @endphp
+            @if($allInvoicePayments->isNotEmpty())
+            <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Payments Received</h3>
+                        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
+                            ${{ number_format($allInvoicePayments->sum(fn($r) => $r['payment']->amount), 2) }} total
+                        </span>
+                    </div>
+                </div>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                            <th class="px-5 py-3 text-left">Date</th>
+                            <th class="px-4 py-3 text-left">Invoice</th>
+                            <th class="px-4 py-3 text-left">Method</th>
+                            <th class="px-4 py-3 text-left">Reference #</th>
+                            <th class="px-4 py-3 text-left">Notes</th>
+                            <th class="px-4 py-3 text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+                        @foreach($allInvoicePayments as $row)
+                        @php $p = $row['payment']; $inv = $row['invoice']; @endphp
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $p->payment_date->format('M j, Y') }}</td>
+                            <td class="px-4 py-3">
+                                <a href="{{ route('pages.sales.invoices.show', [$sale, $inv]) }}"
+                                   class="text-blue-600 hover:underline dark:text-blue-400">{{ $inv->invoice_number }}</a>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ $p->method_label }}</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $p->reference_number ?: '—' }}</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $p->notes ?: '—' }}</td>
+                            <td class="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">${{ number_format((float)$p->amount, 2) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-gray-50 dark:bg-gray-700 text-sm font-semibold">
+                            <td colspan="5" class="px-5 py-3 text-right text-gray-600 dark:text-gray-300">Total Payments</td>
+                            <td class="px-4 py-3 text-right text-green-700 dark:text-green-400">${{ number_format($allInvoicePayments->sum(fn($r) => $r['payment']->amount), 2) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @endif
+            @endcan
+
             {{-- Deposits Section --}}
             <div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
