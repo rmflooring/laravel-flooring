@@ -2157,6 +2157,13 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
       const balance = Math.max(0, grand - dep);
       balanceEl.textContent = '$' + balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
+
+    const balanceRemEl = document.getElementById('summary-balance-remaining');
+    if (balanceRemEl) {
+      const received = parseFloat(balanceRemEl.dataset.totalReceived || 0);
+      const balRem = Math.max(0, grand - received);
+      balanceRemEl.textContent = '$' + balRem.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
   }
 
   // ── Real-time line total calculation ────────────────────────────────────

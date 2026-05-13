@@ -401,33 +401,71 @@
                     @endforeach
                 </div>
 
-                {{-- Totals --}}
-                <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
-                    <div class="max-w-xs ml-auto space-y-1.5 text-sm">
-                        <div class="flex justify-between text-gray-600">
-                            <span>Materials</span>
-                            <span>${{ number_format($sale->subtotal_materials, 2) }}</span>
+                {{-- Sale Summary --}}
+                @php
+                    $showInvoicePaymentsTotal = $sale->invoices
+                        ->whereNotIn('status', ['voided'])
+                        ->flatMap->payments
+                        ->sum('amount');
+                    $showAppliedDepositIds = $sale->invoices
+                        ->whereNotIn('status', ['voided'])
+                        ->flatMap->payments
+                        ->whereNotNull('sale_payment_id')
+                        ->pluck('sale_payment_id')
+                        ->all();
+                    $showUnappliedDepositTotal = $sale->deposits->whereNotIn('id', $showAppliedDepositIds)->sum('amount');
+                    $showTotalReceived         = $showInvoicePaymentsTotal + $showUnappliedDepositTotal;
+                    $showDepositTotal          = $sale->deposits->sum('amount');
+                @endphp
+                <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Sale Summary</h2>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <span class="text-sm text-gray-700">Subtotal (Materials)</span>
+                            <span class="text-sm font-semibold text-gray-900">${{ number_format($sale->subtotal_materials, 2) }}</span>
                         </div>
-                        <div class="flex justify-between text-gray-600">
-                            <span>Labour</span>
-                            <span>${{ number_format($sale->subtotal_labour, 2) }}</span>
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <span class="text-sm text-gray-700">Subtotal (Labour)</span>
+                            <span class="text-sm font-semibold text-gray-900">${{ number_format($sale->subtotal_labour, 2) }}</span>
                         </div>
-                        <div class="flex justify-between text-gray-600">
-                            <span>Freight</span>
-                            <span>${{ number_format($sale->subtotal_freight, 2) }}</span>
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <span class="text-sm text-gray-700">Total Freight / Trip</span>
+                            <span class="text-sm font-semibold text-gray-900">${{ number_format($sale->subtotal_freight, 2) }}</span>
                         </div>
-                        <div class="flex justify-between text-gray-600 border-t border-gray-100 pt-1.5">
-                            <span>Subtotal</span>
-                            <span>${{ number_format($sale->pretax_total, 2) }}</span>
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <span class="text-sm text-gray-700">Pre-tax Total</span>
+                            <span class="text-sm font-semibold text-gray-900">${{ number_format($sale->pretax_total, 2) }}</span>
                         </div>
-                        <div class="flex justify-between text-gray-600">
-                            <span>Tax ({{ $sale->tax_rate_percent }}%)</span>
-                            <span>${{ number_format($sale->tax_amount, 2) }}</span>
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <span class="text-sm text-gray-700">Tax ({{ number_format((float)($sale->tax_rate_percent ?? 0), 2) }}%)</span>
+                            <span class="text-sm font-semibold text-gray-900">${{ number_format($sale->tax_amount, 2) }}</span>
                         </div>
-                        <div class="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-1.5 text-base">
-                            <span>Grand Total</span>
-                            <span>${{ number_format($sale->grand_total, 2) }}</span>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-base font-semibold text-gray-900">Grand Total</span>
+                            <span class="text-base font-bold text-gray-900">${{ number_format($sale->grand_total, 2) }}</span>
                         </div>
+                        @if($showDepositTotal > 0)
+                        <div class="flex items-center justify-between pt-2 border-t border-dashed border-gray-200 mt-2">
+                            <span class="text-sm text-gray-500">Deposits Received</span>
+                            <span class="text-sm font-semibold text-green-700">−${{ number_format($showDepositTotal, 2) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-sm font-semibold text-gray-700">Balance Owing</span>
+                            <span class="text-sm font-bold text-gray-900">${{ number_format(max(0, $sale->grand_total - $showDepositTotal), 2) }}</span>
+                        </div>
+                        @endif
+                        @if($showTotalReceived > 0)
+                        <div class="flex items-center justify-between pt-2 border-t border-dashed border-gray-200 mt-2">
+                            <span class="text-sm text-gray-500">Payments Received</span>
+                            <span class="text-sm font-semibold text-green-700">−${{ number_format($showTotalReceived, 2) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-sm font-semibold text-gray-700">Balance Remaining</span>
+                            <span class="text-sm font-bold {{ max(0, $sale->grand_total - $showTotalReceived) <= 0 ? 'text-green-700' : 'text-gray-900' }}">
+                                ${{ number_format(max(0, $sale->grand_total - $showTotalReceived), 2) }}
+                            </span>
+                        </div>
+                        @endif
                     </div>
                 </div>
             @else

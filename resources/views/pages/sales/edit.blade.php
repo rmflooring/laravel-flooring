@@ -1861,7 +1861,21 @@
     <span class="estimate-grand-total-value text-base font-bold text-gray-900">$0.00</span>
 </div>
 
-@php $depositTotal = $sale->deposits->sum('amount'); @endphp
+@php
+    $depositTotal         = $sale->deposits->sum('amount');
+    $invoicePaymentsTotal = $sale->invoices
+        ->whereNotIn('status', ['voided'])
+        ->flatMap->payments
+        ->sum('amount');
+    $appliedDepositIds    = $sale->invoices
+        ->whereNotIn('status', ['voided'])
+        ->flatMap->payments
+        ->whereNotNull('sale_payment_id')
+        ->pluck('sale_payment_id')
+        ->all();
+    $unappliedDepositTotal = $sale->deposits->whereNotIn('id', $appliedDepositIds)->sum('amount');
+    $totalReceived         = $invoicePaymentsTotal + $unappliedDepositTotal;
+@endphp
 @if($depositTotal > 0)
 <div class="flex items-center justify-between pt-2 border-t border-dashed border-gray-200 mt-2">
     <span class="text-sm text-gray-500">Deposits Received</span>
@@ -1873,6 +1887,20 @@
           data-deposit-total="{{ $depositTotal }}"
           class="text-sm font-bold text-gray-900">
         ${{ number_format(max(0, ($sale->grand_total ?? 0) - $depositTotal), 2) }}
+    </span>
+</div>
+@endif
+@if($totalReceived > 0)
+<div class="flex items-center justify-between pt-2 border-t border-dashed border-gray-200 mt-2">
+    <span class="text-sm text-gray-500">Payments Received</span>
+    <span class="text-sm font-semibold text-green-700">−${{ number_format($totalReceived, 2) }}</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+    <span class="text-sm font-semibold text-gray-700">Balance Remaining</span>
+    <span id="summary-balance-remaining"
+          data-total-received="{{ $totalReceived }}"
+          class="text-sm font-bold text-gray-900">
+        ${{ number_format(max(0, ($sale->grand_total ?? 0) - $totalReceived), 2) }}
     </span>
 </div>
 @endif
