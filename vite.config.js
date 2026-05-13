@@ -13,7 +13,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     hmr: {
-      host: '192.168.1.151', // e.g. 192.168.0.25
+      host: process.env.VITE_HMR_HOST ?? 'localhost',
       protocol: 'ws',
       port: 5173,
     },

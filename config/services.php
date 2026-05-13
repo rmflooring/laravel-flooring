@@ -50,4 +50,9 @@ return [
         'mail_from_address'=> env('MAIL_GRAPH_FROM_ADDRESS', 'team@rmflooring.ca'),
     ],
 
+    'shop' => [
+        'url'             => env('SHOP_URL', ''),
+        'cache_bust_key'  => env('SHOP_CACHE_BUST_KEY', ''),
+    ],
+
 ];

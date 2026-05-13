@@ -8,6 +8,7 @@ use App\Models\ProductStyle;
 use App\Models\ProductType;
 use App\Models\UnitMeasure;
 use App\Models\Vendor;
+use App\Services\ShopCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -118,10 +119,12 @@ public function index(Request $request)
 
     $validated['shop_visible'] = $request->boolean('shop_visible');
 
-    ProductLine::create([
+    $line = ProductLine::create([
         ...$validated,
         'created_by' => Auth::id(),
     ]);
+
+    app(ShopCacheService::class)->bustProductLine($line->id, $line->product_type_id);
 
     return redirect()->route('admin.product_lines.index')
         ->with('success', 'Product line created successfully.');
@@ -164,6 +167,8 @@ public function update(Request $request, ProductLine $product_line)
         ...$validated,
         'updated_by' => Auth::id(),
     ]);
+
+    app(ShopCacheService::class)->bustProductLine($product_line->id, $product_line->product_type_id);
 
     return redirect()->route('admin.product_lines.index')
         ->with('success', 'Product line updated successfully.');

@@ -10,6 +10,13 @@ class ProductLine extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'width'            => 'float',
+        'length'           => 'float',
+        'default_sell_price' => 'float',
+        'shop_visible'     => 'boolean',
+    ];
+
     protected $fillable = [
         'product_type_id',
         'name',

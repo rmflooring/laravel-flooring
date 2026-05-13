@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\ShopCacheService;
 use Illuminate\Http\Request;
 use App\Models\ProductLine;
 use App\Models\Vendor;
@@ -107,6 +108,8 @@ class ProductStyleController extends Controller
 
         $style->update($validated);
 
+        app(ShopCacheService::class)->bustProductStyle($product_line->id, $product_line->product_type_id);
+
         return redirect()
             ->route('admin.product_styles.index', $product_line)
             ->with('success', 'Style updated successfully.');
@@ -136,6 +139,8 @@ class ProductStyleController extends Controller
         $validated['shop_visible'] = $request->boolean('shop_visible');
 
         $product_line->productStyles()->create($validated);
+
+        app(ShopCacheService::class)->bustProductStyle($product_line->id, $product_line->product_type_id);
 
         return redirect()
             ->route('admin.product_styles.index', $product_line)

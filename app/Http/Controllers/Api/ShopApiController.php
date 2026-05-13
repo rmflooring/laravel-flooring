@@ -51,8 +51,8 @@ class ShopApiController extends Controller
                 'manufacturer'     => $line->manufacturer,
                 'model'            => $line->model,
                 'collection'       => $line->collection,
-                'width'            => $line->width,
-                'length'           => $line->length,
+                'width'            => $line->width !== null ? (float) $line->width : null,
+                'length'           => $line->length !== null ? (float) $line->length : null,
                 'shop_description' => $line->shop_description,
                 'styles_preview'   => $line->productStyles->map(fn ($s) => [
                     'id'    => $s->id,
@@ -86,8 +86,8 @@ class ShopApiController extends Controller
             'manufacturer'     => $line->manufacturer,
             'model'            => $line->model,
             'collection'       => $line->collection,
-            'width'            => $line->width,
-            'length'           => $line->length,
+            'width'            => $line->width !== null ? (float) $line->width : null,
+            'length'           => $line->length !== null ? (float) $line->length : null,
             'shop_description' => $line->shop_description,
             'styles'           => $line->productStyles->map(function ($style) {
                 return [

@@ -12,10 +12,11 @@ class ProductStyle extends Model
     use HasFactory;
 
     protected $casts = [
-        'use_box_qty' => 'bool',
-        'units_per'   => 'float',
-        'cost_price'  => 'float',
-        'sell_price'  => 'float',
+        'use_box_qty'  => 'bool',
+        'units_per'    => 'float',
+        'cost_price'   => 'float',
+        'sell_price'   => 'float',
+        'shop_visible' => 'boolean',
     ];
 
     protected $fillable = [
