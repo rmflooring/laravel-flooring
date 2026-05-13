@@ -23,6 +23,8 @@ class ProductLine extends Model
         'width',
         'length',
         'status',
+        'shop_visible',
+        'shop_description',
         'created_by',
         'updated_by',
     ];

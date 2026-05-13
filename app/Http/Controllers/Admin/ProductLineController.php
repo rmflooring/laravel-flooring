@@ -112,7 +112,11 @@ public function index(Request $request)
         'unit_id' => 'nullable|exists:unit_measures,id',
         'width' => 'nullable|numeric|min:0',
         'length' => 'nullable|numeric|min:0',
+        'shop_visible' => 'boolean',
+        'shop_description' => 'nullable|string',
     ]);
+
+    $validated['shop_visible'] = $request->boolean('shop_visible');
 
     ProductLine::create([
         ...$validated,
@@ -150,7 +154,11 @@ public function update(Request $request, ProductLine $product_line)
         'unit_id' => 'nullable|exists:unit_measures,id',
         'width' => 'nullable|numeric|min:0',
         'length' => 'nullable|numeric|min:0',
+        'shop_visible' => 'boolean',
+        'shop_description' => 'nullable|string',
     ]);
+
+    $validated['shop_visible'] = $request->boolean('shop_visible');
 
     $product_line->update([
         ...$validated,

@@ -1,0 +1,18 @@
+<?php
+
+use App\Http\Controllers\Api\ShopApiController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('shop')->group(function () {
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('product-types', [ShopApiController::class, 'productTypes']);
+        Route::get('product-lines', [ShopApiController::class, 'productLines']);
+        Route::get('product-lines/{id}', [ShopApiController::class, 'productLineShow'])
+            ->whereNumber('id');
+    });
+
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('quote-request', [ShopApiController::class, 'quoteRequest']);
+        Route::post('sample-request', [ShopApiController::class, 'sampleRequest']);
+    });
+});

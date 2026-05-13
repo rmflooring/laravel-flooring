@@ -33,6 +33,7 @@ class ProductStyle extends Model
         'use_box_qty',
         'thickness',
         'status',
+        'shop_visible',
         'created_by',
         'updated_by',
     ];

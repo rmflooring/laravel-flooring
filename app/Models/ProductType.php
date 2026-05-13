@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductLine;
 
 class ProductType extends Model
 {
@@ -21,6 +22,11 @@ class ProductType extends Model
         'default_cost_gl_account_id',
         'default_sell_gl_account_id',
     ];
+
+    public function productLines()
+    {
+        return $this->hasMany(ProductLine::class);
+    }
 
     /**
      * Get the unit used for ordering this product type.

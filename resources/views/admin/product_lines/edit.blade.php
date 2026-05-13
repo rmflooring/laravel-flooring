@@ -216,6 +216,36 @@
                             @enderror
                         </div>
 
+                        <!-- Shop Visibility -->
+                        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Public Shop</h3>
+
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <label for="shop_visible" class="text-sm font-medium text-gray-900 dark:text-white">Show in shop</label>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Make this product line visible on shop.rmflooring.ca</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="hidden" name="shop_visible" value="0">
+                                    <input type="checkbox" id="shop_visible" name="shop_visible" value="1"
+                                           class="sr-only peer"
+                                           {{ old('shop_visible', $product_line->shop_visible) ? 'checked' : '' }}>
+                                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div>
+                                <label for="shop_description" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Shop description</label>
+                                <textarea name="shop_description" id="shop_description" rows="3"
+                                          class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                          placeholder="Marketing copy shown on the public shop...">{{ old('shop_description', $product_line->shop_description) }}</textarea>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Marketing copy shown on the public shop. Leave blank to use the product name only.</p>
+                                @error('shop_description')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
                         <!-- Form Actions -->
                         <div class="flex justify-end space-x-4">
                             <a href="{{ route('admin.product_lines.index') }}"
