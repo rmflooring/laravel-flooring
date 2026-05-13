@@ -282,7 +282,9 @@ class InvoiceService
         }
 
         if ($saleItem->item_type === 'labour') {
-            return $saleItem->labour_type ?: 'Labour';
+            $labType = trim($saleItem->labour_type ?? '');
+            $desc    = trim($saleItem->description ?? '');
+            return ($labType && $desc) ? "{$labType} — {$desc}" : ($labType ?: ($desc ?: 'Labour'));
         }
 
         if ($saleItem->item_type === 'freight') {
