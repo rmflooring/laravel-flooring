@@ -33,6 +33,7 @@ class ShopApiController extends Controller
                 'productStyles' => function ($q) {
                     $q->where('status', 'active')
                       ->where('shop_visible', true)
+                      ->with(['photos' => fn ($pq) => $pq->where('is_primary', true)->limit(1)])
                       ->orderBy('name')
                       ->limit(8)
                       ->select(['id', 'product_line_id', 'name', 'color']);
@@ -54,10 +55,13 @@ class ShopApiController extends Controller
                 'width'            => $line->width !== null ? (float) $line->width : null,
                 'length'           => $line->length !== null ? (float) $line->length : null,
                 'shop_description' => $line->shop_description,
+                'shop_show_price'  => (bool) $line->shop_show_price,
+                'photo_url'        => $line->photo_path ? Storage::url($line->photo_path) : null,
                 'styles_preview'   => $line->productStyles->map(fn ($s) => [
-                    'id'    => $s->id,
-                    'name'  => $s->name,
-                    'color' => $s->color,
+                    'id'               => $s->id,
+                    'name'             => $s->name,
+                    'color'            => $s->color,
+                    'primary_photo_url' => $s->photos->first() ? Storage::url($s->photos->first()->file_path) : null,
                 ]),
             ];
         });
@@ -89,6 +93,8 @@ class ShopApiController extends Controller
             'width'            => $line->width !== null ? (float) $line->width : null,
             'length'           => $line->length !== null ? (float) $line->length : null,
             'shop_description' => $line->shop_description,
+            'shop_show_price'  => (bool) $line->shop_show_price,
+            'photo_url'        => $line->photo_path ? Storage::url($line->photo_path) : null,
             'styles'           => $line->productStyles->map(function ($style) {
                 return [
                     'id'           => $style->id,

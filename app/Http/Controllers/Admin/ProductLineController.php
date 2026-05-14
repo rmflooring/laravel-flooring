@@ -12,6 +12,7 @@ use App\Services\ShopCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductLineController extends Controller
@@ -113,16 +114,25 @@ public function index(Request $request)
         'unit_id' => 'nullable|exists:unit_measures,id',
         'width' => 'nullable|numeric|min:0',
         'length' => 'nullable|numeric|min:0',
-        'shop_visible' => 'boolean',
+        'shop_visible'    => 'boolean',
         'shop_description' => 'nullable|string',
+        'shop_show_price' => 'boolean',
+        'photo'           => 'nullable|image|max:5120',
     ]);
 
-    $validated['shop_visible'] = $request->boolean('shop_visible');
+    $validated['shop_visible']    = $request->boolean('shop_visible');
+    $validated['shop_show_price'] = $request->boolean('shop_show_price');
+    unset($validated['photo']);
 
     $line = ProductLine::create([
         ...$validated,
         'created_by' => Auth::id(),
     ]);
+
+    if ($request->hasFile('photo')) {
+        $path = $request->file('photo')->store("product-lines/{$line->id}", 'public');
+        $line->update(['photo_path' => $path]);
+    }
 
     app(ShopCacheService::class)->bustProductLine($line->id, $line->product_type_id);
 
@@ -157,11 +167,26 @@ public function update(Request $request, ProductLine $product_line)
         'unit_id' => 'nullable|exists:unit_measures,id',
         'width' => 'nullable|numeric|min:0',
         'length' => 'nullable|numeric|min:0',
-        'shop_visible' => 'boolean',
+        'shop_visible'    => 'boolean',
         'shop_description' => 'nullable|string',
+        'shop_show_price' => 'boolean',
+        'photo'           => 'nullable|image|max:5120',
+        'remove_photo'    => 'nullable|boolean',
     ]);
 
-    $validated['shop_visible'] = $request->boolean('shop_visible');
+    $validated['shop_visible']    = $request->boolean('shop_visible');
+    $validated['shop_show_price'] = $request->boolean('shop_show_price');
+    unset($validated['photo'], $validated['remove_photo']);
+
+    if ($request->hasFile('photo')) {
+        if ($product_line->photo_path) {
+            Storage::disk('public')->delete($product_line->photo_path);
+        }
+        $validated['photo_path'] = $request->file('photo')->store("product-lines/{$product_line->id}", 'public');
+    } elseif ($request->boolean('remove_photo') && $product_line->photo_path) {
+        Storage::disk('public')->delete($product_line->photo_path);
+        $validated['photo_path'] = null;
+    }
 
     $product_line->update([
         ...$validated,

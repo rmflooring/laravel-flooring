@@ -20,7 +20,7 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('admin.product_lines.update', $product_line) }}" method="POST">
+                    <form action="{{ route('admin.product_lines.update', $product_line) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
 
@@ -234,13 +234,47 @@
                                 </label>
                             </div>
 
-                            <div>
+                            <div class="mb-4">
                                 <label for="shop_description" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Shop description</label>
                                 <textarea name="shop_description" id="shop_description" rows="3"
                                           class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                           placeholder="Marketing copy shown on the public shop...">{{ old('shop_description', $product_line->shop_description) }}</textarea>
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Marketing copy shown on the public shop. Leave blank to use the product name only.</p>
                                 @error('shop_description')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <label for="shop_show_price" class="text-sm font-medium text-gray-900 dark:text-white">Show price on shop</label>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Display sell price on the public shop. If off, shows "Contact us for a quote."</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="hidden" name="shop_show_price" value="0">
+                                    <input type="checkbox" id="shop_show_price" name="shop_show_price" value="1"
+                                           class="sr-only peer"
+                                           {{ old('shop_show_price', $product_line->shop_show_price) ? 'checked' : '' }}>
+                                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div x-data="{ removePhoto: false }">
+                                <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Cover photo</label>
+                                @if($product_line->photo_path)
+                                    <div class="mb-3 flex items-center gap-4">
+                                        <img src="{{ Storage::url($product_line->photo_path) }}" alt="Cover photo" class="w-24 h-24 object-cover rounded-lg border border-gray-200">
+                                        <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer">
+                                            <input type="checkbox" name="remove_photo" value="1" x-model="removePhoto" class="rounded border-gray-300 text-red-600">
+                                            Remove photo
+                                        </label>
+                                    </div>
+                                @endif
+                                <input type="file" name="photo" accept="image/*"
+                                       :disabled="removePhoto"
+                                       class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 p-2 disabled:opacity-50">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Shown on the shop category page. JPG/PNG, max 5 MB. Upload a new file to replace the existing one.</p>
+                                @error('photo')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
