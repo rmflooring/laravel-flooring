@@ -56,12 +56,12 @@ class ShopApiController extends Controller
                 'length'           => $line->length !== null ? (float) $line->length : null,
                 'shop_description' => $line->shop_description,
                 'shop_show_price'  => (bool) $line->shop_show_price,
-                'photo_url'        => $line->photo_path ? Storage::url($line->photo_path) : null,
+                'photo_url'        => $line->photo_path ? url(Storage::url($line->photo_path)) : null,
                 'styles_preview'   => $line->productStyles->map(fn ($s) => [
                     'id'               => $s->id,
                     'name'             => $s->name,
                     'color'            => $s->color,
-                    'primary_photo_url' => $s->photos->first() ? Storage::url($s->photos->first()->file_path) : null,
+                    'primary_photo_url' => $s->photos->first() ? url(Storage::url($s->photos->first()->file_path)) : null,
                 ]),
             ];
         });
@@ -94,7 +94,7 @@ class ShopApiController extends Controller
             'length'           => $line->length !== null ? (float) $line->length : null,
             'shop_description' => $line->shop_description,
             'shop_show_price'  => (bool) $line->shop_show_price,
-            'photo_url'        => $line->photo_path ? Storage::url($line->photo_path) : null,
+            'photo_url'        => $line->photo_path ? url(Storage::url($line->photo_path)) : null,
             'styles'           => $line->productStyles->map(function ($style) {
                 return [
                     'id'             => $style->id,
@@ -109,7 +109,7 @@ class ShopApiController extends Controller
                     'shop_show_price' => (bool) $style->shop_show_price,
                     'photos'       => $style->photos->map(fn ($p) => [
                         'id'         => $p->id,
-                        'url'        => Storage::url($p->file_path),
+                        'url'        => url(Storage::url($p->file_path)),
                         'is_primary' => (bool) $p->is_primary,
                         'sort_order' => $p->sort_order,
                     ]),
