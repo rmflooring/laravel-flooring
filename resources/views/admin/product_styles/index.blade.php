@@ -473,18 +473,33 @@
                         </div>
                     </div>
 
-                    <div class="mt-4 flex items-center justify-between py-3 px-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                            <span class="text-sm font-medium text-gray-900 dark:text-white">Show in shop</span>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Show this style on shop.rmflooring.ca</p>
+                    <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">Show in shop</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Show this style on shop.rmflooring.ca</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="hidden" name="shop_visible" value="0">
+                                <input type="checkbox" id="shop_visible_style" name="shop_visible" value="1"
+                                       class="sr-only peer"
+                                       {{ (session('editStyle')->shop_visible ?? false) ? 'checked' : '' }}>
+                                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
+                            </label>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="hidden" name="shop_visible" value="0">
-                            <input type="checkbox" id="shop_visible_style" name="shop_visible" value="1"
-                                   class="sr-only peer"
-                                   {{ (session('editStyle')->shop_visible ?? false) ? 'checked' : '' }}>
-                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
-                        </label>
+                        <div class="flex items-center justify-between border-t border-gray-200 dark:border-gray-600 pt-3">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">Show price on shop</span>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Display sell price for this style publicly</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="hidden" name="shop_show_price" value="0">
+                                <input type="checkbox" id="shop_show_price_style" name="shop_show_price" value="1"
+                                       class="sr-only peer"
+                                       {{ (session('editStyle')->shop_show_price ?? false) ? 'checked' : '' }}>
+                                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="flex items-center justify-end space-x-4 mt-4">

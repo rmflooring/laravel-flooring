@@ -16,7 +16,8 @@ class ProductStyle extends Model
         'units_per'    => 'float',
         'cost_price'   => 'float',
         'sell_price'   => 'float',
-        'shop_visible' => 'boolean',
+        'shop_visible'    => 'boolean',
+        'shop_show_price' => 'boolean',
     ];
 
     protected $fillable = [
@@ -35,6 +36,7 @@ class ProductStyle extends Model
         'thickness',
         'status',
         'shop_visible',
+        'shop_show_price',
         'created_by',
         'updated_by',
     ];

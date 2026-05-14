@@ -99,12 +99,14 @@ class ProductStyleController extends Controller
             'use_box_qty' => 'boolean',
             'thickness' => 'nullable|string|max:50',
             'vendor_id' => 'nullable|exists:vendors,id',
-            'shop_visible' => 'boolean',
+            'shop_visible'    => 'boolean',
+            'shop_show_price' => 'boolean',
         ]);
 
         $validated['updated_by'] = auth()->id();
-        $validated['use_box_qty'] = $request->boolean('use_box_qty');
-        $validated['shop_visible'] = $request->boolean('shop_visible');
+        $validated['use_box_qty']     = $request->boolean('use_box_qty');
+        $validated['shop_visible']    = $request->boolean('shop_visible');
+        $validated['shop_show_price'] = $request->boolean('shop_show_price');
 
         $style->update($validated);
 
@@ -131,12 +133,14 @@ class ProductStyleController extends Controller
             'use_box_qty' => 'boolean',
             'thickness' => 'nullable|string|max:50',
             'vendor_id' => 'nullable|exists:vendors,id',
-            'shop_visible' => 'boolean',
+            'shop_visible'    => 'boolean',
+            'shop_show_price' => 'boolean',
         ]);
 
         $validated['created_by'] = auth()->id();
-        $validated['use_box_qty'] = $request->boolean('use_box_qty');
-        $validated['shop_visible'] = $request->boolean('shop_visible');
+        $validated['use_box_qty']     = $request->boolean('use_box_qty');
+        $validated['shop_visible']    = $request->boolean('shop_visible');
+        $validated['shop_show_price'] = $request->boolean('shop_show_price');
 
         $product_line->productStyles()->create($validated);
 
