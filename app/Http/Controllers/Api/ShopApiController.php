@@ -130,6 +130,7 @@ class ShopApiController extends Controller
             'sq_footage'        => 'nullable|numeric|min:0',
             'message'           => 'required|string|max:5000',
             'product_reference' => 'nullable|string|max:500',
+            'color_reference'   => 'nullable|string|max:500',
         ]);
 
         $to = config('mail.from.address', 'reception@rmflooring.ca');
@@ -182,6 +183,10 @@ class ShopApiController extends Controller
 
         if (!empty($data['product_reference'])) {
             $lines[] = "Product Ref: {$data['product_reference']}";
+        }
+
+        if (!empty($data['color_reference'])) {
+            $lines[] = "Colour:      {$data['color_reference']}";
         }
 
         $lines[] = '';
