@@ -124,6 +124,9 @@ public function index(Request $request)
     $validated['shop_show_price'] = $request->boolean('shop_show_price');
     unset($validated['photo']);
 
+    $validated['default_cost_price'] = $validated['default_cost_price'] ?? 0;
+    $validated['default_sell_price'] = $validated['default_sell_price'] ?? 0;
+
     $line = ProductLine::create([
         ...$validated,
         'created_by' => Auth::id(),
@@ -176,6 +179,8 @@ public function update(Request $request, ProductLine $product_line)
 
     $validated['shop_visible']    = $request->boolean('shop_visible');
     $validated['shop_show_price'] = $request->boolean('shop_show_price');
+    $validated['default_cost_price'] = $validated['default_cost_price'] ?? 0;
+    $validated['default_sell_price'] = $validated['default_sell_price'] ?? 0;
     unset($validated['photo'], $validated['remove_photo']);
 
     if ($request->hasFile('photo')) {
