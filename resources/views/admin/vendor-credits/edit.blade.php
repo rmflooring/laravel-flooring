@@ -100,11 +100,11 @@
                                     <option value="">— Select tax group —</option>
                                     @foreach ($taxGroups as $tg)
                                         <option value="{{ $tg->id }}"
-                                                data-gst="{{ $tg->gst_rate * 100 }}"
-                                                data-pst="{{ $tg->pst_rate * 100 }}">
+                                                data-gst="{{ $tg->gst_rate }}"
+                                                data-pst="{{ $tg->pst_rate }}">
                                             {{ $tg->name }}
-                                            (GST {{ number_format($tg->gst_rate * 100, 2) }}%
-                                            / PST {{ number_format($tg->pst_rate * 100, 2) }}%)
+                                            (GST {{ number_format($tg->gst_rate, 2) }}%
+                                            / PST {{ number_format($tg->pst_rate, 2) }}%)
                                         </option>
                                     @endforeach
                                 </select>
