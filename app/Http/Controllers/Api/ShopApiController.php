@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Models\Opportunity;
 use App\Models\ProductLine;
 use App\Models\ProductStyle;
 use App\Models\ProductType;
+use App\Models\Setting;
+use App\Services\EmailTemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
@@ -133,13 +138,43 @@ class ShopApiController extends Controller
             'color_reference'   => 'nullable|string|max:500',
         ]);
 
-        $to = config('mail.from.address', 'reception@rmflooring.ca');
+        // Create or find customer, then open an opportunity
+        try {
+            $customer = Customer::firstOrCreate(
+                ['email' => $validated['email']],
+                [
+                    'name'  => trim("{$validated['first_name']} {$validated['last_name']}"),
+                    'phone' => $validated['phone'],
+                    'notes' => $this->buildCustomerNotes($validated),
+                ]
+            );
 
-        Mail::raw($this->buildQuoteEmail($validated), function ($msg) use ($validated, $to) {
-            $msg->to($to)
+            Opportunity::create([
+                'parent_customer_id'   => $customer->id,
+                'job_site_customer_id' => $customer->id,
+                'status'               => 'New',
+                'requires_rfm'         => true,
+                'is_active'            => true,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Shop quote: failed to create customer/opportunity', ['error' => $e->getMessage(), 'data' => $validated]);
+        }
+
+        // Internal notification
+        $notifyEmail = Setting::get('shop_quote_notify_email', config('mail.from.address', 'reception@rmflooring.ca'));
+
+        Mail::raw($this->buildQuoteEmail($validated), function ($msg) use ($validated, $notifyEmail) {
+            $msg->to($notifyEmail)
                 ->replyTo($validated['email'], trim("{$validated['first_name']} {$validated['last_name']}"))
                 ->subject('New Quote Request — shop.rmflooring.ca');
         });
+
+        // Confirmation email to the customer
+        try {
+            $this->sendQuoteConfirmation($validated);
+        } catch (\Throwable $e) {
+            Log::error('Shop quote: failed to send confirmation email', ['error' => $e->getMessage(), 'email' => $validated['email']]);
+        }
 
         return response()->json(['message' => 'Quote request received. We will be in touch shortly.']);
     }
@@ -165,6 +200,49 @@ class ShopApiController extends Controller
         });
 
         return response()->json(['message' => 'Sample request received. We will mail your sample shortly.']);
+    }
+
+    private function sendQuoteConfirmation(array $data): void
+    {
+        $service  = app(EmailTemplateService::class);
+        $template = $service->getTemplate(null, 'shop_quote_confirmation');
+
+        $vars = [
+            'first_name'        => $data['first_name'],
+            'last_name'         => $data['last_name'],
+            'phone'             => $data['phone'],
+            'product_reference' => $data['product_reference'] ?? '',
+            'color_reference'   => $data['color_reference'] ?? '',
+            'sq_footage'        => $data['sq_footage'] ?? '',
+        ];
+
+        $subject = $service->render($template['subject'], $vars);
+        $body    = $service->render($template['body'], $vars);
+
+        Mail::raw($body, function ($msg) use ($data, $subject) {
+            $msg->to($data['email'], trim("{$data['first_name']} {$data['last_name']}"))
+                ->subject($subject);
+        });
+    }
+
+    private function buildCustomerNotes(array $data): string
+    {
+        $lines = ['Web quote submitted via shop.rmflooring.ca'];
+
+        if (! empty($data['sq_footage'])) {
+            $lines[] = "Sq Footage: {$data['sq_footage']}";
+        }
+        if (! empty($data['product_reference'])) {
+            $lines[] = "Product: {$data['product_reference']}";
+        }
+        if (! empty($data['color_reference'])) {
+            $lines[] = "Colour: {$data['color_reference']}";
+        }
+
+        $lines[] = '';
+        $lines[] = $data['message'];
+
+        return implode("\n", $lines);
     }
 
     private function buildQuoteEmail(array $data): string

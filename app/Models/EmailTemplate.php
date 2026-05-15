@@ -25,10 +25,11 @@ class EmailTemplate extends Model
 
     // Types restricted to admin (system notifications)
     public const SYSTEM_TYPES = [
-        'rfm_created_estimator' => 'RFM Created — Estimator',
-        'rfm_created_pm'        => 'RFM Created — PM',
-        'rfm_updated_estimator' => 'RFM Updated — Estimator',
-        'rfm_updated_pm'        => 'RFM Updated — PM',
+        'rfm_created_estimator'   => 'RFM Created — Estimator',
+        'rfm_created_pm'          => 'RFM Created — PM',
+        'rfm_updated_estimator'   => 'RFM Updated — Estimator',
+        'rfm_updated_pm'          => 'RFM Updated — PM',
+        'shop_quote_confirmation' => 'Shop Quote — Customer Confirmation',
     ];
 
     // Merge tags available per type
@@ -87,6 +88,10 @@ class EmailTemplate extends Model
             '{{estimator_name}}', '{{estimator_first_name}}', '{{pm_name}}', '{{pm_first_name}}',
             '{{rfm_link}}',
         ],
+        'shop_quote_confirmation' => [
+            '{{first_name}}', '{{last_name}}', '{{phone}}',
+            '{{product_reference}}', '{{color_reference}}', '{{sq_footage}}',
+        ],
     ];
 
     // Built-in defaults — used when a user has no saved template
@@ -126,6 +131,10 @@ class EmailTemplate extends Model
         'rfm_updated_pm' => [
             'subject' => 'RFM Updated — {{customer_name}}',
             'body'    => "Hi {{pm_first_name}},\n\nThe flooring measurement details for {{customer_name}} at {{job_site}} have been updated.\n\n----------------------------------------\nDate:         {{rfm_date}}\nTime:         {{rfm_time}}\nLocation:     {{job_address}}\nPhone:        {{job_phone}}\nEstimator:    {{estimator_name}}\n----------------------------------------\n\nPlease ensure site access is available at the updated scheduled time.\n\nThank you,\nRM Flooring",
+        ],
+        'shop_quote_confirmation' => [
+            'subject' => 'We received your quote request — RM Flooring',
+            'body'    => "Hi {{first_name}},\n\nThank you for reaching out! We've received your quote request and one of our team members will be in touch with you shortly.\n\nIf you have any questions in the meantime, feel free to contact us at reception@rmflooring.ca.\n\nWarm regards,\nRM Flooring",
         ],
     ];
 }
