@@ -36,7 +36,7 @@
             @endif
 
             {{-- Stat Cards --}}
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Total Outstanding</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">${{ number_format($totalOutstanding, 2) }}</p>
@@ -51,6 +51,11 @@
                     <p class="text-sm text-amber-600 dark:text-amber-400">Due This Week</p>
                     <p class="mt-1 text-2xl font-bold text-amber-700 dark:text-amber-400">${{ number_format($dueThisWeek, 2) }}</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Next 7 days</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800 rounded-lg p-5">
+                    <p class="text-sm text-green-700 dark:text-green-400">Vendor Credits (Open)</p>
+                    <p class="mt-1 text-2xl font-bold text-green-700 dark:text-green-400">−${{ number_format($totalOpenCredits, 2) }}</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Net AP: ${{ number_format(max(0, $totalOutstanding - $totalOpenCredits), 2) }}</p>
                 </div>
             </div>
 
@@ -220,6 +225,55 @@
                 @endif
                 @endif
             </div>
+
+            {{-- Vendor Credits summary --}}
+            @can('view vendor credits')
+            @if ($recentCredits->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-green-100 dark:border-green-800 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-semibold text-green-800 dark:text-green-300">Vendor Credit Memos</h2>
+                        <p class="text-xs text-green-600 dark:text-green-500 mt-0.5">Open credits reduce your AP payables balance</p>
+                    </div>
+                    <a href="{{ route('admin.vendor-credits.index') }}"
+                       class="text-sm font-medium text-green-700 hover:underline dark:text-green-400">
+                        View all →
+                    </a>
+                </div>
+                <table class="min-w-full divide-y divide-green-100 dark:divide-green-900">
+                    <thead class="bg-green-50 dark:bg-green-900/20">
+                        <tr>
+                            <th class="px-6 py-2 text-left text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Credit Memo #</th>
+                            <th class="px-6 py-2 text-left text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Vendor</th>
+                            <th class="px-6 py-2 text-left text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Date</th>
+                            <th class="px-6 py-2 text-right text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-green-50 dark:divide-green-900/30">
+                        @foreach ($recentCredits as $credit)
+                        <tr class="hover:bg-green-50 dark:hover:bg-green-900/10">
+                            <td class="px-6 py-2">
+                                <a href="{{ route('admin.vendor-credits.show', $credit) }}"
+                                   class="font-mono text-sm font-semibold text-green-700 hover:underline dark:text-green-400">
+                                    {{ $credit->credit_memo_number }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-2 text-sm text-gray-700 dark:text-gray-300">{{ $credit->vendor?->company_name ?? '—' }}</td>
+                            <td class="px-6 py-2 text-sm text-gray-500 dark:text-gray-400">{{ $credit->date->format('M j, Y') }}</td>
+                            <td class="px-6 py-2 text-right text-sm font-bold text-green-700 dark:text-green-400">−${{ number_format($credit->grand_total, 2) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-green-50 dark:bg-green-900/20 border-t border-green-200 dark:border-green-800">
+                        <tr>
+                            <td colspan="3" class="px-6 py-2 text-sm font-semibold text-green-800 dark:text-green-300 text-right">Total open credits</td>
+                            <td class="px-6 py-2 text-right font-bold text-green-700 dark:text-green-400">−${{ number_format($totalOpenCredits, 2) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @endif
+            @endcan
 
         </div>
     </div>

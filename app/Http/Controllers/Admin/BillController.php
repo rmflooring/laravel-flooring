@@ -10,6 +10,7 @@ use App\Models\PaymentTerm;
 use App\Models\PurchaseOrder;
 use App\Models\Setting;
 use App\Models\Vendor;
+use App\Models\VendorCreditMemo;
 use App\Models\WorkOrder;
 use App\Services\QboSyncService;
 use Illuminate\Http\Request;
@@ -64,12 +65,19 @@ class BillController extends Controller
             ->whereBetween('due_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
             ->sum('grand_total');
 
+        // Open vendor credit memos — reduces net AP balance
+        $recentCredits   = VendorCreditMemo::with('vendor')->where('status', 'open')
+            ->orderByDesc('date')->orderByDesc('id')->limit(5)->get();
+        $totalOpenCredits = VendorCreditMemo::where('status', 'open')->sum('grand_total');
+
         return view('admin.bills.index', [
             'bills'            => $bills,
             'statuses'         => Bill::STATUSES,
             'totalOutstanding' => $totalOutstanding,
             'totalOverdue'     => $totalOverdue,
             'dueThisWeek'      => $dueThisWeek,
+            'recentCredits'    => $recentCredits,
+            'totalOpenCredits' => $totalOpenCredits,
             'filters'          => $request->only('status', 'bill_type', 'search', 'due_from', 'due_to'),
         ]);
     }
@@ -453,12 +461,22 @@ class BillController extends Controller
             }
         }
 
+        // Open vendor credit memos — keyed by vendor_id
+        $creditsByVendor = VendorCreditMemo::where('status', 'open')
+            ->selectRaw('vendor_id, SUM(grand_total) as total_credits')
+            ->groupBy('vendor_id')
+            ->pluck('total_credits', 'vendor_id');
+
+        $totalOpenCredits = $creditsByVendor->sum();
+
         return view('admin.bills.aging', [
-            'aging'        => $aging,
-            'totals'       => $totals,
-            'buckets'      => $buckets,
-            'bucketLabels' => $bucketLabels,
-            'billType'     => $billType,
+            'aging'            => $aging,
+            'totals'           => $totals,
+            'buckets'          => $buckets,
+            'bucketLabels'     => $bucketLabels,
+            'billType'         => $billType,
+            'creditsByVendor'  => $creditsByVendor,
+            'totalOpenCredits' => $totalOpenCredits,
         ]);
     }
 }

@@ -160,6 +160,7 @@ class ReturnToVendorController extends Controller
             'items.purchaseOrderItem',
             'items.saleItem',
             'returnedBy',
+            'vendorCreditMemo',
         ]);
 
         return view('pages.inventory.rtv.show', compact('rtv'));

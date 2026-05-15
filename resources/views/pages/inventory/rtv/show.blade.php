@@ -220,6 +220,42 @@
                         </div>
                     @endif
 
+                    {{-- Vendor Credit Memo --}}
+                    @if ($rtv->status === 'resolved' && $rtv->outcome === 'credit_note')
+                        <div class="rounded-lg border {{ $rtv->vendorCreditMemo ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800' }} p-5 shadow-sm">
+                            <h3 class="mb-3 text-sm font-semibold {{ $rtv->vendorCreditMemo ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-300' }}">Vendor Credit Memo</h3>
+                            @if ($rtv->vendorCreditMemo)
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <a href="{{ route('admin.vendor-credits.show', $rtv->vendorCreditMemo) }}"
+                                           class="font-mono font-semibold text-green-700 hover:underline dark:text-green-400 text-sm">
+                                            {{ $rtv->vendorCreditMemo->credit_memo_number }}
+                                        </a>
+                                        <p class="text-xs text-green-600 dark:text-green-500 mt-0.5">
+                                            −${{ number_format($rtv->vendorCreditMemo->grand_total, 2) }}
+                                        </p>
+                                    </div>
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400">
+                                        {{ $rtv->vendorCreditMemo->status_label }}
+                                    </span>
+                                </div>
+                            @else
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                                    This RTV was resolved as a credit note. Create a credit memo to track it in vendor payables.
+                                </p>
+                                @can('create vendor credits')
+                                    <a href="{{ route('admin.vendor-credits.create', ['rtv' => $rtv->id]) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                        </svg>
+                                        Create Credit Memo
+                                    </a>
+                                @endcan
+                            @endif
+                        </div>
+                    @endif
+
                     {{-- Notes --}}
                     @if ($rtv->notes)
                         <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">

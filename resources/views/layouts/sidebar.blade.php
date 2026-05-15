@@ -658,6 +658,14 @@
                                     <span class="sidebar-label">AP Aging</span>
                                 </a>
                             </li>
+                            @can('view vendor credits')
+                            <li>
+                                <a href="{{ route('admin.vendor-credits.index') }}"
+                                   class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                                    <span class="sidebar-label">Vendor Credits</span>
+                                </a>
+                            </li>
+                            @endcan
                         </ul>
                     </li>
                     @endcan

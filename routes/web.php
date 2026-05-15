@@ -475,6 +475,22 @@ Route::prefix('admin')
             ])
             ->only(['index', 'store', 'edit', 'update', 'destroy']);
 
+        // Accounts Payable — Vendor Credit Memos
+        Route::middleware('role_or_permission:admin|view vendor credits')->group(function () {
+            Route::resource('vendor-credits', \App\Http\Controllers\Admin\VendorCreditMemoController::class)
+                ->names([
+                    'index'   => 'vendor-credits.index',
+                    'create'  => 'vendor-credits.create',
+                    'store'   => 'vendor-credits.store',
+                    'show'    => 'vendor-credits.show',
+                    'edit'    => 'vendor-credits.edit',
+                    'update'  => 'vendor-credits.update',
+                    'destroy' => 'vendor-credits.destroy',
+                ]);
+            Route::post('vendor-credits/{vendorCredit}/void', [\App\Http\Controllers\Admin\VendorCreditMemoController::class, 'void'])
+                ->name('vendor-credits.void');
+        });
+
         // Accounts Payable — Bills
         Route::middleware('role_or_permission:admin|view bills')->group(function () {
             Route::get('bills/aging', [\App\Http\Controllers\Admin\BillController::class, 'aging'])

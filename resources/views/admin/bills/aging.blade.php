@@ -105,6 +105,39 @@
                 @endforeach
             </div>
 
+            {{-- Vendor Credits deduction (vendors only) --}}
+            @can('view vendor credits')
+            @if (($billType === 'all' || $billType === 'vendor') && $totalOpenCredits > 0)
+            <div class="rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20 p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-green-800 dark:text-green-300">Vendor Credit Memos (Open)</h3>
+                    <a href="{{ route('admin.vendor-credits.index') }}"
+                       class="text-sm font-medium text-green-700 hover:underline dark:text-green-400">View all →</a>
+                </div>
+                <p class="text-xs text-green-700 dark:text-green-500">
+                    These open credit memos reduce your net vendor AP balance.
+                </p>
+                <dl class="divide-y divide-green-100 dark:divide-green-800">
+                    @foreach ($creditsByVendor as $vendorId => $amount)
+                        @php $vendorName = $aging['vendor_'.$vendorId]['name'] ?? \App\Models\Vendor::find($vendorId)?->company_name ?? 'Unknown Vendor'; @endphp
+                        <div class="flex justify-between py-1.5 text-sm">
+                            <dt class="text-green-700 dark:text-green-400">{{ $vendorName }}</dt>
+                            <dd class="font-semibold text-green-700 dark:text-green-400">−${{ number_format($amount, 2) }}</dd>
+                        </div>
+                    @endforeach
+                    <div class="flex justify-between py-2 text-sm font-bold text-green-800 dark:text-green-300">
+                        <dt>Total vendor credits</dt>
+                        <dd>−${{ number_format($totalOpenCredits, 2) }}</dd>
+                    </div>
+                    <div class="flex justify-between py-2 text-base font-bold text-gray-900 dark:text-white">
+                        <dt>Net AP Balance</dt>
+                        <dd>${{ number_format(max(0, $totals['total'] - $totalOpenCredits), 2) }}</dd>
+                    </div>
+                </dl>
+            </div>
+            @endif
+            @endcan
+
             @endif
 
         </div>
