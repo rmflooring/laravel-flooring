@@ -493,6 +493,8 @@ Route::prefix('admin')
                 ]);
             Route::post('vendor-credits/{vendorCredit}/void', [\App\Http\Controllers\Admin\VendorCreditMemoController::class, 'void'])
                 ->name('vendor-credits.void');
+            Route::post('vendor-credits/{vendorCredit}/mark-applied', [\App\Http\Controllers\Admin\VendorCreditMemoController::class, 'markApplied'])
+                ->name('vendor-credits.mark-applied');
             Route::post('vendor-credits/{vendorCredit}/push-to-qbo', [\App\Http\Controllers\Admin\VendorCreditMemoController::class, 'pushToQbo'])
                 ->name('vendor-credits.push-to-qbo');
         });

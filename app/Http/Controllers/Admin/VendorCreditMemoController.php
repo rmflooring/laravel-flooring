@@ -252,6 +252,21 @@ class VendorCreditMemoController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // MARK APPLIED
+    // -----------------------------------------------------------------------
+
+    public function markApplied(VendorCreditMemo $vendorCredit)
+    {
+        if ($vendorCredit->status !== 'open') {
+            return back()->with('error', 'Only open credit memos can be marked as applied.');
+        }
+
+        $vendorCredit->update(['status' => 'applied']);
+
+        return back()->with('success', 'Credit memo marked as applied.');
+    }
+
+    // -----------------------------------------------------------------------
     // QBO PUSH
     // -----------------------------------------------------------------------
 

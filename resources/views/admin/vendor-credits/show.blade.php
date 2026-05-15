@@ -44,6 +44,17 @@
                                 </span>
                             </div>
                             <div class="flex flex-wrap gap-2">
+                                @if ($vendorCredit->status === 'open')
+                                    @can('edit vendor credits')
+                                    <form method="POST" action="{{ route('admin.vendor-credits.mark-applied', $vendorCredit) }}">
+                                        @csrf
+                                        <button type="submit"
+                                                class="inline-flex items-center rounded-md border border-purple-300 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20">
+                                            Mark as Applied
+                                        </button>
+                                    </form>
+                                    @endcan
+                                @endif
                                 @if (!in_array($vendorCredit->status, ['voided', 'applied']))
                                     @can('edit vendor credits')
                                         <a href="{{ route('admin.vendor-credits.edit', $vendorCredit) }}"
