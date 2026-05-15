@@ -411,6 +411,10 @@ Route::prefix('admin')
             ->name('vendors.push-to-qbo')
             ->middleware('role_or_permission:admin|edit vendors');
 
+        Route::get('vendors/{vendor}/transactions', [\App\Http\Controllers\Admin\VendorController::class, 'transactions'])
+            ->name('vendors.transactions')
+            ->middleware('role_or_permission:admin|view vendors');
+
         Route::resource('vendor-reps', VendorRepController::class)
             ->middleware('role_or_permission:admin|view vendor reps')
             ->names([
