@@ -513,6 +513,8 @@ Route::prefix('admin')
                 ]);
             Route::post('bills/{bill}/void', [\App\Http\Controllers\Admin\BillController::class, 'void'])
                 ->name('bills.void');
+            Route::post('bills/{bill}/mark-paid', [\App\Http\Controllers\Admin\BillController::class, 'markPaid'])
+                ->name('bills.mark-paid');
             Route::post('bills/{bill}/push-to-qbo', [\App\Http\Controllers\Admin\BillController::class, 'pushToQbo'])
                 ->name('bills.push-to-qbo');
         });

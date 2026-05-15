@@ -47,7 +47,7 @@
                 <div class="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded-lg p-5">
                     <p class="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Outstanding</p>
                     <p class="mt-1 text-2xl font-bold text-red-700 dark:text-red-400">${{ number_format($outstandingBills, 2) }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Pending &amp; overdue bills</p>
+                    <p class="text-xs text-gray-400 mt-1">Pending, approved &amp; overdue</p>
                 </div>
                 <div class="bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800 rounded-lg p-5">
                     <p class="text-xs font-medium text-green-700 dark:text-green-400 uppercase tracking-wide">Open Credits</p>
@@ -166,9 +166,10 @@
                                 @php
                                     $isBill   = $txn['type'] === 'bill';
                                     $isVoided = $txn['status'] === 'voided';
+                                    $isPaid   = $isBill && $txn['status'] === 'paid';
                                     $isOverdue = $isBill && $txn['status'] === 'overdue';
 
-                                    if (!$isVoided) {
+                                    if (!$isVoided && !$isPaid) {
                                         $filteredTotal += $isBill ? $txn['amount'] : -$txn['amount'];
                                     }
 
@@ -177,6 +178,7 @@
                                         $txn['status'] === 'overdue'  => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
                                         $txn['status'] === 'pending'  => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
                                         $txn['status'] === 'approved' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                        $txn['status'] === 'paid'     => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
                                         $txn['status'] === 'open'     => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
                                         $txn['status'] === 'draft'    => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
                                         default => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
@@ -251,7 +253,7 @@
                         <tfoot class="border-t-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40">
                             <tr>
                                 <td colspan="6" class="px-5 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                    Net (filtered, excl. voided)
+                                    Net owing (excl. voided &amp; paid)
                                 </td>
                                 <td class="px-5 py-3 text-right text-sm font-bold whitespace-nowrap {{ $filteredTotal >= 0 ? 'text-gray-900 dark:text-white' : 'text-green-700 dark:text-green-400' }}">
                                     {{ $filteredTotal < 0 ? '−' : '' }}${{ number_format(abs($filteredTotal), 2) }}

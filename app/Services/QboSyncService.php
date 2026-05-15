@@ -704,7 +704,7 @@ class QboSyncService
             if ($balance <= 0 && ! $bill->qbo_paid_at) {
                 // Fully paid in QBO
                 $updates['qbo_paid_at'] = now();
-                $updates['status']      = 'approved';
+                $updates['status']      = 'paid';
                 $message = 'Bill marked as paid via QBO webhook';
             } elseif ($balance > 0 && $bill->qbo_paid_at) {
                 // Payment was reversed in QBO

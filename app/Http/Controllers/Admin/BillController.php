@@ -56,12 +56,12 @@ class BillController extends Controller
 
         $bills = $query->orderBy('due_date')->orderBy('id', 'desc')->paginate(25)->withQueryString();
 
-        // Stat cards (active bills only, excluding voided)
-        $activeQuery = Bill::whereNotIn('status', ['voided', 'approved']);
+        // Stat cards — outstanding = not yet paid (excludes voided + paid)
+        $activeQuery = Bill::whereNotIn('status', ['voided', 'paid']);
 
         $totalOutstanding = (clone $activeQuery)->sum('grand_total');
         $totalOverdue     = Bill::where('status', 'overdue')->sum('grand_total');
-        $dueThisWeek      = Bill::whereNotIn('status', ['voided', 'approved', 'overdue'])
+        $dueThisWeek      = Bill::whereNotIn('status', ['voided', 'paid', 'overdue'])
             ->whereBetween('due_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
             ->sum('grand_total');
 
@@ -326,6 +326,17 @@ class BillController extends Controller
     // -----------------------------------------------------------------------
     // VOID
     // -----------------------------------------------------------------------
+
+    public function markPaid(Bill $bill)
+    {
+        if (in_array($bill->status, ['voided', 'paid'])) {
+            return back()->with('error', 'Bill is already ' . $bill->status . '.');
+        }
+
+        $bill->update(['status' => 'paid']);
+
+        return back()->with('success', 'Bill marked as paid.');
+    }
 
     public function void(Request $request, Bill $bill)
     {

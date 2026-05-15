@@ -14,6 +14,7 @@
                                 'draft'    => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
                                 'pending'  => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
                                 'approved' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                                'paid'     => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
                                 'overdue'  => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
                                 'voided'   => 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
                             ];
@@ -196,11 +197,10 @@
             @if ($bill->status !== 'voided')
             <div class="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div class="flex gap-3">
-                    @if (in_array($bill->status, ['pending', 'overdue']))
                     @can('edit bills')
+                    @if (in_array($bill->status, ['pending', 'overdue']))
                     <form method="POST" action="{{ route('admin.bills.update', $bill) }}">
                         @csrf @method('PUT')
-                        {{-- Send all required fields to only update status --}}
                         <input type="hidden" name="vendor_id" value="{{ $bill->vendor_id }}">
                         <input type="hidden" name="installer_id" value="{{ $bill->installer_id }}">
                         <input type="hidden" name="payment_term_id" value="{{ $bill->payment_term_id }}">
@@ -225,8 +225,17 @@
                             Mark as Approved
                         </button>
                     </form>
-                    @endcan
                     @endif
+                    @if (in_array($bill->status, ['pending', 'approved', 'overdue']))
+                    <form method="POST" action="{{ route('admin.bills.mark-paid', $bill) }}">
+                        @csrf
+                        <button type="submit"
+                            class="px-4 py-2 text-sm font-medium text-white bg-purple-700 rounded-lg hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 dark:bg-purple-600 dark:hover:bg-purple-700">
+                            Mark as Paid
+                        </button>
+                    </form>
+                    @endif
+                    @endcan
                 </div>
 
                 @can('edit bills')

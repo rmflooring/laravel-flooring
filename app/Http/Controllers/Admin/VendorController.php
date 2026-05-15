@@ -318,7 +318,7 @@ class VendorController extends Controller
 
         // Summary totals (unfiltered, for stat cards)
         $totalBills       = Bill::where('vendor_id', $vendor->id)->whereNotIn('status', ['voided'])->sum('grand_total');
-        $outstandingBills = Bill::where('vendor_id', $vendor->id)->whereNotIn('status', ['voided', 'approved'])->sum('grand_total');
+        $outstandingBills = Bill::where('vendor_id', $vendor->id)->whereNotIn('status', ['voided', 'paid'])->sum('grand_total');
         $totalCredits     = VendorCreditMemo::where('vendor_id', $vendor->id)->where('status', 'open')->sum('grand_total');
         $netBalance       = $outstandingBills - $totalCredits;
 

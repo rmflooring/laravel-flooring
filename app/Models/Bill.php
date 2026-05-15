@@ -34,6 +34,7 @@ class Bill extends Model
         'draft'    => 'Draft',
         'pending'  => 'Pending',
         'approved' => 'Approved',
+        'paid'     => 'Paid',
         'overdue'  => 'Overdue',
         'voided'   => 'Voided',
     ];
@@ -42,6 +43,7 @@ class Bill extends Model
         'draft'    => 'gray',
         'pending'  => 'blue',
         'approved' => 'green',
+        'paid'     => 'purple',
         'overdue'  => 'red',
         'voided'   => 'gray',
     ];
@@ -129,7 +131,7 @@ class Bill extends Model
      */
     public function getDaysOverdueAttribute(): int
     {
-        if (! $this->due_date || in_array($this->status, ['voided', 'approved'])) {
+        if (! $this->due_date || in_array($this->status, ['voided', 'approved', 'paid'])) {
             return 0;
         }
         $days = now()->startOfDay()->diffInDays($this->due_date->startOfDay(), false);
