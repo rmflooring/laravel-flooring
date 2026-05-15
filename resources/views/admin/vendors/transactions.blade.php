@@ -164,12 +164,13 @@
                             @php $filteredTotal = 0; @endphp
                             @foreach ($transactions as $txn)
                                 @php
-                                    $isBill   = $txn['type'] === 'bill';
-                                    $isVoided = $txn['status'] === 'voided';
-                                    $isPaid   = $isBill && $txn['status'] === 'paid';
+                                    $isBill    = $txn['type'] === 'bill';
+                                    $isVoided  = $txn['status'] === 'voided';
+                                    $isSettled = ($isBill && $txn['status'] === 'paid')
+                                              || (!$isBill && $txn['status'] === 'applied');
                                     $isOverdue = $isBill && $txn['status'] === 'overdue';
 
-                                    if (!$isVoided && !$isPaid) {
+                                    if (!$isVoided && !$isSettled) {
                                         $filteredTotal += $isBill ? $txn['amount'] : -$txn['amount'];
                                     }
 
