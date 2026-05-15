@@ -22,9 +22,10 @@
 
             @php
                 $statusBadge = match($vendorCredit->status) {
-                    'open'   => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-                    'voided' => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-                    default  => 'bg-gray-100 text-gray-600',
+                    'open'    => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+                    'applied' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+                    'voided'  => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+                    default   => 'bg-gray-100 text-gray-600',
                 };
             @endphp
 
@@ -43,7 +44,7 @@
                                 </span>
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                @if ($vendorCredit->status !== 'voided')
+                                @if (!in_array($vendorCredit->status, ['voided', 'applied']))
                                     @can('edit vendor credits')
                                         <a href="{{ route('admin.vendor-credits.edit', $vendorCredit) }}"
                                            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
@@ -58,7 +59,7 @@
                                         </button>
                                     @endcan
                                 @endif
-                                @if (app(\App\Services\QuickBooksService::class)->isConnected() && $vendorCredit->status !== 'voided')
+                                @if (app(\App\Services\QuickBooksService::class)->isConnected() && !in_array($vendorCredit->status, ['voided', 'applied']))
                                     <form method="POST" action="{{ route('admin.vendor-credits.push-to-qbo', $vendorCredit) }}">
                                         @csrf
                                         <button type="submit"
@@ -211,7 +212,7 @@
                                 </dl>
                             @else
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Not synced</span>
-                                @if ($vendorCredit->status !== 'voided')
+                                @if (!in_array($vendorCredit->status, ['voided', 'applied']))
                                     <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Use the "Push to QBO" button above to sync this credit memo.</p>
                                 @endif
                             @endif
@@ -245,7 +246,7 @@
     </div>
 
     {{-- Void modal --}}
-    @if ($vendorCredit->status !== 'voided')
+    @if (!in_array($vendorCredit->status, ['voided', 'applied']))
     <div id="void-modal"
          class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
          onclick="if(event.target===this) this.classList.add('hidden')">

@@ -44,9 +44,10 @@ class ProcessQboWebhook implements ShouldQueue
                 Log::info("[QBO Webhook] {$operation} {$name} #{$qboId}");
 
                 match ($name) {
-                    'Bill'    => $sync->handleBillUpdate($qboId, $operation),
-                    'Invoice' => $sync->handleInvoiceUpdate($qboId, $operation),
-                    default   => null,
+                    'Bill'         => $sync->handleBillUpdate($qboId, $operation),
+                    'Invoice'      => $sync->handleInvoiceUpdate($qboId, $operation),
+                    'VendorCredit' => $sync->handleVendorCreditUpdate($qboId, $operation),
+                    default        => null,
                 };
             }
         }

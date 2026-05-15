@@ -725,6 +725,60 @@ class QboSyncService
     }
 
     /**
+     * Called when QBO notifies us that a VendorCredit entity was updated or deleted.
+     * If the credit's Balance = 0 it has been fully applied in QBO — mark FM status as applied.
+     */
+    public function handleVendorCreditUpdate(string $qboId, string $operation): void
+    {
+        $credit = VendorCreditMemo::where('qbo_id', $qboId)->first();
+
+        if (! $credit) {
+            Log::info("[QBO Webhook] VendorCredit qbo_id={$qboId} not found in FM — skipping.");
+            return;
+        }
+
+        if ($operation === 'Delete') {
+            $credit->update(['qbo_id' => null, 'qbo_sync_token' => null, 'qbo_synced_at' => null]);
+            $this->qbo->log('vendor_credit', $credit->id, 'pull', 'success', $qboId, 'VendorCredit deleted in QBO — sync link cleared');
+            return;
+        }
+
+        try {
+            $response  = $this->qbo->get("vendorcredit/{$qboId}");
+            $qboCredit = $response['VendorCredit'] ?? null;
+
+            if (! $qboCredit) {
+                Log::warning("[QBO Webhook] VendorCredit #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            $balance = (float) ($qboCredit['Balance'] ?? 0);
+            $updates = [
+                'qbo_sync_token' => $qboCredit['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ];
+
+            if ($balance <= 0 && $credit->status === 'open') {
+                $updates['status'] = 'applied';
+                $message = 'Vendor credit marked as applied via QBO webhook';
+            } elseif ($balance > 0 && $credit->status === 'applied') {
+                $updates['status'] = 'open';
+                $message = 'Vendor credit application reversed in QBO — status reset to open';
+            } else {
+                $message = 'VendorCredit updated in QBO (no status change)';
+            }
+
+            $credit->update($updates);
+
+            $this->qbo->log('vendor_credit', $credit->id, 'pull', 'success', $qboId, $message);
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch VendorCredit #{$qboId}: " . $e->getMessage());
+            $this->qbo->log('vendor_credit', $credit->id, 'pull', 'error', $qboId, $e->getMessage());
+        }
+    }
+
+    /**
      * Called when QBO notifies us that an Invoice entity was updated or deleted.
      * Fetches the current Invoice from QBO and syncs payment status back to FM.
      */

@@ -29,13 +29,15 @@ class VendorCreditMemo extends Model
     ];
 
     const STATUSES = [
-        'open'   => 'Open',
-        'voided' => 'Voided',
+        'open'    => 'Open',
+        'applied' => 'Applied',
+        'voided'  => 'Voided',
     ];
 
     const STATUS_COLORS = [
-        'open'   => 'green',
-        'voided' => 'gray',
+        'open'    => 'green',
+        'applied' => 'purple',
+        'voided'  => 'gray',
     ];
 
     protected static function booted(): void
