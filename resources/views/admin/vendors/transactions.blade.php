@@ -206,7 +206,7 @@
 
                                     {{-- Number (linked) --}}
                                     <td class="px-5 py-3 whitespace-nowrap">
-                                        <a href="{{ $txn['link'] }}"
+                                        <a href="{{ $txn['link'] }}?back={{ urlencode(request()->fullUrl()) }}"
                                            class="font-mono text-sm font-semibold {{ $isBill ? 'text-blue-600 hover:underline dark:text-blue-400' : 'text-green-700 hover:underline dark:text-green-400' }}">
                                             {{ $txn['number'] }}
                                         </a>
