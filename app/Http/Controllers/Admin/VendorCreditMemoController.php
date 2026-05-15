@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryReturn;
 use App\Models\Vendor;
 use App\Models\VendorCreditMemo;
+use App\Services\QboSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Setting;
 
 class VendorCreditMemoController extends Controller
 {
@@ -247,6 +249,38 @@ class VendorCreditMemoController extends Controller
 
         return redirect()->route('admin.vendor-credits.index')
             ->with('success', "Credit memo {$vendorCredit->credit_memo_number} deleted.");
+    }
+
+    // -----------------------------------------------------------------------
+    // QBO PUSH
+    // -----------------------------------------------------------------------
+
+    public function pushToQbo(VendorCreditMemo $vendorCredit, QboSyncService $sync)
+    {
+        if (! app(\App\Services\QuickBooksService::class)->isConnected()) {
+            return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
+        }
+
+        if ($vendorCredit->status === 'voided') {
+            return back()->with('error', 'Voided credit memos cannot be pushed to QuickBooks.');
+        }
+
+        $accountIds = [
+            'product' => Setting::get('qbo_ap_product_account_id'),
+            'freight' => Setting::get('qbo_ap_freight_account_id'),
+            'labour'  => Setting::get('qbo_ap_labour_account_id'),
+        ];
+
+        if (! $accountIds['product']) {
+            return back()->with('error', 'Missing QBO expense account. Visit Settings → QuickBooks Online to set it up.');
+        }
+
+        $result = $sync->pushVendorCredit($vendorCredit, $accountIds);
+
+        return back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 
     // -----------------------------------------------------------------------

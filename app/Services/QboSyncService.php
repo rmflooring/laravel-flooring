@@ -6,6 +6,7 @@ use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Vendor;
+use App\Models\VendorCreditMemo;
 use App\Services\InvoiceService;
 use Illuminate\Support\Facades\Log;
 
@@ -385,6 +386,114 @@ class QboSyncService
 
         if ($bill->notes) {
             $payload['PrivateNote'] = $bill->notes;
+        }
+
+        return $payload;
+    }
+
+    // =========================================================================
+    // Vendor Credit Memos (AP credit)
+    // =========================================================================
+
+    /**
+     * Push a VendorCreditMemo to QBO as a VendorCredit entity.
+     * Vendor is auto-synced if not already in QBO.
+     * $accountIds must contain at least a 'product' key (QBO expense account ID).
+     */
+    public function pushVendorCredit(VendorCreditMemo $credit, array $accountIds): array
+    {
+        try {
+            $credit->load('vendor');
+
+            $vendor = $credit->vendor;
+            if (! $vendor) {
+                return ['success' => false, 'message' => 'Credit memo has no vendor assigned.', 'qbo_id' => null];
+            }
+
+            if (! $vendor->qbo_id) {
+                $vendorResult = $this->pushVendor($vendor);
+                if (! $vendorResult['success']) {
+                    return ['success' => false, 'message' => 'Failed to sync vendor: ' . $vendorResult['message'], 'qbo_id' => null];
+                }
+                $vendor->refresh();
+            }
+
+            $payload = $this->buildVendorCreditPayload($credit, $vendor->qbo_id, $accountIds);
+
+            if ($credit->qbo_id) {
+                $payload['Id']        = $credit->qbo_id;
+                $payload['SyncToken'] = $credit->qbo_sync_token ?? '0';
+                $response  = $this->qbo->post('vendorcredit', $payload);
+                $qboCredit = $response['VendorCredit'];
+                $action    = 'updated';
+            } else {
+                $response  = $this->qbo->post('vendorcredit', $payload);
+                $qboCredit = $response['VendorCredit'];
+                $action    = 'created';
+            }
+
+            $credit->update([
+                'qbo_id'         => $qboCredit['Id'],
+                'qbo_sync_token' => $qboCredit['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('vendor_credit', $credit->id, 'push', 'success', $qboCredit['Id'],
+                ucfirst($action) . ' vendor credit in QBO', $payload, $qboCredit);
+
+            return ['success' => true, 'message' => 'Vendor credit ' . $action . ' in QuickBooks.', 'qbo_id' => $qboCredit['Id']];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('vendor_credit', $credit->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
+    }
+
+    private function buildVendorCreditPayload(VendorCreditMemo $credit, string $vendorQboId, array $accountIds): array
+    {
+        $lines = [];
+
+        // Subtotal line
+        $lines[] = [
+            'Amount'      => (float) $credit->subtotal,
+            'DetailType'  => 'AccountBasedExpenseLineDetail',
+            'Description' => 'Credit ' . $credit->credit_memo_number,
+            'AccountBasedExpenseLineDetail' => [
+                'AccountRef' => ['value' => $accountIds['product']],
+            ],
+        ];
+
+        if ($credit->gst_amount > 0) {
+            $lines[] = [
+                'Amount'      => (float) $credit->gst_amount,
+                'DetailType'  => 'AccountBasedExpenseLineDetail',
+                'Description' => 'GST',
+                'AccountBasedExpenseLineDetail' => [
+                    'AccountRef' => ['value' => $accountIds['product']],
+                ],
+            ];
+        }
+
+        if ($credit->pst_amount > 0) {
+            $lines[] = [
+                'Amount'      => (float) $credit->pst_amount,
+                'DetailType'  => 'AccountBasedExpenseLineDetail',
+                'Description' => 'PST',
+                'AccountBasedExpenseLineDetail' => [
+                    'AccountRef' => ['value' => $accountIds['product']],
+                ],
+            ];
+        }
+
+        $payload = [
+            'VendorRef' => ['value' => $vendorQboId],
+            'TxnDate'   => $credit->date->toDateString(),
+            'DocNumber' => $credit->reference_number ?: $credit->credit_memo_number,
+            'Line'      => $lines,
+        ];
+
+        if ($credit->notes) {
+            $payload['PrivateNote'] = $credit->notes;
         }
 
         return $payload;

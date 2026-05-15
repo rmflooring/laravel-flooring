@@ -58,6 +58,21 @@
                                         </button>
                                     @endcan
                                 @endif
+                                @if (app(\App\Services\QuickBooksService::class)->isConnected() && $vendorCredit->status !== 'voided')
+                                    <form method="POST" action="{{ route('admin.vendor-credits.push-to-qbo', $vendorCredit) }}">
+                                        @csrf
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition
+                                                    {{ $vendorCredit->qbo_id
+                                                        ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-700 dark:bg-green-900/20 dark:text-green-400'
+                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300' }}">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                                            </svg>
+                                            {{ $vendorCredit->qbo_id ? 'Re-sync to QBO' : 'Push to QBO' }}
+                                        </button>
+                                    </form>
+                                @endif
                                 @can('delete vendor credits')
                                     <form method="POST" action="{{ route('admin.vendor-credits.destroy', $vendorCredit) }}"
                                           onsubmit="return confirm('Delete this credit memo? This cannot be undone.')">
@@ -175,6 +190,33 @@
                             @endif
                         </dl>
                     </div>
+
+                    {{-- QuickBooks status --}}
+                    @if (app(\App\Services\QuickBooksService::class)->isConnected())
+                        <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                            <h3 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">QuickBooks Online</h3>
+                            @if ($vendorCredit->qbo_id)
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Synced</span>
+                                </div>
+                                <dl class="space-y-2 text-sm">
+                                    <div>
+                                        <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">QBO ID</dt>
+                                        <dd class="font-mono text-gray-700 dark:text-gray-300">{{ $vendorCredit->qbo_id }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Last Synced</dt>
+                                        <dd class="text-gray-700 dark:text-gray-300">{{ $vendorCredit->qbo_synced_at?->format('M j, Y g:i a') ?? '—' }}</dd>
+                                    </div>
+                                </dl>
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Not synced</span>
+                                @if ($vendorCredit->status !== 'voided')
+                                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Use the "Push to QBO" button above to sync this credit memo.</p>
+                                @endif
+                            @endif
+                        </div>
+                    @endif
 
                     {{-- Audit --}}
                     <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
