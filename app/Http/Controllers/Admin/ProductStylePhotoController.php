@@ -19,6 +19,9 @@ class ProductStylePhotoController extends Controller
         ]);
 
         if ($style->photos()->count() >= 3) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Maximum 3 photos per style.'], 422);
+            }
             return back()->with('photo_error', 'Maximum 3 photos per style.');
         }
 
@@ -27,12 +30,23 @@ class ProductStylePhotoController extends Controller
 
         $isFirst = $style->photos()->count() === 0;
 
-        $style->photos()->create([
+        $photo = $style->photos()->create([
             'file_path'   => $path,
             'is_primary'  => $isFirst,
             'sort_order'  => $style->photos()->max('sort_order') + 1,
             'uploaded_by' => auth()->id(),
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'id'          => $photo->id,
+                'url'         => $photo->url,
+                'is_primary'  => (bool) $photo->is_primary,
+                'count'       => $style->photos()->count(),
+                'delete_url'  => route('admin.product_styles.photos.destroy', [$product_line, $style, $photo]),
+                'primary_url' => route('admin.product_styles.photos.primary', [$product_line, $style, $photo]),
+            ]);
+        }
 
         $redirectTo = $request->input('_redirect_back');
 
@@ -56,6 +70,14 @@ class ProductStylePhotoController extends Controller
             $style->photos()->orderBy('sort_order')->first()?->update(['is_primary' => true]);
         }
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success'        => true,
+                'count'          => $style->photos()->count(),
+                'new_primary_id' => $wasPrimary ? $style->photos()->where('is_primary', true)->first()?->id : null,
+            ]);
+        }
+
         $redirectTo = $request->input('_redirect_back');
 
         return $redirectTo
@@ -71,6 +93,10 @@ class ProductStylePhotoController extends Controller
 
         $style->photos()->update(['is_primary' => false]);
         $photo->update(['is_primary' => true]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'primary_id' => $photo->id]);
+        }
 
         $redirectTo = $request->input('_redirect_back');
 
