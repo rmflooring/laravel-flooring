@@ -963,11 +963,19 @@ public function showProfits(Sale $sale)
         ->with(['inventoryReturn', 'saleItem'])
         ->get();
 
+    $poIds = $sale->purchaseOrders()->pluck('id');
+
+    $billSurcharges = \App\Models\BillItem::whereNotNull('charge_type')
+        ->whereHas('bill', fn ($q) => $q->whereIn('purchase_order_id', $poIds)->whereNotIn('status', ['voided']))
+        ->with('bill.purchaseOrder')
+        ->get();
+
     return view('pages.profits.show', [
-        'recordType'    => 'sale',
-        'record'        => $sale,
-        'rooms'         => $sale->rooms,
-        'vendorCredits' => $vendorCredits,
+        'recordType'     => 'sale',
+        'record'         => $sale,
+        'rooms'          => $sale->rooms,
+        'vendorCredits'  => $vendorCredits,
+        'billSurcharges' => $billSurcharges,
     ]);
 }
 

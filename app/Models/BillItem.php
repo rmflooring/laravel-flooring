@@ -9,6 +9,12 @@ class BillItem extends Model
 {
     protected $guarded = ['id'];
 
+    const CHARGE_TYPES = [
+        'fuel'    => 'Fuel Surcharge',
+        'freight' => 'Freight / Delivery',
+        'other'   => 'Other Charge',
+    ];
+
     protected $casts = [
         'quantity'   => 'decimal:2',
         'unit_cost'  => 'decimal:2',

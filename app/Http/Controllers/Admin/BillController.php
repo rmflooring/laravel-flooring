@@ -144,6 +144,7 @@ class BillController extends Controller
             'items.*.unit_cost'              => 'required|numeric|min:0',
             'items.*.purchase_order_item_id' => 'nullable|exists:purchase_order_items,id',
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
+            'items.*.charge_type'            => 'nullable|string',
         ]);
 
         // If due date not provided but payment term has days, compute it
@@ -189,6 +190,7 @@ class BillController extends Controller
                     'bill_id'                 => $bill->id,
                     'purchase_order_item_id'  => $row['purchase_order_item_id'] ?? null,
                     'work_order_item_id'      => $row['work_order_item_id'] ?? null,
+                    'charge_type'             => ($row['charge_type'] ?: null),
                     'item_name'               => $row['item_name'],
                     'quantity'                => $row['quantity'],
                     'unit'                    => $row['unit'] ?? null,
@@ -276,6 +278,7 @@ class BillController extends Controller
             'items.*.unit_cost'              => 'required|numeric|min:0',
             'items.*.purchase_order_item_id' => 'nullable|exists:purchase_order_items,id',
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
+            'items.*.charge_type'            => 'nullable|string',
         ]);
 
         $gstRate   = round(($validated['gst_rate'] ?? 0) / 100, 6);
@@ -307,6 +310,7 @@ class BillController extends Controller
                     'bill_id'                => $bill->id,
                     'purchase_order_item_id' => $row['purchase_order_item_id'] ?? null,
                     'work_order_item_id'     => $row['work_order_item_id'] ?? null,
+                    'charge_type'            => $row['charge_type'] ?? null,
                     'item_name'              => $row['item_name'],
                     'quantity'               => $row['quantity'],
                     'unit'                   => $row['unit'] ?? null,

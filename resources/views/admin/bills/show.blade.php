@@ -155,9 +155,17 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($bill->items as $item)
-                        <tr>
-                            <td class="px-4 py-3">{{ $item->item_name }}</td>
-                            <td class="px-4 py-3 text-right">{{ rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
+                        <tr @class(['bg-amber-50/40 dark:bg-amber-900/10' => $item->charge_type])>
+                            <td class="px-4 py-3">
+                                {{ $item->item_name }}
+                                @if ($item->charge_type)
+                                    @php $chargeLabels = ['fuel' => 'Fuel Surcharge', 'freight' => 'Freight', 'other' => 'Other']; @endphp
+                                    <span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                        {{ $chargeLabels[$item->charge_type] ?? $item->charge_type }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-right">{{ $item->charge_type ? '—' : rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
                             <td class="px-4 py-3 text-gray-500">{{ $item->unit ?? '—' }}</td>
                             <td class="px-4 py-3 text-right">${{ number_format($item->unit_cost, 2) }}</td>
                             <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">${{ number_format($item->line_total, 2) }}</td>
@@ -215,6 +223,7 @@
                             <input type="hidden" name="items[{{ $i }}][id]" value="{{ $item->id }}">
                             <input type="hidden" name="items[{{ $i }}][purchase_order_item_id]" value="{{ $item->purchase_order_item_id }}">
                             <input type="hidden" name="items[{{ $i }}][work_order_item_id]" value="{{ $item->work_order_item_id }}">
+                            <input type="hidden" name="items[{{ $i }}][charge_type]" value="{{ $item->charge_type }}">
                             <input type="hidden" name="items[{{ $i }}][item_name]" value="{{ $item->item_name }}">
                             <input type="hidden" name="items[{{ $i }}][quantity]" value="{{ $item->quantity }}">
                             <input type="hidden" name="items[{{ $i }}][unit]" value="{{ $item->unit }}">

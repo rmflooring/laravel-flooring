@@ -95,7 +95,9 @@
         ? $vendorCredits->groupBy('sale_item_id')->map(fn($g) => round($g->sum('line_total'), 2))
         : collect();
 
-    $totalProfit = $totalSell - $totalCost + $totalVendorCredit;
+    $totalBillSurcharges = isset($billSurcharges) ? $billSurcharges->sum(fn($s) => (float) $s->line_total) : 0;
+
+    $totalProfit = $totalSell - $totalCost + $totalVendorCredit - $totalBillSurcharges;
 
     $profitMargin = $totalSell > 0
         ? ($totalProfit / $totalSell) * 100
@@ -358,8 +360,9 @@
             @endif
         </div>
 
-        {{-- Hidden element for JS to read vendor credit totals --}}
+        {{-- Hidden elements for JS totals --}}
         <div data-total-vendor-credit="{{ $totalVendorCredit }}" style="display:none"></div>
+        <div data-total-bill-surcharges="{{ $totalBillSurcharges }}" style="display:none"></div>
 
         {{-- Vendor Credits card (sales only, when credits exist) --}}
         @if (isset($vendorCredits) && $vendorCredits->isNotEmpty())
@@ -417,6 +420,60 @@
                             <td colspan="4" class="px-3 py-2 text-right border-t text-green-800">Total Vendor Credit</td>
                             <td class="px-3 py-2 text-right border-t text-green-700 text-base">
                                 +${{ number_format($totalVendorCredit, 2) }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        @endif
+
+        {{-- Bill Surcharges card (sales only, when surcharges exist) --}}
+        @if (isset($billSurcharges) && $billSurcharges->isNotEmpty())
+        <div class="bg-white shadow rounded-lg p-6 border-l-4 border-amber-500">
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Bill Surcharges</h2>
+            <p class="text-sm text-gray-500 mb-4">Fuel, freight, or other charges recorded on vendor bills linked to this sale's purchase orders.</p>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm border border-gray-200">
+                    <thead class="bg-amber-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left border-b text-amber-800">Bill / PO</th>
+                            <th class="px-3 py-2 text-left border-b text-amber-800">Charge</th>
+                            <th class="px-3 py-2 text-left border-b text-amber-800">Type</th>
+                            <th class="px-3 py-2 text-right border-b text-amber-800">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php $chargeLabels = ['fuel' => 'Fuel Surcharge', 'freight' => 'Freight / Delivery', 'other' => 'Other']; @endphp
+                        @foreach ($billSurcharges as $surcharge)
+                        <tr class="odd:bg-white even:bg-amber-50/40">
+                            <td class="px-3 py-2 border-b">
+                                <a href="{{ route('admin.bills.show', $surcharge->bill) }}"
+                                   class="text-amber-700 hover:underline font-mono">
+                                    #{{ $surcharge->bill->reference_number }}
+                                </a>
+                                @if ($surcharge->bill->purchaseOrder)
+                                    <div class="text-xs text-gray-400">PO #{{ $surcharge->bill->purchaseOrder->po_number }}</div>
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 border-b text-gray-700">{{ $surcharge->item_name }}</td>
+                            <td class="px-3 py-2 border-b">
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                    {{ $chargeLabels[$surcharge->charge_type] ?? $surcharge->charge_type }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2 border-b text-right font-semibold text-amber-700">
+                                +${{ number_format((float) $surcharge->line_total, 2) }}
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-amber-50 font-semibold">
+                        <tr>
+                            <td colspan="3" class="px-3 py-2 text-right border-t text-amber-800">Total Bill Surcharges</td>
+                            <td class="px-3 py-2 text-right border-t text-amber-700 text-base">
+                                +${{ number_format($totalBillSurcharges, 2) }}
                             </td>
                         </tr>
                     </tfoot>
@@ -587,6 +644,10 @@ function updateProfitSummaryHeader() {
         totalProfit += parseFloat(room.querySelector('[data-room-profit]')?.dataset.value || 0);
     });
 
+    // Bill surcharges are a sale-level cost — add to cost, subtract from profit
+    const totalBillSurcharges = parseFloat(document.querySelector('[data-total-bill-surcharges]')?.dataset.value || 0);
+    totalProfit -= totalBillSurcharges;
+
     const margin = totalSell > 0
         ? (totalProfit / totalSell) * 100
         : 0;
@@ -594,7 +655,7 @@ function updateProfitSummaryHeader() {
     document.querySelector('[data-summary-sell]').textContent =
         '$' + totalSell.toFixed(2);
 
-    // Show cost net of vendor credits (sell - profit = adjusted cost)
+    // Show cost net of vendor credits but including bill surcharges
     const adjustedCost = totalSell - totalProfit;
     document.querySelector('[data-summary-cost]').textContent =
         '$' + adjustedCost.toFixed(2);
