@@ -113,7 +113,7 @@
 
             {{-- Price --}}
             <td width="18%" valign="middle" align="center" style="padding:0 4pt; border-right:1pt solid #e5e7eb;">
-                @if ($sample->effective_price)
+                @if ($showPrice && $sample->effective_price)
                     <div style="font-size:5.5pt; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px;">Price / Unit</div>
                     <div style="font-size:14pt; font-weight:bold; color:#1d4ed8; line-height:1.1;">${{ number_format($sample->effective_price, 2) }}</div>
                 @endif
@@ -150,7 +150,7 @@
                     @if ($sample->productStyle->color) &middot; {{ $sample->productStyle->color }}@endif
                 </div>
 
-                @if ($sample->effective_price)
+                @if ($showPrice && $sample->effective_price)
                 <div class="price-line">
                     <div class="price-label">Price / Unit</div>
                     <div class="price-value">${{ number_format($sample->effective_price, 2) }}</div>
@@ -217,7 +217,7 @@
     <hr class="divider">
 
     {{-- Price --}}
-    @if ($sample->effective_price)
+    @if ($showPrice && $sample->effective_price)
     <div class="price-line">
         <div class="price-label">Material Price / Unit</div>
         <div class="price-value">${{ number_format($sample->effective_price, 2) }}</div>

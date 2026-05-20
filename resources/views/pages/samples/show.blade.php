@@ -44,18 +44,30 @@
                             </svg>
                         </button>
                         <div x-show="open" @click.outside="open = false" x-cloak
-                             class="absolute right-0 mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                             class="absolute right-0 mt-1 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
                             <a href="{{ route('pages.samples.label', [$sample, 'format' => '5371']) }}" target="_blank"
                                class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg">
                                 Avery 5371 (3.5" × 2")
+                            </a>
+                            <a href="{{ route('pages.samples.label', [$sample, 'format' => '5371', 'show_price' => '0']) }}" target="_blank"
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
+                                Avery 5371 — no price
                             </a>
                             <a href="{{ route('pages.samples.label', [$sample, 'format' => '5388']) }}" target="_blank"
                                class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
                                 Avery 5388 (3" × 5")
                             </a>
+                            <a href="{{ route('pages.samples.label', [$sample, 'format' => '5388', 'show_price' => '0']) }}" target="_blank"
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
+                                Avery 5388 — no price
+                            </a>
                             <a href="{{ route('pages.samples.label', [$sample, 'format' => 'ql700']) }}" target="_blank"
-                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg border-t border-gray-100 dark:border-gray-700">
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
                                 Brother QL-700 (62mm)
+                            </a>
+                            <a href="{{ route('pages.samples.label', [$sample, 'format' => 'ql700', 'show_price' => '0']) }}" target="_blank"
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg border-t border-gray-100 dark:border-gray-700">
+                                Brother QL-700 — no price
                             </a>
                         </div>
                     </div>

@@ -251,8 +251,10 @@ class SampleController extends Controller
             default => [0, 0, 252, 144],
         };
 
+        $showPrice = $request->boolean('show_price', true);
+
         $pdf = Pdf::loadView('pdf.sample-label', compact(
-            'sample', 'format', 'qrSvg', 'logoDataUri', 'companyName'
+            'sample', 'format', 'qrSvg', 'logoDataUri', 'companyName', 'showPrice'
         ))->setPaper($paperSize);
 
         return $pdf->stream("label-{$sample->sample_id}.pdf");

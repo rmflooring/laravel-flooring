@@ -140,7 +140,7 @@
             {{-- Price range --}}
             <td width="18%" valign="middle" align="center" style="padding:0 4pt; border-right:1pt solid #e5e7eb;">
                 @php $prices = $sampleSet->items->pluck('display_price')->filter()->map(fn($p) => (float)$p); @endphp
-                @if ($prices->isNotEmpty())
+                @if ($showPrice && $prices->isNotEmpty())
                     <div style="font-size:5pt; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;">From</div>
                     <div style="font-size:12pt; font-weight:bold; color:#1d4ed8; line-height:1.1;">${{ number_format($prices->min(), 2) }}</div>
                 @endif
@@ -182,7 +182,7 @@
                 @php
                     $prices = $sampleSet->items->pluck('display_price')->filter()->map(fn($p) => (float)$p);
                 @endphp
-                @if ($prices->isNotEmpty())
+                @if ($showPrice && $prices->isNotEmpty())
                 <div style="margin-top:4pt;">
                     <div class="price-range-label">From</div>
                     <div class="price-range-value">${{ number_format($prices->min(), 2) }}</div>
@@ -247,7 +247,7 @@
                 @if ($item->productStyle->color)
                     <span class="style-color">&middot; {{ $item->productStyle->color }}</span>
                 @endif
-                @if ($item->display_price)
+                @if ($showPrice && $item->display_price)
                     <br><span style="font-weight:bold;color:#1d4ed8;font-size:7pt;">${{ number_format($item->display_price, 2) }}</span>
                 @endif
             </td>

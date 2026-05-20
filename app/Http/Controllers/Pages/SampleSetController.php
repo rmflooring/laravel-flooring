@@ -200,8 +200,10 @@ class SampleSetController extends Controller
             default => [0, 0, 252, 144],
         };
 
+        $showPrice = $request->boolean('show_price', true);
+
         $pdf = Pdf::loadView('pdf.sample-set-label', compact(
-            'sampleSet', 'format', 'qrSvg', 'logoDataUri', 'companyName'
+            'sampleSet', 'format', 'qrSvg', 'logoDataUri', 'companyName', 'showPrice'
         ))->setPaper($paperSize);
 
         return $pdf->stream("label-{$sampleSet->set_id}.pdf");
