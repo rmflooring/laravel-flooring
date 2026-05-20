@@ -61,6 +61,9 @@
                         <a href="{{ route('admin.settings.calendar-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Calendar Entry Templates
                         </a>
+                        <a href="{{ route('admin.settings.installer-colors') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Installer Calendar Colors
+                        </a>
                         <a href="{{ route('admin.settings.sms') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             SMS Notifications
                         </a>
