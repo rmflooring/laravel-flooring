@@ -337,38 +337,54 @@ return back()->with(
 $totalUpserted = 0;
 
 foreach ($enabledCalendars as $cal) {
+    // calendarView with a rolling window: 3 months back → 12 months ahead
+    $windowStart = now()->subMonths(3)->startOfDay()->format('Y-m-d\TH:i:s');
+    $windowEnd   = now()->addMonths(12)->endOfDay()->format('Y-m-d\TH:i:s');
+
     $baseUrl = $cal->group_id
-    ? "https://graph.microsoft.com/v1.0/groups/{$cal->group_id}/calendar/events"
-    : "https://graph.microsoft.com/v1.0/me/calendars/" . rawurlencode($cal->calendar_id) . "/events";
+        ? "https://graph.microsoft.com/v1.0/groups/{$cal->group_id}/calendarView"
+        : "https://graph.microsoft.com/v1.0/me/calendars/" . rawurlencode($cal->calendar_id) . "/calendarView";
 
-$params = [
-    '$top' => 200,
-    '$orderby' => 'lastModifiedDateTime desc',
-];
+    $params = [
+        'startDateTime' => $windowStart,
+        'endDateTime'   => $windowEnd,
+        '$top'          => 500,
+    ];
 
-// NO FILTER — Graph does not support filtering by calendarId
+    // Paginate through all results via @odata.nextLink (safety cap: 20 pages)
+    $allEvents  = [];
+    $pageUrl    = null;
+    $fetchError = false;
 
-$resp = Http::withToken($accessToken)
-    ->acceptJson()
-    ->get($baseUrl, $params);
+    for ($page = 0; $page < 20; $page++) {
+        $resp = Http::withToken($accessToken)
+            ->acceptJson()
+            ->get($pageUrl ?? $baseUrl, $pageUrl ? [] : $params);
 
-    if (!$resp->successful()) {
-    Log::error('Microsoft syncNow calendar fetch failed', [
-        'calendar_name' => $cal->name,
-        'calendar_id'   => $cal->calendar_id,
-        'group_id'      => $cal->group_id,
-        'url'           => $baseUrl,
-        'status'        => $resp->status(),
-        'body'          => $resp->body(),
-		'json'          => $resp->json(),
+        if (!$resp->successful()) {
+            Log::error('Microsoft syncNow calendar fetch failed', [
+                'calendar_name' => $cal->name,
+                'calendar_id'   => $cal->calendar_id,
+                'group_id'      => $cal->group_id,
+                'url'           => $pageUrl ?? $baseUrl,
+                'status'        => $resp->status(),
+                'body'          => $resp->body(),
+                'json'          => $resp->json(),
+            ]);
+            $results[]  = $cal->name . ': error ' . $resp->status();
+            $fetchError = true;
+            break;
+        }
 
-    ]);
+        $allEvents = array_merge($allEvents, $resp->json('value') ?? []);
+        $pageUrl   = $resp->json('@odata.nextLink');
 
-    $results[] = $cal->name . ': error ' . $resp->status();
-    continue;
-}
+        if (!$pageUrl) break;
+    }
 
-    $events = $resp->json('value') ?? [];
+    if ($fetchError) continue;
+
+    $events   = $allEvents;
     $upserted = 0;
 
     foreach ($events as $ev) {
