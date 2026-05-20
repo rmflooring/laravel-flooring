@@ -192,9 +192,12 @@ class SampleSetController extends Controller
 
         $companyName = Setting::get('branding_company_name', 'RM Flooring');
 
-        $paperSize = $format === '5388'
-            ? [0, 0, 216, 360]
-            : [0, 0, 252, 144];
+        // Paper size in points (72pt/in): 5371 = 3.5"×2", 5388 = 3"×5", ql700 = 62mm×90mm
+        $paperSize = match ($format) {
+            '5388'  => [0, 0, 216, 360],
+            'ql700' => [0, 0, 176, 255],
+            default => [0, 0, 252, 144],
+        };
 
         $pdf = Pdf::loadView('pdf.sample-set-label', compact(
             'sampleSet', 'format', 'qrSvg', 'logoDataUri', 'companyName'

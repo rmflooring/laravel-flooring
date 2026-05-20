@@ -41,8 +41,12 @@
                                 Avery 5371 (3.5" × 2")
                             </a>
                             <a href="{{ route('pages.sample-sets.label', [$sampleSet, 'format' => '5388']) }}" target="_blank"
-                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg border-t border-gray-100 dark:border-gray-700">
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
                                 Avery 5388 (3" × 5")
+                            </a>
+                            <a href="{{ route('pages.sample-sets.label', [$sampleSet, 'format' => 'ql700']) }}" target="_blank"
+                               class="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg border-t border-gray-100 dark:border-gray-700">
+                                Brother QL-700 (62mm)
                             </a>
                         </div>
                     </div>

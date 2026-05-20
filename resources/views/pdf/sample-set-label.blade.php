@@ -18,17 +18,17 @@
         }
 
         .label {
-            width: {{ $format === '5388' ? '216pt' : '252pt' }};
-            max-height: {{ $format === '5388' ? '348pt' : '136pt' }};
-            padding: {{ $format === '5388' ? '8pt' : '5pt' }};
+            width: {{ $format === '5388' ? '216pt' : ($format === 'ql700' ? '164pt' : '252pt') }};
+            max-height: {{ $format === '5388' ? '348pt' : ($format === 'ql700' ? '243pt' : '136pt') }};
+            padding: {{ $format === '5388' ? '8pt' : ($format === 'ql700' ? '6pt' : '5pt') }};
             overflow: hidden;
             page-break-inside: avoid;
             page-break-after: avoid;
         }
 
         /* ── Shared ─────────────────────────────────────── */
-        .logo img    { max-height: {{ $format === '5388' ? '30px' : '20px' }}; max-width: 110px; }
-        .company-name { font-size: {{ $format === '5388' ? '9pt' : '7pt' }}; font-weight: bold; color: #1d4ed8; }
+        .logo img    { max-height: {{ $format === '5388' ? '30px' : ($format === 'ql700' ? '26px' : '20px') }}; max-width: 110px; }
+        .company-name { font-size: {{ $format === '5388' ? '9pt' : ($format === 'ql700' ? '8pt' : '7pt') }}; font-weight: bold; color: #1d4ed8; }
 
         .set-badge {
             font-size: 5.5pt;
@@ -43,7 +43,7 @@
         }
 
         .product-name {
-            font-size: {{ $format === '5388' ? '12pt' : '9pt' }};
+            font-size: {{ $format === '5388' ? '12pt' : ($format === 'ql700' ? '10pt' : '9pt') }};
             font-weight: bold;
             color: #111827;
             line-height: 1.2;
@@ -52,13 +52,13 @@
 
         .meta {
             color: #6b7280;
-            font-size: {{ $format === '5388' ? '7.5pt' : '6pt' }};
+            font-size: {{ $format === '5388' ? '7.5pt' : ($format === 'ql700' ? '7pt' : '6pt') }};
             margin-top: 2pt;
             line-height: 1.4;
         }
 
         .set-id {
-            font-size: {{ $format === '5388' ? '6.5pt' : '5.5pt' }};
+            font-size: {{ $format === '5388' ? '6.5pt' : ($format === 'ql700' ? '6pt' : '5.5pt') }};
             color: #9ca3af;
             font-family: 'DejaVu Sans Mono', monospace;
         }
@@ -110,7 +110,60 @@
 </head>
 <body>
 
-@if ($format === '5371')
+@if ($format === 'ql700')
+{{-- ── Brother QL-700 DK-2205: 62mm × 90mm ─────────── --}}
+<div class="label">
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td width="58%" valign="top" style="padding-right:4pt;">
+                <div class="logo">
+                    @if ($logoDataUri)
+                        <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
+                    @else
+                        <div class="company-name">{{ $companyName }}</div>
+                    @endif
+                </div>
+                <div style="margin-top:3pt;"><span class="set-badge">Sample Set</span></div>
+            </td>
+            <td width="42%" valign="top" align="center">
+                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="68" height="68" alt="QR">
+                <div class="scan-hint" style="margin-top:2pt;">Scan for details</div>
+            </td>
+        </tr>
+    </table>
+
+    <hr class="divider">
+
+    <div class="product-name" style="margin-top:0;">{{ $sampleSet->name ?? $sampleSet->productLine->name }}</div>
+    <div class="meta">
+        {{ $sampleSet->productLine->manufacturer }}
+        &middot; {{ $sampleSet->items->count() }} {{ $sampleSet->items->count() === 1 ? 'style' : 'styles' }}
+        @if ($sampleSet->location)<br>{{ $sampleSet->location }}@endif
+    </div>
+
+    <hr class="divider">
+
+    <div class="styles-heading">Styles in this set</div>
+    <table class="styles-table">
+        @foreach ($sampleSet->items as $item)
+        <tr>
+            <td class="td-name">
+                {{ $item->productStyle->name }}
+                @if ($item->productStyle->color)
+                    <span class="style-color">&middot; {{ $item->productStyle->color }}</span>
+                @endif
+                @if ($item->display_price)
+                    &nbsp;<span style="font-weight:bold;color:#1d4ed8;font-size:7pt;">${{ number_format($item->display_price, 2) }}</span>
+                @endif
+            </td>
+        </tr>
+        @endforeach
+    </table>
+
+    <div class="set-id" style="margin-top:4pt;">{{ $sampleSet->set_id }}</div>
+</div>
+
+@elseif ($format === '5371')
 {{-- ── Avery 5371: 3.5" × 2" ─────────────────────────── --}}
 <div class="label">
     <table width="100%" style="height:126pt;" cellpadding="0" cellspacing="0">

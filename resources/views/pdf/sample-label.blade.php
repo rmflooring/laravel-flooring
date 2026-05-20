@@ -20,46 +20,45 @@
 
         .label {
             width: 100%;
-            height: {{ $format === '5388' ? '340pt' : '132pt' }};
-            padding: {{ $format === '5388' ? '10pt' : '6pt' }};
+            height: {{ $format === '5388' ? '340pt' : ($format === 'ql700' ? '243pt' : '132pt') }};
+            padding: {{ $format === '5388' ? '10pt' : ($format === 'ql700' ? '6pt' : '6pt') }};
             overflow: hidden;
             page-break-after: avoid;
         }
 
         /* Shared */
-        .logo img { max-height: {{ $format === '5388' ? '36px' : '22px' }}; max-width: 120px; }
+        .logo img { max-height: {{ $format === '5388' ? '36px' : ($format === 'ql700' ? '28px' : '22px') }}; max-width: 110px; }
         .company-name {
-            font-size: {{ $format === '5388' ? '10pt' : '7.5pt' }};
+            font-size: {{ $format === '5388' ? '10pt' : ($format === 'ql700' ? '9pt' : '7.5pt') }};
             font-weight: bold;
             color: #1d4ed8;
         }
 
         .product-name {
-            font-size: {{ $format === '5388' ? '13pt' : '9pt' }};
+            font-size: {{ $format === '5388' ? '13pt' : ($format === 'ql700' ? '11pt' : '9pt') }};
             font-weight: bold;
             color: #111827;
             line-height: 1.2;
-            margin-top: {{ $format === '5388' ? '6px' : '3px' }};
+            margin-top: {{ $format === '5388' ? '6px' : ($format === 'ql700' ? '5px' : '3px') }};
         }
 
         .meta {
             color: #6b7280;
-            font-size: {{ $format === '5388' ? '8pt' : '6pt' }};
+            font-size: {{ $format === '5388' ? '8pt' : ($format === 'ql700' ? '7pt' : '6pt') }};
             margin-top: 2px;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
         .price-line {
-            margin-top: {{ $format === '5388' ? '10px' : '4px' }};
+            margin-top: {{ $format === '5388' ? '10px' : ($format === 'ql700' ? '6px' : '4px') }};
         }
-        .price-label { font-size: {{ $format === '5388' ? '7pt' : '5.5pt' }}; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
-        .price-value { font-size: {{ $format === '5388' ? '16pt' : '11pt' }}; font-weight: bold; color: #1d4ed8; line-height: 1.1; }
+        .price-label { font-size: {{ $format === '5388' ? '7pt' : ($format === 'ql700' ? '6pt' : '5.5pt') }}; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; }
+        .price-value { font-size: {{ $format === '5388' ? '16pt' : ($format === 'ql700' ? '18pt' : '11pt') }}; font-weight: bold; color: #1d4ed8; line-height: 1.1; }
 
         .sample-id {
-            font-size: {{ $format === '5388' ? '7pt' : '5.5pt' }};
+            font-size: {{ $format === '5388' ? '7pt' : ($format === 'ql700' ? '6.5pt' : '5.5pt') }};
             color: #9ca3af;
             font-family: 'DejaVu Sans Mono', monospace;
-            margin-top: auto;
         }
 
         .scan-hint {
@@ -72,13 +71,68 @@
         .divider {
             border: none;
             border-top: 1px solid #e5e7eb;
-            margin: {{ $format === '5388' ? '8px 0' : '4px 0' }};
+            margin: {{ $format === '5388' ? '8px 0' : ($format === 'ql700' ? '6px 0' : '4px 0') }};
         }
     </style>
 </head>
 <body>
 
-@if ($format === '5371')
+@if ($format === 'ql700')
+{{-- ── Brother QL-700 DK-2205: 62mm × 90mm ─────────── --}}
+<div class="label">
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td width="58%" valign="top" style="padding-right:4pt;">
+                <div class="logo">
+                    @if ($logoDataUri)
+                        <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
+                    @else
+                        <div class="company-name">{{ $companyName }}</div>
+                    @endif
+                </div>
+            </td>
+            <td width="42%" valign="top" align="center">
+                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="68" height="68" alt="QR">
+                <div class="scan-hint" style="margin-top:2pt;">Scan for details</div>
+            </td>
+        </tr>
+    </table>
+
+    <hr class="divider">
+
+    <div class="product-name" style="margin-top:0;">{{ $sample->productStyle->name }}</div>
+
+    <div class="meta" style="margin-top:4pt;">
+        @if ($sample->productStyle->productLine?->manufacturer)
+            <strong>{{ $sample->productStyle->productLine->manufacturer }}</strong><br>
+        @endif
+        @if ($sample->productStyle->productLine?->name)
+            {{ $sample->productStyle->productLine->name }}<br>
+        @endif
+        @if ($sample->productStyle->color)
+            {{ $sample->productStyle->color }}<br>
+        @endif
+        @if ($sample->productStyle->sku)
+            SKU: {{ $sample->productStyle->sku }}<br>
+        @endif
+    </div>
+
+    <hr class="divider">
+
+    @if ($sample->effective_price)
+    <div class="price-line" style="margin-top:0;">
+        <div class="price-label">Price / Unit</div>
+        <div class="price-value">${{ number_format($sample->effective_price, 2) }}</div>
+    </div>
+    @endif
+
+    <div class="sample-id" style="margin-top:6pt;">
+        {{ $sample->sample_id }}
+        @if ($sample->location) &middot; {{ $sample->location }}@endif
+    </div>
+</div>
+
+@elseif ($format === '5371')
 {{-- ── Avery 5371: 3.5" × 2" business card ─────────── --}}
 <div class="label">
     <table width="100%" style="height:120pt;" cellpadding="0" cellspacing="0">
