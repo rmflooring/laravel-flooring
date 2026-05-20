@@ -1320,6 +1320,15 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
     // Load events once
     $eventModels = $eventsQuery->get();
 
+    // Installer color map: lowercase company_name => hex color (for WO event coloring)
+    $installerColorMap = \App\Models\Installer::whereNotNull('calendar_color')
+        ->get(['company_name', 'calendar_color'])
+        ->mapWithKeys(fn ($i) => [
+            strtolower(trim($i->company_name)) => \App\Models\Installer::CALENDAR_COLORS[$i->calendar_color]['hex'] ?? null,
+        ])
+        ->filter()
+        ->toArray();
+
     // Link: calendar_event_id -> external_calendar_id (Graph calendar id)
     $linksByEventId = \App\Models\ExternalEventLink::query()
         ->whereIn('calendar_event_id', $eventModels->pluck('id'))
@@ -1339,7 +1348,7 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
         ->groupBy('group_id')
         ->pluck('id', 'group_id');
 
-    $events = $eventModels->map(function ($e) use ($linksByEventId, $calendarByGraphId, $normalizedIdByGroupId) {
+    $events = $eventModels->map(function ($e) use ($linksByEventId, $calendarByGraphId, $normalizedIdByGroupId, $installerColorMap) {
 
         $isAllDay = $e->starts_at
             && $e->ends_at
@@ -1350,7 +1359,15 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
         $graphCalendarId = optional($linksByEventId->get($e->id))->external_calendar_id;
         $mc = $graphCalendarId ? $calendarByGraphId->get($graphCalendarId) : null;
 
-        return [
+        // Resolve installer color from "Installer: {name}" line in description
+        $eventColor = null;
+        if (! empty($installerColorMap) && ! empty($e->description)) {
+            if (preg_match('/^Installer:\s*(.+)$/m', $e->description, $match)) {
+                $eventColor = $installerColorMap[strtolower(trim($match[1]))] ?? null;
+            }
+        }
+
+        $event = [
             'id'    => (string) $e->id,
             'title' => (string) $e->title,
 
@@ -1384,6 +1401,12 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
                 'end_date'    => $isAllDay ? optional($e->ends_at)->format('Y-m-d') : null,
             ],
         ];
+
+        if ($eventColor) {
+            $event['color'] = $eventColor;
+        }
+
+        return $event;
     });
 
     return response()->json($events);
