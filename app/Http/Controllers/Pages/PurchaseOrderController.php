@@ -353,10 +353,11 @@ class PurchaseOrderController extends Controller
                 continue;
             }
             $saleItem  = $saleItemsForValidation[$itemId];
-            $remaining = max(0, (float) $saleItem->quantity - ($orderedQtys[$itemId] ?? 0));
+            $effectiveQty = $saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity;
+            $remaining = max(0, $effectiveQty - ($orderedQtys[$itemId] ?? 0));
             $submitted = isset($qtyOverrides[$itemId]) && $qtyOverrides[$itemId] !== ''
                 ? (float) $qtyOverrides[$itemId]
-                : (float) $saleItem->quantity;
+                : $effectiveQty;
 
             if ($submitted > $remaining + 0.001) {
                 $qtyErrors["qty.{$itemId}"] = '"' . $this->buildItemName($saleItem) . '" — qty ' . $submitted . ' exceeds remaining available qty of ' . $remaining . '.';
