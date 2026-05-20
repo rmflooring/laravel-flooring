@@ -5,7 +5,7 @@
     <style>
         @page {
             margin: 0;
-            size: {{ $format === '5388' ? '3in 5in' : '3.5in 2in' }};
+            size: {{ $format === '5388' ? '3in 5in' : ($format === 'ql700' ? '62mm 90mm' : '3.5in 2in') }};
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
