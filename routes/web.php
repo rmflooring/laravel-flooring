@@ -1308,14 +1308,17 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
         ->where('owner_user_id', auth()->id())
         ->whereNull('deleted_at');
 
-    // If calendar_ids provided, filter by external_event_links.external_calendar_id (Graph calendar id)
-    if ($calendarIds->count() > 0) {
-        $eventsQuery->whereIn('id', function ($sub) use ($calendarIds) {
-            $sub->select('calendar_event_id')
-                ->from('external_event_links')
-                ->whereIn('external_calendar_id', $calendarIds->all());
-        });
+    // If no calendar_ids, return empty — prevents fetching millions of events for users with no prefs set
+    if ($calendarIds->count() === 0) {
+        return response()->json([]);
     }
+
+    // Filter by external_event_links.external_calendar_id (Graph calendar id)
+    $eventsQuery->whereIn('id', function ($sub) use ($calendarIds) {
+        $sub->select('calendar_event_id')
+            ->from('external_event_links')
+            ->whereIn('external_calendar_id', $calendarIds->all());
+    });
 
     // Load events once
     $eventModels = $eventsQuery->get();

@@ -25,22 +25,22 @@
 
         <div class="flex flex-wrap items-center gap-4">
             <label class="inline-flex items-center gap-2">
-                <input id="filter-show-rfm" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <input id="filter-show-rfm" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded" checked>
                 <span class="text-sm text-gray-800">RFM / Measures</span>
             </label>
 
             <label class="inline-flex items-center gap-2">
-                <input id="filter-show-installations" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <input id="filter-show-installations" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded" checked>
                 <span class="text-sm text-gray-800">Installations</span>
             </label>
 
             <label class="inline-flex items-center gap-2">
-                <input id="filter-show-warehouse" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <input id="filter-show-warehouse" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded" checked>
                 <span class="text-sm text-gray-800">Warehouse</span>
             </label>
 
             <label class="inline-flex items-center gap-2">
-                <input id="filter-show-team" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <input id="filter-show-team" type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded" checked>
                 <span class="text-sm text-gray-800">Team / Showroom</span>
             </label>
 
