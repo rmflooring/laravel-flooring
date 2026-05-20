@@ -170,6 +170,14 @@ Route::prefix('admin')
             Route::delete('/settings/email-templates/{type}', [\App\Http\Controllers\Admin\AdminEmailTemplateController::class, 'reset'])
                 ->name('settings.email-templates.reset');
 
+            // Installer calendar colors
+            Route::get('/settings/installer-colors', [\App\Http\Controllers\Admin\InstallerColorController::class, 'index'])
+                ->name('settings.installer-colors');
+            Route::post('/settings/installer-colors', [\App\Http\Controllers\Admin\InstallerColorController::class, 'update'])
+                ->name('settings.installer-colors.update');
+            Route::post('/settings/installer-colors/push', [\App\Http\Controllers\Admin\InstallerColorController::class, 'push'])
+                ->name('settings.installer-colors.push');
+
             // Calendar entry templates (admin)
             Route::get('/settings/calendar-templates', [\App\Http\Controllers\Admin\AdminCalendarTemplateController::class, 'index'])
                 ->name('settings.calendar-templates.index');

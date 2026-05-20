@@ -90,6 +90,10 @@ class GraphCalendarService
             $payload['location'] = ['displayName' => $eventData['location']];
         }
 
+        if (!empty($eventData['categories'])) {
+            $payload['categories'] = $eventData['categories'];
+        }
+
         if (!empty($eventData['attendees'])) {
             $payload['attendees'] = array_map(fn($a) => [
                 'emailAddress' => ['address' => $a['email'], 'name' => $a['name'] ?? $a['email']],
@@ -147,6 +151,10 @@ class GraphCalendarService
 
         if (array_key_exists('location', $eventData)) {
             $payload['location'] = ['displayName' => $eventData['location'] ?? ''];
+        }
+
+        if (!empty($eventData['categories'])) {
+            $payload['categories'] = $eventData['categories'];
         }
 
         if (!empty($eventData['attendees'])) {
@@ -241,6 +249,68 @@ class GraphCalendarService
         }
 
         return $result;
+    }
+
+    /**
+     * Push installer calendar categories (name + color) to one MS365 account.
+     * Creates the category if it doesn't exist, patches the color if it does.
+     * Silently skips installers with no calendar_color assigned.
+     * Returns an array of errors keyed by installer name (empty = all good).
+     */
+    public function pushInstallerCategories(MicrosoftAccount $account, \Illuminate\Support\Collection $installers): array
+    {
+        $accessToken = $this->ensureAccessToken($account);
+        $errors      = [];
+
+        // Fetch existing master categories for this account
+        $existing = [];
+        try {
+            $resp = Http::withToken($accessToken)->acceptJson()
+                ->get('https://graph.microsoft.com/v1.0/me/outlook/masterCategories');
+            if ($resp->successful()) {
+                foreach ($resp->json('value', []) as $cat) {
+                    $existing[strtolower($cat['displayName'])] = $cat['id'];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[InstallerColors] Could not fetch master categories', ['account_id' => $account->id, 'error' => $e->getMessage()]);
+        }
+
+        foreach ($installers as $installer) {
+            if (empty($installer->calendar_color)) {
+                continue;
+            }
+
+            $name  = $installer->company_name;
+            $color = $installer->calendar_color;
+            $key   = strtolower($name);
+
+            try {
+                if (isset($existing[$key])) {
+                    // Update the color if the category already exists
+                    Http::withToken($accessToken)->acceptJson()
+                        ->patch("https://graph.microsoft.com/v1.0/me/outlook/masterCategories/{$existing[$key]}", [
+                            'color' => $color,
+                        ]);
+                } else {
+                    // Create the category
+                    Http::withToken($accessToken)->acceptJson()
+                        ->post('https://graph.microsoft.com/v1.0/me/outlook/masterCategories', [
+                            'displayName' => $name,
+                            'color'       => $color,
+                        ]);
+                }
+            } catch (\Throwable $e) {
+                $errors[$name] = $e->getMessage();
+                Log::warning('[InstallerColors] Failed to push category', [
+                    'installer' => $name,
+                    'account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $errors;
     }
 
     /**

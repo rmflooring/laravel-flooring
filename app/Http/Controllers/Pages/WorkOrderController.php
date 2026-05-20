@@ -814,13 +814,19 @@ class WorkOrderController extends Controller
 
         $rendered = app(CalendarTemplateService::class)->renderTemplate('work_order_calendar', $vars);
 
-        return [
+        $data = [
             'title'    => $overrides['title'] ?? $rendered['title'],
             'start'    => $start,
             'end'      => $end,
             'location' => $overrides['location'] ?? $sale->job_address ?? null,
             'notes'    => $overrides['notes'] ?? $rendered['notes'],
         ];
+
+        if (! empty($workOrder->installer?->company_name)) {
+            $data['categories'] = [$workOrder->installer->company_name];
+        }
+
+        return $data;
     }
 
     /**
