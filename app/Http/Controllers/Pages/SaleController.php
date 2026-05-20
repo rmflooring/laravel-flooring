@@ -985,7 +985,7 @@ public function showProfits(Sale $sale)
             ? request('format')
             : 'detailed';
 
-        $sale->loadMissing(['rooms.items', 'sourceEstimate']);
+        $sale->loadMissing(['rooms.items', 'sourceEstimate', 'deposits']);
         $pdf = Pdf::loadView('pdf.sale', compact('sale', 'format'));
         $filename = 'Sale-' . ($sale->sale_number ?? $sale->id) . '.pdf';
         return response($pdf->output(), 200, [
@@ -1010,7 +1010,7 @@ public function showProfits(Sale $sale)
         $mailer = app(GraphMailService::class);
         $cc     = array_filter($request->input('cc', []));
 
-        $sale->loadMissing(['rooms.items', 'sourceEstimate']);
+        $sale->loadMissing(['rooms.items', 'sourceEstimate', 'deposits']);
         $pdfContent = Pdf::loadView('pdf.sale', compact('sale', 'format'))->output();
         $attachment = [
             'filename' => 'Sale-' . ($sale->sale_number ?? $sale->id) . '.pdf',

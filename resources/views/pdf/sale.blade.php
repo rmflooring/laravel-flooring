@@ -443,6 +443,11 @@
     @endif
 
     {{-- Totals --}}
+    @php
+        $deposits        = $sale->deposits ?? collect();
+        $totalDeposits   = $deposits->sum('amount');
+        $balanceDue      = $sale->grand_total - $totalDeposits;
+    @endphp
     <div class="totals-wrapper">
         <table class="totals-table">
             @if ($format === 'detailed')
@@ -471,6 +476,22 @@
                 <td class="label">Grand Total</td>
                 <td class="amount">${{ number_format($sale->grand_total, 2) }}</td>
             </tr>
+            @if ($deposits->isNotEmpty())
+                @foreach ($deposits as $deposit)
+                    <tr>
+                        <td class="label" style="color:#16a34a;">
+                            Deposit ({{ $deposit->payment_date->format('M j, Y') }})
+                        </td>
+                        <td class="amount" style="color:#16a34a;">
+                            -${{ number_format($deposit->amount, 2) }}
+                        </td>
+                    </tr>
+                @endforeach
+                <tr class="grand">
+                    <td class="label">Balance Due</td>
+                    <td class="amount">${{ number_format($balanceDue, 2) }}</td>
+                </tr>
+            @endif
         </table>
     </div>
 
