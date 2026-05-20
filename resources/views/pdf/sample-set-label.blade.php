@@ -5,7 +5,7 @@
     <style>
         @page {
             margin: 0;
-            size: {{ $format === '5388' ? '3in 5in' : ($format === 'ql700' ? '62mm 90mm' : '3.5in 2in') }};
+            size: {{ $format === '5388' ? '3in 5in' : ($format === 'ql700' ? '90mm 62mm' : '3.5in 2in') }};
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -19,7 +19,7 @@
 
         .label {
             width: {{ $format === '5388' ? '216pt' : ($format === 'ql700' ? '164pt' : '252pt') }};
-            max-height: {{ $format === '5388' ? '348pt' : ($format === 'ql700' ? '243pt' : '136pt') }};
+            max-height: {{ $format === '5388' ? '348pt' : ($format === 'ql700' ? '164pt' : '136pt') }};
             padding: {{ $format === '5388' ? '8pt' : ($format === 'ql700' ? '6pt' : '5pt') }};
             overflow: hidden;
             page-break-inside: avoid;
@@ -111,56 +111,48 @@
 <body>
 
 @if ($format === 'ql700')
-{{-- ── Brother QL-700 DK-2205: 62mm × 90mm ─────────── --}}
+{{-- ── Brother QL-700 DK-2205: landscape PDF 90mm×62mm ────────────────── --}}
+{{-- Brother driver rotates this 90° so it prints portrait on the 62mm tape --}}
 <div class="label">
-    <table width="100%" cellpadding="0" cellspacing="0">
+    <table width="100%" style="height:164pt;" cellpadding="0" cellspacing="0">
         <tr>
-            <td width="58%" valign="top" style="padding-right:4pt;">
-                <div class="logo">
-                    @if ($logoDataUri)
-                        <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
-                    @else
-                        <div class="company-name">{{ $companyName }}</div>
-                    @endif
+            {{-- Logo + badge --}}
+            <td width="22%" valign="middle" align="center" style="padding-right:5pt; border-right:1pt solid #e5e7eb;">
+                @if ($logoDataUri)
+                    <img src="{{ $logoDataUri }}" alt="{{ $companyName }}" style="max-width:46pt; max-height:36pt;">
+                @else
+                    <div style="font-size:8pt; font-weight:bold; color:#1d4ed8; text-align:center;">{{ $companyName }}</div>
+                @endif
+                <div style="margin-top:4pt;"><span class="set-badge">Sample Set</span></div>
+            </td>
+
+            {{-- Set info --}}
+            <td width="42%" valign="middle" style="padding:0 8pt; border-right:1pt solid #e5e7eb;">
+                <div style="font-size:10pt; font-weight:bold; color:#111827; line-height:1.2;">{{ $sampleSet->name ?? $sampleSet->productLine->name }}</div>
+                <div style="font-size:7pt; color:#6b7280; margin-top:5pt; line-height:1.5;">
+                    <strong>{{ $sampleSet->productLine->manufacturer }}</strong><br>
+                    {{ $sampleSet->productLine->name }}<br>
+                    {{ $sampleSet->items->count() }} {{ $sampleSet->items->count() === 1 ? 'style' : 'styles' }}
+                    @if ($sampleSet->location)<br>{{ $sampleSet->location }}@endif
                 </div>
-                <div style="margin-top:3pt;"><span class="set-badge">Sample Set</span></div>
             </td>
-            <td width="42%" valign="top" align="center">
-                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="68" height="68" alt="QR">
-                <div class="scan-hint" style="margin-top:2pt;">Scan for details</div>
+
+            {{-- Price range --}}
+            <td width="18%" valign="middle" align="center" style="padding:0 4pt; border-right:1pt solid #e5e7eb;">
+                @php $prices = $sampleSet->items->pluck('display_price')->filter()->map(fn($p) => (float)$p); @endphp
+                @if ($prices->isNotEmpty())
+                    <div style="font-size:5pt; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;">From</div>
+                    <div style="font-size:12pt; font-weight:bold; color:#1d4ed8; line-height:1.1;">${{ number_format($prices->min(), 2) }}</div>
+                @endif
+            </td>
+
+            {{-- QR + Set ID --}}
+            <td width="18%" valign="middle" align="center" style="padding-left:5pt;">
+                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="52" height="52" alt="QR">
+                <div style="font-size:5pt; color:#9ca3af; font-family:'DejaVu Sans Mono',monospace; text-align:center; margin-top:3pt;">{{ $sampleSet->set_id }}</div>
             </td>
         </tr>
     </table>
-
-    <hr class="divider">
-
-    <div class="product-name" style="margin-top:0;">{{ $sampleSet->name ?? $sampleSet->productLine->name }}</div>
-    <div class="meta">
-        {{ $sampleSet->productLine->manufacturer }}
-        &middot; {{ $sampleSet->items->count() }} {{ $sampleSet->items->count() === 1 ? 'style' : 'styles' }}
-        @if ($sampleSet->location)<br>{{ $sampleSet->location }}@endif
-    </div>
-
-    <hr class="divider">
-
-    <div class="styles-heading">Styles in this set</div>
-    <table class="styles-table">
-        @foreach ($sampleSet->items as $item)
-        <tr>
-            <td class="td-name">
-                {{ $item->productStyle->name }}
-                @if ($item->productStyle->color)
-                    <span class="style-color">&middot; {{ $item->productStyle->color }}</span>
-                @endif
-                @if ($item->display_price)
-                    &nbsp;<span style="font-weight:bold;color:#1d4ed8;font-size:7pt;">${{ number_format($item->display_price, 2) }}</span>
-                @endif
-            </td>
-        </tr>
-        @endforeach
-    </table>
-
-    <div class="set-id" style="margin-top:4pt;">{{ $sampleSet->set_id }}</div>
 </div>
 
 @elseif ($format === '5371')

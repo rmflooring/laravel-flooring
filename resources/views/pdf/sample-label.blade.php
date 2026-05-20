@@ -5,7 +5,7 @@
     <style>
         @page {
             margin: 0;
-            size: {{ $format === '5388' ? '3in 5in' : ($format === 'ql700' ? '62mm 90mm' : '3.5in 2in') }};
+            size: {{ $format === '5388' ? '3in 5in' : ($format === 'ql700' ? '90mm 62mm' : '3.5in 2in') }};
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -20,7 +20,7 @@
 
         .label {
             width: 100%;
-            height: {{ $format === '5388' ? '340pt' : ($format === 'ql700' ? '243pt' : '132pt') }};
+            height: {{ $format === '5388' ? '340pt' : ($format === 'ql700' ? '164pt' : '132pt') }};
             padding: {{ $format === '5388' ? '10pt' : ($format === 'ql700' ? '6pt' : '6pt') }};
             overflow: hidden;
             page-break-after: avoid;
@@ -78,58 +78,54 @@
 <body>
 
 @if ($format === 'ql700')
-{{-- ── Brother QL-700 DK-2205: 62mm × 90mm ─────────── --}}
+{{-- ── Brother QL-700 DK-2205: landscape PDF 90mm×62mm ────────────────── --}}
+{{-- Brother driver rotates this 90° so it prints portrait on the 62mm tape --}}
 <div class="label">
-    <table width="100%" cellpadding="0" cellspacing="0">
+    <table width="100%" style="height:164pt;" cellpadding="0" cellspacing="0">
         <tr>
-            <td width="58%" valign="top" style="padding-right:4pt;">
-                <div class="logo">
-                    @if ($logoDataUri)
-                        <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
-                    @else
-                        <div class="company-name">{{ $companyName }}</div>
+            {{-- Logo --}}
+            <td width="22%" valign="middle" align="center" style="padding-right:5pt; border-right:1pt solid #e5e7eb;">
+                @if ($logoDataUri)
+                    <img src="{{ $logoDataUri }}" alt="{{ $companyName }}" style="max-width:46pt; max-height:46pt;">
+                @else
+                    <div style="font-size:8pt; font-weight:bold; color:#1d4ed8; text-align:center;">{{ $companyName }}</div>
+                @endif
+            </td>
+
+            {{-- Product info --}}
+            <td width="42%" valign="middle" style="padding:0 8pt; border-right:1pt solid #e5e7eb;">
+                <div style="font-size:10pt; font-weight:bold; color:#111827; line-height:1.2;">{{ $sample->productStyle->name }}</div>
+                <div style="font-size:7pt; color:#6b7280; margin-top:5pt; line-height:1.5;">
+                    @if ($sample->productStyle->productLine?->manufacturer)
+                        <strong>{{ $sample->productStyle->productLine->manufacturer }}</strong><br>
+                    @endif
+                    @if ($sample->productStyle->productLine?->name)
+                        {{ $sample->productStyle->productLine->name }}<br>
+                    @endif
+                    @if ($sample->productStyle->color)
+                        {{ $sample->productStyle->color }}<br>
+                    @endif
+                    @if ($sample->productStyle->sku)
+                        SKU: {{ $sample->productStyle->sku }}<br>
                     @endif
                 </div>
             </td>
-            <td width="42%" valign="top" align="center">
-                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="68" height="68" alt="QR">
-                <div class="scan-hint" style="margin-top:2pt;">Scan for details</div>
+
+            {{-- Price --}}
+            <td width="18%" valign="middle" align="center" style="padding:0 4pt; border-right:1pt solid #e5e7eb;">
+                @if ($sample->effective_price)
+                    <div style="font-size:5.5pt; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px;">Price / Unit</div>
+                    <div style="font-size:14pt; font-weight:bold; color:#1d4ed8; line-height:1.1;">${{ number_format($sample->effective_price, 2) }}</div>
+                @endif
+            </td>
+
+            {{-- QR + Sample ID --}}
+            <td width="18%" valign="middle" align="center" style="padding-left:5pt;">
+                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="52" height="52" alt="QR">
+                <div style="font-size:5pt; color:#9ca3af; font-family:'DejaVu Sans Mono',monospace; text-align:center; margin-top:3pt;">{{ $sample->sample_id }}</div>
             </td>
         </tr>
     </table>
-
-    <hr class="divider">
-
-    <div class="product-name" style="margin-top:0;">{{ $sample->productStyle->name }}</div>
-
-    <div class="meta" style="margin-top:4pt;">
-        @if ($sample->productStyle->productLine?->manufacturer)
-            <strong>{{ $sample->productStyle->productLine->manufacturer }}</strong><br>
-        @endif
-        @if ($sample->productStyle->productLine?->name)
-            {{ $sample->productStyle->productLine->name }}<br>
-        @endif
-        @if ($sample->productStyle->color)
-            {{ $sample->productStyle->color }}<br>
-        @endif
-        @if ($sample->productStyle->sku)
-            SKU: {{ $sample->productStyle->sku }}<br>
-        @endif
-    </div>
-
-    <hr class="divider">
-
-    @if ($sample->effective_price)
-    <div class="price-line" style="margin-top:0;">
-        <div class="price-label">Price / Unit</div>
-        <div class="price-value">${{ number_format($sample->effective_price, 2) }}</div>
-    </div>
-    @endif
-
-    <div class="sample-id" style="margin-top:6pt;">
-        {{ $sample->sample_id }}
-        @if ($sample->location) &middot; {{ $sample->location }}@endif
-    </div>
 </div>
 
 @elseif ($format === '5371')

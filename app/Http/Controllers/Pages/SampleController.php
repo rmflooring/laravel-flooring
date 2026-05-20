@@ -243,10 +243,11 @@ class SampleController extends Controller
 
         $companyName = Setting::get('branding_company_name', 'RM Flooring');
 
-        // Paper size in points (72pt/in): 5371 = 3.5"×2", 5388 = 3"×5", ql700 = 62mm×90mm
+        // Paper size in points (72pt/in): 5371 = 3.5"×2", 5388 = 3"×5"
+        // ql700 = landscape 90mm×62mm — Brother driver rotates it 90° onto the 62mm tape
         $paperSize = match ($format) {
             '5388'  => [0, 0, 216, 360],
-            'ql700' => [0, 0, 176, 255],
+            'ql700' => [0, 0, 255, 176],
             default => [0, 0, 252, 144],
         };
 
