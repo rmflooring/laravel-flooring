@@ -122,7 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
         cb.checked = !!val;
       });
     })
-    .catch((err) => console.error('Failed to load calendar prefs', err));
+    .catch((err) => console.error('Failed to load calendar prefs', err))
+    .finally(() => {
+      // Render only after prefs are applied so the first events fetch
+      // uses the correct checkbox states (checked = correct calendar IDs).
+      calendar.render();
+    });
 
   function saveCalendarPrefs() {
     const payload = {
@@ -624,6 +629,4 @@ const url = isEdit
   })();
 
 window.__FC = calendar;
-
-  calendar.render();
 });
