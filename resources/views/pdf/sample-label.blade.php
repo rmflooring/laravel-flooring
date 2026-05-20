@@ -20,56 +20,10 @@
 
         .label {
             width: 100%;
-            height: {{ $format === '5388' ? '354pt' : '140pt' }};
+            height: {{ $format === '5388' ? '340pt' : '132pt' }};
             padding: {{ $format === '5388' ? '10pt' : '6pt' }};
             overflow: hidden;
             page-break-after: avoid;
-            display: flex;
-            flex-direction: {{ $format === '5388' ? 'column' : 'row' }};
-            gap: {{ $format === '5388' ? '8pt' : '6pt' }};
-        }
-
-        /* ── 5371 layout (3.5" × 2") ─────────────────── */
-        .layout-5371 .content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-width: 0;
-        }
-        .layout-5371 .qr-block {
-            width: 70px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 3px;
-        }
-        .layout-5371 .qr-block img {
-            width: 66px;
-            height: 66px;
-        }
-
-        /* ── 5388 layout (3" × 5") ─────────────────── */
-        .layout-5388 .top-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8px;
-        }
-        .layout-5388 .content { flex: 1; min-width: 0; }
-        .layout-5388 .qr-block {
-            width: 90px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-        .layout-5388 .qr-block img {
-            width: 86px;
-            height: 86px;
         }
 
         /* Shared */
@@ -126,65 +80,67 @@
 
 @if ($format === '5371')
 {{-- ── Avery 5371: 3.5" × 2" business card ─────────── --}}
-<div class="label layout-5371">
+<div class="label">
+    <table width="100%" style="height:120pt;" cellpadding="0" cellspacing="0">
+        <tr>
+            {{-- Left: content --}}
+            <td width="72%" valign="top" style="padding-right:4pt;">
+                <div class="logo">
+                    @if ($logoDataUri)
+                        <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
+                    @else
+                        <div class="company-name">{{ $companyName }}</div>
+                    @endif
+                </div>
 
-    <div class="content">
-        {{-- Logo / company --}}
-        <div class="logo">
-            @if ($logoDataUri)
-                <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
-            @else
-                <div class="company-name">{{ $companyName }}</div>
-            @endif
-        </div>
+                <div class="product-name">{{ $sample->productStyle->name }}</div>
+                <div class="meta">
+                    @if ($sample->productStyle->productLine?->manufacturer){{ $sample->productStyle->productLine->manufacturer }}@endif
+                    @if ($sample->productStyle->color) &middot; {{ $sample->productStyle->color }}@endif
+                </div>
 
-        {{-- Product name + meta --}}
-        <div class="product-name">{{ $sample->productStyle->name }}</div>
-        <div class="meta">
-            @if ($sample->productStyle->productLine?->manufacturer){{ $sample->productStyle->productLine->manufacturer }}@endif
-            @if ($sample->productStyle->color) &middot; {{ $sample->productStyle->color }}@endif
-        </div>
+                @if ($sample->effective_price)
+                <div class="price-line">
+                    <div class="price-label">Price / Unit</div>
+                    <div class="price-value">${{ number_format($sample->effective_price, 2) }}</div>
+                </div>
+                @endif
 
-        {{-- Price --}}
-        @if ($sample->effective_price)
-        <div class="price-line">
-            <div class="price-label">Price / Unit</div>
-            <div class="price-value">${{ number_format($sample->effective_price, 2) }}</div>
-        </div>
-        @endif
+                <div class="sample-id" style="margin-top:4pt;">{{ $sample->sample_id }}</div>
+            </td>
 
-        {{-- Sample ID --}}
-        <div class="sample-id">{{ $sample->sample_id }}</div>
-    </div>
-
-    {{-- QR --}}
-    <div class="qr-block">
-        <img src="data:image/svg+xml;base64,{{ $qrSvg }}" alt="QR">
-        <div class="scan-hint">Scan for<br>details</div>
-    </div>
+            {{-- Right: QR --}}
+            <td width="28%" valign="middle" align="center">
+                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="62" height="62" alt="QR">
+                <div class="scan-hint" style="margin-top:2pt;">Scan for<br>details</div>
+            </td>
+        </tr>
+    </table>
 </div>
 
 @else
 {{-- ── Avery 5388: 3" × 5" index card ──────────────── --}}
-<div class="label layout-5388">
+<div class="label">
 
     {{-- Top: logo + QR --}}
-    <div class="top-row">
-        <div class="content">
-            <div class="logo">
-                @if ($logoDataUri)
-                    <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
-                @else
-                    <div class="company-name">{{ $companyName }}</div>
-                @endif
-            </div>
-            <div class="product-name">{{ $sample->productStyle->name }}</div>
-        </div>
-        <div class="qr-block">
-            <img src="data:image/svg+xml;base64,{{ $qrSvg }}" alt="QR">
-            <div class="scan-hint">Scan to view<br>details &amp; pricing</div>
-        </div>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td width="68%" valign="top" style="padding-right:6pt;">
+                <div class="logo">
+                    @if ($logoDataUri)
+                        <img src="{{ $logoDataUri }}" alt="{{ $companyName }}">
+                    @else
+                        <div class="company-name">{{ $companyName }}</div>
+                    @endif
+                </div>
+                <div class="product-name">{{ $sample->productStyle->name }}</div>
+            </td>
+            <td width="32%" valign="top" align="center">
+                <img src="data:image/svg+xml;base64,{{ $qrSvg }}" width="86" height="86" alt="QR">
+                <div class="scan-hint" style="margin-top:2pt;">Scan to view<br>details &amp; pricing</div>
+            </td>
+        </tr>
+    </table>
 
     <hr class="divider">
 
