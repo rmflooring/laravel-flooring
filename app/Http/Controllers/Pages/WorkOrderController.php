@@ -49,7 +49,7 @@ class WorkOrderController extends Controller
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('wo_number', 'like', "%{$q}%")
-                        ->orWhereHas('installer', fn ($iq) => $iq->where('name', 'like', "%{$q}%"))
+                        ->orWhereHas('installer', fn ($iq) => $iq->where('company_name', 'like', "%{$q}%"))
                         ->orWhereHas('sale', fn ($sq) => $sq->where('sale_number', 'like', "%{$q}%"));
                 });
             })

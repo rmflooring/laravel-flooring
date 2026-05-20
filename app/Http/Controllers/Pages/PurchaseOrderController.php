@@ -41,7 +41,7 @@ class PurchaseOrderController extends Controller
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('po_number', 'like', "%{$q}%")
-                        ->orWhereHas('vendor', fn ($vq) => $vq->where('name', 'like', "%{$q}%"))
+                        ->orWhereHas('vendor', fn ($vq) => $vq->where('company_name', 'like', "%{$q}%"))
                         ->orWhereHas('sale', fn ($sq) => $sq->where('sale_number', 'like', "%{$q}%"));
                 });
             })
