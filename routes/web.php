@@ -1406,7 +1406,8 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
         ];
 
         if ($eventColor) {
-            $event['color'] = $eventColor;
+            $event['color']   = $eventColor;
+            $event['display'] = 'block'; // force solid block in month view (not dot)
         }
 
         return $event;
