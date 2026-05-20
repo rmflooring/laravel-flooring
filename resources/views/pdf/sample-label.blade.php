@@ -146,6 +146,7 @@
                 <div class="product-name">{{ $sample->productStyle->name }}</div>
                 <div class="meta">
                     @if ($sample->productStyle->productLine?->manufacturer){{ $sample->productStyle->productLine->manufacturer }}@endif
+                    @if ($sample->productStyle->productLine?->name) &middot; {{ $sample->productStyle->productLine->name }}@endif
                     @if ($sample->productStyle->color) &middot; {{ $sample->productStyle->color }}@endif
                 </div>
 
