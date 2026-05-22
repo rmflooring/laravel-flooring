@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\Installer;
 use App\Models\Invoice;
 use App\Models\Vendor;
 use App\Models\VendorCreditMemo;
@@ -118,6 +119,77 @@ class QboSyncService
         $result = $this->qbo->query("SELECT * FROM Vendor WHERE DisplayName = '{$escapedName}'");
         $vendors = $result['QueryResponse']['Vendor'] ?? [];
         return $vendors[0] ?? null;
+    }
+
+    // =========================================================================
+    // Installers (pushed to QBO as Vendors / subcontractors)
+    // =========================================================================
+
+    public function pushInstaller(Installer $installer): array
+    {
+        try {
+            $payload = [
+                'DisplayName'     => $installer->company_name,
+                'Vendor1099'      => true,
+            ];
+
+            if ($installer->contact_name) {
+                $parts = explode(' ', trim($installer->contact_name), 2);
+                $payload['GivenName']  = $parts[0] ?? '';
+                $payload['FamilyName'] = $parts[1] ?? '';
+            }
+
+            if ($installer->email) {
+                $payload['PrimaryEmailAddr'] = ['Address' => $installer->email];
+            }
+
+            if ($installer->phone) {
+                $payload['PrimaryPhone'] = ['FreeFormNumber' => $installer->phone];
+            }
+
+            if ($installer->address || $installer->city) {
+                $payload['BillAddr'] = [
+                    'Line1'                  => $installer->address ?? '',
+                    'City'                   => $installer->city ?? '',
+                    'CountrySubDivisionCode' => $installer->province ?? '',
+                    'PostalCode'             => $installer->postal_code ?? '',
+                    'Country'                => 'CA',
+                ];
+            }
+
+            if ($installer->qbo_id) {
+                $payload['Id']        = $installer->qbo_id;
+                $payload['SyncToken'] = $installer->qbo_sync_token ?? '0';
+                $response   = $this->qbo->post('vendor', $payload);
+                $qboVendor  = $response['Vendor'];
+                $action     = 'updated';
+            } else {
+                $existing = $this->findQboVendorByName($installer->company_name);
+                if ($existing) {
+                    $qboVendor = $existing;
+                    $action    = 'linked';
+                } else {
+                    $response  = $this->qbo->post('vendor', $payload);
+                    $qboVendor = $response['Vendor'];
+                    $action    = 'created';
+                }
+            }
+
+            $installer->update([
+                'qbo_id'         => $qboVendor['Id'],
+                'qbo_sync_token' => $qboVendor['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('installer', $installer->id, 'push', 'success', $qboVendor['Id'],
+                ucfirst($action) . ' installer as vendor in QBO', $payload, $qboVendor);
+
+            return ['success' => true, 'message' => 'Installer ' . $action . ' in QuickBooks.', 'qbo_id' => $qboVendor['Id']];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('installer', $installer->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
     }
 
     // =========================================================================
@@ -272,27 +344,38 @@ class QboSyncService
     public function pushBill(Bill $bill, array $accountIds): array
     {
         try {
-            if ($bill->bill_type !== 'vendor') {
-                return ['success' => false, 'message' => 'Only vendor bills can be pushed to QBO at this time.', 'qbo_id' => null];
-            }
+            $bill->load(['vendor', 'installer', 'items.purchaseOrderItem.saleItem']);
 
-            $bill->load(['vendor', 'items.purchaseOrderItem.saleItem']);
-
-            // Ensure vendor is synced to QBO first
-            $vendor = $bill->vendor;
-            if (! $vendor) {
-                return ['success' => false, 'message' => 'Bill has no vendor assigned.', 'qbo_id' => null];
-            }
-
-            if (! $vendor->qbo_id) {
-                $vendorResult = $this->pushVendor($vendor);
-                if (! $vendorResult['success']) {
-                    return ['success' => false, 'message' => 'Failed to sync vendor: ' . $vendorResult['message'], 'qbo_id' => null];
+            // Resolve the QBO vendor reference — vendor bill uses Vendor, installer bill uses Installer (synced as QBO Vendor)
+            if ($bill->bill_type === 'vendor') {
+                $vendor = $bill->vendor;
+                if (! $vendor) {
+                    return ['success' => false, 'message' => 'Bill has no vendor assigned.', 'qbo_id' => null];
                 }
-                $vendor->refresh();
+                if (! $vendor->qbo_id) {
+                    $result = $this->pushVendor($vendor);
+                    if (! $result['success']) {
+                        return ['success' => false, 'message' => 'Failed to sync vendor: ' . $result['message'], 'qbo_id' => null];
+                    }
+                    $vendor->refresh();
+                }
+                $vendorQboId = $vendor->qbo_id;
+            } else {
+                $installer = $bill->installer;
+                if (! $installer) {
+                    return ['success' => false, 'message' => 'Bill has no installer assigned.', 'qbo_id' => null];
+                }
+                if (! $installer->qbo_id) {
+                    $result = $this->pushInstaller($installer);
+                    if (! $result['success']) {
+                        return ['success' => false, 'message' => 'Failed to sync installer: ' . $result['message'], 'qbo_id' => null];
+                    }
+                    $installer->refresh();
+                }
+                $vendorQboId = $installer->qbo_id;
             }
 
-            $payload = $this->buildBillPayload($bill, $vendor->qbo_id, $accountIds);
+            $payload = $this->buildBillPayload($bill, $vendorQboId, $accountIds);
 
             if ($bill->qbo_id) {
                 $payload['Id']        = $bill->qbo_id;
@@ -328,13 +411,17 @@ class QboSyncService
         $lines = [];
 
         foreach ($bill->items as $item) {
-            // Resolve account by sale item type; fall back to product
-            $saleItemType = $item->purchaseOrderItem?->saleItem?->type ?? 'material';
-            $accountId = match ($saleItemType) {
-                'freight' => $accountIds['freight'],
-                'labour'  => $accountIds['labour'],
-                default   => $accountIds['product'],
-            };
+            // Installer bills are always labour; vendor bills resolve by sale item type
+            if ($bill->bill_type === 'installer') {
+                $accountId = $accountIds['labour'];
+            } else {
+                $saleItemType = $item->purchaseOrderItem?->saleItem?->type ?? 'material';
+                $accountId = match ($saleItemType) {
+                    'freight' => $accountIds['freight'],
+                    'labour'  => $accountIds['labour'],
+                    default   => $accountIds['product'],
+                };
+            }
 
             $lines[] = [
                 'Amount'      => (float) $item->line_total,

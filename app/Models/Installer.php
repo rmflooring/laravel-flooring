@@ -37,9 +37,16 @@ class Installer extends Model
         'preset24' => ['label' => 'Dark Cranberry','hex' => '#750B1C'],
     ];
 
+    protected $casts = [
+        'qbo_synced_at' => 'datetime',
+    ];
+
     protected $fillable = [
         'user_id',
         'vendor_id',
+        'qbo_id',
+        'qbo_sync_token',
+        'qbo_synced_at',
         'company_name',
         'contact_name',
         'phone',

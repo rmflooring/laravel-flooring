@@ -45,7 +45,7 @@
                         @endcan
                     @endif
                     {{-- Push to QBO --}}
-                    @if ($bill->bill_type === 'vendor' && app(\App\Services\QuickBooksService::class)->isConnected())
+                    @if (app(\App\Services\QuickBooksService::class)->isConnected())
                         <form method="POST" action="{{ route('admin.bills.push-to-qbo', $bill) }}">
                             @csrf
                             <button type="submit"
