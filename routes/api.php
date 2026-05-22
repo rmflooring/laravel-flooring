@@ -9,6 +9,7 @@ Route::prefix('shop')->group(function () {
         Route::get('product-lines', [ShopApiController::class, 'productLines']);
         Route::get('product-lines/{id}', [ShopApiController::class, 'productLineShow'])
             ->whereNumber('id');
+        Route::get('product-feed', [ShopApiController::class, 'productFeed']);
     });
 
     Route::middleware('throttle:10,1')->group(function () {

@@ -133,6 +133,54 @@ class ShopApiController extends Controller
         return response()->json($data);
     }
 
+    public function productFeed(): JsonResponse
+    {
+        $lines = ProductLine::where('status', 'active')
+            ->where('shop_visible', true)
+            ->with([
+                'productType:id,name',
+                'unit:id,code,label',
+                'productStyles' => function ($q) {
+                    $q->where('status', 'active')
+                      ->where('shop_visible', true)
+                      ->whereNotNull('sell_price')
+                      ->with(['photos' => fn ($pq) => $pq->where('is_primary', true)->limit(1)])
+                      ->orderBy('name');
+                },
+            ])
+            ->get();
+
+        $items = $lines->flatMap(function ($line) {
+            return $line->productStyles
+                ->filter(fn ($style) => $line->shop_show_price || $style->shop_show_price)
+                ->map(function ($style) use ($line) {
+                    $photo = $style->photos->first();
+                    $imageUrl = $photo
+                        ? url(Storage::url($photo->file_path))
+                        : ($line->photo_path ? url(Storage::url($line->photo_path)) : null);
+
+                    return [
+                        'style_id'          => $style->id,
+                        'line_id'           => $line->id,
+                        'line_name'         => $line->name,
+                        'style_name'        => $style->name,
+                        'product_type_name' => $line->productType?->name,
+                        'description'       => $line->shop_description,
+                        'manufacturer'      => $line->manufacturer,
+                        'sku'               => $style->sku ?: $style->style_number,
+                        'sell_price'        => (float) $style->sell_price,
+                        'units_per'         => $style->units_per !== null ? (float) $style->units_per : null,
+                        'use_box_qty'       => (bool) $style->use_box_qty,
+                        'unit_code'         => $line->unit?->code,
+                        'unit_label'        => $line->unit?->label,
+                        'image_url'         => $imageUrl,
+                    ];
+                });
+        })->values();
+
+        return response()->json($items);
+    }
+
     public function quoteRequest(Request $request): JsonResponse
     {
         $validated = $request->validate([
