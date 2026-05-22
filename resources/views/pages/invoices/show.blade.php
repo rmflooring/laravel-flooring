@@ -142,8 +142,8 @@
             $parentCustomer  = $sale->opportunity?->parentCustomer;
             $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
         @endphp
-        @if($parentCustomer || $jobSiteCustomer)
-            <div class="mt-5 pt-5 border-t border-gray-200 dark:border-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        @if($parentCustomer || $jobSiteCustomer || $sale->opportunity)
+            <div class="mt-5 pt-5 border-t border-gray-200 dark:border-gray-600 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 @if($parentCustomer)
                     <div>
                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Bill To</div>
@@ -171,6 +171,20 @@
                         @endif
                         @if($sale->job_email)
                             <div class="text-gray-500 dark:text-gray-400">{{ $sale->job_email }}</div>
+                        @endif
+                    </div>
+                @endif
+                @if($sale->opportunity)
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Job Info</div>
+                        @if($sale->opportunity->job_no)
+                            <div class="font-medium text-gray-900 dark:text-white">Job #{{ $sale->opportunity->job_no }}</div>
+                        @endif
+                        @if($sale->job_name)
+                            <div class="text-gray-500 dark:text-gray-400">{{ $sale->job_name }}</div>
+                        @endif
+                        @if($sale->opportunity->projectManager)
+                            <div class="text-gray-500 dark:text-gray-400">PM: {{ $sale->opportunity->projectManager->name }}</div>
                         @endif
                     </div>
                 @endif
