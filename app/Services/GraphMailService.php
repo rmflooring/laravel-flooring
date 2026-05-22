@@ -5,11 +5,14 @@ namespace App\Services;
 use App\Models\MailLog;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GraphMailService
 {
+    private static bool $sendingFailureNotification = false;
+
     // =========================================================================
     // Track 1 — Shared Mailbox (app-level client credentials)
     // =========================================================================
@@ -204,6 +207,8 @@ class GraphMailService
                 ]);
             }
 
+            $this->notifyAdminOfFailure(implode(', ', (array) $to), $subject, 'Track 1 — shared', $errorBody);
+
             return false;
 
         } catch (\Throwable $e) {
@@ -225,6 +230,8 @@ class GraphMailService
                     'error'     => $e->getMessage(),
                 ]);
             }
+
+            $this->notifyAdminOfFailure(implode(', ', (array) $to), $subject, 'Track 1 — shared', $e->getMessage());
 
             return false;
         }
@@ -546,6 +553,8 @@ class GraphMailService
                 ]);
             }
 
+            $this->notifyAdminOfFailure(implode(', ', (array) $to), $subject, "Track 2 — {$senderEmail}", $errorBody);
+
             return false;
 
         } catch (\Throwable $e) {
@@ -568,7 +577,60 @@ class GraphMailService
                 ]);
             }
 
+            $this->notifyAdminOfFailure(implode(', ', (array) $to), $subject, "Track 2 — {$senderEmail}", $e->getMessage());
+
             return false;
+        }
+    }
+
+    // =========================================================================
+    // Admin failure notification
+    // =========================================================================
+
+    private function notifyAdminOfFailure(string $failedTo, string $subject, string $track, string $error): void
+    {
+        // Prevent recursion if the notification email itself fails
+        if (self::$sendingFailureNotification) {
+            return;
+        }
+
+        // Rate-limit: at most one notification every 5 minutes
+        if (Cache::has('mail_failure_notification_sent')) {
+            return;
+        }
+
+        self::$sendingFailureNotification = true;
+        Cache::put('mail_failure_notification_sent', true, now()->addMinutes(5));
+
+        try {
+            $token = $this->getAppToken();
+
+            $from     = Setting::get('mail_from_address', 'reception@rmflooring.ca');
+            $fromName = Setting::get('mail_from_name', 'RM Flooring Notifications');
+            $adminEmail = 'richard@rmflooring.ca';
+
+            $body = "A Floor Manager email failed to send.\n\n"
+                  . "Failed recipient: {$failedTo}\n"
+                  . "Subject: {$subject}\n"
+                  . "Track: {$track}\n"
+                  . "Error: {$error}\n\n"
+                  . "Check the email log at: " . url('/admin/settings/mail');
+
+            Http::withToken($token)
+                ->acceptJson()
+                ->post("https://graph.microsoft.com/v1.0/users/{$from}/sendMail", [
+                    'message' => [
+                        'subject'      => '[Floor Manager] Email delivery failure',
+                        'body'         => ['contentType' => 'Text', 'content' => $body],
+                        'toRecipients' => [['emailAddress' => ['address' => $adminEmail]]],
+                        'from'         => ['emailAddress' => ['address' => $from, 'name' => $fromName]],
+                    ],
+                    'saveToSentItems' => false,
+                ]);
+        } catch (\Throwable $e) {
+            Log::warning('[GraphMail] Could not send admin failure notification', ['error' => $e->getMessage()]);
+        } finally {
+            self::$sendingFailureNotification = false;
         }
     }
 }
