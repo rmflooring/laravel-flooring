@@ -534,10 +534,8 @@ class InvoiceController extends Controller
             $data = base64_encode($pdf->output());
 
             return [
-                '@odata.type'  => '#microsoft.graph.fileAttachment',
-                'name'         => "invoice-{$invoice->invoice_number}.pdf",
-                'contentType'  => 'application/pdf',
-                'contentBytes' => $data,
+                'filename' => "invoice-{$invoice->invoice_number}.pdf",
+                'content'  => $data,
             ];
         } catch (\Throwable $e) {
             return null;
