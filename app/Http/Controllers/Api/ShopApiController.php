@@ -117,6 +117,8 @@ class ShopApiController extends Controller
                     'description'    => $style->description,
                     'thickness'      => $style->thickness,
                     'sell_price'     => $style->sell_price !== null ? (float) $style->sell_price : null,
+                    'units_per'      => $style->units_per !== null ? (float) $style->units_per : null,
+                    'use_box_qty'    => (bool) $style->use_box_qty,
                     'shop_show_price' => (bool) $style->shop_show_price,
                     'photos'       => $style->photos->map(fn ($p) => [
                         'id'         => $p->id,
