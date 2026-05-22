@@ -434,38 +434,49 @@ class QboSyncService
             ];
         }
 
-        // GST tax line — use product account
-        if ($bill->gst_amount > 0) {
-            $lines[] = [
-                'Amount'      => (float) $bill->gst_amount,
-                'DetailType'  => 'AccountBasedExpenseLineDetail',
-                'Description' => 'GST',
-                'AccountBasedExpenseLineDetail' => [
-                    'AccountRef' => ['value' => $accountIds['product']],
-                    'BillableStatus' => 'NotBillable',
+        // Build TxnTaxDetail so QBO shows proper GST/PST instead of expense lines
+        $taxLines = [];
+        $gstRateId = $accountIds['gst_rate_id'] ?? null;
+        $pstRateId = $accountIds['pst_rate_id'] ?? null;
+
+        if ($gstRateId && $bill->gst_amount > 0) {
+            $taxLines[] = [
+                'Amount'        => (float) $bill->gst_amount,
+                'DetailType'    => 'TaxLineDetail',
+                'TaxLineDetail' => [
+                    'TaxRateRef'        => ['value' => $gstRateId],
+                    'PercentBased'      => false,
+                    'NetAmountTaxable'  => (float) $bill->subtotal,
                 ],
             ];
         }
 
-        // PST tax line — use product account
-        if ($bill->pst_amount > 0) {
-            $lines[] = [
-                'Amount'      => (float) $bill->pst_amount,
-                'DetailType'  => 'AccountBasedExpenseLineDetail',
-                'Description' => 'PST',
-                'AccountBasedExpenseLineDetail' => [
-                    'AccountRef' => ['value' => $accountIds['product']],
-                    'BillableStatus' => 'NotBillable',
+        if ($pstRateId && $bill->pst_amount > 0) {
+            $taxLines[] = [
+                'Amount'        => (float) $bill->pst_amount,
+                'DetailType'    => 'TaxLineDetail',
+                'TaxLineDetail' => [
+                    'TaxRateRef'        => ['value' => $pstRateId],
+                    'PercentBased'      => false,
+                    'NetAmountTaxable'  => (float) $bill->subtotal,
                 ],
             ];
         }
 
         $payload = [
-            'VendorRef'  => ['value' => $vendorQboId],
-            'TxnDate'    => $bill->bill_date->toDateString(),
-            'DocNumber'  => $bill->reference_number,
-            'Line'       => $lines,
+            'VendorRef'             => ['value' => $vendorQboId],
+            'TxnDate'               => $bill->bill_date->toDateString(),
+            'DocNumber'             => $bill->reference_number,
+            'GlobalTaxCalculation'  => 'TaxExcluded',
+            'Line'                  => $lines,
         ];
+
+        if ($taxLines) {
+            $payload['TxnTaxDetail'] = [
+                'TotalTax' => (float) $bill->tax_amount,
+                'TaxLine'  => $taxLines,
+            ];
+        }
 
         if ($bill->due_date) {
             $payload['DueDate'] = $bill->due_date->toDateString();
@@ -550,34 +561,48 @@ class QboSyncService
             ],
         ];
 
-        if ($credit->gst_amount > 0) {
-            $lines[] = [
-                'Amount'      => (float) $credit->gst_amount,
-                'DetailType'  => 'AccountBasedExpenseLineDetail',
-                'Description' => 'GST',
-                'AccountBasedExpenseLineDetail' => [
-                    'AccountRef' => ['value' => $accountIds['product']],
+        $taxLines  = [];
+        $gstRateId = $accountIds['gst_rate_id'] ?? null;
+        $pstRateId = $accountIds['pst_rate_id'] ?? null;
+
+        if ($gstRateId && $credit->gst_amount > 0) {
+            $taxLines[] = [
+                'Amount'        => (float) $credit->gst_amount,
+                'DetailType'    => 'TaxLineDetail',
+                'TaxLineDetail' => [
+                    'TaxRateRef'       => ['value' => $gstRateId],
+                    'PercentBased'     => false,
+                    'NetAmountTaxable' => (float) $credit->subtotal,
                 ],
             ];
         }
 
-        if ($credit->pst_amount > 0) {
-            $lines[] = [
-                'Amount'      => (float) $credit->pst_amount,
-                'DetailType'  => 'AccountBasedExpenseLineDetail',
-                'Description' => 'PST',
-                'AccountBasedExpenseLineDetail' => [
-                    'AccountRef' => ['value' => $accountIds['product']],
+        if ($pstRateId && $credit->pst_amount > 0) {
+            $taxLines[] = [
+                'Amount'        => (float) $credit->pst_amount,
+                'DetailType'    => 'TaxLineDetail',
+                'TaxLineDetail' => [
+                    'TaxRateRef'       => ['value' => $pstRateId],
+                    'PercentBased'     => false,
+                    'NetAmountTaxable' => (float) $credit->subtotal,
                 ],
             ];
         }
 
         $payload = [
-            'VendorRef' => ['value' => $vendorQboId],
-            'TxnDate'   => $credit->date->toDateString(),
-            'DocNumber' => $credit->reference_number ?: $credit->credit_memo_number,
-            'Line'      => $lines,
+            'VendorRef'            => ['value' => $vendorQboId],
+            'TxnDate'              => $credit->date->toDateString(),
+            'DocNumber'            => $credit->reference_number ?: $credit->credit_memo_number,
+            'GlobalTaxCalculation' => 'TaxExcluded',
+            'Line'                 => $lines,
         ];
+
+        if ($taxLines) {
+            $payload['TxnTaxDetail'] = [
+                'TotalTax' => (float) $credit->tax_amount,
+                'TaxLine'  => $taxLines,
+            ];
+        }
 
         if ($credit->notes) {
             $payload['PrivateNote'] = $credit->notes;

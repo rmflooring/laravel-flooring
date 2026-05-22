@@ -26,6 +26,8 @@ class QuickBooksController extends Controller
             'qbo_ap_product_account_id'    => Setting::get('qbo_ap_product_account_id', ''),
             'qbo_ap_freight_account_id'    => Setting::get('qbo_ap_freight_account_id', ''),
             'qbo_ap_labour_account_id'     => Setting::get('qbo_ap_labour_account_id', ''),
+            'qbo_ap_gst_tax_rate_id'       => Setting::get('qbo_ap_gst_tax_rate_id', ''),
+            'qbo_ap_pst_tax_rate_id'       => Setting::get('qbo_ap_pst_tax_rate_id', ''),
             'qbo_income_material_item_id'  => Setting::get('qbo_income_material_item_id', ''),
             'qbo_income_freight_item_id'   => Setting::get('qbo_income_freight_item_id', ''),
             'qbo_income_labour_item_id'    => Setting::get('qbo_income_labour_item_id', ''),
@@ -40,6 +42,8 @@ class QuickBooksController extends Controller
             'qbo_ap_product_account_id'   => 'required|string|max:50',
             'qbo_ap_freight_account_id'   => 'required|string|max:50',
             'qbo_ap_labour_account_id'    => 'required|string|max:50',
+            'qbo_ap_gst_tax_rate_id'      => 'nullable|string|max:50',
+            'qbo_ap_pst_tax_rate_id'      => 'nullable|string|max:50',
             'qbo_income_material_item_id' => 'required|string|max:50',
             'qbo_income_freight_item_id'  => 'required|string|max:50',
             'qbo_income_labour_item_id'   => 'required|string|max:50',
@@ -48,6 +52,8 @@ class QuickBooksController extends Controller
         Setting::set('qbo_ap_product_account_id',   trim($request->qbo_ap_product_account_id));
         Setting::set('qbo_ap_freight_account_id',   trim($request->qbo_ap_freight_account_id));
         Setting::set('qbo_ap_labour_account_id',    trim($request->qbo_ap_labour_account_id));
+        Setting::set('qbo_ap_gst_tax_rate_id',      trim($request->qbo_ap_gst_tax_rate_id ?? ''));
+        Setting::set('qbo_ap_pst_tax_rate_id',      trim($request->qbo_ap_pst_tax_rate_id ?? ''));
         Setting::set('qbo_income_material_item_id', trim($request->qbo_income_material_item_id));
         Setting::set('qbo_income_freight_item_id',  trim($request->qbo_income_freight_item_id));
         Setting::set('qbo_income_labour_item_id',   trim($request->qbo_income_labour_item_id));

@@ -281,9 +281,11 @@ class VendorCreditMemoController extends Controller
         }
 
         $accountIds = [
-            'product' => Setting::get('qbo_ap_product_account_id'),
-            'freight' => Setting::get('qbo_ap_freight_account_id'),
-            'labour'  => Setting::get('qbo_ap_labour_account_id'),
+            'product'     => Setting::get('qbo_ap_product_account_id'),
+            'freight'     => Setting::get('qbo_ap_freight_account_id'),
+            'labour'      => Setting::get('qbo_ap_labour_account_id'),
+            'gst_rate_id' => Setting::get('qbo_ap_gst_tax_rate_id'),
+            'pst_rate_id' => Setting::get('qbo_ap_pst_tax_rate_id'),
         ];
 
         if (! $accountIds['product']) {

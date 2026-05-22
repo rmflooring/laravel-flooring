@@ -137,6 +137,32 @@
                         </div>
                     </div>
 
+                    {{-- AP Tax Rates --}}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-1 pb-1 border-b border-gray-100">AP Tax Rate IDs <span class="text-xs font-normal text-gray-400">(used for GST/PST on bills — find in QBO: Taxes → Tax Rates → hover row → ID in URL)</span></h3>
+                        <p class="text-xs text-gray-400 mb-3">Run <code class="bg-gray-100 px-1 rounded">php artisan tinker</code> then <code class="bg-gray-100 px-1 rounded">app(\App\Services\QuickBooksService::class)->query("SELECT * FROM TaxRate MAXRESULTS 50")</code> to list all rate IDs.</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">GST Rate ID</label>
+                                <input type="text"
+                                       name="qbo_ap_gst_tax_rate_id"
+                                       value="{{ $settings['qbo_ap_gst_tax_rate_id'] }}"
+                                       placeholder="e.g. 3"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <p class="mt-1 text-xs text-gray-400">GST on Purchases rate</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">PST Rate ID <span class="text-gray-400 font-normal">(optional)</span></label>
+                                <input type="text"
+                                       name="qbo_ap_pst_tax_rate_id"
+                                       value="{{ $settings['qbo_ap_pst_tax_rate_id'] }}"
+                                       placeholder="e.g. 4"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <p class="mt-1 text-xs text-gray-400">PST on Purchases rate (leave blank if PST-exempt)</p>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- Income Items --}}
                     <div>
                         <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-100">Income Items <span class="text-xs font-normal text-gray-400">(QBO product/service items used for invoice lines)</span></h3>
