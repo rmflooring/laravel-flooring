@@ -143,22 +143,40 @@
                         <p class="text-xs text-gray-400 mb-3">Run <code class="bg-gray-100 px-1 rounded">php artisan tinker</code> then <code class="bg-gray-100 px-1 rounded">app(\App\Services\QuickBooksService::class)->query("SELECT * FROM TaxRate MAXRESULTS 50")</code> to list all rate IDs.</p>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">GST Rate ID</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">GST Purchase Rate ID</label>
                                 <input type="text"
                                        name="qbo_ap_gst_tax_rate_id"
                                        value="{{ $settings['qbo_ap_gst_tax_rate_id'] }}"
-                                       placeholder="e.g. 3"
+                                       placeholder="e.g. 44"
                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
-                                <p class="mt-1 text-xs text-gray-400">GST on Purchases rate</p>
+                                <p class="mt-1 text-xs text-gray-400">GST (ITC) purchase rate — from TaxRate query</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">PST Rate ID <span class="text-gray-400 font-normal">(optional)</span></label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">PST Purchase Rate ID <span class="text-gray-400 font-normal">(optional)</span></label>
                                 <input type="text"
                                        name="qbo_ap_pst_tax_rate_id"
                                        value="{{ $settings['qbo_ap_pst_tax_rate_id'] }}"
-                                       placeholder="e.g. 4"
+                                       placeholder="e.g. 69"
                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
-                                <p class="mt-1 text-xs text-gray-400">PST on Purchases rate (leave blank if PST-exempt)</p>
+                                <p class="mt-1 text-xs text-gray-400">PST (BC) on purchases rate — from TaxRate query</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">GST-only Tax Code ID</label>
+                                <input type="text"
+                                       name="qbo_ap_gst_code_id"
+                                       value="{{ $settings['qbo_ap_gst_code_id'] }}"
+                                       placeholder="e.g. 19"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <p class="mt-1 text-xs text-gray-400">Tax code for GST-only lines (installer bills) — from TaxCode query</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">GST+PST Tax Code ID</label>
+                                <input type="text"
+                                       name="qbo_ap_gst_pst_code_id"
+                                       value="{{ $settings['qbo_ap_gst_pst_code_id'] }}"
+                                       placeholder="e.g. 39"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <p class="mt-1 text-xs text-gray-400">Tax code for GST+PST lines (vendor bills) — from TaxCode query</p>
                             </div>
                         </div>
                     </div>

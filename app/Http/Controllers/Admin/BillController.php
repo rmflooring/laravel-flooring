@@ -379,11 +379,13 @@ class BillController extends Controller
         }
 
         $accountIds = [
-            'product'      => Setting::get('qbo_ap_product_account_id'),
-            'freight'      => Setting::get('qbo_ap_freight_account_id'),
-            'labour'       => Setting::get('qbo_ap_labour_account_id'),
-            'gst_rate_id'  => Setting::get('qbo_ap_gst_tax_rate_id'),
-            'pst_rate_id'  => Setting::get('qbo_ap_pst_tax_rate_id'),
+            'product'         => Setting::get('qbo_ap_product_account_id'),
+            'freight'         => Setting::get('qbo_ap_freight_account_id'),
+            'labour'          => Setting::get('qbo_ap_labour_account_id'),
+            'gst_rate_id'     => Setting::get('qbo_ap_gst_tax_rate_id'),
+            'pst_rate_id'     => Setting::get('qbo_ap_pst_tax_rate_id'),
+            'gst_code_id'     => Setting::get('qbo_ap_gst_code_id'),
+            'gst_pst_code_id' => Setting::get('qbo_ap_gst_pst_code_id'),
         ];
 
         $missing = array_keys(array_filter(['product' => $accountIds['product'], 'freight' => $accountIds['freight'], 'labour' => $accountIds['labour']], fn($v) => ! $v));

@@ -423,14 +423,25 @@ class QboSyncService
                 };
             }
 
+            // Tax code: GST+PST for vendor bills with PST, GST-only otherwise
+            $hasPst     = $bill->pst_amount > 0;
+            $taxCodeId  = ($hasPst && ($accountIds['gst_pst_code_id'] ?? null))
+                ? $accountIds['gst_pst_code_id']
+                : ($accountIds['gst_code_id'] ?? null);
+
+            $lineDetail = [
+                'AccountRef'     => ['value' => $accountId],
+                'BillableStatus' => 'NotBillable',
+            ];
+            if ($taxCodeId) {
+                $lineDetail['TaxCodeRef'] = ['value' => $taxCodeId];
+            }
+
             $lines[] = [
                 'Amount'      => (float) $item->line_total,
                 'DetailType'  => 'AccountBasedExpenseLineDetail',
                 'Description' => $item->item_name . ($item->quantity ? ' (Qty: ' . $item->quantity . ' @ $' . number_format($item->unit_cost, 2) . ')' : ''),
-                'AccountBasedExpenseLineDetail' => [
-                    'AccountRef'     => ['value' => $accountId],
-                    'BillableStatus' => 'NotBillable',
-                ],
+                'AccountBasedExpenseLineDetail' => $lineDetail,
             ];
         }
 
@@ -551,14 +562,23 @@ class QboSyncService
     {
         $lines = [];
 
+        // Tax code for the subtotal line
+        $hasPst        = $credit->pst_amount > 0;
+        $taxCodeId     = ($hasPst && ($accountIds['gst_pst_code_id'] ?? null))
+            ? $accountIds['gst_pst_code_id']
+            : ($accountIds['gst_code_id'] ?? null);
+
+        $lineDetail = ['AccountRef' => ['value' => $accountIds['product']]];
+        if ($taxCodeId) {
+            $lineDetail['TaxCodeRef'] = ['value' => $taxCodeId];
+        }
+
         // Subtotal line
         $lines[] = [
             'Amount'      => (float) $credit->subtotal,
             'DetailType'  => 'AccountBasedExpenseLineDetail',
             'Description' => 'Credit ' . $credit->credit_memo_number,
-            'AccountBasedExpenseLineDetail' => [
-                'AccountRef' => ['value' => $accountIds['product']],
-            ],
+            'AccountBasedExpenseLineDetail' => $lineDetail,
         ];
 
         $taxLines  = [];
