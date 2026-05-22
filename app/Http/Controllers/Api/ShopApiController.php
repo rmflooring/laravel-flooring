@@ -35,6 +35,7 @@ class ShopApiController extends Controller
         $query = ProductLine::where('status', 'active')
             ->where('shop_visible', true)
             ->with([
+                'unit',
                 'productStyles' => function ($q) {
                     $q->where('status', 'active')
                       ->where('shop_visible', true)
@@ -59,6 +60,8 @@ class ShopApiController extends Controller
                 'collection'       => $line->collection,
                 'width'            => $line->width !== null ? (float) $line->width : null,
                 'length'           => $line->length !== null ? (float) $line->length : null,
+                'unit_code'        => $line->unit?->code,
+                'unit_label'       => $line->unit?->label,
                 'shop_description' => $line->shop_description,
                 'shop_show_price'  => (bool) $line->shop_show_price,
                 'photo_url'        => $line->photo_path ? url(Storage::url($line->photo_path)) : null,
@@ -79,6 +82,7 @@ class ShopApiController extends Controller
         $line = ProductLine::where('status', 'active')
             ->where('shop_visible', true)
             ->with([
+                'unit',
                 'productStyles' => function ($q) {
                     $q->where('status', 'active')
                       ->where('shop_visible', true)
@@ -97,6 +101,8 @@ class ShopApiController extends Controller
             'collection'       => $line->collection,
             'width'            => $line->width !== null ? (float) $line->width : null,
             'length'           => $line->length !== null ? (float) $line->length : null,
+            'unit_code'        => $line->unit?->code,
+            'unit_label'       => $line->unit?->label,
             'shop_description' => $line->shop_description,
             'shop_show_price'  => (bool) $line->shop_show_price,
             'photo_url'        => $line->photo_path ? url(Storage::url($line->photo_path)) : null,
