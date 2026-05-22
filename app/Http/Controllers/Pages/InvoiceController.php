@@ -507,6 +507,7 @@ class InvoiceController extends Controller
             'job_address'      => $sale->job_address,
             'job_phone'        => $sale->job_phone,
             'pm_name'          => $sale->pm_name,
+            'pm_first_name'    => explode(' ', trim($sale->pm_name ?? ''))[0],
             'sender_name'      => $user->name,
             'sender_email'     => $user->email,
         ];
