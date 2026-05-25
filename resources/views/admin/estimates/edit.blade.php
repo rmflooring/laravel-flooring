@@ -354,6 +354,11 @@
           </button>
 
           <button type="button"
+            class="duplicate-room inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300">
+            Duplicate Room
+          </button>
+
+          <button type="button"
             class="delete-room inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300">
             Delete Room
           </button>

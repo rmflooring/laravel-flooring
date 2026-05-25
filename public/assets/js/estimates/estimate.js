@@ -2062,6 +2062,50 @@ function addRoom() {
 
   addRoomBtn.addEventListener("click", addRoom);
 
+function duplicateRoom(sourceCard) {
+  const clone = sourceCard.cloneNode(true);
+
+  // Clear all DB ids (room-level and item-level) so server treats them as new
+  clone.querySelectorAll('input[type="hidden"]').forEach(input => {
+    if (/\[id\]$/.test(input.getAttribute('name') || '') && !input.closest('template')) {
+      input.value = '';
+    }
+  });
+
+  // Reset delete flag
+  const deleteFlag = clone.querySelector('.room-delete-flag');
+  if (deleteFlag) deleteFlag.value = '0';
+
+  // Pre-fill name as "Copy of {original}"
+  const origNameInput = sourceCard.querySelector('input[name$="[room_name]"]');
+  const cloneNameInput = clone.querySelector('input[name$="[room_name]"]');
+  if (cloneNameInput) {
+    cloneNameInput.value = 'Copy of ' + (origNameInput?.value || '');
+  }
+
+  clone.style.display = '';
+  roomsContainer.appendChild(clone);
+
+  // Re-init all dropdowns on the cloned card
+  initProductTypeDropdownForRoom(clone);
+  initManufacturerDropdownForRoom(clone);
+  initStyleDropdownForRoom(clone);
+  initColorDropdownForRoom(clone);
+  initManualPriceOverrideForRoom(clone);
+  initFreightDropdownForRoom(clone);
+  clone.querySelectorAll('.labour-tbody tr').forEach(row => {
+    initLabourTypeDropdownForRow(row);
+    initLabourDescriptionDropdownForRow(row);
+  });
+  if (window.initRichNotesIn) window.initRichNotesIn(clone);
+
+  renumberRooms();
+  reindexAllRooms();
+  updateRoomTotals(clone);
+
+  clone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
   function deleteRoom(card) {
     if (!card) return;
     if (!confirm("Delete this room?")) return;
@@ -2359,6 +2403,12 @@ if (t.closest(".add-freight-row")) {
   updateRoomTotals(room);
   return;
 }
+
+    // Duplicate room
+    if (t.closest(".duplicate-room")) {
+      duplicateRoom(t.closest(".room-card"));
+      return;
+    }
 
     // Delete room
     if (t.closest(".delete-room")) {
