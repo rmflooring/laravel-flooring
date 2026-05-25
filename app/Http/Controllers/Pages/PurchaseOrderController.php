@@ -607,8 +607,11 @@ class PurchaseOrderController extends Controller
         // Max qty each PO item can be set to (sale item qty minus what other non-cancelled POs have)
         $orderedByOthers = $this->orderedQtys($purchaseOrder->sale_id, $purchaseOrder->id);
         $maxQtys = $purchaseOrder->items->mapWithKeys(function ($poItem) use ($orderedByOthers) {
-            $saleQty = (float) ($poItem->saleItem->quantity ?? 0);
-            $max     = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
+            $saleItem = $poItem->saleItem;
+            $saleQty  = $saleItem
+                ? ($saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity)
+                : 0.0;
+            $max = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
             return [$poItem->id => ['max' => $max, 'sale_qty' => $saleQty]];
         })->toArray();
 
@@ -707,8 +710,9 @@ class PurchaseOrderController extends Controller
                     if (! $poItem || ! $poItem->saleItem) {
                         continue;
                     }
-                    $saleQty = (float) $poItem->saleItem->quantity;
-                    $maxQty  = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
+                    $saleItem = $poItem->saleItem;
+                    $saleQty  = $saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity;
+                    $maxQty   = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
                     $newQty  = isset($overrides['quantity']) && $overrides['quantity'] !== ''
                         ? (float) $overrides['quantity']
                         : (float) $poItem->quantity;
