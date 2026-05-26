@@ -259,6 +259,35 @@
                                 </label>
                             </div>
 
+                            <div class="border-t border-gray-200 dark:border-gray-600 pt-4 mt-4">
+                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Google Local Inventory</h4>
+
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <label for="store_available" class="text-sm font-medium text-gray-900 dark:text-white">Available in store</label>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">Include this product in the Google local inventory feed.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="hidden" name="store_available" value="0">
+                                        <input type="checkbox" id="store_available" name="store_available" value="1"
+                                               class="sr-only peer"
+                                               {{ old('store_available', $product_line->store_available ?? true) ? 'checked' : '' }}>
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label for="store_qty" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Display quantity</label>
+                                    <input type="number" name="store_qty" id="store_qty" min="0" max="9999"
+                                           value="{{ old('store_qty', $product_line->store_qty ?? 1) }}"
+                                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Quantity reported to Google (e.g. number of sample rolls/tiles on display).</p>
+                                    @error('store_qty')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
                             <div x-data="{ removePhoto: false }">
                                 <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Cover photo</label>
                                 @if($product_line->photo_path)

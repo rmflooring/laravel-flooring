@@ -173,6 +173,8 @@ class ShopApiController extends Controller
                         'use_box_qty'       => (bool) $style->use_box_qty,
                         'unit_code'         => $line->unit?->code,
                         'unit_label'        => $line->unit?->label,
+                        'store_available'   => (bool) $line->store_available,
+                        'store_qty'         => (int) ($line->store_qty ?? 1),
                         'image_url'         => $imageUrl,
                     ];
                 });

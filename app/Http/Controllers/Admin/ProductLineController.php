@@ -114,14 +114,18 @@ public function index(Request $request)
         'unit_id' => 'nullable|exists:unit_measures,id',
         'width' => 'nullable|numeric|min:0',
         'length' => 'nullable|numeric|min:0',
-        'shop_visible'    => 'boolean',
+        'shop_visible'     => 'boolean',
         'shop_description' => 'nullable|string',
-        'shop_show_price' => 'boolean',
-        'photo'           => 'nullable|image|max:5120',
+        'shop_show_price'  => 'boolean',
+        'store_available'  => 'boolean',
+        'store_qty'        => 'nullable|integer|min:0|max:9999',
+        'photo'            => 'nullable|image|max:5120',
     ]);
 
     $validated['shop_visible']    = $request->boolean('shop_visible');
     $validated['shop_show_price'] = $request->boolean('shop_show_price');
+    $validated['store_available'] = $request->boolean('store_available');
+    $validated['store_qty']       = $validated['store_qty'] ?? 1;
     unset($validated['photo']);
 
     $validated['default_cost_price'] = $validated['default_cost_price'] ?? 0;
@@ -170,15 +174,19 @@ public function update(Request $request, ProductLine $product_line)
         'unit_id' => 'nullable|exists:unit_measures,id',
         'width' => 'nullable|numeric|min:0',
         'length' => 'nullable|numeric|min:0',
-        'shop_visible'    => 'boolean',
+        'shop_visible'     => 'boolean',
         'shop_description' => 'nullable|string',
-        'shop_show_price' => 'boolean',
-        'photo'           => 'nullable|image|max:5120',
-        'remove_photo'    => 'nullable|boolean',
+        'shop_show_price'  => 'boolean',
+        'store_available'  => 'boolean',
+        'store_qty'        => 'nullable|integer|min:0|max:9999',
+        'photo'            => 'nullable|image|max:5120',
+        'remove_photo'     => 'nullable|boolean',
     ]);
 
     $validated['shop_visible']    = $request->boolean('shop_visible');
     $validated['shop_show_price'] = $request->boolean('shop_show_price');
+    $validated['store_available'] = $request->boolean('store_available');
+    $validated['store_qty']       = $validated['store_qty'] ?? 1;
     $validated['default_cost_price'] = $validated['default_cost_price'] ?? 0;
     $validated['default_sell_price'] = $validated['default_sell_price'] ?? 0;
     unset($validated['photo'], $validated['remove_photo']);

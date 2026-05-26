@@ -16,6 +16,7 @@ class ProductLine extends Model
         'default_sell_price' => 'float',
         'shop_visible'     => 'boolean',
         'shop_show_price'  => 'boolean',
+        'store_available'  => 'boolean',
     ];
 
     protected $fillable = [
@@ -35,6 +36,8 @@ class ProductLine extends Model
         'shop_description',
         'photo_path',
         'shop_show_price',
+        'store_available',
+        'store_qty',
         'created_by',
         'updated_by',
     ];
