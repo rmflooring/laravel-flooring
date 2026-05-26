@@ -184,6 +184,46 @@
         @endif
     </div>
 
+    {{-- Insurance Details --}}
+    @php $site = $rfm->jobSiteCustomer; @endphp
+    @if($site && ($site->insurance_company || $site->adjuster || $site->policy_number || $site->claim_number || $site->dol))
+    <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4">
+        <p class="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">Insurance Details</p>
+        <div class="space-y-2">
+            @if($site->insurance_company)
+            <div>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Insurance Co.</p>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $site->insurance_company }}</p>
+            </div>
+            @endif
+            @if($site->adjuster)
+            <div>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Adjuster</p>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $site->adjuster }}</p>
+            </div>
+            @endif
+            @if($site->policy_number)
+            <div>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Policy #</p>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $site->policy_number }}</p>
+            </div>
+            @endif
+            @if($site->claim_number)
+            <div>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Claim #</p>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $site->claim_number }}</p>
+            </div>
+            @endif
+            @if($site->dol)
+            <div>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Date of Loss</p>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ \Carbon\Carbon::parse($site->dol)->format('M j, Y') }}</p>
+            </div>
+            @endif
+        </div>
+    </div>
+    @endif
+
     {{-- Special instructions --}}
     @if($rfm->special_instructions)
     <div class="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-4 shadow-sm">
