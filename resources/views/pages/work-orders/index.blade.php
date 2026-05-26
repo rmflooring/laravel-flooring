@@ -133,7 +133,7 @@
                                     </td>
 
                                     <td class="px-6 py-4">
-                                        {{ $wo->installer?->name ?? '—' }}
+                                        {{ $wo->installer?->company_name ?: ($wo->installer?->contact_name ?? '—') }}
                                     </td>
 
                                     <td class="px-6 py-4 text-center text-gray-600">
