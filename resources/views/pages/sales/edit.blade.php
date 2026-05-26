@@ -2955,6 +2955,16 @@ function updatePayerCustomer(select) {
                     </a>
                 </div>
 
+                {{-- Read receipt --}}
+                <div class="flex items-center gap-2 py-1">
+                    <input type="checkbox" name="request_read_receipt" id="rr_sale_edit" value="1"
+                           class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <label for="rr_sale_edit" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                        Request read receipt
+                        <span class="text-xs text-gray-400">(tracking pixel + Outlook read request)</span>
+                    </label>
+                </div>
+
                 <p class="text-xs text-gray-400">
                     @if (auth()->user()->microsoftAccount?->mail_connected)
                         Sending from <strong>{{ auth()->user()->microsoftAccount->email }}</strong> via your personal MS365 account (Track 2).

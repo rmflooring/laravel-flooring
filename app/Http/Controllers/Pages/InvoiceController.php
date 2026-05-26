@@ -116,9 +116,16 @@ class InvoiceController extends Controller
                 ->get(['tax_rates.name', 'tax_rates.sales_rate'])
             : collect();
 
+        $openedAt = \App\Models\MailLog::where('related_id', $invoice->id)
+            ->where('related_type', 'invoice')
+            ->whereNotNull('opened_at')
+            ->orderByDesc('opened_at')
+            ->value('opened_at');
+
         return view('pages.invoices.show', compact(
             'sale', 'invoice', 'paymentMethods', 'taxRates',
-            'pmEmail', 'homeownerEmail', 'customerContacts', 'emailSubject', 'emailBody'
+            'pmEmail', 'homeownerEmail', 'customerContacts', 'emailSubject', 'emailBody',
+            'openedAt'
         ));
     }
 
@@ -407,8 +414,10 @@ class InvoiceController extends Controller
             'cc.*'    => ['nullable', 'email'],
         ]);
 
-        $cc         = array_filter($request->input('cc', []));
-        $attachment = $this->buildPdfAttachment($sale, $invoice);
+        $cc                 = array_filter($request->input('cc', []));
+        $requestReadReceipt = $request->boolean('request_read_receipt', true);
+        $trackingToken      = $requestReadReceipt ? (string) \Illuminate\Support\Str::uuid() : null;
+        $attachment         = $this->buildPdfAttachment($sale, $invoice);
 
         $mailer = app(GraphMailService::class);
         $user   = Auth::user();
@@ -416,11 +425,11 @@ class InvoiceController extends Controller
         $pdfUrl = route('pages.sales.invoices.pdf', [$sale, $invoice]);
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl, $requestReadReceipt, $trackingToken)
             : false;
 
         if (! $sent) {
-            $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', null, $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl);
+            $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', null, $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl, $requestReadReceipt, $trackingToken);
         }
 
         $invoice->sent_at = now();

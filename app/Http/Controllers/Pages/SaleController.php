@@ -1005,10 +1005,12 @@ public function showProfits(Sale $sale)
             'pdf_format' => ['nullable', 'in:detailed,simple,room_totals'],
         ]);
 
-        $format = $request->input('pdf_format', 'detailed');
-        $user   = auth()->user();
-        $mailer = app(GraphMailService::class);
-        $cc     = array_filter($request->input('cc', []));
+        $format             = $request->input('pdf_format', 'detailed');
+        $user               = auth()->user();
+        $mailer             = app(GraphMailService::class);
+        $cc                 = array_filter($request->input('cc', []));
+        $requestReadReceipt = $request->boolean('request_read_receipt', false);
+        $trackingToken      = $requestReadReceipt ? (string) \Illuminate\Support\Str::uuid() : null;
 
         $sale->loadMissing(['rooms.items', 'sourceEstimate', 'deposits']);
         $pdfContent = Pdf::loadView('pdf.sale', compact('sale', 'format'))->output();
@@ -1020,11 +1022,11 @@ public function showProfits(Sale $sale)
         $pdfUrl = route('pages.sales.pdf', $sale);
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl, $requestReadReceipt, $trackingToken)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl, $requestReadReceipt, $trackingToken);
         }
 
         if (! $sent) {

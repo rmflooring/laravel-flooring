@@ -94,6 +94,18 @@
                             Emailed {{ $invoice->sent_at->format('M j') }}
                         </button>
                     @endif
+                    @if(!empty($openedAt))
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                              title="Recipient opened the email on {{ \Carbon\Carbon::parse($openedAt)->format('M j, Y g:i a') }}">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            Opened {{ \Carbon\Carbon::parse($openedAt)->format('M j') }}
+                        </span>
+                    @endif
                 </div>
                 <div class="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
                     <div>Sale #{{ $sale->sale_number }}
@@ -626,6 +638,16 @@
                         <span>Invoice-{{ $invoice->invoice_number }}.pdf</span>
                         <span class="text-xs text-gray-400 ml-1">— click to preview</span>
                     </a>
+                </div>
+
+                {{-- Read receipt --}}
+                <div class="flex items-center gap-2 py-1">
+                    <input type="checkbox" name="request_read_receipt" id="rr_invoice" value="1" checked
+                           class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <label for="rr_invoice" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                        Request read receipt
+                        <span class="text-xs text-gray-400">(tracking pixel + Outlook read request)</span>
+                    </label>
                 </div>
 
                 <p class="text-xs text-gray-400">

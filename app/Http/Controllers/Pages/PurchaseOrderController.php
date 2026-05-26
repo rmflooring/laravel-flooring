@@ -791,10 +791,12 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy']);
 
-        $user       = auth()->user();
-        $mailer     = app(GraphMailService::class);
-        $cc         = array_filter($request->input('cc', []));
-        $pdfContent = Pdf::loadView('pdf.purchase-order', compact('purchaseOrder'))->output();
+        $user               = auth()->user();
+        $mailer             = app(GraphMailService::class);
+        $cc                 = array_filter($request->input('cc', []));
+        $requestReadReceipt = $request->boolean('request_read_receipt', false);
+        $trackingToken      = $requestReadReceipt ? (string) \Illuminate\Support\Str::uuid() : null;
+        $pdfContent         = Pdf::loadView('pdf.purchase-order', compact('purchaseOrder'))->output();
 
         $attachment = [
             'filename' => $purchaseOrder->po_number . '.pdf',
@@ -808,11 +810,11 @@ class PurchaseOrderController extends Controller
         $body    = $request->input('body');
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $to, $subject, $body, 'purchase_order', $attachment, $cc ?: null, null, $purchaseOrder->id, 'purchase_order', $pdfUrl)
+            ? $mailer->sendAsUser($user, $to, $subject, $body, 'purchase_order', $attachment, $cc ?: null, null, $purchaseOrder->id, 'purchase_order', $pdfUrl, $requestReadReceipt, $trackingToken)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($to, $subject, $body, 'purchase_order', null, $attachment, $cc ?: null, null, $purchaseOrder->id, 'purchase_order', $pdfUrl);
+            $sent = $mailer->send($to, $subject, $body, 'purchase_order', null, $attachment, $cc ?: null, null, $purchaseOrder->id, 'purchase_order', $pdfUrl, $requestReadReceipt, $trackingToken);
         }
 
         if ($sent) {

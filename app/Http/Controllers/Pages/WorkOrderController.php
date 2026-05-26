@@ -681,10 +681,12 @@ class WorkOrderController extends Controller
 
         $workOrder->load(['installer', 'items.relatedMaterials.saleItem', 'items.saleItem.room', 'sale', 'creator']);
 
-        $user       = auth()->user();
-        $mailer     = app(GraphMailService::class);
-        $cc         = array_filter($request->input('cc', []));
-        $pdfContent = Pdf::loadView('pdf.work-order', compact('workOrder'))->output();
+        $user               = auth()->user();
+        $mailer             = app(GraphMailService::class);
+        $cc                 = array_filter($request->input('cc', []));
+        $requestReadReceipt = $request->boolean('request_read_receipt', false);
+        $trackingToken      = $requestReadReceipt ? (string) \Illuminate\Support\Str::uuid() : null;
+        $pdfContent         = Pdf::loadView('pdf.work-order', compact('workOrder'))->output();
 
         $attachment = [
             'filename' => $workOrder->wo_number . '.pdf',
@@ -719,11 +721,11 @@ class WorkOrderController extends Controller
         $body    = $request->input('body');
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $to, $subject, $body, 'work_order', $attachment, $cc ?: null, $icsContent, $workOrder->id, 'work_order', $pdfUrl)
+            ? $mailer->sendAsUser($user, $to, $subject, $body, 'work_order', $attachment, $cc ?: null, $icsContent, $workOrder->id, 'work_order', $pdfUrl, $requestReadReceipt, $trackingToken)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($to, $subject, $body, 'work_order', null, $attachment, $cc ?: null, $icsContent, $workOrder->id, 'work_order', $pdfUrl);
+            $sent = $mailer->send($to, $subject, $body, 'work_order', null, $attachment, $cc ?: null, $icsContent, $workOrder->id, 'work_order', $pdfUrl, $requestReadReceipt, $trackingToken);
         }
 
         if ($sent) {

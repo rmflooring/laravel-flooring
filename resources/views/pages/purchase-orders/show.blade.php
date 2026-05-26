@@ -463,6 +463,16 @@
                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">{{ $emailBody }}</textarea>
                     </div>
 
+                    {{-- Read receipt --}}
+                    <div class="flex items-center gap-2 py-1">
+                        <input type="checkbox" name="request_read_receipt" id="rr_po" value="1"
+                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="rr_po" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                            Request read receipt
+                            <span class="text-xs text-gray-400">(tracking pixel + Outlook read request)</span>
+                        </label>
+                    </div>
+
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         The PO PDF will be attached automatically.
                         @if($purchaseOrder->sent_at)

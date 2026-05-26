@@ -78,6 +78,10 @@ Route::post('/webhook/quickbooks', [\App\Http\Controllers\QuickBooksWebhookContr
 Route::get('/legal/eula', fn () => view('legal.eula'))->name('legal.eula');
 Route::get('/legal/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
 
+// Email tracking pixel — public, no auth
+Route::get('/t/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'pixel'])
+    ->name('email.tracking.pixel');
+
 // Dashboard (authenticated)
 Route::get('/dashboard', function () {
     return view('dashboard');

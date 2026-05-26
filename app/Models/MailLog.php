@@ -22,5 +22,7 @@ class MailLog extends Model
         'pdf_url',
         'related_id',
         'related_type',
+        'tracking_token',
+        'opened_at',
     ];
 }

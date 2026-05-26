@@ -101,11 +101,13 @@ class ChangeOrderController extends Controller
             'cc.*'    => ['nullable', 'email'],
         ]);
 
-        $user   = auth()->user();
-        $mailer = app(GraphMailService::class);
-        $cc     = array_filter($request->input('cc', []));
+        $user               = auth()->user();
+        $mailer             = app(GraphMailService::class);
+        $cc                 = array_filter($request->input('cc', []));
+        $requestReadReceipt = $request->boolean('request_read_receipt', false);
+        $trackingToken      = $requestReadReceipt ? (string) \Illuminate\Support\Str::uuid() : null;
 
-        $delta      = $this->service->calculateDelta($changeOrder);
+        $delta = $this->service->calculateDelta($changeOrder);
         $pdfContent = Pdf::loadView('pdf.change-order', compact('sale', 'changeOrder', 'delta'))->output();
         $attachment = [
             'filename' => "{$changeOrder->co_number}.pdf",
@@ -115,11 +117,11 @@ class ChangeOrderController extends Controller
         $pdfUrl = route('pages.sales.change-orders.pdf', [$sale, $changeOrder]);
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', $attachment, $cc ?: null, null, $changeOrder->id, 'change_order', $pdfUrl)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', $attachment, $cc ?: null, null, $changeOrder->id, 'change_order', $pdfUrl, $requestReadReceipt, $trackingToken)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', null, $attachment, $cc ?: null, null, $changeOrder->id, 'change_order', $pdfUrl);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'change_order', null, $attachment, $cc ?: null, null, $changeOrder->id, 'change_order', $pdfUrl, $requestReadReceipt, $trackingToken);
         }
 
         if (! $sent) {

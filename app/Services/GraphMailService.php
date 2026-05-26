@@ -70,6 +70,8 @@ class GraphMailService
         ?int $relatedId = null,
         ?string $relatedType = null,
         ?string $pdfUrl = null,
+        bool $requestReadReceipt = false,
+        ?string $trackingToken = null,
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -96,10 +98,9 @@ class GraphMailService
 
             $message = [
                 'subject' => $subject,
-                'body'    => [
-                    'contentType' => 'Text',
-                    'content'     => $body,
-                ],
+                'body'    => $trackingToken
+                    ? $this->buildHtmlBody($body, $trackingToken)
+                    : ['contentType' => 'Text', 'content' => $body],
                 'toRecipients' => $recipients,
                 'from'         => [
                     'emailAddress' => array_filter([
@@ -112,6 +113,10 @@ class GraphMailService
                 ],
             ];
 
+            if ($requestReadReceipt) {
+                $message['isReadReceiptRequested'] = true;
+            }
+
             if (! empty($cc)) {
                 $message['ccRecipients'] = collect($cc)->map(fn ($address) => [
                     'emailAddress' => ['address' => $address],
@@ -123,15 +128,16 @@ class GraphMailService
                 // (Accept / Decline buttons). Graph API JSON sendMail never
                 // triggers Exchange's meeting scheduler regardless of ICS attachment.
                 $mime = $this->buildMimeWithCalendar(
-                    from:       $from,
-                    fromName:   $fromName,
-                    to:         (array) $to,
-                    replyTo:    $replyTo,
-                    subject:    $subject,
-                    body:       $body,
-                    icsContent: $icsContent,
-                    attachment: $attachment,
-                    cc:         $cc ?? [],
+                    from:               $from,
+                    fromName:           $fromName,
+                    to:                 (array) $to,
+                    replyTo:            $replyTo,
+                    subject:            $subject,
+                    body:               $body,
+                    icsContent:         $icsContent,
+                    attachment:         $attachment,
+                    cc:                 $cc ?? [],
+                    requestReadReceipt: $requestReadReceipt,
                 );
                 $response = Http::withToken($token)
                     ->withBody(base64_encode($mime), 'text/plain')
@@ -176,6 +182,7 @@ class GraphMailService
                     'pdf_url'         => $pdfUrl,
                     'related_id'      => $relatedId,
                     'related_type'    => $relatedType,
+                    'tracking_token'  => $trackingToken,
                 ];
 
                 foreach ((array) $to as $address) {
@@ -306,6 +313,7 @@ class GraphMailService
         string $icsContent,
         ?array $attachment = null,
         array  $cc = [],
+        bool   $requestReadReceipt = false,
     ): string {
         $boundary = 'RMF' . strtoupper(bin2hex(random_bytes(8)));
 
@@ -316,6 +324,9 @@ class GraphMailService
             $mime .= "Cc: " . implode(', ', $cc) . "\r\n";
         }
         $mime .= "Reply-To: {$replyTo}\r\n";
+        if ($requestReadReceipt) {
+            $mime .= "Disposition-Notification-To: {$from}\r\n";
+        }
         $mime .= "Subject: {$subject}\r\n";
         $mime .= "Content-Type: multipart/mixed; boundary=\"{$boundary}\"\r\n";
         $mime .= "\r\n";
@@ -433,6 +444,8 @@ class GraphMailService
         ?int $relatedId = null,
         ?string $relatedType = null,
         ?string $pdfUrl = null,
+        bool $requestReadReceipt = false,
+        ?string $trackingToken = null,
     ): bool {
         $token = $this->getUserToken($user);
 
@@ -452,12 +465,15 @@ class GraphMailService
         try {
             $message = [
                 'subject' => $subject,
-                'body'    => [
-                    'contentType' => 'Text',
-                    'content'     => $body,
-                ],
+                'body'    => $trackingToken
+                    ? $this->buildHtmlBody($body, $trackingToken)
+                    : ['contentType' => 'Text', 'content' => $body],
                 'toRecipients' => $recipients,
             ];
+
+            if ($requestReadReceipt) {
+                $message['isReadReceiptRequested'] = true;
+            }
 
             if (! empty($cc)) {
                 $message['ccRecipients'] = collect($cc)->map(fn ($address) => [
@@ -467,15 +483,16 @@ class GraphMailService
 
             if ($icsContent) {
                 $mime = $this->buildMimeWithCalendar(
-                    from:       $senderEmail,
-                    fromName:   $senderEmail,
-                    to:         (array) $to,
-                    replyTo:    $senderEmail,
-                    subject:    $subject,
-                    body:       $body,
-                    icsContent: $icsContent,
-                    attachment: $attachment,
-                    cc:         $cc ?? [],
+                    from:               $senderEmail,
+                    fromName:           $senderEmail,
+                    to:                 (array) $to,
+                    replyTo:            $senderEmail,
+                    subject:            $subject,
+                    body:               $body,
+                    icsContent:         $icsContent,
+                    attachment:         $attachment,
+                    cc:                 $cc ?? [],
+                    requestReadReceipt: $requestReadReceipt,
                 );
                 $response = Http::withToken($token)
                     ->withBody(base64_encode($mime), 'text/plain')
@@ -521,6 +538,7 @@ class GraphMailService
                     'pdf_url'         => $pdfUrl,
                     'related_id'      => $relatedId,
                     'related_type'    => $relatedType,
+                    'tracking_token'  => $trackingToken,
                 ];
 
                 foreach ((array) $to as $address) {
@@ -586,6 +604,18 @@ class GraphMailService
     // =========================================================================
     // Admin failure notification
     // =========================================================================
+
+    private function buildHtmlBody(string $body, string $trackingToken): array
+    {
+        $pixelUrl = url('/t/' . $trackingToken);
+        $escaped  = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
+        $html     = '<div style="font-family:sans-serif;font-size:14px;line-height:1.6;color:#222;">'
+                  . $escaped
+                  . '<img src="' . $pixelUrl . '" width="1" height="1" style="display:block;width:1px;height:1px;border:0;" alt="" />'
+                  . '</div>';
+
+        return ['contentType' => 'HTML', 'content' => $html];
+    }
 
     private function notifyAdminOfFailure(string $failedTo, string $subject, string $track, string $error): void
     {
