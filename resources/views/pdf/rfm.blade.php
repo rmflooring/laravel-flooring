@@ -214,6 +214,46 @@
     @endif
 </div>
 
+{{-- ── Insurance Details ────────────────────────────────────────────── --}}
+@php $site = $rfm->jobSiteCustomer; @endphp
+@if($site && ($site->insurance_company || $site->adjuster || $site->policy_number || $site->claim_number || $site->dol))
+<div class="section">
+    <div class="section-label">Insurance Details</div>
+    <div class="info-grid">
+        @if($site->insurance_company)
+        <div class="info-col" style="width:auto; display:inline-block; margin-right:24px; margin-bottom:8px;">
+            <div class="info-label">Insurance Co.</div>
+            <div class="info-value">{{ $site->insurance_company }}</div>
+        </div>
+        @endif
+        @if($site->adjuster)
+        <div class="info-col" style="width:auto; display:inline-block; margin-right:24px; margin-bottom:8px;">
+            <div class="info-label">Adjuster</div>
+            <div class="info-value">{{ $site->adjuster }}</div>
+        </div>
+        @endif
+        @if($site->policy_number)
+        <div class="info-col" style="width:auto; display:inline-block; margin-right:24px; margin-bottom:8px;">
+            <div class="info-label">Policy #</div>
+            <div class="info-value">{{ $site->policy_number }}</div>
+        </div>
+        @endif
+        @if($site->claim_number)
+        <div class="info-col" style="width:auto; display:inline-block; margin-right:24px; margin-bottom:8px;">
+            <div class="info-label">Claim #</div>
+            <div class="info-value">{{ $site->claim_number }}</div>
+        </div>
+        @endif
+        @if($site->dol)
+        <div class="info-col" style="width:auto; display:inline-block; margin-right:24px; margin-bottom:8px;">
+            <div class="info-label">Date of Loss</div>
+            <div class="info-value">{{ \Carbon\Carbon::parse($site->dol)->format('M j, Y') }}</div>
+        </div>
+        @endif
+    </div>
+</div>
+@endif
+
 {{-- ── Special Instructions ─────────────────────────────────────────── --}}
 @if(filled($rfm->special_instructions))
 <div class="section">
