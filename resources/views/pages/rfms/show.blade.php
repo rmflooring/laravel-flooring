@@ -176,6 +176,46 @@
                     </div>
                 </div>
 
+                {{-- Insurance Details --}}
+                @php $site = $rfm->jobSiteCustomer; @endphp
+                @if($site && ($site->insurance_company || $site->adjuster || $site->policy_number || $site->claim_number || $site->dol))
+                <div class="px-6 pb-6">
+                    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Insurance Details</h2>
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5 text-sm">
+                        @if($site->insurance_company)
+                        <div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Insurance Co.</div>
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $site->insurance_company }}</div>
+                        </div>
+                        @endif
+                        @if($site->adjuster)
+                        <div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Adjuster</div>
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $site->adjuster }}</div>
+                        </div>
+                        @endif
+                        @if($site->policy_number)
+                        <div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Policy #</div>
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $site->policy_number }}</div>
+                        </div>
+                        @endif
+                        @if($site->claim_number)
+                        <div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Claim #</div>
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $site->claim_number }}</div>
+                        </div>
+                        @endif
+                        @if($site->dol)
+                        <div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Date of Loss</div>
+                            <div class="font-medium text-gray-900 dark:text-white">{{ \Carbon\Carbon::parse($site->dol)->format('M j, Y') }}</div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
                 {{-- Special Instructions --}}
                 @if($rfm->special_instructions)
                 <div class="p-6">
