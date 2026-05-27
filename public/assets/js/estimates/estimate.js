@@ -405,7 +405,12 @@ document.addEventListener('fm:tax-group-selected', (e) => {
       if (!body) return;
 
       const rows = Array.from(body.querySelectorAll("tr"));
-      rows.forEach((row, itemIndex) => {
+      let mainIndex = 0;
+      rows.forEach((row) => {
+        const isNotesRow = row.classList.contains('item-notes-row');
+        // Notes rows share the same index as their preceding main row
+        const itemIndex = isNotesRow ? mainIndex - 1 : mainIndex;
+
         row.querySelectorAll("[name]").forEach(el => {
           if (el.closest("template")) return;
 
@@ -417,6 +422,8 @@ document.addEventListener('fm:tax-group-selected', (e) => {
           name = name.replace(re, `[${key}][${itemIndex}]`);
           el.setAttribute("name", name);
         });
+
+        if (!isNotesRow) mainIndex++;
       });
     });
   }
@@ -2392,9 +2399,10 @@ if (t.closest(".add-freight-row")) {
   const room = t.closest(".room-card");
   appendRowFromTemplate(room, ".labour-tbody", ".labour-row-template");
 
-  // ✅ init labour dropdown on the newly added row
+  // init labour dropdowns on the newly added main row (skip the paired notes row)
   const tbody = room.querySelector(".labour-tbody");
-  const newRow = tbody ? tbody.querySelector("tr:last-child") : null;
+  const mainRows = tbody ? Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('item-notes-row')) : [];
+  const newRow = mainRows[mainRows.length - 1] || null;
   if (newRow) initLabourTypeDropdownForRow(newRow);
   initLabourDescriptionDropdownForRow(newRow);
   if (window.initRichNotesIn) window.initRichNotesIn(room);
@@ -2421,6 +2429,11 @@ if (t.closest(".add-freight-row")) {
       const row = t.closest("tr");
       if (row && confirm("Delete this row?")) {
         const roomCard = row.closest(".room-card");
+        // Also remove the paired notes row
+        const notesRow = row.nextElementSibling;
+        if (notesRow && notesRow.classList.contains('item-notes-row')) {
+          notesRow.remove();
+        }
         row.remove();
         if (roomCard) {
           const idx = Array.from(roomsContainer.querySelectorAll(".room-card")).indexOf(roomCard);

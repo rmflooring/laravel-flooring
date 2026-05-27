@@ -120,6 +120,7 @@ class EstimateController extends Controller
 			'rooms.*.materials.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.materials.*.sell_price'        => ['nullable', 'numeric'],
             'rooms.*.materials.*.notes'             => ['nullable', 'string'],
+            'rooms.*.materials.*.internal_notes'    => ['nullable', 'string'],
 			'rooms.*.materials.*.order_qty'  => ['nullable', 'numeric'],
 			'rooms.*.materials.*.line_total' => ['nullable', 'numeric'],
 			'rooms.*.freight.*.line_total'   => ['nullable', 'numeric'],
@@ -132,6 +133,7 @@ class EstimateController extends Controller
 			'rooms.*.freight.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.freight.*.sell_price'          => ['nullable', 'numeric'],
             'rooms.*.freight.*.notes'               => ['nullable', 'string'],
+            'rooms.*.freight.*.internal_notes'      => ['nullable', 'string'],
             'rooms.*.labour'                        => ['nullable', 'array'],
             'rooms.*.labour.*.labour_type'          => ['nullable', 'string'],
             'rooms.*.labour.*.description'          => ['nullable', 'string'],
@@ -141,6 +143,7 @@ class EstimateController extends Controller
 			'rooms.*.labour.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.labour.*.sell_price'           => ['nullable', 'numeric'],
             'rooms.*.labour.*.notes'                => ['nullable', 'string'],
+            'rooms.*.labour.*.internal_notes'       => ['nullable', 'string'],
             'rooms.*.labour.*.order_qty'            => ['nullable', 'numeric'],
         ]);
 
@@ -272,6 +275,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
+                        'internal_notes'     => $item['internal_notes'] ?? null,
                     ]);
 
 					Log::info('[Estimate store] material item saved', [
@@ -307,6 +311,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
+                        'internal_notes'     => $item['internal_notes'] ?? null,
                     ]);
                 }
 
@@ -337,6 +342,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
+                        'internal_notes'     => $item['internal_notes'] ?? null,
                     ]);
                 }
             }
@@ -501,6 +507,7 @@ public function update(Request $request, Estimate $estimate)
 'rooms.*.labour.*.quantity'      => ['nullable', 'numeric'],
 'rooms.*.labour.*.unit'          => ['nullable', 'string', 'max:50'],
 'rooms.*.labour.*.notes'         => ['nullable', 'string'],
+'rooms.*.labour.*.internal_notes' => ['nullable', 'string'],
 'rooms.*.labour.*.sell_price'    => ['nullable', 'numeric'],
 'rooms.*.labour.*.line_total'    => ['nullable', 'numeric'],
 'rooms.*.labour.*.cost_price'    => ['nullable', 'numeric'],
@@ -520,6 +527,7 @@ public function update(Request $request, Estimate $estimate)
 'rooms.*.materials.*.line_total'        => ['nullable', 'numeric'],
 'rooms.*.materials.*.order_qty'         => ['nullable', 'numeric'],
 'rooms.*.materials.*.notes'             => ['nullable', 'string'],
+'rooms.*.materials.*.internal_notes'    => ['nullable', 'string'],
 
 'rooms.*.freight.*.freight_description' => ['nullable', 'string'],
 'rooms.*.freight.*.quantity'            => ['nullable', 'numeric'],
@@ -529,6 +537,7 @@ public function update(Request $request, Estimate $estimate)
 'rooms.*.freight.*.sell_price'          => ['nullable', 'numeric'],
 'rooms.*.freight.*.line_total'          => ['nullable', 'numeric'],
 'rooms.*.freight.*.notes'               => ['nullable', 'string'],
+'rooms.*.freight.*.internal_notes'      => ['nullable', 'string'],
     ]);
 
 			\Log::info('[Estimate update] raw vs validated labour', [
@@ -768,6 +777,7 @@ $roomId = $room->id;
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'             => $item['notes'] ?? null,
+                    'internal_notes'    => $item['internal_notes'] ?? null,
                 ]);
             }
 
@@ -788,6 +798,7 @@ $roomId = $room->id;
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'              => $item['notes'] ?? null,
+                    'internal_notes'     => $item['internal_notes'] ?? null,
                 ]);
             }
 
@@ -810,6 +821,7 @@ $roomId = $room->id;
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
                     'notes'            => $item['notes'] ?? null,
+                    'internal_notes'   => $item['internal_notes'] ?? null,
                 ]);
             }
         }
