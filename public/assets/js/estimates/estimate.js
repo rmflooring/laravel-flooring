@@ -2296,9 +2296,9 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 	  costTotalEl.value = (qty * costPrice).toFixed(2);
 	}
 
-    // Update visible line total (your spans exist in the 2nd last td)
-    const totalSpan = row.querySelector("td:nth-last-child(2) span");
-    if (totalSpan) totalSpan.textContent = formatMoney(lineTotal);
+    // Update visible total input
+    const totalDisplay = row.querySelector('.js-total-input');
+    if (totalDisplay) totalDisplay.value = lineTotal.toFixed(2);
 
     // Update hidden line_total
     const hidden = row.querySelector('input[name$="[line_total]"]');
@@ -2312,6 +2312,36 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 	  const cost = Number(costPriceInput.value || 0);
 	  costTotalInput.value = (qty * cost).toFixed(2);
 	}
+
+    const roomCard = row.closest(".room-card");
+    if (roomCard) updateRoomTotals(roomCard);
+  });
+
+  // ── Reverse calc: user types in total → back-calculate sell price ────────
+  roomsContainer.addEventListener("input", e => {
+    const input = e.target;
+    if (!input.matches('.js-total-input')) return;
+
+    const row = input.closest("tr");
+    if (!row) return;
+
+    const total = parseNumber(input.value);
+    const qty = parseNumber(row.querySelector('input[name*="quantity"]')?.value || 0);
+
+    if (qty !== 0) {
+      const sell = total / qty;
+      const sellInput = row.querySelector('input[name*="sell_price"]');
+      if (sellInput) sellInput.value = formatPrice(sell);
+
+      const costPriceEl = row.querySelector('input[name$="[cost_price]"]');
+      const costTotalEl = row.querySelector('input[name$="[cost_total]"]');
+      if (costPriceEl && costTotalEl) {
+        costTotalEl.value = (qty * parseNumber(costPriceEl.value)).toFixed(2);
+      }
+    }
+
+    const hidden = row.querySelector('input[name$="[line_total]"]');
+    if (hidden) hidden.value = total.toFixed(2);
 
     const roomCard = row.closest(".room-card");
     if (roomCard) updateRoomTotals(roomCard);
