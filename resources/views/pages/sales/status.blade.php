@@ -493,7 +493,7 @@
                                                x-model.number="qty"
                                                :max="maxQty"
                                                min="0.01"
-                                               step="0.01"
+                                               step="any"
                                                :disabled="! selectedReceiptId"
                                                class="w-36 rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100 disabled:text-gray-400"
                                                required>

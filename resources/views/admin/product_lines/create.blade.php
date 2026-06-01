@@ -106,7 +106,7 @@
                                 <label for="default_cost_price" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Default Cost Price</label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">$</span>
-                                    <input type="number" step="0.0001" min="0" name="default_cost_price" id="default_cost_price"
+                                    <input type="number" step="any" name="default_cost_price" id="default_cost_price"
                                            value="{{ old('default_cost_price') }}"
                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                            placeholder="0.0000">
@@ -119,10 +119,10 @@
                                 <label for="default_sell_price" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Default Sell Price</label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">$</span>
-                                    <input type="number" step="0.01" min="0" name="default_sell_price" id="default_sell_price"
+                                    <input type="text" inputmode="decimal" name="default_sell_price" id="default_sell_price"
                                            value="{{ old('default_sell_price') }}"
                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                                           placeholder="0.00">
+                                           placeholder="0.00" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                                 </div>
                                 <div class="mt-2 flex items-center gap-2">
                                     <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Apply GPM:</span>
@@ -173,7 +173,7 @@
                             <div>
                                 <label for="width" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Width</label>
                                 <div class="flex items-center gap-2">
-                                    <input type="number" step="0.01" min="0" name="width" id="width"
+                                    <input type="number" step="any" name="width" id="width"
                                            value="{{ old('width') }}"
                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                            placeholder="e.g. 12">
@@ -186,7 +186,7 @@
                             <div>
                                 <label for="length" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Length</label>
                                 <div class="flex items-center gap-2">
-                                    <input type="number" step="0.01" min="0" name="length" id="length"
+                                    <input type="number" step="any" name="length" id="length"
                                            value="{{ old('length') }}"
                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                            placeholder="e.g. 24">

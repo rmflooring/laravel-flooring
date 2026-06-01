@@ -41,14 +41,14 @@
                             <!-- Cost -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Cost *</label>
-                                <input type="number" step="0.01" name="cost" id="cost" value="{{ old('cost', $labourItem->cost) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="text" inputmode="decimal" name="cost" id="cost" value="{{ old('cost', $labourItem->cost) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                                 @error('cost') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                             </div>
 
                             <!-- Sell -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Sell *</label>
-                                <input type="number" step="0.01" name="sell" id="sell" value="{{ old('sell', $labourItem->sell) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="text" inputmode="decimal" name="sell" id="sell" value="{{ old('sell', $labourItem->sell) }}" required class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                                 <div class="mt-2 flex items-center gap-2">
                                     <span class="text-xs text-gray-500 whitespace-nowrap">Apply GPM:</span>
                                     <select id="gpm_selector" class="flex-1 text-xs bg-gray-50 border border-gray-300 text-gray-700 rounded-lg p-1.5 focus:ring-blue-500 focus:border-blue-500">

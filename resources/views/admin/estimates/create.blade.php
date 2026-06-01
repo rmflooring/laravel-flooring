@@ -293,7 +293,7 @@
   </div>
 </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]"
+                            <input type="number" step="any" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
                         </td>
@@ -436,7 +436,7 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]"
+      <input type="number" step="any" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]"
         class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="0">
     </td>
@@ -516,7 +516,7 @@
 						  </div>
 						</td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]"
+                            <input type="number" step="any" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
                         </td>

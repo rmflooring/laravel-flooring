@@ -87,7 +87,7 @@
                                         <input type="number"
                                                name="items[{{ $idx }}][quantity_returned]"
                                                value="{{ old("items.{$idx}.quantity_returned", $item->quantity_returned) }}"
-                                               required min="0.01" step="0.01"
+                                               required min="0.01" step="any"
                                                class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                     </div>
                                 </div>

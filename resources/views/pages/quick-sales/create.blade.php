@@ -196,7 +196,7 @@
                                 <div class="grid grid-cols-12 gap-2 items-end">
                                     <div class="col-span-2">
                                         <label class="text-xs text-gray-500 mb-0.5 block">Qty</label>
-                                        <input type="number" step="0.01" min="0.01"
+                                        <input type="number" step="any" min="0.01"
                                             x-model="row.quantity"
                                             @input="recalc()"
                                             :name="'items[' + idx + '][quantity]'"
@@ -214,9 +214,10 @@
                                         <label class="text-xs text-gray-500 mb-0.5 block">Unit Price</label>
                                         <div class="relative">
                                             <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                                            <input type="number" step="0.01" min="0"
+                                            <input type="text" inputmode="decimal"
                                                 x-model="row.sell_price"
                                                 @input="recalc()"
+                                                @blur="row.sell_price = row.sell_price !== '' && !isNaN(parseFloat(row.sell_price)) ? parseFloat(row.sell_price).toFixed(2) : row.sell_price"
                                                 :name="'items[' + idx + '][sell_price]'"
                                                 class="w-full border border-gray-300 rounded-lg pl-5 pr-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 bg-white">
                                         </div>
@@ -318,9 +319,10 @@
                             </label>
                             <div class="relative">
                                 <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                                <input type="number" step="0.01" min="0" name="amount_tendered" id="amount_tendered"
+                                <input type="text" inputmode="decimal" name="amount_tendered" id="amount_tendered"
                                     x-model="tendered"
                                     @input="calcChange()"
+                                    @blur="tendered = tendered !== '' && !isNaN(parseFloat(tendered)) ? parseFloat(tendered).toFixed(2) : tendered"
                                     class="w-full border border-gray-300 rounded-lg pl-5 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400">
                             </div>
                         </div>

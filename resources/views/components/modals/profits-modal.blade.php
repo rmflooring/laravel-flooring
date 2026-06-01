@@ -165,11 +165,12 @@ if ($record) {
 
 							  <td class="px-3 py-2 text-right">
 								<input
-								  type="number" step="0.01"
+								  type="text" inputmode="decimal"
 								  class="w-24 rounded-lg border border-gray-300 bg-gray-50 p-1.5 text-right"
 								  value="{{ number_format($cost, 2, '.', '') }}"
 								  data-cost-input
 								  data-item-id="{{ $item->id }}"
+								  onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
 								/>
 							  </td>
 

@@ -128,8 +128,9 @@
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 text-sm">$</span>
-                                <input type="number" name="display_price" value="{{ old('display_price') }}"
-                                       step="0.01" min="0" placeholder="0.00"
+                                <input type="text" inputmode="decimal" name="display_price" value="{{ old('display_price') }}"
+                                       placeholder="0.00"
+                                       onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                                        class="block w-full pl-7 p-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                             </div>
                         </div>

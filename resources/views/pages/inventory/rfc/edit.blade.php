@@ -101,7 +101,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Qty returning</label>
-                <input type="number" name="items[__IDX__][quantity_returned]" required min="0.01" step="0.01"
+                <input type="number" name="items[__IDX__][quantity_returned]" required min="0.01" step="any"
                        class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             </div>
             <div>

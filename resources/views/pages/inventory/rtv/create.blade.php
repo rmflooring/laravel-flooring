@@ -177,12 +177,13 @@
                 </div>
                 <div class="w-28">
                     <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Qty returning</label>
-                    <input type="number" name="items[__IDX__][quantity_returned]" required min="0.01" step="0.01"
+                    <input type="number" name="items[__IDX__][quantity_returned]" required min="0.01" step="any"
                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                 </div>
                 <div class="w-28 unit-cost-field">
                     <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Unit cost ($)</label>
-                    <input type="number" name="items[__IDX__][unit_cost]" min="0" step="0.0001"
+                    <input type="text" inputmode="decimal" name="items[__IDX__][unit_cost]"
+                           onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                 </div>
             </div>

@@ -92,11 +92,10 @@
                             @endphp
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                                <input type="number" name="subtotal" id="subtotal" required
-                                       min="0" step="0.01"
+                                <input type="text" inputmode="decimal" name="subtotal" id="subtotal" required
                                        value="{{ old('subtotal', $rtvSubtotal ? number_format((float)$rtvSubtotal, 2, '.', '') : '') }}"
                                        class="w-full pl-7 rounded-lg border-gray-300 text-sm shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                       oninput="recalcTax()">
+                                       oninput="recalcTax()" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                             </div>
                             @error('subtotal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
@@ -159,22 +158,20 @@
                                         <label class="block text-xs font-medium text-gray-500 mb-1">GST Amount $</label>
                                         <div class="relative">
                                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                                            <input type="number" name="gst_amount_override" id="gst_amount_override"
-                                                   min="0" step="0.01"
+                                            <input type="text" inputmode="decimal" name="gst_amount_override" id="gst_amount_override"
                                                    value="{{ old('gst_amount_override', 0) }}"
                                                    class="w-full pl-7 rounded-lg border-gray-300 text-sm shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                   oninput="recalcTax()">
+                                                   oninput="recalcTax()" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                                         </div>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-500 mb-1">PST Amount $</label>
                                         <div class="relative">
                                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
-                                            <input type="number" name="pst_amount_override" id="pst_amount_override"
-                                                   min="0" step="0.01"
+                                            <input type="text" inputmode="decimal" name="pst_amount_override" id="pst_amount_override"
                                                    value="{{ old('pst_amount_override', 0) }}"
                                                    class="w-full pl-7 rounded-lg border-gray-300 text-sm shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                   oninput="recalcTax()">
+                                                   oninput="recalcTax()" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                                         </div>
                                     </div>
                                 </div>

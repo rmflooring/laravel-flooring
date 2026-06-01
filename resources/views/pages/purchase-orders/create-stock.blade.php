@@ -182,7 +182,7 @@
                                                x-model="row.quantity"
                                                @input="recalc(row)"
                                                @blur="checkBoxQtyForRow(row, $event.target)"
-                                               min="0.01" step="0.01" required
+                                               min="0.01" step="any" required
                                                :style="row.boxAligned ? 'background-color:#fed7aa;border-color:#fb923c;color:#9a3412;' : ''"
                                                class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         <p x-show="row.use_box_qty && row.units_per > 0" x-cloak
@@ -208,11 +208,12 @@
                                         </label>
                                         <div class="relative">
                                             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-gray-500">$</span>
-                                            <input type="number"
+                                            <input type="text" inputmode="decimal"
                                                    :name="`items[${index}][cost_price]`"
                                                    x-model="row.cost_price"
                                                    @input="recalc(row)"
-                                                   min="0" step="0.001" required
+                                                   @blur="row.cost_price = row.cost_price !== '' && !isNaN(parseFloat(row.cost_price)) ? parseFloat(row.cost_price).toFixed(2) : row.cost_price"
+                                                   required
                                                    class="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-7 pr-3 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         </div>
                                     </div>

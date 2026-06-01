@@ -29,12 +29,12 @@
 
                     <div>
                         <label class="block mb-1 text-sm font-medium text-gray-700">Cost Price</label>
-                        <input type="number" step="0.01" min="0" name="cost_price" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5" value="0.00">
+                        <input type="text" inputmode="decimal" name="cost_price" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5" value="0.00" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                     </div>
 
                     <div>
                         <label class="block mb-1 text-sm font-medium text-gray-700">Sell Price</label>
-                        <input type="number" step="0.01" min="0" name="sell_price" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5" value="0.00">
+                        <input type="text" inputmode="decimal" name="sell_price" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5" value="0.00" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                     </div>
 
                     <div class="md:col-span-2">
@@ -77,13 +77,13 @@
                                     </td>
 
                                     <td class="px-4 py-3">
-                                        <input type="number" step="0.01" min="0" name="cost_price" value="{{ $item->cost_price }}"
-                                            class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
+                                        <input type="text" inputmode="decimal" name="cost_price" value="{{ $item->cost_price }}"
+                                            class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                                     </td>
 
                                     <td class="px-4 py-3">
-                                        <input type="number" step="0.01" min="0" name="sell_price" value="{{ $item->sell_price }}"
-                                            class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2">
+                                        <input type="text" inputmode="decimal" name="sell_price" value="{{ $item->sell_price }}"
+                                            class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2" onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                                     </td>
 
                                     <td class="px-4 py-3">

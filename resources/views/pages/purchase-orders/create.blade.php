@@ -176,7 +176,7 @@
                                                     </label>
                                                     <input type="number" name="qty[{{ $item->id }}]"
                                                            value="{{ old('qty.' . $item->id, $remaining) }}"
-                                                           min="0.01" max="{{ $remaining }}" step="0.01"
+                                                           min="0.01" max="{{ $remaining }}" step="any"
                                                            @input="validateQty('{{ $item->id }}', $event.target.value, {{ $remaining }})"
                                                            :class="qtyErrors['{{ $item->id }}'] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'"
                                                            class="w-28 rounded-lg border bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
@@ -194,9 +194,9 @@
                                                     </label>
                                                     <div class="relative">
                                                         <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-sm text-gray-500">$</span>
-                                                        <input type="number" name="cost[{{ $item->id }}]"
+                                                        <input type="text" inputmode="decimal" name="cost[{{ $item->id }}]"
                                                                value="{{ old('cost.' . $item->id, $item->cost_price) }}"
-                                                               min="0" step="0.001"
+                                                               onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                                                                class="w-32 rounded-lg border border-gray-300 bg-white py-1.5 pl-6 pr-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                     </div>
                                                 </div>

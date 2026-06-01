@@ -150,7 +150,7 @@
                         </label>
                         <input type="number" name="items[{{ $item->id }}]"
                                value="{{ $remaining > 0 ? rtrim(rtrim(number_format($remaining, 2), '0'), '.') : '' }}"
-                               step="0.01" min="0" max="{{ $item->quantity }}"
+                               step="any" min="0" max="{{ $item->quantity }}"
                                placeholder="Qty delivered"
                                class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
                     </div>

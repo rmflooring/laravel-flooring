@@ -52,9 +52,10 @@
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 text-sm pointer-events-none">$</span>
-                                <input type="number" name="amount" step="0.01" min="0.01"
+                                <input type="text" inputmode="decimal" name="amount"
                                        value="{{ old('amount', $payment->amount) }}"
                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 p-2.5"
+                                       onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                                        required>
                             </div>
                         </div>

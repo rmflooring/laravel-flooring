@@ -127,10 +127,11 @@
                                     <div class="text-xs text-gray-400 mb-1">Display price</div>
                                     <div class="flex items-center gap-1">
                                         <span class="text-gray-400 text-xs">$</span>
-                                        <input type="number" step="0.01" min="0"
+                                        <input type="text" inputmode="decimal"
                                                :name="`display_prices[${style.id}]`"
                                                :value="style.sell_price ? parseFloat(style.sell_price).toFixed(2) : ''"
                                                @click.stop
+                                               onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                                                class="w-24 text-xs text-right border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:border-gray-500 dark:text-white focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                 </div>

@@ -442,14 +442,14 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
           value="{{ old("rooms.$roomIndex.materials.$i.quantity", $item->quantity) }}"
           class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
       <td class="px-3 py-2" data-order-qty-cell>
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][order_qty]"
           value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
           placeholder="—"
@@ -643,14 +643,14 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][quantity]"
           class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="0">
       </td>
 
       <td class="px-3 py-2" data-order-qty-cell>
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][order_qty]"
           placeholder="—"
           class="w-24 border rounded-lg p-2"
@@ -721,10 +721,11 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="text" inputmode="decimal"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][sell_price]"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
-          placeholder="0.00">
+          placeholder="0.00"
+          onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
         <input type="hidden" name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][cost_price]" class="material-cost-price-input" value="0">
         <input type="hidden" name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][cost_total]" class="material-cost-total-input" value="0">
       </td>
@@ -849,7 +850,7 @@
       </td>
 
       <td class="px-3 py-2">
-  <input type="number" step="0.01"
+  <input type="number" step="any"
     name="rooms[{{ $roomIndex }}][freight][{{ $i }}][quantity]"
     value="{{ old("rooms.$roomIndex.freight.$i.quantity", $qty) }}"
     class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
@@ -966,17 +967,18 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][quantity]"
           class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="0">
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="text" inputmode="decimal"
           name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][sell_price]"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
-          placeholder="0.00">
+          placeholder="0.00"
+          onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
         <input type="hidden" name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][cost_price]" class="freight-cost-price-input" value="0">
         <input type="hidden" name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][cost_total]" class="freight-cost-total-input" value="0">
       </td>
@@ -1109,14 +1111,14 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][labour][{{ $i }}][quantity]"
           value="{{ old("rooms.$roomIndex.labour.$i.quantity", $qty) }}"
           class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
       </td>
 
       <td class="px-3 py-2" data-order-qty-cell>
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][labour][{{ $i }}][order_qty]"
           value="{{ old("rooms.$roomIndex.labour.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
           placeholder="—"
@@ -1292,14 +1294,14 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][quantity]"
           class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
           placeholder="0">
       </td>
 
       <td class="px-3 py-2" data-order-qty-cell>
-        <input type="number" step="0.01"
+        <input type="number" step="any"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][order_qty]"
           placeholder="—"
           class="w-24 border rounded-lg p-2"
@@ -1339,10 +1341,11 @@
       </td>
 
       <td class="px-3 py-2">
-        <input type="number" step="0.01"
+        <input type="text" inputmode="decimal"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][sell_price]"
           class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2"
-          placeholder="0.00">
+          placeholder="0.00"
+          onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
         <input type="hidden" name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][cost_price]" class="labour-cost-price-input" value="0">
         <input type="hidden" name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][cost_total]" class="labour-cost-total-input" value="0">
       </td>
@@ -1507,14 +1510,14 @@
     </td>
 
     <td class="px-3 py-2">
-      <input type="number" step="0.01"
+      <input type="number" step="any"
         name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]"
         class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
         placeholder="0">
     </td>
 
     <td class="px-3 py-2" data-order-qty-cell>
-      <input type="number" step="0.01"
+      <input type="number" step="any"
         name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][order_qty]"
         class="w-24 border rounded-lg p-2"
         placeholder="—"
@@ -1696,7 +1699,7 @@
     </td>
 
     <td class="px-3 py-2">
-  <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]"
+  <input type="number" step="any" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]"
     class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
     placeholder="0">
 
@@ -1836,12 +1839,12 @@
 						  </div>
 						</td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]"
+                            <input type="number" step="any" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
                         </td>
                         <td class="px-3 py-2" data-order-qty-cell>
-                            <input type="number" step="0.01"
+                            <input type="number" step="any"
                                 name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][order_qty]"
                                 class="w-24 border rounded-lg p-2"
                                 placeholder="—"

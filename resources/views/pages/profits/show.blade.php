@@ -245,12 +245,12 @@
     }
 @endphp
     <input
-    type="number"
+    type="text"
+    inputmode="decimal"
     name="items[{{ $item->id }}][cost_price]"
     value="{{ number_format($displayCost, 2, '.', '') }}"
-    step="0.01"
-    min="0"
     class="w-24 rounded-md border-gray-300 text-sm text-right profit-cost-input"
+    onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
 >
     <input
         type="hidden"

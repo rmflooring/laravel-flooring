@@ -1710,9 +1710,10 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount <span class="text-red-500">*</span></label>
                         <div class="relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                            <input type="number" name="amount" step="0.01" min="0.01" required
+                            <input type="text" inputmode="decimal" name="amount" required
                                 class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-7 pr-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                placeholder="0.00">
+                                placeholder="0.00"
+                                onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                         </div>
                     </div>
                     <div>

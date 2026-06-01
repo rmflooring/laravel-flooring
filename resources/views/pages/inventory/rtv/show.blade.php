@@ -451,12 +451,11 @@
                                             ${{ number_format((float) $rtvItem->line_total, 2) }}
                                         </td>
                                         <td class="py-2 pl-3 text-right">
-                                            <input type="number"
+                                            <input type="text" inputmode="decimal"
                                                    name="items[{{ $rtvItem->id }}][credit_received]"
                                                    value="0"
-                                                   min="0"
-                                                   step="0.01"
                                                    placeholder="0.00"
+                                                   onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                                                    class="w-28 rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         </td>
                                         <td class="py-2 text-center">

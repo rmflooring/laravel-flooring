@@ -146,7 +146,7 @@
                                             <input type="number"
                                                    name="po_items[{{ $item->id }}][quantity]"
                                                    value="{{ old('po_items.' . $item->id . '.quantity', $item->quantity) }}"
-                                                   min="0.01" step="0.01"
+                                                   min="0.01" step="any"
                                                    @input="recalcRow({{ $item->id }}, $event)"
                                                    class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1 text-right text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         </td>
@@ -160,11 +160,11 @@
                                         <td class="px-6 py-3 text-right">
                                             <div class="relative inline-flex items-center">
                                                 <span class="absolute left-2.5 text-sm text-gray-500">$</span>
-                                                <input type="number"
+                                                <input type="text" inputmode="decimal"
                                                        name="po_items[{{ $item->id }}][cost_price]"
                                                        value="{{ old('po_items.' . $item->id . '.cost_price', $item->cost_price) }}"
-                                                       min="0" step="0.001"
                                                        @input="recalcRow({{ $item->id }}, $event)"
+                                                       onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                                                        class="w-28 rounded-lg border border-gray-300 bg-white py-1 pl-6 pr-2 text-right text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                             </div>
                                         </td>
@@ -367,7 +367,7 @@
                                                                name="quantities[{{ $item->id }}]"
                                                                value="{{ $item->quantity }}"
                                                                min="0"
-                                                               step="0.01"
+                                                               step="any"
                                                                data-ordered="{{ $item->quantity }}"
                                                                class="modal-qty-input w-24 rounded-lg border-gray-300 text-sm text-right shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                                                required>

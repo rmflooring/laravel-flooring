@@ -175,7 +175,7 @@
                                 </div>
                             </td>
                             <td class="px-3 py-2">
-                                <input type="number" step="0.01"
+                                <input type="number" step="any"
                                     name="rooms[{{ $roomIndex }}][materials][{{ $i }}][quantity]"
                                     value="{{ old("rooms.$roomIndex.materials.$i.quantity", $qty) }}"
                                     class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
@@ -268,7 +268,7 @@
                             </div>
                         </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01"
+                            <input type="number" step="any"
                                 name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
@@ -385,7 +385,7 @@
                                 </div>
                             </td>
                             <td class="px-3 py-2">
-                                <input type="number" step="0.01"
+                                <input type="number" step="any"
                                     name="rooms[{{ $roomIndex }}][freight][{{ $i }}][quantity]"
                                     value="{{ old("rooms.$roomIndex.freight.$i.quantity", $qty) }}"
                                     class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
@@ -429,7 +429,7 @@
                             </div>
                         </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01"
+                            <input type="number" step="any"
                                 name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
@@ -501,7 +501,7 @@
                                 </div>
                             </td>
                             <td class="px-3 py-2">
-                                <input type="number" step="0.01"
+                                <input type="number" step="any"
                                     name="rooms[{{ $roomIndex }}][labour][{{ $i }}][quantity]"
                                     value="{{ old("rooms.$roomIndex.labour.$i.quantity", $qty) }}"
                                     class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2">
@@ -566,7 +566,7 @@
                             </div>
                         </td>
                         <td class="px-3 py-2">
-                            <input type="number" step="0.01"
+                            <input type="number" step="any"
                                 name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][quantity]"
                                 class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2"
                                 placeholder="0">
@@ -754,7 +754,7 @@
                                 <ul class="py-1 text-sm text-gray-700" data-product-type-options></ul>
                             </div>
                         </td>
-                        <td class="px-3 py-2"><input type="number" step="0.01" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
+                        <td class="px-3 py-2"><input type="number" step="any" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
                         <td class="px-3 py-2"><input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][unit]" class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="SF"></td>
                         <td class="px-3 py-2 relative">
                             <input type="text" name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][manufacturer]"
@@ -820,7 +820,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-3 py-2"><input type="number" step="0.01" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
+                        <td class="px-3 py-2"><input type="number" step="any" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
                         <td class="px-3 py-2"><input type="number" step="0.0001" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][sell_price]" class="w-28 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0.00"></td>
                         <td class="px-3 py-2">
                             <span class="line-total-display inline-block w-28 text-right font-medium">$0.00</span>
@@ -864,7 +864,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-3 py-2"><input type="number" step="0.01" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
+                        <td class="px-3 py-2"><input type="number" step="any" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][quantity]" class="w-24 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="0"></td>
                         <td class="px-3 py-2"><input type="text" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][unit]" class="w-14 bg-gray-50 border border-gray-300 rounded-lg p-2" placeholder="SF" data-labour-unit-input></td>
                         <td class="px-3 py-2 overflow-visible">
                             <div class="relative">

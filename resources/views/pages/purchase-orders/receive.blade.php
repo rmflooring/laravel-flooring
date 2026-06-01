@@ -100,7 +100,7 @@
                                                    name="quantities[{{ $item->id }}]"
                                                    value="{{ old('quantities.' . $item->id, $item->quantity) }}"
                                                    min="0"
-                                                   step="0.01"
+                                                   step="any"
                                                    data-ordered="{{ $item->quantity }}"
                                                    class="qty-input w-28 rounded-lg border-gray-300 text-sm text-right shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                                    required>

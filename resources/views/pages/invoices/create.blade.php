@@ -209,7 +209,7 @@
                                                 <input type="number"
                                                     name="items[{{ $item->id }}]"
                                                     class="invoice-qty-input w-24 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg text-center p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                                    min="0" max="{{ $remaining }}" step="0.01"
+                                                    min="0" max="{{ $remaining }}" step="any"
                                                     value="{{ old("items.{$item->id}", 0) }}"
                                                     data-item-id="{{ $item->id }}"
                                                     data-max="{{ $remaining }}"

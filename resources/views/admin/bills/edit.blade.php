@@ -180,7 +180,7 @@
                                         </td>
                                         <td class="px-4 py-2">
                                             <input type="number" :name="`items[${index}][quantity]`" x-model.number="row.quantity"
-                                                @input="recalcRow(row); recalculate()" step="0.01" min="0"
+                                                @input="recalcRow(row); recalculate()" step="any" min="0"
                                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
                                         </td>
                                         <td class="px-4 py-2">
@@ -188,8 +188,9 @@
                                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                         </td>
                                         <td class="px-4 py-2">
-                                            <input type="number" :name="`items[${index}][unit_cost]`" x-model.number="row.unit_cost"
-                                                @input="recalcRow(row); recalculate()" step="0.01" min="0"
+                                            <input type="text" inputmode="decimal" :name="`items[${index}][unit_cost]`" x-model="row.unit_cost"
+                                                @input="recalcRow(row); recalculate()"
+                                                @blur="row.unit_cost = row.unit_cost !== '' && !isNaN(parseFloat(row.unit_cost)) ? parseFloat(row.unit_cost).toFixed(2) : row.unit_cost"
                                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
                                         </td>
                                         <td class="px-4 py-2 text-right font-medium text-gray-900 dark:text-white">
@@ -230,9 +231,10 @@
                                 <div x-show="!taxManual" class="font-medium">$<span x-text="gstAmount.toFixed(2)"></span></div>
                                 <div x-show="taxManual" class="flex items-center gap-1">
                                     <span class="text-gray-500">$</span>
-                                    <input type="number" step="0.01" min="0"
-                                        x-model.number="gstAmountOverride"
+                                    <input type="text" inputmode="decimal"
+                                        x-model="gstAmountOverride"
                                         @input="recalculate()"
+                                        @blur="gstAmountOverride = gstAmountOverride !== '' && !isNaN(parseFloat(gstAmountOverride)) ? parseFloat(gstAmountOverride).toFixed(2) : gstAmountOverride"
                                         class="w-24 bg-white border border-blue-300 text-gray-900 text-sm rounded p-1 text-right dark:bg-gray-700 dark:border-blue-500 dark:text-white">
                                 </div>
                             </div>
@@ -243,9 +245,10 @@
                                 <div x-show="!taxManual" class="font-medium">$<span x-text="pstAmount.toFixed(2)"></span></div>
                                 <div x-show="taxManual" class="flex items-center gap-1">
                                     <span class="text-gray-500">$</span>
-                                    <input type="number" step="0.01" min="0"
-                                        x-model.number="pstAmountOverride"
+                                    <input type="text" inputmode="decimal"
+                                        x-model="pstAmountOverride"
                                         @input="recalculate()"
+                                        @blur="pstAmountOverride = pstAmountOverride !== '' && !isNaN(parseFloat(pstAmountOverride)) ? parseFloat(pstAmountOverride).toFixed(2) : pstAmountOverride"
                                         class="w-24 bg-white border border-blue-300 text-gray-900 text-sm rounded p-1 text-right dark:bg-gray-700 dark:border-blue-500 dark:text-white">
                                 </div>
                             </div>
@@ -325,10 +328,10 @@
                                             <td class="px-4 py-2">
                                                 <div class="flex items-center gap-1">
                                                     <span class="text-gray-500 text-sm">$</span>
-                                                    <input type="number" :name="`items[${rows.length + ci}][unit_cost]`"
-                                                        x-model.number="charge.unit_cost"
+                                                    <input type="text" inputmode="decimal" :name="`items[${rows.length + ci}][unit_cost]`"
+                                                        x-model="charge.unit_cost"
                                                         @input="charge.line_total = charge.unit_cost; recalculate()"
-                                                        step="0.01" min="0"
+                                                        @blur="charge.unit_cost = charge.unit_cost !== '' && !isNaN(parseFloat(charge.unit_cost)) ? parseFloat(charge.unit_cost).toFixed(2) : charge.unit_cost"
                                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                                         placeholder="0.00" required>
                                                 </div>

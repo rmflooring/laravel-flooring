@@ -124,7 +124,7 @@
                                     <td class="py-3 text-right text-gray-700"
                                         x-text="'$' + item.sell_price.toFixed(2)"></td>
                                     <td class="py-3 text-center">
-                                        <input type="number" step="0.01" min="0.01"
+                                        <input type="number" step="any" min="0.01"
                                             :max="item.returnable"
                                             x-model="selected[item.id].quantity"
                                             @input="clampQty(item); recalc()"

@@ -513,7 +513,7 @@
                                                    value="{{ rtrim(rtrim(number_format($remaining, 2), '0'), '.') }}"
                                                    min="0"
                                                    max="{{ $remaining }}"
-                                                   step="0.01"
+                                                   step="any"
                                                    class="w-24 rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         @else
                                             <span class="text-xs text-green-600 dark:text-green-400">Done</span>
