@@ -212,7 +212,7 @@
                                                    :name="`items[${index}][cost_price]`"
                                                    x-model="row.cost_price"
                                                    @input="recalc(row)"
-                                                   min="0" step="0.01" required
+                                                   min="0" step="0.001" required
                                                    class="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-7 pr-3 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         </div>
                                     </div>

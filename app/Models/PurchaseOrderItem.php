@@ -12,7 +12,7 @@ class PurchaseOrderItem extends Model
     protected $casts = [
         'quantity'          => 'decimal:2',
         'returned_quantity' => 'decimal:2',
-        'cost_price'        => 'decimal:2',
+        'cost_price'        => 'decimal:3',
         'cost_total'        => 'decimal:2',
     ];
 

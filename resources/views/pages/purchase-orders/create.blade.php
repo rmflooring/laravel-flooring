@@ -196,7 +196,7 @@
                                                         <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-sm text-gray-500">$</span>
                                                         <input type="number" name="cost[{{ $item->id }}]"
                                                                value="{{ old('cost.' . $item->id, $item->cost_price) }}"
-                                                               min="0" step="0.01"
+                                                               min="0" step="0.001"
                                                                class="w-32 rounded-lg border border-gray-300 bg-white py-1.5 pl-6 pr-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                     </div>
                                                 </div>
