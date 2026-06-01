@@ -141,9 +141,9 @@
                                                             </div>
                                                             <div class="sm:col-span-2">
                                                                 <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Unit Cost</label>
-                                                                <input type="number" name="cost[{{ $item->id }}]"
+                                                                <input type="text" inputmode="decimal" name="cost[{{ $item->id }}]"
                                                                        x-model="cost"
-                                                                       step="0.01" min="0"
+                                                                       @blur="cost = cost !== '' && !isNaN(parseFloat(cost)) ? parseFloat(cost).toFixed(2) : cost"
                                                                        class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                             </div>
                                                         </div>
@@ -313,7 +313,7 @@
         return {
             checked:  {{ old('items.' . '0', 'false') }},
             qty:      maxQty,
-            cost:     defaultCost,
+            cost:     parseFloat(defaultCost).toFixed(2),
             qtyError: '',
 
             onCheck() {

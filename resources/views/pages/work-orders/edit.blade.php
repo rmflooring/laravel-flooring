@@ -170,9 +170,9 @@
                                         </td>
                                         <td class="px-6 py-4">
                                             <template x-if="!pendingDelete">
-                                                <input type="number" name="wo_items[{{ $item->id }}][cost_price]"
+                                                <input type="text" inputmode="decimal" name="wo_items[{{ $item->id }}][cost_price]"
                                                        x-model="cost"
-                                                       step="0.01" min="0"
+                                                       @blur="cost = cost !== '' && !isNaN(parseFloat(cost)) ? parseFloat(cost).toFixed(2) : cost"
                                                        class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                             </template>
                                         </td>
@@ -282,7 +282,7 @@
                                                             <input type="number"
                                                                    name="new_cost[{{ $saleItemId }}]"
                                                                    x-model="cost"
-                                                                   step="0.01" min="0"
+                                                                   @blur="cost = cost !== '' && !isNaN(parseFloat(cost)) ? parseFloat(cost).toFixed(2) : cost"
                                                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                         </div>
                                                         <div class="flex items-end pb-1">
@@ -462,7 +462,7 @@
         return {
             checked: false,
             qty:     maxQty,
-            cost:    defaultCost,
+            cost:    parseFloat(defaultCost).toFixed(2),
             init() {
                 this.$watch('checked', val => {
                     if (!val) {
@@ -489,7 +489,7 @@
     function woRow(id, qty, cost) {
         return {
             qty:           qty,
-            cost:          cost,
+            cost:          parseFloat(cost).toFixed(2),
             qtyError:      '',
             pendingDelete: false,
             validateQty(max) {
