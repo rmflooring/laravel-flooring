@@ -82,6 +82,13 @@ Route::get('/legal/privacy', fn () => view('legal.privacy'))->name('legal.privac
 Route::get('/t/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'pixel'])
     ->name('email.tracking.pixel');
 
+// E-Signature public signing routes — no auth required
+Route::get('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'show'])->name('sign.show');
+Route::get('/sign/{uuid}/document', [\App\Http\Controllers\SigningController::class, 'document'])->name('sign.document');
+Route::post('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'sign'])
+    ->name('sign.submit')
+    ->middleware('throttle:5,1');
+
 // Dashboard (authenticated)
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -538,6 +545,20 @@ Route::prefix('admin')
                 ->name('bills.push-to-qbo');
         });
 
+        // Signing Requests
+        Route::get('signing-requests', [\App\Http\Controllers\Admin\SigningRequestController::class, 'index'])
+            ->name('signing-requests.index')
+            ->middleware('role_or_permission:admin|manage signing requests');
+        Route::post('signing-requests/{signingRequest}/cancel', [\App\Http\Controllers\Admin\SigningRequestController::class, 'cancel'])
+            ->name('signing-requests.cancel')
+            ->middleware('role_or_permission:admin|manage signing requests');
+        Route::post('signing-requests/{signingRequest}/resend', [\App\Http\Controllers\Admin\SigningRequestController::class, 'resend'])
+            ->name('signing-requests.resend')
+            ->middleware('role_or_permission:admin|manage signing requests');
+        Route::get('signing-requests/{signingRequest}/download', [\App\Http\Controllers\Admin\SigningRequestController::class, 'download'])
+            ->name('signing-requests.download')
+            ->middleware('role_or_permission:admin|manage signing requests');
+
         // Installers
         Route::resource('installers', InstallerController::class)
             ->middleware('role_or_permission:admin|view installers')
@@ -930,6 +951,10 @@ Route::prefix('pages')
 		Route::post('sales/{sale}/work-orders/{workOrder}/stage-pick-ticket', [\App\Http\Controllers\Pages\WorkOrderController::class, 'stagePickTicket'])
 			->name('sales.work-orders.stage-pick-ticket')
 			->middleware('role_or_permission:admin|edit work orders');
+
+		Route::post('sales/{sale}/work-orders/{workOrder}/request-signature', [\App\Http\Controllers\Pages\SigningRequestController::class, 'storeFromWorkOrder'])
+			->name('sales.work-orders.request-signature')
+			->middleware('role_or_permission:admin|manage signing requests');
 
 		Route::post('sales/{sale}/stage-pick-ticket', [\App\Http\Controllers\Pages\SaleController::class, 'stagePickTicket'])
 			->name('sales.stage-pick-ticket')
@@ -1512,6 +1537,9 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->name('opportunities.sign-offs.destroy');
             Route::delete('sign-offs/{signOff}/force', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'forceDestroy'])
                 ->name('opportunities.sign-offs.forceDestroy');
+            Route::post('sign-offs/{signOff}/request-signature', [\App\Http\Controllers\Pages\SigningRequestController::class, 'storeFromSignOff'])
+                ->name('opportunities.sign-offs.request-signature')
+                ->middleware('role_or_permission:admin|manage signing requests');
 
             // RFM routes
             Route::get('rfms/create', [RfmController::class, 'create'])

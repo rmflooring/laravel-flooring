@@ -92,3 +92,17 @@ Schedule::call(function () {
 ->everyTenMinutes()
 ->name('microsoft-calendar-auto-sync')
 ->withoutOverlapping();
+
+// E-Signature: expire overdue requests daily at 8am
+Schedule::command('signing:expire-requests')
+    ->dailyAt('08:00')
+    ->timezone('America/Vancouver')
+    ->name('signing-expire-requests')
+    ->withoutOverlapping();
+
+// E-Signature: send reminders at 3, 7, 9 days daily at 9am
+Schedule::command('signing:send-reminders')
+    ->dailyAt('09:00')
+    ->timezone('America/Vancouver')
+    ->name('signing-send-reminders')
+    ->withoutOverlapping();

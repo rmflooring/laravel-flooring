@@ -407,9 +407,15 @@
 
                 {{-- Notes --}}
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700 flex items-center justify-between gap-4">
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Notes</h2>
+                        <button type="button" onclick="insertSignatureTagInNotes()"
+                                class="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-mono text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300"
+                                title="Insert signature tag at cursor position">
+                            + @{{customer_signature}}
+                        </button>
                     </div>
+                    <p class="px-6 pt-3 text-xs text-gray-400 dark:text-gray-500">Place <span class="font-mono">@{{customer_signature}}</span> to position the e-signature at that location on the signed PDF (Work Auth).</p>
                     <div>
                         <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
                         <div id="notes-quill-editor" style="min-height:100px; font-size:14px;"></div>
@@ -638,6 +644,14 @@
         const notesExisting = @json(old('notes', $workOrder->notes ?? ''));
         if (notesExisting) notesQuill.clipboard.dangerouslyPasteHTML(notesExisting);
         else syncNotesInput();
+
+        window.insertSignatureTagInNotes = function() {
+            const tag = '{' + '{customer_signature' + '}}';
+            const range = notesQuill.getSelection(true);
+            notesQuill.insertText(range.index, tag, 'user');
+            notesQuill.setSelection(range.index + tag.length);
+            syncNotesInput();
+        };
     </script>
 
 </x-app-layout>

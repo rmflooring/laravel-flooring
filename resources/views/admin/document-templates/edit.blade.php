@@ -125,6 +125,7 @@
             '{{opportunity_photos_qr}}': '<div style="display:inline-block;width:100px;height:100px;border:2px solid #d1d5db;border-radius:4px;background:#f9fafb;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;color:#6b7280;padding:8px;">📷 Photo Gallery QR</div>',
             '{{opportunity_qr}}': '<div style="display:inline-block;width:100px;height:100px;border:2px solid #d1d5db;border-radius:4px;background:#f9fafb;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;color:#6b7280;padding:8px;">📋 Opportunity QR</div>',
             '{{sale_number}}':        '2024-0042',
+            '{{customer_signature}}': '<div style="border:2px dashed #d1d5db;border-radius:4px;padding:14px;margin:12px 0;background:#f9fafb;text-align:center;"><div style="font-size:9px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">CUSTOMER SIGNATURE REQUIRED</div><div style="border-bottom:1px solid #9ca3af;width:65%;margin:0 auto;height:32px;"></div><div style="margin-top:5px;font-size:8px;color:#9ca3af;">Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date</div></div>',
             '{{flooring_items_table}}': `<table style="width:100%;border-collapse:collapse;font-size:12px;">
                 <thead>
                     <tr style="background:#1d4ed8;color:#fff;">

@@ -126,6 +126,9 @@ class PermissionsSeeder extends Seeder
             'create invoices',
             'edit invoices',
             'delete invoices',
+
+            // ===== E-Signatures =====
+            'manage signing requests',
         ];
 
         foreach ($permissions as $permission) {

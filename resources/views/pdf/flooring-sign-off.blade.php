@@ -189,22 +189,25 @@
     @endif
 
     {{-- Conditions --}}
-    @if ($signOff->condition_text)
+    @if ($conditionText ?? $signOff->condition_text)
     <div class="section-title">Conditions</div>
     <div class="conditions-box" style="margin-top:0;">
-        <p>{!! nl2br(e($signOff->condition_text)) !!}</p>
+        <div style="font-size:10px; line-height:1.6; color:#333;">{!! $conditionText ?? nl2br(e($signOff->condition_text)) !!}</div>
     </div>
     @endif
 
     {{-- Signatures --}}
+    @php $showCustomerSig = $showCustomerSigLine ?? true; @endphp
     <table class="sig-table">
         <tr>
+            @if ($showCustomerSig)
             <td>
                 <div class="sig-label">Customer Signature</div>
                 <div class="sig-line"></div>
                 <div class="sig-caption">Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date</div>
             </td>
-            <td>
+            @endif
+            <td @if (! $showCustomerSig) style="width:100%;" @endif>
                 <div class="sig-label">{{ $branding['company_name'] }} Representative</div>
                 <div class="sig-line"></div>
                 <div class="sig-caption">Signature &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date</div>

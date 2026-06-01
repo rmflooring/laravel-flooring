@@ -102,7 +102,30 @@
             </p>
         </div>
 
-        <p class="text-xs text-gray-400 dark:text-gray-500">Click any tag to copy it to your clipboard.</p>
+        <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">E-Signature <span class="text-green-600 dark:text-green-400">(click to insert at cursor)</span></p>
+            <div class="flex flex-wrap gap-1.5">
+                <code onclick="insertDocTemplateTag('@{{customer_signature}}')"
+                      class="cursor-pointer px-2 py-0.5 text-xs rounded bg-white border border-green-200 text-green-700 hover:bg-green-50 hover:border-green-400 dark:bg-gray-800 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/30 transition-colors">@{{customer_signature}}</code>
+            </div>
+            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                Places the customer's electronic signature at this exact location on the signed PDF.
+            </p>
+        </div>
+
+        <p class="text-xs text-gray-400 dark:text-gray-500">Click any tag above to copy it to your clipboard. Click <span class="text-green-600 dark:text-green-400">green</span> tags to insert at cursor.</p>
     </div>
+
+    <script>
+    function insertDocTemplateTag(tag) {
+        const textarea = document.querySelector('textarea[name="body"]');
+        if (!textarea) return;
+        const start = textarea.selectionStart;
+        const end   = textarea.selectionEnd;
+        textarea.value = textarea.value.slice(0, start) + tag + textarea.value.slice(end);
+        textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+        textarea.focus();
+    }
+    </script>
 
 </div>

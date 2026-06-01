@@ -211,7 +211,7 @@
 @if(trim(strip_tags($workOrder->notes ?? '')))
 <div class="notes-box">
     <div class="label">Notes / Special Instructions</div>
-    <div style="margin-top:4px;">{!! $workOrder->notes !!}</div>
+    <div style="margin-top:4px;">{!! $processedNotes ?? $workOrder->notes !!}</div>
 </div>
 @endif
 

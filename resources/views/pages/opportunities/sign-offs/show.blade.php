@@ -30,6 +30,16 @@
                     </svg>
                     View PDF
                 </a>
+                @can('manage signing requests')
+                <button type="button"
+                        onclick="document.getElementById('request-signature-modal').classList.remove('hidden')"
+                        class="inline-flex items-center gap-1 rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
+                    </svg>
+                    Request Signature
+                </button>
+                @endcan
             </div>
         </div>
 
@@ -223,9 +233,17 @@
                         </select>
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Condition Text (editable)</label>
+                        <div class="mb-1 flex items-center justify-between gap-3">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Condition Text (editable)</label>
+                            <button type="button" onclick="insertSignatureTag(document.querySelector('[name=condition_text]'))"
+                                    class="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-mono text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300"
+                                    title="Insert signature tag at cursor position">
+                                + @{{customer_signature}}
+                            </button>
+                        </div>
                         <textarea name="condition_text" x-model="conditionText" rows="5"
                                   class="block w-full rounded-lg border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"></textarea>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Place <span class="font-mono">@{{customer_signature}}</span> anywhere in the text to position the e-signature at that exact location on the signed PDF.</p>
                     </div>
                 </div>
             </div>
@@ -276,6 +294,16 @@
     </div>
 
     <script>
+    function insertSignatureTag(el) {
+        const tag = '{' + '{customer_signature' + '}}';
+        const start = el.selectionStart;
+        const end   = el.selectionEnd;
+        el.value = el.value.slice(0, start) + tag + el.value.slice(end);
+        el.selectionStart = el.selectionEnd = start + tag.length;
+        el.dispatchEvent(new Event('input'));
+        el.focus();
+    }
+
     let itemRowIndex = {{ $signOff->items->count() }};
 
     // When a room label input changes, sync all hidden room_name inputs in that group
@@ -365,4 +393,42 @@
         headerRow.remove();
     }
     </script>
+
+@can('manage signing requests')
+<div id="request-signature-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Request E-Signature</h3>
+            <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            The client will receive an email with a link to review and sign this Flooring Selection document. The link expires in 10 days.
+        </p>
+        <form method="POST" action="{{ route('pages.opportunities.sign-offs.request-signature', [$opportunity->id, $signOff->id]) }}">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name</label>
+                <input type="text" name="client_name" value="{{ $signOff->customer_name }}" required
+                       class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Email</label>
+                <input type="email" name="client_email" value="{{ $signOff->job_site_email }}" required
+                       class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300">
+                    Send Signature Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endcan
 </x-app-layout>

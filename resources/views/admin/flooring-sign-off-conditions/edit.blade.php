@@ -39,9 +39,17 @@
                 </div>
 
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Body Text <span class="text-red-500">*</span></label>
+                    <div class="mb-1 flex items-center justify-between gap-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Body Text <span class="text-red-500">*</span></label>
+                        <button type="button" onclick="insertSignatureTag(document.querySelector('[name=body]'))"
+                                class="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-mono text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300"
+                                title="Insert signature tag at cursor position">
+                            + @{{customer_signature}}
+                        </button>
+                    </div>
                     <textarea name="body" rows="8" required
                               class="block w-full rounded-lg border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">{{ old('body', $condition->body) }}</textarea>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Place <span class="font-mono">@{{customer_signature}}</span> anywhere in the body to position the e-signature at that location on the signed PDF.</p>
                 </div>
 
                 <div>
@@ -52,6 +60,17 @@
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Active</span>
                     </label>
                 </div>
+
+                <script>
+                function insertSignatureTag(el) {
+                    const tag = '{' + '{customer_signature' + '}}';
+                    const start = el.selectionStart;
+                    const end   = el.selectionEnd;
+                    el.value = el.value.slice(0, start) + tag + el.value.slice(end);
+                    el.selectionStart = el.selectionEnd = start + tag.length;
+                    el.focus();
+                }
+                </script>
 
                 <div class="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
                     <a href="{{ route('admin.flooring-conditions.index') }}"
