@@ -1,17 +1,15 @@
+@php
+    $mmToPt      = 2.8346;
+    $topPadPt    = round($topOffsetMm  * $mmToPt, 2);
+    $leftPadPt   = round($leftOffsetMm * $mmToPt, 2);
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <style>
-        @php
-            $mmToPt   = 2.8346;
-            $topPt    = round(36 + $topOffsetMm  * $mmToPt, 2);
-            $bottomPt = round(36 - $topOffsetMm  * $mmToPt, 2);
-            $leftPt   = round(11 + $leftOffsetMm * $mmToPt, 2);
-            $rightPt  = round(11 - $leftOffsetMm * $mmToPt, 2);
-        @endphp
         @page {
-            margin: {{ $topPt }}pt {{ $rightPt }}pt {{ $bottomPt }}pt {{ $leftPt }}pt;
+            margin: 36pt 11pt;
             size: letter;
         }
 
@@ -20,6 +18,8 @@
         html, body {
             margin: 0;
             padding: 0;
+            padding-top: {{ $topPadPt }}pt;
+            padding-left: {{ $leftPadPt }}pt;
             font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 7pt;
             color: #1f2937;
