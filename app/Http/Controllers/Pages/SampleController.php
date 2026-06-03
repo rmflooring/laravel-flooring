@@ -228,8 +228,8 @@ class SampleController extends Controller
 
         $sample->load(['productStyle.productLine', 'productStyle.photos']);
 
-        // Generate QR code as base64 SVG
-        $mobileUrl = route('mobile.samples.show', $sample->sample_id);
+        // Generate QR code as base64 SVG — points to public scan page (no auth)
+        $mobileUrl = route('scan.sample', $sample->sample_id);
         $qrSvg     = base64_encode(QrCode::format('svg')->size(150)->generate($mobileUrl));
 
         // Branding logo
@@ -320,5 +320,99 @@ class SampleController extends Controller
             'line_name'   => $s->productLine?->name,
             'manufacturer'=> $s->productLine?->manufacturer,
         ]));
+    }
+
+    // -----------------------------------------------------------------------
+    // BATCH LABEL FORM
+    // -----------------------------------------------------------------------
+
+    public function batchLabelForm(Request $request)
+    {
+        $sampleIds = array_filter(array_map('intval', (array) $request->input('samples', [])));
+        $setIds    = array_filter(array_map('intval', (array) $request->input('sets', [])));
+        $showPrice = $request->boolean('show_price', false);
+
+        if (empty($sampleIds) && empty($setIds)) {
+            return redirect()->route('pages.samples.index')
+                ->with('error', 'Select at least one sample or set before printing labels.');
+        }
+
+        $samples = $sampleIds
+            ? Sample::whereIn('id', $sampleIds)->with('productStyle.productLine')->orderBy('sample_id')->get()
+            : collect();
+
+        $sets = $setIds
+            ? SampleSet::whereIn('id', $setIds)->with('productLine')->orderBy('set_id')->get()
+            : collect();
+
+        return view('pages.samples.batch-label-form', compact('samples', 'sets', 'showPrice'));
+    }
+
+    // -----------------------------------------------------------------------
+    // BATCH LABEL PDF
+    // -----------------------------------------------------------------------
+
+    public function batchLabel(Request $request)
+    {
+        $sampleIds = array_filter(array_map('intval', (array) $request->input('samples', [])));
+        $setIds    = array_filter(array_map('intval', (array) $request->input('sets', [])));
+        $showPrice = $request->boolean('show_price', false);
+        $qty       = $request->input('qty', []);
+
+        $samples = $sampleIds
+            ? Sample::whereIn('id', $sampleIds)->with('productStyle.productLine')->get()->keyBy('id')
+            : collect();
+
+        $sets = $setIds
+            ? SampleSet::whereIn('id', $setIds)->with('productLine')->get()->keyBy('id')
+            : collect();
+
+        // Branding
+        $logoPath    = Setting::get('branding_logo_path');
+        $logoDataUri = null;
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            $logoData    = Storage::disk('public')->get($logoPath);
+            $logoMime    = Storage::disk('public')->mimeType($logoPath);
+            $logoDataUri = 'data:' . $logoMime . ';base64,' . base64_encode($logoData);
+        }
+        $companyName = Setting::get('branding_company_name', 'RM Flooring');
+
+        // Build flat label list, generating QR once per record
+        $labels = [];
+
+        foreach ($sampleIds as $id) {
+            if (! $samples->has($id)) {
+                continue;
+            }
+            $sample = $samples[$id];
+            $copies = max(1, min(20, (int) ($qty["s_{$id}"] ?? 1)));
+            $qrSvg  = base64_encode(QrCode::format('svg')->size(100)->generate(route('scan.sample', $sample->sample_id)));
+            for ($i = 0; $i < $copies; $i++) {
+                $labels[] = ['type' => 'sample', 'model' => $sample, 'qrSvg' => $qrSvg];
+            }
+        }
+
+        foreach ($setIds as $id) {
+            if (! $sets->has($id)) {
+                continue;
+            }
+            $set    = $sets[$id];
+            $copies = max(1, min(20, (int) ($qty["set_{$id}"] ?? 1)));
+            $qrSvg  = base64_encode(QrCode::format('svg')->size(100)->generate(route('scan.sample', $set->set_id)));
+            for ($i = 0; $i < $copies; $i++) {
+                $labels[] = ['type' => 'set', 'model' => $set, 'qrSvg' => $qrSvg];
+            }
+        }
+
+        if (empty($labels)) {
+            return redirect()->route('pages.samples.index')
+                ->with('error', 'No valid items selected for printing.');
+        }
+
+        $rows = array_chunk($labels, 2);
+
+        return Pdf::loadView('pdf.batch-labels-5163', compact('rows', 'logoDataUri', 'companyName', 'showPrice'))
+            ->setPaper('letter')
+            ->stream('batch-labels.pdf');
     }
 }

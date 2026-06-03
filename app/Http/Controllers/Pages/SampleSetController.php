@@ -179,7 +179,7 @@ class SampleSetController extends Controller
 
         $sampleSet->load(['productLine', 'items.productStyle']);
 
-        $mobileUrl = route('mobile.samples.show', $sampleSet->set_id);
+        $mobileUrl = route('scan.sample', $sampleSet->set_id);
         $qrSvg     = base64_encode(QrCode::format('svg')->size(150)->generate($mobileUrl));
 
         $logoPath    = Setting::get('branding_logo_path');

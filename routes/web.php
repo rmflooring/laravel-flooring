@@ -82,6 +82,10 @@ Route::get('/legal/privacy', fn () => view('legal.privacy'))->name('legal.privac
 Route::get('/t/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'pixel'])
     ->name('email.tracking.pixel');
 
+// Public QR scan page — no auth required
+Route::get('/scan/{sampleId}', [\App\Http\Controllers\PublicSampleController::class, 'show'])
+    ->name('scan.sample');
+
 // E-Signature public signing routes — no auth required
 Route::get('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'show'])->name('sign.show');
 Route::get('/sign/{uuid}/document', [\App\Http\Controllers\SigningController::class, 'document'])->name('sign.document');
@@ -1597,6 +1601,14 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
     Route::post('samples', [\App\Http\Controllers\Pages\SampleController::class, 'store'])
         ->middleware('role_or_permission:admin|create samples')
         ->name('samples.store');
+
+    Route::get('samples/batch', [\App\Http\Controllers\Pages\SampleController::class, 'batchLabelForm'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.batch-label.form');
+
+    Route::post('samples/batch', [\App\Http\Controllers\Pages\SampleController::class, 'batchLabel'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.batch-label');
 
     // Wildcard {sample} routes after all static routes
     Route::get('samples/{sample}', [\App\Http\Controllers\Pages\SampleController::class, 'show'])
