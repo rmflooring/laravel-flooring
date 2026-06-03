@@ -15,7 +15,7 @@
         $title       = $set->set_id . ' – ' . ($set->name ?? $line->name);
     }
 @endphp
-<x-mobile-layout :title="$title">
+<x-public-scan-layout :title="$title">
 
     {{-- Sample: photo --}}
     @if ($isSample && isset($primary))
@@ -175,4 +175,4 @@
         @endauth
     </div>
 
-</x-mobile-layout>
+</x-public-scan-layout>
