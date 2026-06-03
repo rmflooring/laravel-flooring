@@ -356,8 +356,10 @@ class SampleController extends Controller
     {
         $sampleIds = array_filter(array_map('intval', (array) $request->input('samples', [])));
         $setIds    = array_filter(array_map('intval', (array) $request->input('sets', [])));
-        $showPrice = $request->boolean('show_price', false);
-        $qty       = $request->input('qty', []);
+        $showPrice  = $request->boolean('show_price', false);
+        $qty        = $request->input('qty', []);
+        $topOffsetMm  = max(-20, min(20, (float) $request->input('top_offset_mm', 0)));
+        $leftOffsetMm = max(-20, min(20, (float) $request->input('left_offset_mm', 0)));
 
         $samples = $sampleIds
             ? Sample::whereIn('id', $sampleIds)->with('productStyle.productLine')->get()->keyBy('id')
@@ -411,7 +413,7 @@ class SampleController extends Controller
 
         $rows = array_chunk($labels, 2);
 
-        return Pdf::loadView('pdf.batch-labels-5163', compact('rows', 'logoDataUri', 'companyName', 'showPrice'))
+        return Pdf::loadView('pdf.batch-labels-5163', compact('rows', 'logoDataUri', 'companyName', 'showPrice', 'topOffsetMm', 'leftOffsetMm'))
             ->setPaper('letter')
             ->stream('batch-labels.pdf');
     }

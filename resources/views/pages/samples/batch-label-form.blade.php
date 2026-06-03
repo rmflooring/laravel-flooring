@@ -1,6 +1,21 @@
 <x-app-layout>
     <div class="py-6">
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6"
+             x-data="{
+                 topOffset: 0,
+                 leftOffset: 0,
+                 init() {
+                     this.topOffset  = parseFloat(localStorage.getItem('label_top_offset')  ?? 0);
+                     this.leftOffset = parseFloat(localStorage.getItem('label_left_offset') ?? 0);
+                 },
+                 save() {
+                     localStorage.setItem('label_top_offset',  this.topOffset);
+                     localStorage.setItem('label_left_offset', this.leftOffset);
+                 },
+                 reset() {
+                     this.topOffset = 0; this.leftOffset = 0; this.save();
+                 }
+             }">
 
             {{-- Header --}}
             <div class="flex items-center gap-4">
@@ -30,6 +45,40 @@
                                {{ $showPrice ? 'checked' : '' }}>
                         <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                     </label>
+                </div>
+
+                {{-- Alignment offsets --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Label alignment offsets</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Shift labels to compensate for printer margins. Values saved per browser.</p>
+                        </div>
+                        <button type="button" @click="reset()"
+                                class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline">
+                            Reset
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                Top offset (mm)
+                                <span class="font-normal text-gray-400">— positive = move down</span>
+                            </label>
+                            <input type="number" name="top_offset_mm" step="0.5" min="-20" max="20"
+                                   x-model="topOffset" @change="save()"
+                                   class="w-full text-sm text-center border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-2">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                Left offset (mm)
+                                <span class="font-normal text-gray-400">— positive = move right</span>
+                            </label>
+                            <input type="number" name="left_offset_mm" step="0.5" min="-20" max="20"
+                                   x-model="leftOffset" @change="save()"
+                                   class="w-full text-sm text-center border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-2">
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Samples --}}
@@ -132,6 +181,6 @@
 
             </form>
 
-        </div>
+        </div>{{-- /x-data --}}
     </div>
 </x-app-layout>

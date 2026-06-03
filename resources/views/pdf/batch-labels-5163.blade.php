@@ -3,8 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <style>
+        @php
+            $mmToPt   = 2.8346;
+            $topPt    = round(36 + $topOffsetMm  * $mmToPt, 2);
+            $bottomPt = round(36 - $topOffsetMm  * $mmToPt, 2);
+            $leftPt   = round(11 + $leftOffsetMm * $mmToPt, 2);
+            $rightPt  = round(11 - $leftOffsetMm * $mmToPt, 2);
+        @endphp
         @page {
-            margin: 36pt 11pt;
+            margin: {{ $topPt }}pt {{ $rightPt }}pt {{ $bottomPt }}pt {{ $leftPt }}pt;
             size: letter;
         }
 
