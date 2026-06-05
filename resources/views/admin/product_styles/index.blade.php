@@ -32,7 +32,7 @@
 
 
     <div class="py-8" x-data="bulkSelect({{ json_encode($styles->pluck('id')->values()) }})">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-full mx-auto sm:px-6 lg:px-8">
             <!-- Success Message -->
             @if (session('success'))
                 <div class="mb-6 p-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">
@@ -368,7 +368,7 @@
                   action="{{ route('admin.product_styles.bulk_update', $product_line) }}"
                   @submit.prevent="submitBulk">
                 @csrf
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-3">
                     <div class="flex flex-wrap items-end gap-3">
 
                         {{-- Selection count --}}
