@@ -99,26 +99,22 @@
     {{-- Sample: pricing + availability --}}
     @if ($isSample)
     @php
-        $unitLabel   = $line?->unit?->label;
-        $effectivePrice = $sample->effective_price;
-        $perUmPrice  = ($style->use_box_qty && $style->units_per > 0 && $effectivePrice)
-            ? $effectivePrice / $style->units_per
+        $unitLabel      = $line?->unit?->label;
+        $perUmPrice     = $sample->effective_price;
+        $boxPrice       = ($style->use_box_qty && $style->units_per > 0 && $perUmPrice)
+            ? $perUmPrice * $style->units_per
             : null;
     @endphp
     <div class="grid grid-cols-2 gap-3">
         <div class="rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm p-4 text-center">
             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Price</p>
-            @if ($effectivePrice)
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">${{ number_format($effectivePrice, 2) }}</p>
-                @if ($style->use_box_qty)
-                    <p class="text-xs text-gray-500 mt-0.5">per box</p>
-                    @if ($perUmPrice)
-                        <p class="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1.5">
-                            ${{ number_format($perUmPrice, 2) }}<span class="text-xs font-normal text-gray-400"> / {{ $unitLabel ?? 'unit' }}</span>
-                        </p>
-                    @endif
-                @else
-                    <p class="text-xs text-gray-500 mt-0.5">per {{ $unitLabel ?? 'unit' }}</p>
+            @if ($perUmPrice)
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">${{ number_format($perUmPrice, 2) }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">per {{ $unitLabel ?? 'unit' }}</p>
+                @if ($boxPrice)
+                    <p class="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1.5">
+                        ${{ number_format($boxPrice, 2) }}<span class="text-xs font-normal text-gray-400"> / box</span>
+                    </p>
                 @endif
             @else
                 <p class="text-gray-400 text-sm">Not listed</p>
