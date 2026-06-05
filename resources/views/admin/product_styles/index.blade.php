@@ -457,6 +457,22 @@
                                 Apply to Selected
                             </button>
                         </div>
+
+                        <div class="w-px h-8 bg-gray-200 dark:bg-gray-600 self-center hidden sm:block"></div>
+
+                        {{-- Add as Samples --}}
+                        @can('create samples')
+                        <div class="flex-shrink-0 self-end">
+                            <button type="button"
+                                    @click="addAsSamples('{{ route('pages.samples.add-from-styles.form') }}')"
+                                    class="inline-flex items-center px-5 py-2 text-sm font-semibold text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 rounded-lg dark:bg-green-600 dark:hover:bg-green-700">
+                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Add as Samples
+                            </button>
+                        </div>
+                        @endcan
                     </div>
                 </div>
             </form>
@@ -944,6 +960,12 @@
 
             clearAll() {
                 this.selected = [];
+            },
+
+            addAsSamples(baseUrl) {
+                if (!this.selected.length) return;
+                const params = this.selected.map(id => `styles[]=${id}`).join('&');
+                window.location.href = baseUrl + '?' + params;
             },
 
             submitBulk() {

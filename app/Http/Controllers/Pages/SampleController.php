@@ -323,6 +323,68 @@ class SampleController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // ADD FROM STYLES FORM
+    // -----------------------------------------------------------------------
+
+    public function addFromStylesForm(Request $request)
+    {
+        $styleIds = array_filter(array_map('intval', (array) $request->input('styles', [])));
+
+        if (empty($styleIds)) {
+            return redirect()->route('pages.samples.index')
+                ->with('error', 'Select at least one style to add as samples.');
+        }
+
+        $styles = ProductStyle::whereIn('id', $styleIds)
+            ->with('productLine')
+            ->where('status', '<>', 'archived')
+            ->orderBy('name')
+            ->get();
+
+        if ($styles->isEmpty()) {
+            return redirect()->route('pages.samples.index')
+                ->with('error', 'No valid styles found for the selection.');
+        }
+
+        return view('pages.samples.add-from-styles-form', compact('styles'));
+    }
+
+    // -----------------------------------------------------------------------
+    // ADD FROM STYLES — CREATE
+    // -----------------------------------------------------------------------
+
+    public function addFromStyles(Request $request)
+    {
+        $request->validate([
+            'styles'       => 'required|array|min:1',
+            'styles.*'     => 'integer|exists:product_styles,id',
+            'qty'          => 'required|array',
+            'qty.*'        => 'integer|min:1|max:99',
+            'location'     => 'nullable|string|max:255',
+            'received_at'  => 'nullable|date',
+        ]);
+
+        $location    = $request->input('location');
+        $receivedAt  = $request->input('received_at');
+        $created     = 0;
+
+        foreach ($request->input('styles') as $styleId) {
+            $qty = max(1, min(99, (int) ($request->input('qty')[$styleId] ?? 1)));
+            Sample::create([
+                'product_style_id' => $styleId,
+                'quantity'         => $qty,
+                'location'         => $location ?: null,
+                'received_at'      => $receivedAt ?: null,
+                'status'           => 'active',
+            ]);
+            $created++;
+        }
+
+        return redirect()->route('pages.samples.index')
+            ->with('success', $created . ' ' . ($created === 1 ? 'sample' : 'samples') . ' created.');
+    }
+
+    // -----------------------------------------------------------------------
     // BATCH LABEL FORM
     // -----------------------------------------------------------------------
 

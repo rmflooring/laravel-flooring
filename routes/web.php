@@ -1614,6 +1614,14 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         ->middleware('role_or_permission:admin|view samples')
         ->name('samples.batch-label');
 
+    Route::get('samples/add-from-styles', [\App\Http\Controllers\Pages\SampleController::class, 'addFromStylesForm'])
+        ->middleware('role_or_permission:admin|create samples')
+        ->name('samples.add-from-styles.form');
+
+    Route::post('samples/add-from-styles', [\App\Http\Controllers\Pages\SampleController::class, 'addFromStyles'])
+        ->middleware('role_or_permission:admin|create samples')
+        ->name('samples.add-from-styles');
+
     // Wildcard {sample} routes after all static routes
     Route::get('samples/{sample}', [\App\Http\Controllers\Pages\SampleController::class, 'show'])
         ->middleware('role_or_permission:admin|view samples')
