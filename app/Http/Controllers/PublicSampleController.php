@@ -20,7 +20,7 @@ class PublicSampleController extends Controller
         }
 
         $sample = Sample::where('sample_id', $sampleId)
-            ->with(['productStyle.productLine', 'productStyle.photos'])
+            ->with(['productStyle.productLine.unit', 'productStyle.photos'])
             ->firstOrFail();
 
         $checkoutUrl = route('mobile.samples.checkout', $sample->sample_id);

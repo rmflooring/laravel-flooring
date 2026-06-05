@@ -79,17 +79,47 @@
                 <p class="font-medium text-gray-800 dark:text-gray-200 font-mono">{{ $style->sku }}</p>
             </div>
             @endif
+            @if ($isSample && $style->thickness)
+            <div class="text-sm">
+                <p class="text-xs text-gray-400">Thickness</p>
+                <p class="font-medium text-gray-800 dark:text-gray-200">{{ $style->thickness }}</p>
+            </div>
+            @endif
+            @if ($isSample && $style->units_per)
+            <div class="text-sm">
+                <p class="text-xs text-gray-400">Qty per Box</p>
+                <p class="font-medium text-gray-800 dark:text-gray-200">
+                    {{ rtrim(rtrim(number_format((float) $style->units_per, 2), '0'), '.') }}{{ $line?->unit ? ' ' . $line->unit->label : '' }}
+                </p>
+            </div>
+            @endif
         </div>
     </div>
 
     {{-- Sample: pricing + availability --}}
     @if ($isSample)
+    @php
+        $unitLabel   = $line?->unit?->label;
+        $effectivePrice = $sample->effective_price;
+        $perUmPrice  = ($style->use_box_qty && $style->units_per > 0 && $effectivePrice)
+            ? $effectivePrice / $style->units_per
+            : null;
+    @endphp
     <div class="grid grid-cols-2 gap-3">
         <div class="rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm p-4 text-center">
             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Price</p>
-            @if ($sample->effective_price)
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">${{ number_format($sample->effective_price, 2) }}</p>
-                <p class="text-xs text-gray-500 mt-0.5">per unit</p>
+            @if ($effectivePrice)
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">${{ number_format($effectivePrice, 2) }}</p>
+                @if ($style->use_box_qty)
+                    <p class="text-xs text-gray-500 mt-0.5">per box</p>
+                    @if ($perUmPrice)
+                        <p class="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1.5">
+                            ${{ number_format($perUmPrice, 2) }}<span class="text-xs font-normal text-gray-400"> / {{ $unitLabel ?? 'unit' }}</span>
+                        </p>
+                    @endif
+                @else
+                    <p class="text-xs text-gray-500 mt-0.5">per {{ $unitLabel ?? 'unit' }}</p>
+                @endif
             @else
                 <p class="text-gray-400 text-sm">Not listed</p>
             @endif
