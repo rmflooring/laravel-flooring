@@ -197,6 +197,56 @@ class ProductStyleController extends Controller
             ->with('success', 'Style restored to inactive.');
     }
 
+    public function bulkUpdate(Request $request, ProductLine $product_line)
+    {
+        $request->validate([
+            'style_ids'       => 'required|array|min:1',
+            'style_ids.*'     => 'integer',
+            'cost_price'      => 'nullable|numeric|min:0',
+            'sell_price'      => 'nullable|numeric|min:0',
+            'status'          => 'nullable|in:active,inactive,dropped',
+            'units_per'       => 'nullable|numeric|min:0',
+            'thickness'       => 'nullable|string|max:50',
+            'shop_visible'    => 'nullable|in:0,1',
+            'shop_show_price' => 'nullable|in:0,1',
+        ]);
+
+        $updates = ['updated_by' => auth()->id()];
+
+        if ($request->filled('cost_price'))      $updates['cost_price']      = $request->input('cost_price');
+        if ($request->filled('sell_price'))      $updates['sell_price']      = $request->input('sell_price');
+        if ($request->filled('status'))          $updates['status']          = $request->input('status');
+        if ($request->filled('units_per'))       $updates['units_per']       = $request->input('units_per');
+        if ($request->filled('thickness'))       $updates['thickness']       = $request->input('thickness');
+        if ($request->filled('shop_visible'))    $updates['shop_visible']    = (bool) $request->input('shop_visible');
+        if ($request->filled('shop_show_price')) $updates['shop_show_price'] = (bool) $request->input('shop_show_price');
+
+        if (count($updates) <= 1) {
+            return redirect()
+                ->route('admin.product_styles.index', $product_line)
+                ->with('error', 'No fields were filled in — nothing to update.');
+        }
+
+        $styleIds = $product_line->productStyles()
+            ->whereIn('id', $request->input('style_ids'))
+            ->pluck('id');
+
+        if ($styleIds->isEmpty()) {
+            return redirect()
+                ->route('admin.product_styles.index', $product_line)
+                ->with('error', 'No valid styles selected.');
+        }
+
+        $product_line->productStyles()->whereIn('id', $styleIds)->update($updates);
+
+        app(ShopCacheService::class)->bustProductStyle($product_line->id, $product_line->product_type_id);
+
+        $count = $styleIds->count();
+        return redirect()
+            ->route('admin.product_styles.index', $product_line)
+            ->with('success', "Bulk update applied to {$count} " . ($count === 1 ? 'style' : 'styles') . '.');
+    }
+
     public function destroy(ProductLine $product_line, $styleId)
     {
         $style = $product_line->productStyles()->findOrFail($styleId);

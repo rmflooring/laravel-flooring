@@ -652,6 +652,10 @@ Route::prefix('admin')
             ->middleware('role_or_permission:admin|view product lines')
             ->name('product_lines.unarchive');
 
+        Route::post('product-lines/{product_line}/product-styles/bulk-update', [ProductStyleController::class, 'bulkUpdate'])
+            ->middleware('role_or_permission:admin|edit product styles')
+            ->name('product_styles.bulk_update');
+
         Route::resource('product-lines/{product_line}/product-styles', ProductStyleController::class)
             ->middleware('role_or_permission:admin|view product styles')
             ->names([

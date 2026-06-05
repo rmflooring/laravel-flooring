@@ -31,7 +31,7 @@
 </x-slot>
 
 
-    <div class="py-8">
+    <div class="py-8" x-data="bulkSelect({{ json_encode($styles->pluck('id')->values()) }})">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Success Message -->
             @if (session('success'))
@@ -170,6 +170,13 @@
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
+                                        <th class="px-4 py-3">
+                                            <input type="checkbox"
+                                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                                   :checked="isAllSelected"
+                                                   @change="toggleAll($event.target.checked)"
+                                                   title="Select all on this page">
+                                        </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKU</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Style Number</th>
@@ -186,7 +193,14 @@
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     @foreach ($styles as $style)
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                            :class="{ 'bg-blue-50 dark:bg-blue-900/20': isSelected({{ $style->id }}) }">
+                                            <td class="px-4 py-4">
+                                                <input type="checkbox"
+                                                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                                       :checked="isSelected({{ $style->id }})"
+                                                       @change="toggle({{ $style->id }})">
+                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
                                                 {{ $style->name }}
                                             </td>
@@ -337,6 +351,115 @@
 
                 </div>
             </div>
+        </div>
+
+        {{-- Bulk Edit Toolbar --}}
+        <div x-show="selected.length > 0"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 translate-y-4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y-4"
+             class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t-2 border-blue-500 shadow-2xl"
+             style="display: none;">
+            <form x-ref="bulkForm"
+                  method="POST"
+                  action="{{ route('admin.product_styles.bulk_update', $product_line) }}"
+                  @submit.prevent="submitBulk">
+                @csrf
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                    <div class="flex flex-wrap items-end gap-3">
+
+                        {{-- Selection count --}}
+                        <div class="flex-shrink-0 flex items-center gap-2 self-center">
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold" x-text="selected.length"></span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                style<span x-show="selected.length !== 1">s</span> selected
+                            </span>
+                            <button type="button" @click="clearAll()"
+                                    class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline ml-1">
+                                Clear
+                            </button>
+                        </div>
+
+                        <div class="w-px h-8 bg-gray-200 dark:bg-gray-600 self-center hidden sm:block"></div>
+
+                        {{-- Cost Price --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cost Price</label>
+                            <input type="number" name="cost_price" step="any" min="0" placeholder="Leave blank to skip"
+                                   class="w-36 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                        </div>
+
+                        {{-- Sell Price --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Sell Price</label>
+                            <input type="number" name="sell_price" step="any" min="0" placeholder="Leave blank to skip"
+                                   class="w-36 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                        </div>
+
+                        {{-- Units Per --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Units Per</label>
+                            <input type="number" name="units_per" step="any" min="0" placeholder="Leave blank to skip"
+                                   class="w-32 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                        </div>
+
+                        {{-- Thickness --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Thickness</label>
+                            <input type="text" name="thickness" placeholder="e.g. 3mm, 12mil"
+                                   class="w-32 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                        </div>
+
+                        {{-- Status --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</label>
+                            <select name="status"
+                                    class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                                <option value="">— don't change —</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="dropped">Dropped</option>
+                            </select>
+                        </div>
+
+                        {{-- Shop Visible --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Shop Visible</label>
+                            <select name="shop_visible"
+                                    class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                                <option value="">— don't change —</option>
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+
+                        {{-- Shop Show Price --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Show Price</label>
+                            <select name="shop_show_price"
+                                    class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                                <option value="">— don't change —</option>
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+
+                        {{-- Submit --}}
+                        <div class="flex-shrink-0 self-end">
+                            <button type="submit"
+                                    class="inline-flex items-center px-5 py-2 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 rounded-lg dark:bg-blue-600 dark:hover:bg-blue-700">
+                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Apply to Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -791,6 +914,52 @@
             if (next && next.href !== '#') window.location.href = next.href;
         }
     });
+    </script>
+
+    <!-- Bulk select Alpine component -->
+    <script>
+    function bulkSelect(allStyleIds) {
+        return {
+            selected: [],
+            allStyleIds: allStyleIds,
+
+            get isAllSelected() {
+                return this.allStyleIds.length > 0 &&
+                    this.allStyleIds.every(id => this.selected.includes(id));
+            },
+
+            isSelected(id) {
+                return this.selected.includes(id);
+            },
+
+            toggle(id) {
+                const idx = this.selected.indexOf(id);
+                if (idx === -1) this.selected.push(id);
+                else this.selected.splice(idx, 1);
+            },
+
+            toggleAll(checked) {
+                this.selected = checked ? [...this.allStyleIds] : [];
+            },
+
+            clearAll() {
+                this.selected = [];
+            },
+
+            submitBulk() {
+                const form = this.$refs.bulkForm;
+                form.querySelectorAll('input[name="style_ids[]"]').forEach(el => el.remove());
+                this.selected.forEach(id => {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.name = 'style_ids[]';
+                    inp.value = id;
+                    form.appendChild(inp);
+                });
+                form.submit();
+            },
+        };
+    }
     </script>
 
 </x-app-layout>
