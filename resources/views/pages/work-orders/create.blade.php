@@ -207,16 +207,28 @@
                     </div>
                     <div class="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2">
                         <div>
-                            <label for="scheduled_date" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Scheduled Date</label>
+                            <label for="scheduled_date" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
                             <input type="date" id="scheduled_date" name="scheduled_date"
                                    value="{{ old('scheduled_date') }}"
                                    x-model="scheduledDate"
                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
                         <div>
-                            <label for="scheduled_time" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Scheduled Time</label>
+                            <label for="scheduled_time" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</label>
                             <input type="time" id="scheduled_time" name="scheduled_time"
                                    value="{{ old('scheduled_time') }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="scheduled_end_date" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
+                            <input type="date" id="scheduled_end_date" name="scheduled_end_date"
+                                   value="{{ old('scheduled_end_date') }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="scheduled_end_time" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">End Time</label>
+                            <input type="time" id="scheduled_end_time" name="scheduled_end_time"
+                                   value="{{ old('scheduled_end_time') }}"
                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
                         <div class="sm:col-span-2 flex items-start gap-3">

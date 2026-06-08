@@ -199,6 +199,15 @@
                                     @if($workOrder->scheduled_time)
                                         at {{ \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_time)->format('g:i A') }}
                                     @endif
+                                    @if($workOrder->scheduled_end_date || $workOrder->scheduled_end_time)
+                                        &ndash;
+                                        @if($workOrder->scheduled_end_date && $workOrder->scheduled_end_date->ne($workOrder->scheduled_date))
+                                            {{ $workOrder->scheduled_end_date->format('M j, Y') }}
+                                        @endif
+                                        @if($workOrder->scheduled_end_time)
+                                            {{ \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_end_time)->format('g:i A') }}
+                                        @endif
+                                    @endif
                                 @else
                                     —
                                 @endif
@@ -411,6 +420,15 @@
                                     {{ $workOrder->scheduled_date->format('M j, Y') }}
                                     @if ($workOrder->scheduled_time)
                                         · {{ \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_time)->format('g:i A') }}
+                                    @endif
+                                    @if($workOrder->scheduled_end_date || $workOrder->scheduled_end_time)
+                                        &ndash;
+                                        @if($workOrder->scheduled_end_date && $workOrder->scheduled_end_date->ne($workOrder->scheduled_date))
+                                            {{ $workOrder->scheduled_end_date->format('M j, Y') }}
+                                        @endif
+                                        @if($workOrder->scheduled_end_time)
+                                            {{ \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_end_time)->format('g:i A') }}
+                                        @endif
                                     @endif
                                 @else
                                     <span class="text-gray-400">Not scheduled</span>

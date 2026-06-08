@@ -344,16 +344,28 @@
                     </div>
                     <div class="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2">
                         <div>
-                            <label for="scheduled_date" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Scheduled Date</label>
+                            <label for="scheduled_date" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
                             <input type="date" id="scheduled_date" name="scheduled_date"
                                    value="{{ old('scheduled_date', $workOrder->scheduled_date?->format('Y-m-d')) }}"
                                    x-model="scheduledDate"
                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
                         <div>
-                            <label for="scheduled_time" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Scheduled Time</label>
+                            <label for="scheduled_time" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</label>
                             <input type="time" id="scheduled_time" name="scheduled_time"
                                    value="{{ old('scheduled_time', $workOrder->scheduled_time) }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="scheduled_end_date" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
+                            <input type="date" id="scheduled_end_date" name="scheduled_end_date"
+                                   value="{{ old('scheduled_end_date', $workOrder->scheduled_end_date?->format('Y-m-d')) }}"
+                                   class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="scheduled_end_time" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">End Time</label>
+                            <input type="time" id="scheduled_end_time" name="scheduled_end_time"
+                                   value="{{ old('scheduled_end_time', $workOrder->scheduled_end_time) }}"
                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-500">
                         </div>
                         <div class="sm:col-span-2 flex items-start gap-3">
@@ -554,13 +566,19 @@
         const pad = n => String(n).padStart(2, '0');
         const scheduledDate = document.getElementById('scheduled_date').value;
         const scheduledTime = document.getElementById('scheduled_time').value || '09:00';
+        const endDate = document.getElementById('scheduled_end_date').value || scheduledDate;
+        const endTime = document.getElementById('scheduled_end_time').value;
         const startEl = document.getElementById('wo-cal-start');
         const endEl   = document.getElementById('wo-cal-end');
         if (scheduledDate) {
             startEl.value = `${scheduledDate}T${scheduledTime}`;
-            const startDt = new Date(`${scheduledDate}T${scheduledTime}`);
-            startDt.setHours(startDt.getHours() + 2);
-            endEl.value = `${startDt.getFullYear()}-${pad(startDt.getMonth()+1)}-${pad(startDt.getDate())}T${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
+            if (endDate && endTime) {
+                endEl.value = `${endDate}T${endTime}`;
+            } else {
+                const startDt = new Date(`${scheduledDate}T${scheduledTime}`);
+                startDt.setHours(startDt.getHours() + 2);
+                endEl.value = `${startDt.getFullYear()}-${pad(startDt.getMonth()+1)}-${pad(startDt.getDate())}T${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
+            }
         } else {
             startEl.value = '';
             endEl.value   = '';
@@ -588,14 +606,19 @@
             document.getElementById('cal_location_hidden').value =
                 document.getElementById('wo-cal-location').value;
 
-            // Sync start date/time back to the scheduling fields
+            // Sync start/end date/time back to the scheduling fields
             const startVal = document.getElementById('wo-cal-start').value;
             if (startVal) {
                 const [date, time] = startVal.split('T');
                 document.getElementById('scheduled_date').value = date;
-                // x-model update for Alpine
                 document.getElementById('scheduled_date').dispatchEvent(new Event('input'));
                 if (time) document.getElementById('scheduled_time').value = time.slice(0, 5);
+            }
+            const endVal = document.getElementById('wo-cal-end').value;
+            if (endVal) {
+                const [eDate, eTime] = endVal.split('T');
+                document.getElementById('scheduled_end_date').value = eDate;
+                if (eTime) document.getElementById('scheduled_end_time').value = eTime.slice(0, 5);
             }
 
             // Update summary line

@@ -137,6 +137,15 @@
         @if($workOrder->scheduled_time)
             at {{ \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_time)->format('g:i A') }}
         @endif
+        @if($workOrder->scheduled_end_date || $workOrder->scheduled_end_time)
+            &ndash;
+            @if($workOrder->scheduled_end_date && $workOrder->scheduled_end_date->ne($workOrder->scheduled_date))
+                {{ $workOrder->scheduled_end_date->format('l, F j, Y') }}
+            @endif
+            @if($workOrder->scheduled_end_time)
+                {{ \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_end_time)->format('g:i A') }}
+            @endif
+        @endif
     </div>
     @if($sale->job_address)
         <div style="margin-top:4px; color:#555">{{ $sale->job_address }}</div>

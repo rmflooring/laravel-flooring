@@ -99,18 +99,20 @@ class WorkOrderController extends Controller
         }
 
         $data = $request->validate([
-            'installer_id'   => ['nullable', 'integer', 'exists:installers,id'],
-            'scheduled_date' => ['nullable', 'date'],
-            'scheduled_time' => ['nullable', 'date_format:H:i'],
-            'notes'          => ['nullable', 'string'],
-            'items'          => ['nullable', 'array'],
-            'qty'            => ['nullable', 'array'],
-            'cost'           => ['nullable', 'array'],
-            'wo_notes'       => ['nullable', 'array'],
-            'wo_notes.*'     => ['nullable', 'string'],
-            'materials'      => ['nullable', 'array'],
-            'materials.*'    => ['nullable', 'array'],
-            'materials.*.*'  => ['nullable', 'integer', 'exists:sale_items,id'],
+            'installer_id'        => ['nullable', 'integer', 'exists:installers,id'],
+            'scheduled_date'      => ['nullable', 'date'],
+            'scheduled_time'      => ['nullable', 'date_format:H:i'],
+            'scheduled_end_date'  => ['nullable', 'date'],
+            'scheduled_end_time'  => ['nullable', 'date_format:H:i'],
+            'notes'               => ['nullable', 'string'],
+            'items'               => ['nullable', 'array'],
+            'qty'                 => ['nullable', 'array'],
+            'cost'                => ['nullable', 'array'],
+            'wo_notes'            => ['nullable', 'array'],
+            'wo_notes.*'          => ['nullable', 'string'],
+            'materials'           => ['nullable', 'array'],
+            'materials.*'         => ['nullable', 'array'],
+            'materials.*.*'       => ['nullable', 'integer', 'exists:sale_items,id'],
         ]);
 
         $selectedItems = array_keys($request->input('items', []));
@@ -146,12 +148,14 @@ class WorkOrderController extends Controller
 
         DB::transaction(function () use ($sale, $data, $request, $selectedItems, $saleItems, $status, &$workOrder) {
             $workOrder = WorkOrder::create([
-                'sale_id'        => $sale->id,
-                'installer_id'   => $data['installer_id'] ?? null,
-                'scheduled_date' => $data['scheduled_date'] ?? null,
-                'scheduled_time' => $data['scheduled_time'] ?? null,
-                'notes'          => $data['notes'] ?? null,
-                'status'         => $status,
+                'sale_id'             => $sale->id,
+                'installer_id'        => $data['installer_id'] ?? null,
+                'scheduled_date'      => $data['scheduled_date'] ?? null,
+                'scheduled_time'      => $data['scheduled_time'] ?? null,
+                'scheduled_end_date'  => $data['scheduled_end_date'] ?? null,
+                'scheduled_end_time'  => $data['scheduled_end_time'] ?? null,
+                'notes'               => $data['notes'] ?? null,
+                'status'              => $status,
             ]);
 
             $sortOrder = 0;
@@ -390,6 +394,8 @@ class WorkOrderController extends Controller
             'installer_id'         => ['nullable', 'integer', 'exists:installers,id'],
             'scheduled_date'       => ['nullable', 'date'],
             'scheduled_time'       => ['nullable', 'date_format:H:i'],
+            'scheduled_end_date'   => ['nullable', 'date'],
+            'scheduled_end_time'   => ['nullable', 'date_format:H:i'],
             'notes'                => ['nullable', 'string'],
             'status'               => ['required', 'string', 'in:' . implode(',', WorkOrder::STATUSES)],
             'calendar_title'       => ['nullable', 'string', 'max:500'],
@@ -490,7 +496,9 @@ class WorkOrderController extends Controller
         $calendarFieldsChanged =
             (int) ($data['installer_id'] ?? 0) !== (int) ($workOrder->installer_id ?? 0)
             || ($data['scheduled_date'] ?? '') !== ($workOrder->scheduled_date?->format('Y-m-d') ?? '')
-            || ($data['scheduled_time'] ?? '') !== ($workOrder->scheduled_time ?? '');
+            || ($data['scheduled_time'] ?? '') !== ($workOrder->scheduled_time ?? '')
+            || ($data['scheduled_end_date'] ?? '') !== ($workOrder->scheduled_end_date?->format('Y-m-d') ?? '')
+            || ($data['scheduled_end_time'] ?? '') !== ($workOrder->scheduled_end_time ?? '');
 
         $previousStatus = $workOrder->status;
         $wasCancelled   = $workOrder->status === 'cancelled';
@@ -498,11 +506,13 @@ class WorkOrderController extends Controller
 
         DB::transaction(function () use ($workOrder, $data, $request, $deleteItemIds, $newSelectedItems, $newSaleItems) {
             $workOrder->update([
-                'installer_id'   => $data['installer_id'] ?? null,
-                'scheduled_date' => $data['scheduled_date'] ?? null,
-                'scheduled_time' => $data['scheduled_time'] ?? null,
-                'notes'          => $data['notes'] ?? null,
-                'status'         => $data['status'],
+                'installer_id'        => $data['installer_id'] ?? null,
+                'scheduled_date'      => $data['scheduled_date'] ?? null,
+                'scheduled_time'      => $data['scheduled_time'] ?? null,
+                'scheduled_end_date'  => $data['scheduled_end_date'] ?? null,
+                'scheduled_end_time'  => $data['scheduled_end_time'] ?? null,
+                'notes'               => $data['notes'] ?? null,
+                'status'              => $data['status'],
             ]);
 
             foreach ($workOrder->items as $item) {
@@ -796,7 +806,12 @@ class WorkOrderController extends Controller
         $date  = $workOrder->scheduled_date?->format('Y-m-d') ?? now()->format('Y-m-d');
         $time  = $workOrder->scheduled_time ?? '08:00';
         $start = Carbon::parse($date . ' ' . $time);
-        $end   = $start->copy()->addHours(2);
+
+        $endDate = $workOrder->scheduled_end_date?->format('Y-m-d') ?? $date;
+        $endTime = $workOrder->scheduled_end_time ?? null;
+        $end     = $endTime
+            ? Carbon::parse($endDate . ' ' . $endTime)
+            : $start->copy()->addHours(2);
 
         $homeownerName = $sale->homeowner_name ?? $sale->customer_name ?? $sale->job_name ?? 'Customer';
         $itemSummary   = $workOrder->items->map(fn($i) => $i->item_name . ' (' . $i->quantity . ' ' . $i->unit . ')')->implode(', ');
