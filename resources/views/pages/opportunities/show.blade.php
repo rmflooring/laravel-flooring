@@ -488,7 +488,42 @@
                                     </td>
 
                                     {{-- WOs --}}
-                                    <td class="px-6 py-4 text-gray-400 dark:text-gray-500">—</td>
+                                    <td class="px-6 py-4">
+                                        @php
+                                            $allWos = $sales->flatMap(fn($s) => $s->workOrders)->sortByDesc('created_at');
+                                            $woStatusColors = [
+                                                'created'         => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                                                'scheduled'       => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+                                                'in_progress'     => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+                                                'partial'         => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+                                                'site_not_ready'  => 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200',
+                                                'needs_levelling' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200',
+                                                'needs_attention' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200',
+                                                'completed'       => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+                                                'cancelled'       => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+                                            ];
+                                        @endphp
+                                        @if($allWos->isNotEmpty())
+                                            <ul class="list-disc space-y-1 pl-5 text-gray-700 dark:text-gray-200">
+                                                @foreach($allWos as $wo)
+                                                    <li>
+                                                        <a href="{{ route('pages.sales.work-orders.show', [$wo->sale_id, $wo]) }}"
+                                                           class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                            {{ $wo->wo_number }}
+                                                        </a>
+                                                        @if($wo->installer)
+                                                            <span class="text-gray-500 dark:text-gray-400 text-xs">({{ $wo->installer->company_name }})</span>
+                                                        @endif
+                                                        <span class="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium {{ $woStatusColors[$wo->status] ?? 'bg-gray-100 text-gray-700' }}">
+                                                            {{ $wo->status_label }}
+                                                        </span>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @else
+                                            <span class="text-gray-400 dark:text-gray-500">—</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

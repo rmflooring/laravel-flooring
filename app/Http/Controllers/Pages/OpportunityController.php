@@ -270,7 +270,10 @@ $employees = Employee::query()
 
 			// Sales for this opportunity
 			$sales = Sale::where('opportunity_id', $opportunity->id)
-				->with(['invoices' => fn ($q) => $q->whereNotIn('status', ['voided'])->orderBy('created_at')])
+				->with([
+                    'invoices'           => fn ($q) => $q->whereNotIn('status', ['voided'])->orderBy('created_at'),
+                    'workOrders.installer',
+                ])
 				->latest('updated_at')
 				->get();
 
