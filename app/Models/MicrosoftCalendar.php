@@ -15,6 +15,7 @@ class MicrosoftCalendar extends Model
         'name',
         'is_primary',
         'is_enabled',
+        'group_id',
     ];
 
     protected $casts = [
