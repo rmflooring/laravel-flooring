@@ -1317,11 +1317,26 @@ Route::prefix('pages')
 		
 		Route::get('calendar', function () {
     $microsoftCalendars = \App\Models\MicrosoftCalendar::query()
-    ->where('is_enabled', 1)
-    ->orderBy('name')
-    ->get();
+        ->where('is_enabled', 1)
+        ->orderBy('name')
+        ->get();
 
-    return view('pages.calendar.index', compact('microsoftCalendars'));
+    // Build FM_CALENDAR_IDS dynamically from DB using known group_ids
+    $groupCalendarIds = \App\Models\MicrosoftCalendar::whereNotNull('group_id')
+        ->get(['name', 'group_id', 'calendar_id'])
+        ->mapWithKeys(function ($cal) {
+            $key = match (true) {
+                str_contains($cal->name, 'RFM') || str_contains($cal->name, 'Measures') => 'rfm',
+                str_contains($cal->name, 'Installations')                                => 'installations',
+                str_contains($cal->name, 'Warehouse')                                    => 'warehouse',
+                str_contains($cal->name, 'Team')                                         => 'team',
+                default                                                                  => null,
+            };
+            return $key ? [$key => $cal->calendar_id] : [];
+        })
+        ->filter();
+
+    return view('pages.calendar.index', compact('microsoftCalendars', 'groupCalendarIds'));
 })->name('calendar.index');
 		
 		Route::get('calendar/events', function () {
@@ -1341,21 +1356,20 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
         ->filter()
         ->values();
 
-    $eventsQuery = \App\Models\CalendarEvent::query()
-        ->where('owner_user_id', auth()->id())
-        ->whereNull('deleted_at');
-
-    // If no calendar_ids, return empty — prevents fetching millions of events for users with no prefs set
+    // If no calendar_ids, return empty — prevents fetching all events for users with no prefs set
     if ($calendarIds->count() === 0) {
         return response()->json([]);
     }
 
-    // Filter by external_event_links.external_calendar_id (Graph calendar id)
-    $eventsQuery->whereIn('id', function ($sub) use ($calendarIds) {
-        $sub->select('calendar_event_id')
-            ->from('external_event_links')
-            ->whereIn('external_calendar_id', $calendarIds->all());
-    });
+    // Filter by external_event_links.external_calendar_id only — no owner_user_id filter,
+    // because group calendar events are shared and the last syncing user "owns" them in the DB.
+    $eventsQuery = \App\Models\CalendarEvent::query()
+        ->whereNull('deleted_at')
+        ->whereIn('id', function ($sub) use ($calendarIds) {
+            $sub->select('calendar_event_id')
+                ->from('external_event_links')
+                ->whereIn('external_calendar_id', $calendarIds->all());
+        });
 
     // Load events once
     $eventModels = $eventsQuery->get();
