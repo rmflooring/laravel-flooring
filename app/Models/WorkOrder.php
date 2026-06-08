@@ -16,6 +16,7 @@ class WorkOrder extends Model
 
     protected $casts = [
         'scheduled_date'      => 'date',
+        'scheduled_end_date'  => 'date',
         'sent_at'             => 'datetime',
         'sms_reminder_sent_at'=> 'datetime',
         'deleted_at'          => 'datetime',
