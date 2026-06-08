@@ -670,7 +670,7 @@
                     ->sortBy('scheduled_date')
                     ->first()?->scheduled_date?->format('Y-m-d') ?? '';
             @endphp
-            <div x-data="{ showStageModal: false, fulfillmentType: 'delivery', pickupDate: '{{ $woInstallDate }}', pickupTime: '09:00' }" class="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div x-data="{ showStageModal: false, fulfillmentType: 'delivery', deliveryDate: '{{ $woInstallDate }}', pickupDate: '{{ $woInstallDate }}', pickupTime: '09:00' }" class="rounded-lg border border-gray-200 bg-white shadow-sm">
 
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
@@ -831,9 +831,13 @@
                                 {{-- Delivery Date/Time (delivery only) --}}
                                 <div x-show="fulfillmentType === 'delivery'" x-cloak>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Scheduled Delivery</label>
+                                    @if ($woInstallDate)
+                                        <p class="mb-2 text-xs text-amber-600">Pre-filled from scheduled install date. Adjust if delivery is on a different day.</p>
+                                    @endif
                                     <div class="flex gap-3">
                                         <div class="flex-1">
                                             <input type="date" name="delivery_date"
+                                                   x-model="deliveryDate"
                                                    :disabled="fulfillmentType !== 'delivery'"
                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
                                         </div>

@@ -9,6 +9,7 @@ use App\Models\MicrosoftCalendar;
 use App\Models\PickTicket;
 use App\Models\PickTicketItem;
 use App\Models\Sale;
+use App\Models\WorkOrder;
 use App\Models\SaleItem;
 use App\Models\Employee;
 use App\Services\CalendarTemplateService;
@@ -185,9 +186,8 @@ class SaleController extends Controller
             ->orderBy('id')
             ->get();
 
-        // Active direct (no-WO) PT — determines whether to show the Stage button
+        // Any active PT for this sale — determines whether to show the Stage button
         $directPickTicket  = $salePickTickets
-            ->whereNull('work_order_id')
             ->whereIn('status', PickTicket::ACTIVE_STATUSES)
             ->first();
         $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
@@ -772,9 +772,8 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
 {
     $warehouseGroupId = '4bfd495c-4df2-4eaa-9d8c-987c4ef23b02';
 
-    // Block if an active direct PT already exists for this sale
+    // Block if any active PT already exists for this sale
     $existing = PickTicket::where('sale_id', $sale->id)
-        ->whereNull('work_order_id')
         ->whereIn('status', PickTicket::ACTIVE_STATUSES)
         ->first();
 
@@ -802,14 +801,27 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
         return back()->with('error', 'One or more selected items are invalid.');
     }
 
+    // Find the active WO for this sale so we can link it and fall back to its install date
+    $workOrder = WorkOrder::where('sale_id', $sale->id)
+        ->where('status', '<>', 'cancelled')
+        ->orderBy('id')
+        ->first();
+
+    $woDate = $workOrder?->scheduled_date?->format('Y-m-d');
+
     $pt = $ptService->createFromSale(
         $sale,
         $data['sale_item_ids'],
         $data['fulfillment_type'],
         $data['staging_notes'] ?? null,
-        $data['delivery_date'] ?? null,
+        $data['delivery_date'] ?? $woDate,
         $data['delivery_time'] ?? null,
     );
+
+    // Link the WO if one exists
+    if ($workOrder) {
+        $pt->update(['work_order_id' => $workOrder->id]);
+    }
 
     // Calendar sync — delivery only, date required
     if ($pt->fulfillment_type === 'delivery' && $pt->delivery_date) {
