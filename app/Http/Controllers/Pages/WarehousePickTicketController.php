@@ -24,20 +24,23 @@ class WarehousePickTicketController extends Controller
                 $q->where('pt_number', 'like', '%' . $request->search . '%');
             });
 
-        // Active statuses first (pending, ready, picked), then terminal (delivered, returned, cancelled)
+        // Status priority: staged first (awaiting warehouse action), then in-progress, then terminal
+        // Within each status: earliest install date first, nulls last, then oldest created_at
         $query->orderByRaw("
             CASE status
-                WHEN 'pending'             THEN 0
-                WHEN 'ready'               THEN 1
-                WHEN 'picked'              THEN 2
-                WHEN 'staged'              THEN 3
+                WHEN 'staged'              THEN 0
+                WHEN 'pending'             THEN 1
+                WHEN 'ready'               THEN 2
+                WHEN 'picked'              THEN 3
                 WHEN 'partially_delivered' THEN 4
                 WHEN 'delivered'           THEN 5
                 WHEN 'returned'            THEN 6
                 WHEN 'cancelled'           THEN 7
                 ELSE 8
             END
-        ")->orderBy('id');
+        ")->orderByRaw("CASE WHEN delivery_date IS NULL THEN 1 ELSE 0 END")
+          ->orderBy('delivery_date')
+          ->orderBy('created_at');
 
         $pickTickets = $query->paginate(30)->withQueryString();
 
