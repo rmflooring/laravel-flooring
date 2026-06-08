@@ -54,6 +54,7 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Work Order</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Items</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Install Date</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Created</th>
                             <th class="px-4 py-3"></th>
                         </tr>
@@ -92,6 +93,9 @@
                                     @include('pages.warehouse.pick-tickets._status-badge', ['status' => $pt->status])
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                    {{ $pt->delivery_date ? $pt->delivery_date->format('M j, Y') : '—' }}
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                     {{ $pt->created_at->format('M j, Y') }}
                                 </td>
                                 <td class="px-4 py-3 text-right">
@@ -103,7 +107,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400">
+                                <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-400">
                                     No pick tickets found.
                                 </td>
                             </tr>

@@ -353,7 +353,7 @@
                             @endif
                             @if ($pickTicket->delivery_date)
                                 <div class="flex justify-between">
-                                    <dt class="text-gray-500">Delivery date</dt>
+                                    <dt class="text-gray-500">Installation date</dt>
                                     <dd class="text-gray-700 dark:text-gray-300">
                                         {{ $pickTicket->delivery_date->format('M j, Y') }}
                                         @if ($pickTicket->delivery_time)
@@ -672,7 +672,7 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span x-text="fulfillmentType === 'pickup' ? 'Pickup Date' : 'Delivery Date'">Date</span>
+                                <span x-text="fulfillmentType === 'pickup' ? 'Pickup Date' : 'Installation Date'">Date</span>
                                 <span class="text-gray-400 font-normal">(optional)</span>
                             </label>
                             <input type="date" name="delivery_date"
