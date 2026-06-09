@@ -11,6 +11,15 @@
                         Stock records and available quantities.
                     </p>
                 </div>
+                @can('create purchase orders')
+                <a href="{{ route('pages.inventory.create') }}"
+                   class="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-300 dark:bg-teal-700 dark:hover:bg-teal-800">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Record
+                </a>
+                @endcan
             </div>
 
             {{-- Flash --}}

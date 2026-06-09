@@ -1070,6 +1070,18 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('inventory.index');
 
+		Route::get('inventory/create', [\App\Http\Controllers\Pages\InventoryController::class, 'create'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('inventory.create');
+
+		Route::post('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'store'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('inventory.store');
+
+		Route::get('inventory/api/search-products', [\App\Http\Controllers\Pages\InventoryController::class, 'searchProducts'])
+			->middleware('role_or_permission:admin|view purchase orders')
+			->name('inventory.api.search-products');
+
 		// RFC — Return From Customer
 		Route::prefix('inventory/rfc')->name('inventory.rfc.')->middleware('role_or_permission:admin|view rfcs')->group(function () {
 			Route::get('/', [\App\Http\Controllers\Pages\CustomerReturnController::class, 'index'])->name('index');

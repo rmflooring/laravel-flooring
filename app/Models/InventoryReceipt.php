@@ -12,6 +12,7 @@ class InventoryReceipt extends Model
 
     protected $casts = [
         'quantity_received' => 'decimal:2',
+        'cost_price'        => 'decimal:4',
         'received_date'     => 'date',
     ];
 

@@ -60,6 +60,18 @@
                                 @if ($inventoryReceipt->unit)
                                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Unit: {{ $inventoryReceipt->unit }}</p>
                                 @endif
+                                @if ($inventoryReceipt->cost_price)
+                                    @php
+                                        $costPerUnit = (float) $inventoryReceipt->cost_price;
+                                        $totalCost   = $costPerUnit * (float) $inventoryReceipt->quantity_received;
+                                    @endphp
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Cost: ${{ number_format($costPerUnit, 4) }}/{{ $inventoryReceipt->unit ?: 'unit' }}
+                                        <span class="text-gray-400 dark:text-gray-500">
+                                            &nbsp;·&nbsp; Total: ${{ number_format($totalCost, 2) }}
+                                        </span>
+                                    </p>
+                                @endif
                             </div>
                             <div class="flex flex-col items-end gap-2 shrink-0">
                                 <div class="text-right text-sm text-gray-500 dark:text-gray-400">
