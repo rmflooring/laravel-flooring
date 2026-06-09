@@ -229,7 +229,6 @@
         </div>
     </div>
 
-    @push('scripts')
     <script>
     const INVENTORY_SEARCH_URL = @json(route('pages.inventory.api.search-products'));
 
@@ -330,5 +329,4 @@
         };
     }
     </script>
-    @endpush
 </x-app-layout>
