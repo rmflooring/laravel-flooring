@@ -527,7 +527,7 @@
             <h5 class="text-base font-semibold text-gray-800">Send Invoice</h5>
             <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
-        <form method="POST" action="{{ route('pages.sales.invoices.send-email', [$sale, $invoice]) }}">
+        <form method="POST" action="{{ route('pages.sales.invoices.send-email', [$sale, $invoice]) }}" enctype="multipart/form-data">
             @csrf
             <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
@@ -639,6 +639,51 @@
                         <span>Invoice-{{ $invoice->invoice_number }}.pdf</span>
                         <span class="text-xs text-gray-400 ml-1">— click to preview</span>
                     </a>
+                </div>
+
+                {{-- Extra Attachments --}}
+                <div x-data="{
+                        extraFiles: [],
+                        onSelect(event) {
+                            this.extraFiles = [...this.extraFiles, ...Array.from(event.target.files)];
+                            const dt = new DataTransfer();
+                            this.extraFiles.forEach(f => dt.items.add(f));
+                            this.$refs.fileInput.files = dt.files;
+                            event.target.value = '';
+                        },
+                        remove(idx) {
+                            this.extraFiles.splice(idx, 1);
+                            const dt = new DataTransfer();
+                            this.extraFiles.forEach(f => dt.items.add(f));
+                            this.$refs.fileInput.files = dt.files;
+                        },
+                        formatSize(bytes) {
+                            return bytes < 1048576 ? (bytes / 1024).toFixed(0) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
+                        }
+                    }">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Attachments <span class="text-xs text-gray-400 font-normal">(optional, max 3 MB each)</span>
+                    </label>
+                    <input type="file" x-ref="fileInput" name="attachments[]" multiple class="hidden" @change="onSelect($event)">
+                    <button type="button" @click="$refs.fileInput.click()"
+                            class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:border-gray-400 transition-colors">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                        </svg>
+                        Attach files...
+                    </button>
+                    <div x-show="extraFiles.length > 0" class="mt-2 space-y-1.5">
+                        <template x-for="(file, idx) in extraFiles" :key="idx">
+                            <div class="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700">
+                                <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="flex-1 truncate" x-text="file.name"></span>
+                                <span class="text-gray-400 flex-shrink-0" x-text="formatSize(file.size)"></span>
+                                <button type="button" @click="remove(idx)" class="text-gray-400 hover:text-red-500 transition-colors leading-none ml-1">&times;</button>
+                            </div>
+                        </template>
+                    </div>
                 </div>
 
                 {{-- Read receipt --}}

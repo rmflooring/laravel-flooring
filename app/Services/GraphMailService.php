@@ -72,6 +72,7 @@ class GraphMailService
         ?string $pdfUrl = null,
         bool $requestReadReceipt = false,
         ?string $trackingToken = null,
+        array $extraAttachments = [],
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -150,6 +151,14 @@ class GraphMailService
                         'name'         => $attachment['filename'],
                         'contentType'  => 'application/pdf',
                         'contentBytes' => $attachment['content'],
+                    ];
+                }
+                foreach ($extraAttachments as $extra) {
+                    $attachments[] = [
+                        '@odata.type'  => '#microsoft.graph.fileAttachment',
+                        'name'         => $extra['filename'],
+                        'contentType'  => $extra['mime'],
+                        'contentBytes' => $extra['content'],
                     ];
                 }
                 if (! empty($attachments)) {
@@ -446,6 +455,7 @@ class GraphMailService
         ?string $pdfUrl = null,
         bool $requestReadReceipt = false,
         ?string $trackingToken = null,
+        array $extraAttachments = [],
     ): bool {
         $token = $this->getUserToken($user);
 
@@ -505,6 +515,14 @@ class GraphMailService
                         'name'         => $attachment['filename'],
                         'contentType'  => 'application/pdf',
                         'contentBytes' => $attachment['content'],
+                    ];
+                }
+                foreach ($extraAttachments as $extra) {
+                    $attachments[] = [
+                        '@odata.type'  => '#microsoft.graph.fileAttachment',
+                        'name'         => $extra['filename'],
+                        'contentType'  => $extra['mime'],
+                        'contentBytes' => $extra['content'],
                     ];
                 }
                 if (! empty($attachments)) {
