@@ -57,6 +57,21 @@
                                     @endif
                                 </div>
                                 <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ $inventoryReceipt->item_name }}</h1>
+                                @php
+                                    $metaParts = array_filter([
+                                        $inventoryReceipt->productStyle?->productLine?->manufacturer,
+                                        $inventoryReceipt->productStyle?->productLine?->name,
+                                    ]);
+                                    $styleSku = $inventoryReceipt->productStyle?->sku;
+                                @endphp
+                                @if ($metaParts || $styleSku)
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                                        {{ implode(' · ', $metaParts) }}
+                                        @if ($styleSku)
+                                            <span class="text-gray-400 dark:text-gray-500">&nbsp;· SKU: {{ $styleSku }}</span>
+                                        @endif
+                                    </p>
+                                @endif
                                 @if ($inventoryReceipt->unit)
                                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Unit: {{ $inventoryReceipt->unit }}</p>
                                 @endif

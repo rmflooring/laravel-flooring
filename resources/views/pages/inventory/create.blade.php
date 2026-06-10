@@ -267,7 +267,8 @@
 
             selectProduct(item) {
                 this.selectedProduct = item;
-                this.itemName        = [item.name, item.color].filter(Boolean).join(' — ');
+                const color = (item.color && item.color !== item.name) ? item.color : null;
+                this.itemName = [item.name, color].filter(Boolean).join(' — ');
                 this.costPerUnit     = item.cost_price ?? 0;
                 if (item.unit_code) this.selectedUnit = item.unit_code;
                 this.closeDropdown();

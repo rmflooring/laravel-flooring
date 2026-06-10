@@ -18,7 +18,7 @@ class InventoryController extends Controller
             'purchaseOrder.vendor',
             'purchaseOrder.sale',
             'purchaseOrderItem',
-            'productStyle',
+            'productStyle.productLine',
             'allocations.saleItem.room',
             'allocations.saleItem.sale',
             'allocations.pickTicketItems.pickTicket',
