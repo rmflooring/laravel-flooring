@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
 use App\Http\Controllers\ProfileController;
 
 use App\Http\Controllers\Pages\OpportunityController;
+use App\Http\Controllers\Pages\OpportunityNoteController;
 use App\Http\Controllers\Pages\JobSiteCustomerController;
 use App\Http\Controllers\Pages\RfmController;
 
@@ -1498,7 +1499,14 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         |--------------------------------------------------------------------------
         */
         Route::prefix('opportunities/{opportunity}')->group(function () {
-			
+
+            Route::post('notes', [OpportunityNoteController::class, 'store'])
+                ->name('opportunities.notes.store');
+            Route::patch('notes/{note}', [OpportunityNoteController::class, 'update'])
+                ->name('opportunities.notes.update');
+            Route::delete('notes/{note}', [OpportunityNoteController::class, 'destroy'])
+                ->name('opportunities.notes.destroy');
+
 			Route::get('media', [OpportunityMediaController::class, 'index'])
 				->name('opportunities.media.index');
 			

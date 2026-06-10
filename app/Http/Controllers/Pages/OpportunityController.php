@@ -261,6 +261,7 @@ $employees = Employee::query()
 				'projectManager',
 				'estimates',
 				'rfms.estimator',
+				'notes.user',
 			])->findOrFail($id);
 
 			$salesPeople = Employee::whereIn('id', array_filter([

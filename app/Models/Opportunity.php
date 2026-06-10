@@ -113,6 +113,11 @@ class Opportunity extends Model
         return $this->hasMany(PurchaseOrder::class)->orderByDesc('created_at');
     }
 
+    public function notes()
+    {
+        return $this->hasMany(OpportunityNote::class)->orderByDesc('created_at');
+    }
+
     /**
      * Returns the storage folder name for this opportunity's uploaded files.
      * Format: "{JobSiteName} - {job_no}"  e.g. "Sandra_Cokinass - 26-0001"
