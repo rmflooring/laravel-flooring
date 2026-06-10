@@ -406,6 +406,14 @@
                     {{ $inventoryReceipt->item_name }}
                 </div>
 
+                {{-- Manufacturer / Product Line / SKU --}}
+                @if ($metaParts)
+                    <div style="font-size:11px; color:#555; margin-bottom:3px;">{{ implode(' · ', $metaParts) }}</div>
+                @endif
+                @if ($styleSku)
+                    <div style="font-size:10px; color:#777; margin-bottom:5px;">SKU: {{ $styleSku }}</div>
+                @endif
+
                 {{-- Qty + Date --}}
                 <div style="font-size:11px; color:#555; margin-bottom:3px;">
                     <strong>Qty:</strong>
