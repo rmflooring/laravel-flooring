@@ -127,5 +127,61 @@
 		<script src="{{ asset('assets/js/phone-format.js') }}"></script>
 		<script src="{{ asset('assets/js/postal-format.js') }}"></script>
 		<script src="{{ asset('assets/js/email-validate.js') }}"></script>
+		@auth
+		<script>
+		(function () {
+		    const POLL_INTERVAL = 30000;
+
+		    function updateBadges(count) {
+		        const navBadge     = document.getElementById('nav-msg-badge');
+		        const sidebarBadge = document.getElementById('sidebar-msg-badge');
+		        const avatar       = document.getElementById('user-avatar-btn');
+
+		        if (navBadge) {
+		            if (count > 0) {
+		                navBadge.textContent = count > 99 ? '99+' : count;
+		                navBadge.classList.remove('hidden');
+		            } else {
+		                navBadge.classList.add('hidden');
+		            }
+		        }
+
+		        if (sidebarBadge) {
+		            if (count > 0) {
+		                sidebarBadge.textContent = count > 99 ? '99+' : count;
+		                sidebarBadge.classList.remove('hidden');
+		            } else {
+		                sidebarBadge.classList.add('hidden');
+		            }
+		        }
+
+		        if (avatar) {
+		            if (count > 0) {
+		                avatar.style.backgroundColor = '#2563eb';
+		                avatar.style.color = '#fff';
+		            } else {
+		                avatar.style.backgroundColor = '';
+		                avatar.style.color = '';
+		            }
+		        }
+		    }
+
+		    async function poll() {
+		        try {
+		            const res = await fetch('{{ route('pages.messages.unread-count') }}', {
+		                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		            });
+		            if (res.ok) {
+		                const data = await res.json();
+		                updateBadges(data.count || 0);
+		            }
+		        } catch (_) {}
+		    }
+
+		    poll();
+		    setInterval(poll, POLL_INTERVAL);
+		}());
+		</script>
+		@endauth
     </body>
 </html>

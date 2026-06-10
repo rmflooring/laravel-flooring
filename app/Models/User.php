@@ -74,5 +74,19 @@ class User extends Authenticatable
     {
         return $this->hasOne(\App\Models\UserCalendarPreference::class);
     }
-	
+
+    public function messageThreads()
+    {
+        return $this->belongsToMany(MessageThread::class, 'message_thread_users')
+            ->withPivot('last_read_at')
+            ->withTimestamps()
+            ->orderByPivot('last_read_at', 'desc');
+    }
+
+    public function unreadMessageCount(): int
+    {
+        return $this->messageThreads()
+            ->get()
+            ->sum(fn ($thread) => $thread->unreadCountFor($this->id));
+    }
 }

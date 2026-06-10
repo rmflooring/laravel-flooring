@@ -1722,6 +1722,22 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         ->middleware('role_or_permission:admin|manage sample checkouts')
         ->name('sample-sets.checkouts.return');
 
+    // Messages
+    Route::get('messages/unread-count', [\App\Http\Controllers\Pages\MessageController::class, 'unreadCount'])
+        ->name('messages.unread-count');
+    Route::get('messages/api/users', [\App\Http\Controllers\Pages\MessageController::class, 'searchUsers'])
+        ->name('messages.api.users');
+    Route::get('messages/api/jobs', [\App\Http\Controllers\Pages\MessageController::class, 'searchJobs'])
+        ->name('messages.api.jobs');
+    Route::get('messages', [\App\Http\Controllers\Pages\MessageController::class, 'index'])
+        ->name('messages.index');
+    Route::post('messages', [\App\Http\Controllers\Pages\MessageController::class, 'store'])
+        ->name('messages.store');
+    Route::get('messages/{thread}', [\App\Http\Controllers\Pages\MessageController::class, 'show'])
+        ->name('messages.show');
+    Route::post('messages/{thread}/reply', [\App\Http\Controllers\Pages\MessageController::class, 'reply'])
+        ->name('messages.reply');
+
     }); // end pages group
 
 
