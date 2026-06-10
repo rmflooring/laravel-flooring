@@ -70,17 +70,17 @@
 
         .tag-info { flex: 1; }
 
-        .info-row { margin-bottom: 3pt; }
+        .info-row { margin-bottom: 2pt; }
 
         .info-label {
-            font-size: 6.5pt;
+            font-size: 6pt;
             color: #777;
             text-transform: uppercase;
             letter-spacing: 0.3pt;
         }
 
         .info-value {
-            font-size: 9pt;
+            font-size: 7.5pt;
             font-weight: bold;
             color: #111;
         }
@@ -89,9 +89,9 @@
             background: #eff6ff;
             border: 1pt solid #bfdbfe;
             border-radius: 3pt;
-            padding: 4pt 6pt;
+            padding: 3pt 6pt;
             text-align: center;
-            margin-bottom: 4pt;
+            margin-bottom: 3pt;
         }
 
         .qty-number {
@@ -167,6 +167,9 @@
         $manufacturer = $receipt->productStyle?->productLine?->manufacturer;
         $lineName     = $receipt->productStyle?->productLine?->name;
         $styleSku     = $receipt->productStyle?->sku;
+        $lineNameDisplay = $lineName
+            ? ($isZebra ? $lineName : \Illuminate\Support\Str::limit($lineName, 40))
+            : null;
     @endphp
 
     <div class="tag-header">
@@ -199,10 +202,10 @@
                         <div class="info-value">{{ $manufacturer }}</div>
                     </div>
                 @endif
-                @if ($lineName)
+                @if ($lineNameDisplay)
                     <div class="info-row">
                         <div class="info-label">Product Line</div>
-                        <div class="info-value" style="font-size:7.5pt;">{{ $lineName }}</div>
+                        <div class="info-value">{{ $lineNameDisplay }}</div>
                     </div>
                 @endif
                 @if ($styleSku)
