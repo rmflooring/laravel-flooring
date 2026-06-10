@@ -129,6 +129,9 @@ class PermissionsSeeder extends Seeder
 
             // ===== E-Signatures =====
             'manage signing requests',
+
+            // ===== Reports =====
+            'view reports',
         ];
 
         foreach ($permissions as $permission) {

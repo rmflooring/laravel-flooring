@@ -691,6 +691,20 @@ Route::prefix('admin')
         Route::post('product-lines/{product_line}/product-styles/{style}/photos/{photo}/primary', [ProductStylePhotoController::class, 'setPrimary'])
             ->middleware('role_or_permission:admin|edit product styles')
             ->name('product_styles.photos.primary');
+
+        /*
+        |----------------------------------------
+        | Reports
+        |----------------------------------------
+        */
+        Route::prefix('reports')->name('reports.')->middleware('role_or_permission:admin|view reports')->group(function () {
+            Route::get('/',               [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('index');
+            Route::get('/sales',          [\App\Http\Controllers\Admin\ReportController::class, 'sales'])->name('sales');
+            Route::get('/invoices',       [\App\Http\Controllers\Admin\ReportController::class, 'invoices'])->name('invoices');
+            Route::get('/revenue',        [\App\Http\Controllers\Admin\ReportController::class, 'revenue'])->name('revenue');
+            Route::get('/purchase-orders',[\App\Http\Controllers\Admin\ReportController::class, 'purchaseOrders'])->name('purchaseOrders');
+        });
+
     });
 
 /*
