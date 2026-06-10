@@ -79,7 +79,6 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(MessageThread::class, 'message_thread_users')
             ->withPivot('last_read_at')
-            ->withTimestamps()
             ->orderByPivot('last_read_at', 'desc');
     }
 
