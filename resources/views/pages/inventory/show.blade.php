@@ -497,6 +497,22 @@ function printTag() {
     const note    = document.getElementById('tag-note-input').value;
     const format  = @json($tagFormat);
 
+    @php
+        $tagManufacturer = $inventoryReceipt->productStyle?->productLine?->manufacturer ?? '';
+        $tagLineName     = $inventoryReceipt->productStyle?->productLine?->name ?? '';
+        $tagSku          = $inventoryReceipt->productStyle?->sku ?? '';
+    @endphp
+
+    const mfrHtml  = @json($tagManufacturer !== '')
+        ? `<div class="tag-detail"><strong>Manufacturer:</strong> {{ addslashes($tagManufacturer) }}</div>`
+        : '';
+    const lineHtml = @json($tagLineName !== '')
+        ? `<div class="tag-detail"><strong>Product Line:</strong> {{ addslashes($tagLineName) }}</div>`
+        : '';
+    const skuHtml  = @json($tagSku !== '')
+        ? `<div class="tag-detail"><strong>SKU:</strong> {{ addslashes($tagSku) }}</div>`
+        : '';
+
     const noteHtml = note
         ? `<div class="tag-notes">
                <div class="tag-notes-label">Notes</div>
@@ -564,15 +580,9 @@ function printTag() {
     <div class="tag-body">
         <div class="tag-left">
             <div class="tag-item-name">{{ addslashes($inventoryReceipt->item_name) }}</div>
-            @if ($inventoryReceipt->productStyle?->productLine?->manufacturer)
-                <div class="tag-detail"><strong>Manufacturer:</strong> {{ $inventoryReceipt->productStyle->productLine->manufacturer }}</div>
-            @endif
-            @if ($inventoryReceipt->productStyle?->productLine?->name)
-                <div class="tag-detail"><strong>Product Line:</strong> {{ $inventoryReceipt->productStyle->productLine->name }}</div>
-            @endif
-            @if ($inventoryReceipt->productStyle?->sku)
-                <div class="tag-detail"><strong>SKU:</strong> {{ $inventoryReceipt->productStyle->sku }}</div>
-            @endif
+            ${mfrHtml}
+            ${lineHtml}
+            ${skuHtml}
             <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
             <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
             ${poHtml}
@@ -629,15 +639,9 @@ function printTag() {
         <span class="tag-header-id">#{{ $inventoryReceipt->id }}</span>
     </div>
     <div class="tag-item-name">{{ addslashes($inventoryReceipt->item_name) }}</div>
-    @if ($inventoryReceipt->productStyle?->productLine?->manufacturer)
-        <div class="tag-detail"><strong>Manufacturer:</strong> {{ $inventoryReceipt->productStyle->productLine->manufacturer }}</div>
-    @endif
-    @if ($inventoryReceipt->productStyle?->productLine?->name)
-        <div class="tag-detail"><strong>Product Line:</strong> {{ $inventoryReceipt->productStyle->productLine->name }}</div>
-    @endif
-    @if ($inventoryReceipt->productStyle?->sku)
-        <div class="tag-detail"><strong>SKU:</strong> {{ $inventoryReceipt->productStyle->sku }}</div>
-    @endif
+    ${mfrHtml}
+    ${lineHtml}
+    ${skuHtml}
     <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
     <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
     ${poHtml}
