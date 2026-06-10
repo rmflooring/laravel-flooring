@@ -136,6 +136,7 @@
 		        const navBadge     = document.getElementById('nav-msg-badge');
 		        const sidebarBadge = document.getElementById('sidebar-msg-badge');
 		        const avatar       = document.getElementById('user-avatar-btn');
+		        const navIcon      = document.getElementById('nav-msg-icon');
 
 		        if (navBadge) {
 		            if (count > 0) {
@@ -144,6 +145,10 @@
 		            } else {
 		                navBadge.classList.add('hidden');
 		            }
+		        }
+
+		        if (navIcon) {
+		            navIcon.style.color = count > 0 ? '#16a34a' : ''; // green-600 when unread
 		        }
 
 		        if (sidebarBadge) {
@@ -157,7 +162,7 @@
 
 		        if (avatar) {
 		            if (count > 0) {
-		                avatar.style.backgroundColor = '#2563eb';
+		                avatar.style.backgroundColor = '#16a34a';
 		                avatar.style.color = '#fff';
 		            } else {
 		                avatar.style.backgroundColor = '';
