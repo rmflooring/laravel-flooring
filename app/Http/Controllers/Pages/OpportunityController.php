@@ -100,9 +100,15 @@ class OpportunityController extends Controller
         'Closed',
     ];
 
+    $showInactive = $request->boolean('show_inactive', false);
+
     $query = Opportunity::query()
         ->with(['parentCustomer', 'jobSiteCustomer', 'projectManager'])
         ->withCount(['rfms', 'estimates', 'sales', 'purchaseOrders']);
+
+    if (! $showInactive) {
+        $query->where('is_active', true);
+    }
 
     $this->applyOpportunityFilters($query, $request);
 
@@ -119,7 +125,7 @@ class OpportunityController extends Controller
         ->orderBy('name')
         ->get(['id', 'company_name', 'name']);
 
-    return view('pages.opportunities.index', compact('opportunities', 'statuses', 'parentCustomers', 'projectManagers'));
+    return view('pages.opportunities.index', compact('opportunities', 'statuses', 'parentCustomers', 'projectManagers', 'showInactive'));
 }
 
 

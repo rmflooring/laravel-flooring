@@ -107,6 +107,14 @@
     </select>
 </div>
 
+                        {{-- Show Inactive toggle --}}
+                        <div class="md:col-span-2 flex items-center gap-2">
+                            <input type="checkbox" id="show_inactive" name="show_inactive" value="1"
+                                   {{ $showInactive ? 'checked' : '' }}
+                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="show_inactive" class="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">Show Inactive</label>
+                        </div>
+
                         {{-- Actions --}}
                         <div class="md:col-span-1 flex gap-2">
                             <button type="submit"
@@ -136,10 +144,10 @@
                 </div>
 
                 @php
-                    $qs = http_build_query(request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'sort']));
+                    $qs = http_build_query(request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'sort', 'show_inactive']));
 
                     $currentSort   = request('sort', 'updated_desc');
-                    $filterParams  = request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id']);
+                    $filterParams  = request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'show_inactive']);
 
                     $colSorts = [
                         'job_no'   => ['asc' => 'job_no_asc',    'desc' => 'job_no_desc'],
@@ -191,11 +199,14 @@
 
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($opportunities as $opp)
-                                <tr class="hover:bg-gray-50">
+                                <tr class="{{ $opp->is_active ? 'hover:bg-gray-50' : 'bg-gray-50 opacity-60 hover:opacity-80' }}">
                                     <td class="px-4 md:px-6 py-3 whitespace-nowrap">
                                         <span class="font-medium text-gray-900">
                                             {{ $opp->job_no ?: '—' }}
                                         </span>
+                                        @if(! $opp->is_active)
+                                            <span class="ml-1 inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-600">Inactive</span>
+                                        @endif
                                     </td>
 
                                     <td class="px-4 md:px-6 py-3">
