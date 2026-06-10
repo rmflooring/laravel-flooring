@@ -20,6 +20,7 @@ class InventoryTagController extends Controller
             'purchaseOrder.sale',
             'allocations.sale',
             'transactions',
+            'productStyle.productLine',
         ]);
 
         $format = Setting::get('label_printer_format', 'standard');
@@ -43,6 +44,7 @@ class InventoryTagController extends Controller
                 'purchaseOrder.sale',
                 'allocations.sale',
                 'transactions',
+                'productStyle.productLine',
             ])
             ->get();
 
