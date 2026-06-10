@@ -564,6 +564,15 @@ function printTag() {
     <div class="tag-body">
         <div class="tag-left">
             <div class="tag-item-name">{{ addslashes($inventoryReceipt->item_name) }}</div>
+            @if ($inventoryReceipt->productStyle?->productLine?->manufacturer)
+                <div class="tag-detail"><strong>Manufacturer:</strong> {{ $inventoryReceipt->productStyle->productLine->manufacturer }}</div>
+            @endif
+            @if ($inventoryReceipt->productStyle?->productLine?->name)
+                <div class="tag-detail"><strong>Product Line:</strong> {{ $inventoryReceipt->productStyle->productLine->name }}</div>
+            @endif
+            @if ($inventoryReceipt->productStyle?->sku)
+                <div class="tag-detail"><strong>SKU:</strong> {{ $inventoryReceipt->productStyle->sku }}</div>
+            @endif
             <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
             <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
             ${poHtml}
@@ -620,6 +629,15 @@ function printTag() {
         <span class="tag-header-id">#{{ $inventoryReceipt->id }}</span>
     </div>
     <div class="tag-item-name">{{ addslashes($inventoryReceipt->item_name) }}</div>
+    @if ($inventoryReceipt->productStyle?->productLine?->manufacturer)
+        <div class="tag-detail"><strong>Manufacturer:</strong> {{ $inventoryReceipt->productStyle->productLine->manufacturer }}</div>
+    @endif
+    @if ($inventoryReceipt->productStyle?->productLine?->name)
+        <div class="tag-detail"><strong>Product Line:</strong> {{ $inventoryReceipt->productStyle->productLine->name }}</div>
+    @endif
+    @if ($inventoryReceipt->productStyle?->sku)
+        <div class="tag-detail"><strong>SKU:</strong> {{ $inventoryReceipt->productStyle->sku }}</div>
+    @endif
     <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
     <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
     ${poHtml}
