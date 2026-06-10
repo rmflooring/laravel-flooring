@@ -62,13 +62,6 @@
             line-height: 1.2;
         }
 
-        .product-meta {
-            font-size: 7pt;
-            color: #555;
-            margin-top: 2pt;
-            line-height: 1.3;
-        }
-
         .tag-body {
             display: flex;
             gap: {{ $bodyGap }};
@@ -170,22 +163,15 @@
 
 <div class="tag">
 
+    @php
+        $manufacturer = $receipt->productStyle?->productLine?->manufacturer;
+        $lineName     = $receipt->productStyle?->productLine?->name;
+        $styleSku     = $receipt->productStyle?->sku;
+    @endphp
+
     <div class="tag-header">
         <div class="tag-label">Inventory Tag</div>
         <div class="item-name">{{ $receipt->item_name }}</div>
-        @php
-            $metaParts = array_filter([
-                $receipt->productStyle?->productLine?->manufacturer,
-                $receipt->productStyle?->productLine?->name,
-            ]);
-            $sku = $receipt->productStyle?->sku;
-        @endphp
-        @if ($metaParts || $sku)
-            <div class="product-meta">
-                @if ($metaParts){{ implode(' · ', $metaParts) }}@endif
-                @if ($sku)<span style="color:#888;"> &nbsp;SKU: {{ $sku }}</span>@endif
-            </div>
-        @endif
     </div>
 
     <div class="tag-body">
@@ -207,6 +193,24 @@
             @endif
 
             <div style="margin-top: 4pt;">
+                @if ($manufacturer)
+                    <div class="info-row">
+                        <div class="info-label">Manufacturer</div>
+                        <div class="info-value">{{ $manufacturer }}</div>
+                    </div>
+                @endif
+                @if ($lineName)
+                    <div class="info-row">
+                        <div class="info-label">Product Line</div>
+                        <div class="info-value" style="font-size:7.5pt;">{{ $lineName }}</div>
+                    </div>
+                @endif
+                @if ($styleSku)
+                    <div class="info-row">
+                        <div class="info-label">SKU</div>
+                        <div class="info-value">{{ $styleSku }}</div>
+                    </div>
+                @endif
                 @if ($receipt->purchaseOrder)
                     <div class="info-row">
                         <div class="info-label">PO</div>
