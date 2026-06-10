@@ -24,7 +24,6 @@
 
         .page {
             width: {{ $bodyW }};
-            height: {{ $bodyH }};
             padding: 8pt;
             page-break-after: always;
         }
@@ -33,12 +32,9 @@
 
         .tag {
             width: 100%;
-            height: 100%;
             border: 1.5pt solid #1d4ed8;
             border-radius: 4pt;
             padding: 7pt;
-            display: flex;
-            flex-direction: column;
         }
 
         .tag-header {
@@ -64,24 +60,32 @@
         }
 
         .tag-body {
-            display: flex;
-            gap: {{ $bodyGap }};
-            flex: 1;
+            width: 100%;
+            overflow: hidden;
         }
 
-        .tag-info { flex: 1; }
+        .tag-info {
+            float: left;
+            width: {{ $isZebra ? '310pt' : '135pt' }};
+        }
 
-        .info-row { margin-bottom: 3pt; }
+        .qr-col {
+            float: right;
+            text-align: center;
+            width: {{ $qrColW }};
+        }
+
+        .info-row { margin-bottom: 2pt; }
 
         .info-label {
-            font-size: 6.5pt;
+            font-size: 6pt;
             color: #777;
             text-transform: uppercase;
             letter-spacing: 0.3pt;
         }
 
         .info-value {
-            font-size: 9pt;
+            font-size: 7.5pt;
             font-weight: bold;
             color: #111;
         }
@@ -131,14 +135,6 @@
             text-align: center;
         }
 
-        .qr-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            width: {{ $qrColW }};
-        }
-
         .qr-img { width: {{ $qrImgSz }}; height: {{ $qrImgSz }}; }
 
         .qr-caption {
@@ -149,7 +145,7 @@
         }
 
         .receipt-id {
-            margin-top: auto;
+            clear: both;
             font-size: 6pt;
             color: #bbb;
             text-align: right;
@@ -171,9 +167,12 @@
 <div class="tag">
 
     @php
-        $manufacturer = $receipt->productStyle?->productLine?->manufacturer;
-        $lineName     = $receipt->productStyle?->productLine?->name;
-        $styleSku     = $receipt->productStyle?->sku;
+        $manufacturer    = $receipt->productStyle?->productLine?->manufacturer;
+        $lineName        = $receipt->productStyle?->productLine?->name;
+        $styleSku        = $receipt->productStyle?->sku;
+        $lineNameDisplay = $lineName
+            ? ($isZebra ? $lineName : \Illuminate\Support\Str::limit($lineName, 40))
+            : null;
     @endphp
 
     <div class="tag-header">
@@ -206,10 +205,10 @@
                         <div class="info-value">{{ $manufacturer }}</div>
                     </div>
                 @endif
-                @if ($lineName)
+                @if ($lineNameDisplay)
                     <div class="info-row">
                         <div class="info-label">Product Line</div>
-                        <div class="info-value" style="font-size:7.5pt;">{{ $lineName }}</div>
+                        <div class="info-value">{{ $lineNameDisplay }}</div>
                     </div>
                 @endif
                 @if ($styleSku)

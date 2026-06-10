@@ -26,18 +26,14 @@
             font-size: 9px;
             color: #1a1a1a;
             width: {{ $bodyW }};
-            height: {{ $bodyH }};
             padding: 8pt;
         }
 
         .tag {
             width: 100%;
-            height: 100%;
             border: 1.5pt solid #1d4ed8;
             border-radius: 4pt;
             padding: 7pt;
-            display: flex;
-            flex-direction: column;
         }
 
         .tag-header {
@@ -63,12 +59,20 @@
         }
 
         .tag-body {
-            display: flex;
-            gap: {{ $bodyGap }};
-            flex: 1;
+            width: 100%;
+            overflow: hidden;
         }
 
-        .tag-info { flex: 1; }
+        .tag-info {
+            float: left;
+            width: {{ $isZebra ? '310pt' : '135pt' }};
+        }
+
+        .qr-col {
+            float: right;
+            text-align: center;
+            width: {{ $qrColW }};
+        }
 
         .info-row { margin-bottom: 2pt; }
 
@@ -130,14 +134,6 @@
             text-align: center;
         }
 
-        .qr-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            width: {{ $qrColW }};
-        }
-
         .qr-img {
             width: {{ $qrImgSz }};
             height: {{ $qrImgSz }};
@@ -151,7 +147,7 @@
         }
 
         .receipt-id {
-            margin-top: auto;
+            clear: both;
             font-size: 6pt;
             color: #bbb;
             text-align: right;
