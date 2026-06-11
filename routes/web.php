@@ -548,6 +548,12 @@ Route::prefix('admin')
                 ->name('bills.mark-paid');
             Route::post('bills/{bill}/push-to-qbo', [\App\Http\Controllers\Admin\BillController::class, 'pushToQbo'])
                 ->name('bills.push-to-qbo');
+            Route::post('bills/{bill}/documents', [\App\Http\Controllers\Admin\BillDocumentController::class, 'store'])
+                ->name('bills.documents.store');
+            Route::delete('bills/{bill}/documents/{document}', [\App\Http\Controllers\Admin\BillDocumentController::class, 'destroy'])
+                ->name('bills.documents.destroy');
+            Route::get('bills/{bill}/documents/{document}/download', [\App\Http\Controllers\Admin\BillDocumentController::class, 'download'])
+                ->name('bills.documents.download');
         });
 
         // Signing Requests

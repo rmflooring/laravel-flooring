@@ -96,6 +96,11 @@ class Bill extends Model
         return $this->hasMany(BillItem::class)->orderBy('sort_order');
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(BillDocument::class)->orderBy('created_at');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

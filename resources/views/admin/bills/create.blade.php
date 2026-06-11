@@ -34,7 +34,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('admin.bills.store') }}" x-data="billForm()">
+            <form method="POST" action="{{ route('admin.bills.store') }}" enctype="multipart/form-data" x-data="billForm()">
                 @csrf
                 <input type="hidden" name="bill_type" value="{{ $billType }}">
                 @if ($purchaseOrder)
@@ -396,6 +396,65 @@
                                 </label>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {{-- Attachments --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm mt-4"
+                     x-data="{ files: [], dragover: false }"
+                     @dragover.prevent="dragover = true"
+                     @dragleave="if (!$el.contains($event.relatedTarget)) dragover = false"
+                     @drop.prevent="
+                         dragover = false;
+                         const input = $refs.docInput;
+                         const dt = new DataTransfer();
+                         Array.from($event.dataTransfer.files).forEach(f => dt.items.add(f));
+                         Array.from(input.files).forEach(f => dt.items.add(f));
+                         input.files = dt.files;
+                         files = Array.from(input.files).map(f => ({ name: f.name, size: f.size }));
+                     ">
+                    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Attachments</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Attach the vendor invoice PDF or any supporting documents.</p>
+                        </div>
+                        <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            Choose Files
+                            <input type="file"
+                                   x-ref="docInput"
+                                   name="documents[]"
+                                   multiple
+                                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                                   class="hidden"
+                                   @change="files = Array.from($event.target.files).map(f => ({ name: f.name, size: f.size }))">
+                        </label>
+                    </div>
+
+                    {{-- Drop zone --}}
+                    <div :class="dragover ? 'border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'"
+                         class="mx-4 my-3 rounded-lg border-2 border-dashed px-6 py-6 text-center transition-colors">
+                        <template x-if="files.length === 0">
+                            <p class="text-sm text-gray-400 dark:text-gray-500">
+                                Drop files here or use "Choose Files" above.<br>
+                                <span class="text-xs">PDF, images, Word, Excel — up to 20 MB each</span>
+                            </p>
+                        </template>
+                        <template x-if="files.length > 0">
+                            <ul class="space-y-1 text-left">
+                                <template x-for="(f, i) in files" :key="i">
+                                    <li class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                                        </svg>
+                                        <span x-text="f.name" class="truncate flex-1"></span>
+                                        <span x-text="Math.round(f.size / 1024) + ' KB'" class="text-xs text-gray-400 shrink-0"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
                     </div>
                 </div>
 

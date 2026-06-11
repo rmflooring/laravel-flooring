@@ -145,6 +145,8 @@ class BillController extends Controller
             'items.*.purchase_order_item_id' => 'nullable|exists:purchase_order_items,id',
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
             'items.*.charge_type'            => 'nullable|string',
+            'documents'   => 'nullable|array',
+            'documents.*' => 'file|max:20480|mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx,csv,txt',
         ]);
 
         // If due date not provided but payment term has days, compute it
@@ -206,6 +208,10 @@ class BillController extends Controller
             return $bill;
         });
 
+        if ($request->hasFile('documents')) {
+            BillDocumentController::saveFiles($request->file('documents'), $bill);
+        }
+
         return redirect()->route('admin.bills.show', $bill)
             ->with('success', 'Bill created successfully.');
     }
@@ -216,7 +222,7 @@ class BillController extends Controller
 
     public function show(Bill $bill)
     {
-        $bill->load(['vendor', 'installer', 'purchaseOrder', 'workOrder', 'items', 'paymentTerm', 'creator', 'updater']);
+        $bill->load(['vendor', 'installer', 'purchaseOrder', 'workOrder', 'items', 'paymentTerm', 'creator', 'updater', 'documents.uploader']);
 
         return view('admin.bills.show', compact('bill'));
     }

@@ -299,6 +299,9 @@
             </div>
             @endif
 
+            {{-- Documents --}}
+            @include('admin.bills._documents', ['bill' => $bill])
+
             {{-- Delete (admin) --}}
             @can('delete bills')
             <div class="flex justify-end">
