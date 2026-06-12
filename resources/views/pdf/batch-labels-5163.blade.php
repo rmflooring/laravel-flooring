@@ -91,7 +91,7 @@
     @foreach ($rows as $row)
     <tr>
         {{-- Left label --}}
-        <td width="288" height="144" style="padding:6pt; vertical-align:top; overflow:hidden;">
+        <td width="288" height="132" style="padding:6pt; vertical-align:top; overflow:hidden;">
             @if (isset($row[0]))
                 @php $item = $row[0]; $model = $item['model']; @endphp
                 <table width="100%" style="height:132pt;" cellpadding="0" cellspacing="0">
@@ -143,7 +143,7 @@
         <td width="14"></td>
 
         {{-- Right label --}}
-        <td width="288" height="144" style="padding:6pt; vertical-align:top; overflow:hidden;">
+        <td width="288" height="132" style="padding:6pt; vertical-align:top; overflow:hidden;">
             @if (isset($row[1]))
                 @php $item = $row[1]; $model = $item['model']; @endphp
                 <table width="100%" style="height:132pt;" cellpadding="0" cellspacing="0">
