@@ -29,20 +29,20 @@ class BillController extends Controller
         $direction = $request->get('direction') === 'desc' ? 'desc' : 'asc';
 
         $query = Bill::with(['vendor', 'installer', 'purchaseOrder', 'workOrder'])
-            ->whereNotIn('status', ['voided']);
+            ->whereNotIn('bills.status', ['voided']);
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('bills.status', $request->status);
         }
 
         if ($request->filled('bill_type')) {
-            $query->where('bill_type', $request->bill_type);
+            $query->where('bills.bill_type', $request->bill_type);
         }
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('reference_number', 'like', "%{$search}%")
+                $q->where('bills.reference_number', 'like', "%{$search}%")
                   ->orWhereHas('vendor', fn ($v) => $v->where('company_name', 'like', "%{$search}%"))
                   ->orWhereHas('installer', fn ($i) => $i->where('company_name', 'like', "%{$search}%"))
                   ->orWhereHas('purchaseOrder', fn ($p) => $p->where('po_number', 'like', "%{$search}%"))
@@ -51,11 +51,11 @@ class BillController extends Controller
         }
 
         if ($request->filled('due_from')) {
-            $query->where('due_date', '>=', $request->due_from);
+            $query->where('bills.due_date', '>=', $request->due_from);
         }
 
         if ($request->filled('due_to')) {
-            $query->where('due_date', '<=', $request->due_to);
+            $query->where('bills.due_date', '<=', $request->due_to);
         }
 
         if ($sort === 'payee') {
@@ -65,7 +65,7 @@ class BillController extends Controller
                 ->orderByRaw("COALESCE(v_sort.company_name, i_sort.company_name) {$direction}")
                 ->orderBy('bills.id', 'desc');
         } else {
-            $query->orderBy($sort, $direction)->orderBy('id', 'desc');
+            $query->orderBy("bills.{$sort}", $direction)->orderBy('bills.id', 'desc');
         }
 
         $bills = $query->paginate(25)->withQueryString();
