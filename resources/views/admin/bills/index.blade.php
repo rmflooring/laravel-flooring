@@ -126,18 +126,57 @@
                         @endcan
                     </div>
                 @else
+                @php
+                    $sortUrl = function (string $col) use ($currentSort, $currentDirection, $filters): string {
+                        $newDir = ($currentSort === $col && $currentDirection === 'asc') ? 'desc' : 'asc';
+                        return route('admin.bills.index', array_merge($filters, ['sort' => $col, 'direction' => $newDir]));
+                    };
+                    $sortIcon = function (string $col) use ($currentSort, $currentDirection): string {
+                        if ($currentSort !== $col) {
+                            return '<svg class="w-3 h-3 ml-1 text-gray-400 inline" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4M16 15l-4 4-4-4"/></svg>';
+                        }
+                        if ($currentDirection === 'asc') {
+                            return '<svg class="w-3 h-3 ml-1 text-blue-500 inline" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 15l4-4 4 4"/></svg>';
+                        }
+                        return '<svg class="w-3 h-3 ml-1 text-blue-500 inline" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 9l-4 4-4-4"/></svg>';
+                    };
+                @endphp
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-700 dark:text-gray-300">
                         <thead class="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
-                                <th class="px-4 py-3">Invoice #</th>
+                                <th class="px-4 py-3">
+                                    <a href="{{ $sortUrl('reference_number') }}" class="inline-flex items-center hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap">
+                                        Invoice #{!! $sortIcon('reference_number') !!}
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3">Type</th>
-                                <th class="px-4 py-3">Payee</th>
+                                <th class="px-4 py-3">
+                                    <a href="{{ $sortUrl('payee') }}" class="inline-flex items-center hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap">
+                                        Payee{!! $sortIcon('payee') !!}
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3">Linked To</th>
-                                <th class="px-4 py-3">Bill Date</th>
-                                <th class="px-4 py-3">Due Date</th>
-                                <th class="px-4 py-3 text-right">Total</th>
-                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">
+                                    <a href="{{ $sortUrl('bill_date') }}" class="inline-flex items-center hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap">
+                                        Bill Date{!! $sortIcon('bill_date') !!}
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3">
+                                    <a href="{{ $sortUrl('due_date') }}" class="inline-flex items-center hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap">
+                                        Due Date{!! $sortIcon('due_date') !!}
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3 text-right">
+                                    <a href="{{ $sortUrl('grand_total') }}" class="inline-flex items-center justify-end hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap w-full">
+                                        Total{!! $sortIcon('grand_total') !!}
+                                    </a>
+                                </th>
+                                <th class="px-4 py-3">
+                                    <a href="{{ $sortUrl('status') }}" class="inline-flex items-center hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap">
+                                        Status{!! $sortIcon('status') !!}
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3"></th>
                             </tr>
                         </thead>

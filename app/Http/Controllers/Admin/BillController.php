@@ -24,6 +24,10 @@ class BillController extends Controller
 
     public function index(Request $request)
     {
+        $allowedSorts = ['reference_number', 'bill_date', 'due_date', 'grand_total', 'status', 'payee'];
+        $sort      = in_array($request->get('sort'), $allowedSorts) ? $request->get('sort') : 'due_date';
+        $direction = $request->get('direction') === 'desc' ? 'desc' : 'asc';
+
         $query = Bill::with(['vendor', 'installer', 'purchaseOrder', 'workOrder'])
             ->whereNotIn('status', ['voided']);
 
@@ -54,7 +58,17 @@ class BillController extends Controller
             $query->where('due_date', '<=', $request->due_to);
         }
 
-        $bills = $query->orderBy('due_date')->orderBy('id', 'desc')->paginate(25)->withQueryString();
+        if ($sort === 'payee') {
+            $query->select('bills.*')
+                ->leftJoin('vendors as v_sort', 'bills.vendor_id', '=', 'v_sort.id')
+                ->leftJoin('installers as i_sort', 'bills.installer_id', '=', 'i_sort.id')
+                ->orderByRaw("COALESCE(v_sort.company_name, i_sort.company_name) {$direction}")
+                ->orderBy('bills.id', 'desc');
+        } else {
+            $query->orderBy($sort, $direction)->orderBy('id', 'desc');
+        }
+
+        $bills = $query->paginate(25)->withQueryString();
 
         // Stat cards — outstanding = not yet paid (excludes voided + paid)
         $activeQuery = Bill::whereNotIn('status', ['voided', 'paid']);
@@ -79,6 +93,8 @@ class BillController extends Controller
             'recentCredits'    => $recentCredits,
             'totalOpenCredits' => $totalOpenCredits,
             'filters'          => $request->only('status', 'bill_type', 'search', 'due_from', 'due_to'),
+            'currentSort'      => $sort,
+            'currentDirection' => $direction,
         ]);
     }
 
