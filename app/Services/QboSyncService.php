@@ -857,6 +857,54 @@ class QboSyncService
     }
 
     /**
+     * Called when QBO notifies us that a BillPayment was created or deleted.
+     * Fetches the payment from QBO, finds every linked Bill, and re-syncs each one's status.
+     * This is the primary trigger when a bill is paid in QBO — QBO always fires BillPayment
+     * events but may not consistently fire a Bill Update event.
+     */
+    public function handleBillPaymentUpdate(string $qboId, string $operation): void
+    {
+        if ($operation === 'Delete') {
+            // When a payment is deleted the linked bills will also get Bill Update events,
+            // so we don't need to do anything extra here.
+            Log::info("[QBO Webhook] BillPayment #{$qboId} deleted — linked Bill Update events will handle the reversal.");
+            return;
+        }
+
+        try {
+            $response   = $this->qbo->get("billpayment/{$qboId}");
+            $qboPayment = $response['BillPayment'] ?? null;
+
+            if (! $qboPayment) {
+                Log::warning("[QBO Webhook] BillPayment #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            // Collect all linked Bill QBO IDs from the payment lines
+            $linkedBillIds = [];
+            foreach ($qboPayment['Line'] ?? [] as $line) {
+                foreach ($line['LinkedTxn'] ?? [] as $txn) {
+                    if (($txn['TxnType'] ?? '') === 'Bill' && ! empty($txn['TxnId'])) {
+                        $linkedBillIds[] = $txn['TxnId'];
+                    }
+                }
+            }
+
+            if (empty($linkedBillIds)) {
+                Log::info("[QBO Webhook] BillPayment #{$qboId} has no linked Bills.");
+                return;
+            }
+
+            foreach ($linkedBillIds as $billQboId) {
+                $this->handleBillUpdate($billQboId, 'Update');
+            }
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch BillPayment #{$qboId}: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Called when QBO notifies us that a VendorCredit entity was updated or deleted.
      * If the credit's Balance = 0 it has been fully applied in QBO — mark FM status as applied.
      */

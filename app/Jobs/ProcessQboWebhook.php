@@ -45,6 +45,7 @@ class ProcessQboWebhook implements ShouldQueue
 
                 match ($name) {
                     'Bill'         => $sync->handleBillUpdate($qboId, $operation),
+                    'BillPayment'  => $sync->handleBillPaymentUpdate($qboId, $operation),
                     'Invoice'      => $sync->handleInvoiceUpdate($qboId, $operation),
                     'VendorCredit' => $sync->handleVendorCreditUpdate($qboId, $operation),
                     default        => null,
