@@ -757,6 +757,17 @@
 
                 <div class="p-6 space-y-6">
 
+                    {{-- Job Site Notes (read-only) --}}
+                    @if($opportunity->jobSiteCustomer?->notes)
+                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+                            <div class="mb-1 flex items-center gap-2">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Job Site Notes</span>
+                                <span class="text-xs text-blue-500 dark:text-blue-500">— {{ $opportunity->jobSiteCustomer->name ?? $opportunity->jobSiteCustomer->company_name }}</span>
+                            </div>
+                            <p class="whitespace-pre-wrap text-sm text-blue-900 dark:text-blue-200">{{ $opportunity->jobSiteCustomer->notes }}</p>
+                        </div>
+                    @endif
+
                     {{-- Add note form --}}
                     <form method="POST" action="{{ route('pages.opportunities.notes.store', $opportunity) }}">
                         @csrf
