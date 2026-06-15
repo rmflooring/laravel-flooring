@@ -260,6 +260,10 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div class="flex items-center justify-end space-x-4">
                                                     @if($style->status !== 'archived')
+                                                        <a href="{{ route('admin.product_styles.show', [$product_line, $style]) }}"
+                                                           class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                                                            View
+                                                        </a>
                                                         <a href="{{ route('admin.product_styles.edit', [$product_line, $style]) }}"
                                                            class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                                                             Edit

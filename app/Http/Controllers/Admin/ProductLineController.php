@@ -147,6 +147,17 @@ public function index(Request $request)
         ->with('success', 'Product line created successfully.');
 }
 
+    public function show(ProductLine $product_line)
+    {
+        $product_line->load(['productType', 'vendorRelation', 'unit']);
+
+        $styles = $product_line->productStyles()
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.product_lines.show', compact('product_line', 'styles'));
+    }
+
     /**
      * Show the form for editing the specified product line.
      */

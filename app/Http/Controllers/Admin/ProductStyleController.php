@@ -72,6 +72,15 @@ class ProductStyleController extends Controller
         ));
     }
 
+    public function show(ProductLine $product_line, $styleId)
+    {
+        $style = $product_line->productStyles()
+            ->with(['photos', 'vendor'])
+            ->findOrFail($styleId);
+
+        return view('admin.product_styles.show', compact('product_line', 'style'));
+    }
+
     public function edit(ProductLine $product_line, $styleId)
     {
         $style = $product_line->productStyles()->with('photos')->findOrFail($styleId);
