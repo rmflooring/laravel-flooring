@@ -57,6 +57,12 @@ class PermissionsSeeder extends Seeder
             'edit product lines',
             'delete product lines',
 
+            // ===== Product Styles =====
+            'view product styles',
+            'create product styles',
+            'edit product styles',
+            'delete product styles',
+
             // ===== Labour Types =====
             'view labour types',
             'create labour types',
