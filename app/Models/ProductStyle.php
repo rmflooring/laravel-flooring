@@ -83,6 +83,6 @@ class ProductStyle extends Model
 
     public function hasActivity(): bool
     {
-        return $this->estimateItems()->exists() || $this->saleItems()->exists();
+        return $this->estimateItems()->exists() || $this->saleItems()->exists() || $this->samples()->exists();
     }
 }
