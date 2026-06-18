@@ -31,7 +31,7 @@
             @endif
 
             <form method="POST" action="{{ route('pages.sales.work-orders.store', $sale) }}"
-                  x-data="woCreate()" @submit.prevent="submitForm">
+                  x-data="woCreate()" @submit="submitForm($event)">
                 @csrf
 
                 {{-- Installer --}}
@@ -96,7 +96,7 @@
                                             $itemName   = implode(' — ', array_filter([$item->labour_type, $item->description])) ?: 'Labour Item';
                                         @endphp
                                         <div class="rounded-lg border {{ $fullyDone ? 'border-gray-200 bg-gray-50 opacity-60 dark:border-gray-700 dark:bg-gray-900' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800' }} p-4"
-                                             x-data="woItem({{ $item->id }}, {{ $remaining }}, {{ (float) $item->cost_price }})">
+                                             x-data="woItem({{ $item->id }}, {{ $remaining }}, {{ (float) $item->cost_price }}, {{ old('items.' . $item->id) ? 'true' : 'false' }})">
 
                                             <div class="flex items-start gap-3">
                                                 <input type="checkbox" name="items[{{ $item->id }}]" value="1"
@@ -135,6 +135,7 @@
                                                                        x-model="qty"
                                                                        @input="validateQty"
                                                                        step="0.01" min="0.01" max="{{ $remaining }}"
+                                                                       :disabled="!checked"
                                                                        class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                                                        :class="qtyError ? 'border-red-400' : ''">
                                                                 <p x-show="qtyError" x-text="qtyError" x-cloak class="mt-1 text-xs text-red-500"></p>
@@ -143,6 +144,7 @@
                                                                 <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Unit Cost</label>
                                                                 <input type="text" inputmode="decimal" name="cost[{{ $item->id }}]"
                                                                        x-model="cost"
+                                                                       :disabled="!checked"
                                                                        @blur="cost = cost !== '' && !isNaN(parseFloat(cost)) ? parseFloat(cost).toFixed(2) : cost"
                                                                        class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                             </div>
@@ -151,6 +153,7 @@
                                                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">WO Notes</label>
                                                             <textarea name="wo_notes[{{ $item->id }}]"
                                                                       rows="2"
+                                                                      :disabled="!checked"
                                                                       placeholder="Notes for this item on the work order..."
                                                                       class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('wo_notes.' . $item->id) }}</textarea>
                                                         </div>
@@ -198,7 +201,6 @@
                     </div>
                 @endif
 
-                <p x-show="itemError" x-text="itemError" x-cloak class="mt-2 text-sm text-red-500"></p>
 
                 {{-- Scheduling --}}
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -259,6 +261,7 @@
                 </div>
 
                 {{-- Actions --}}
+                <p x-show="itemError" x-text="itemError" x-cloak class="mb-3 text-sm text-red-500"></p>
                 <div class="flex gap-3">
                     <button type="submit"
                             class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700">
@@ -309,21 +312,22 @@
                 });
             },
 
-            submitForm() {
+            submitForm(event) {
                 const checked = document.querySelectorAll('input[name^="items["]:checked');
                 if (!checked.length) {
+                    event.preventDefault();
                     this.itemError = 'Please select at least one labour item.';
                     return;
                 }
                 this.itemError = '';
-                this.$el.submit();
+                if (typeof syncNotesInput === 'function') syncNotesInput();
             },
         };
     }
 
-    function woItem(itemId, maxQty, defaultCost) {
+    function woItem(itemId, maxQty, defaultCost, wasChecked = false) {
         return {
-            checked:  {{ old('items.' . '0', 'false') }},
+            checked:  wasChecked,
             qty:      maxQty,
             cost:     parseFloat(defaultCost).toFixed(2),
             qtyError: '',
