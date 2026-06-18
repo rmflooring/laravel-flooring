@@ -27,6 +27,7 @@ class EstimateItem extends Model implements Auditable
         'cost_total',
 
         'notes',
+        'customer_notes',
         'internal_notes',
         'sort_order',
 

@@ -143,6 +143,7 @@ class EstimateController extends Controller
 			'rooms.*.labour.*.cost_total' => ['nullable', 'numeric'],
             'rooms.*.labour.*.sell_price'           => ['nullable', 'numeric'],
             'rooms.*.labour.*.notes'                => ['nullable', 'string'],
+            'rooms.*.labour.*.customer_notes'       => ['nullable', 'string'],
             'rooms.*.labour.*.internal_notes'       => ['nullable', 'string'],
             'rooms.*.labour.*.order_qty'            => ['nullable', 'numeric'],
         ]);
@@ -342,6 +343,7 @@ $data['tax_rate_percent'] = $groupPercent;
                         'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                         'line_total'         => (float)($item['line_total'] ?? 0),
                         'notes'              => $item['notes'] ?? null,
+                        'customer_notes'     => $item['customer_notes'] ?? null,
                         'internal_notes'     => $item['internal_notes'] ?? null,
                     ]);
                 }
@@ -506,7 +508,8 @@ public function update(Request $request, Estimate $estimate)
 'rooms.*.labour.*.description'   => ['nullable', 'string'],
 'rooms.*.labour.*.quantity'      => ['nullable', 'numeric'],
 'rooms.*.labour.*.unit'          => ['nullable', 'string', 'max:50'],
-'rooms.*.labour.*.notes'         => ['nullable', 'string'],
+'rooms.*.labour.*.notes'          => ['nullable', 'string'],
+'rooms.*.labour.*.customer_notes' => ['nullable', 'string'],
 'rooms.*.labour.*.internal_notes' => ['nullable', 'string'],
 'rooms.*.labour.*.sell_price'    => ['nullable', 'numeric'],
 'rooms.*.labour.*.line_total'    => ['nullable', 'numeric'],
@@ -820,8 +823,9 @@ $roomId = $room->id;
 					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
-                    'notes'            => $item['notes'] ?? null,
-                    'internal_notes'   => $item['internal_notes'] ?? null,
+                    'notes'          => $item['notes'] ?? null,
+                    'customer_notes' => $item['customer_notes'] ?? null,
+                    'internal_notes' => $item['internal_notes'] ?? null,
                 ]);
             }
         }

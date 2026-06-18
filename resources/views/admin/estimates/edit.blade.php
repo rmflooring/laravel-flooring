@@ -1201,7 +1201,7 @@
     <button type="button"
       class="js-toggle-item-notes w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-50 inline-flex items-center justify-center"
       title="Internal Notes">
-      <svg class="item-notes-icon w-4 h-4" style="color: {{ $item->internal_notes ? '#2563eb' : '#9ca3af' }};" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg class="item-notes-icon w-4 h-4" style="color: {{ ($item->customer_notes || $item->internal_notes) ? '#2563eb' : '#9ca3af' }};" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
       </svg>
     </button>
@@ -1217,16 +1217,27 @@
   </div>
 </td>
     </tr>
-    <tr class="item-notes-row {{ $item->internal_notes ? '' : 'hidden' }}">
+    <tr class="item-notes-row {{ ($item->customer_notes || $item->internal_notes) ? '' : 'hidden' }}">
       <td colspan="15" class="px-3 py-2 bg-amber-50 border-t border-gray-100">
-        <div class="max-w-lg py-2">
-          <p class="text-xs font-semibold text-gray-600 mb-1">Internal Notes <span class="font-normal text-amber-600">(staff only — never printed)</span></p>
-          <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
-            contenteditable="true" placeholder="Internal staff notes..."
-            style="min-height:3rem;cursor:text;">{!! old("rooms.$roomIndex.labour.$i.internal_notes", $item->internal_notes) !!}</div>
-          <input type="hidden"
-            name="rooms[{{ $roomIndex }}][labour][{{ $i }}][internal_notes]"
-            value="{{ old("rooms.$roomIndex.labour.$i.internal_notes", $item->internal_notes) }}">
+        <div class="grid grid-cols-2 gap-4 py-2">
+          <div>
+            <p class="text-xs font-semibold text-gray-600 mb-1">Estimate Notes <span class="font-normal text-gray-400">(customer-visible, prints in PDF)</span></p>
+            <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
+              contenteditable="true" placeholder="Customer-facing notes..."
+              style="min-height:3rem;cursor:text;">{!! old("rooms.$roomIndex.labour.$i.customer_notes", $item->customer_notes) !!}</div>
+            <input type="hidden"
+              name="rooms[{{ $roomIndex }}][labour][{{ $i }}][customer_notes]"
+              value="{{ old("rooms.$roomIndex.labour.$i.customer_notes", $item->customer_notes) }}">
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-600 mb-1">Internal Notes <span class="font-normal text-amber-600">(staff only — never printed)</span></p>
+            <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
+              contenteditable="true" placeholder="Internal staff notes..."
+              style="min-height:3rem;cursor:text;">{!! old("rooms.$roomIndex.labour.$i.internal_notes", $item->internal_notes) !!}</div>
+            <input type="hidden"
+              name="rooms[{{ $roomIndex }}][labour][{{ $i }}][internal_notes]"
+              value="{{ old("rooms.$roomIndex.labour.$i.internal_notes", $item->internal_notes) }}">
+          </div>
         </div>
       </td>
     </tr>
@@ -1391,13 +1402,23 @@
     </tr>
     <tr class="item-notes-row hidden">
       <td colspan="15" class="px-3 py-2 bg-amber-50 border-t border-gray-100">
-        <div class="max-w-lg py-2">
-          <p class="text-xs font-semibold text-gray-600 mb-1">Internal Notes <span class="font-normal text-amber-600">(staff only — never printed)</span></p>
-          <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
-            contenteditable="true" placeholder="Internal staff notes..."
-            style="min-height:3rem;cursor:text;"></div>
-          <input type="hidden"
-            name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][internal_notes]">
+        <div class="grid grid-cols-2 gap-4 py-2">
+          <div>
+            <p class="text-xs font-semibold text-gray-600 mb-1">Estimate Notes <span class="font-normal text-gray-400">(customer-visible, prints in PDF)</span></p>
+            <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
+              contenteditable="true" placeholder="Customer-facing notes..."
+              style="min-height:3rem;cursor:text;"></div>
+            <input type="hidden"
+              name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][customer_notes]">
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-600 mb-1">Internal Notes <span class="font-normal text-amber-600">(staff only — never printed)</span></p>
+            <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
+              contenteditable="true" placeholder="Internal staff notes..."
+              style="min-height:3rem;cursor:text;"></div>
+            <input type="hidden"
+              name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][internal_notes]">
+          </div>
         </div>
       </td>
     </tr>
@@ -1935,13 +1956,23 @@
                     </tr>
                     <tr class="item-notes-row hidden">
                       <td colspan="15" class="px-3 py-2 bg-amber-50 border-t border-gray-100">
-                        <div class="max-w-lg py-2">
-                          <p class="text-xs font-semibold text-gray-600 mb-1">Internal Notes <span class="font-normal text-amber-600">(staff only — never printed)</span></p>
-                          <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
-                            contenteditable="true" placeholder="Internal staff notes..."
-                            style="min-height:3rem;cursor:text;"></div>
-                          <input type="hidden"
-                            name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][internal_notes]">
+                        <div class="grid grid-cols-2 gap-4 py-2">
+                          <div>
+                            <p class="text-xs font-semibold text-gray-600 mb-1">Estimate Notes <span class="font-normal text-gray-400">(customer-visible, prints in PDF)</span></p>
+                            <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
+                              contenteditable="true" placeholder="Customer-facing notes..."
+                              style="min-height:3rem;cursor:text;"></div>
+                            <input type="hidden"
+                              name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][customer_notes]">
+                          </div>
+                          <div>
+                            <p class="text-xs font-semibold text-gray-600 mb-1">Internal Notes <span class="font-normal text-amber-600">(staff only — never printed)</span></p>
+                            <div class="rich-notes-field w-full bg-white border border-gray-300 rounded-lg p-2"
+                              contenteditable="true" placeholder="Internal staff notes..."
+                              style="min-height:3rem;cursor:text;"></div>
+                            <input type="hidden"
+                              name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][internal_notes]">
+                          </div>
                         </div>
                       </td>
                     </tr>
