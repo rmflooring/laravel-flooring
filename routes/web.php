@@ -1758,6 +1758,18 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
     Route::post('messages/{thread}/reply', [\App\Http\Controllers\Pages\MessageController::class, 'reply'])
         ->name('messages.reply');
 
+    // Leads
+    Route::prefix('leads')->name('leads.')->middleware('role_or_permission:admin|view leads')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Pages\LeadManagementController::class, 'index'])->name('index');
+        Route::get('/{lead}', [\App\Http\Controllers\Pages\LeadManagementController::class, 'show'])->name('show');
+        Route::post('/{lead}/approve', [\App\Http\Controllers\Pages\LeadManagementController::class, 'approve'])
+            ->middleware('role_or_permission:admin|manage leads')
+            ->name('approve');
+        Route::post('/{lead}/deny', [\App\Http\Controllers\Pages\LeadManagementController::class, 'deny'])
+            ->middleware('role_or_permission:admin|manage leads')
+            ->name('deny');
+    });
+
     }); // end pages group
 
 

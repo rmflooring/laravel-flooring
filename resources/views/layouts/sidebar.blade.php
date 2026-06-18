@@ -85,6 +85,25 @@
                     </a>
                 </li>
 
+                {{-- Leads --}}
+                @can('view leads')
+                <li>
+                    @php $pendingLeadsCount = \App\Models\IncomingLead::where('status', 'pending')->count(); @endphp
+                    <a href="{{ route('pages.leads.index') }}"
+                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.leads.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3M-1.5 9A9 9 0 1 1 18 9M3 10.5a6.75 6.75 0 1 0 13.5 0 6.75 6.75 0 0 0-13.5 0Z"/>
+                        </svg>
+                        <span class="sidebar-label flex-1">Leads</span>
+                        @if ($pendingLeadsCount > 0)
+                            <span class="sidebar-label inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                {{ $pendingLeadsCount }}
+                            </span>
+                        @endif
+                    </a>
+                </li>
+                @endcan
+
                 {{-- Opportunities --}}
                 <li>
                     <a href="{{ route('pages.opportunities.index') }}"
