@@ -25,11 +25,22 @@ class PickTicketService
         $allocation->loadMissing('inventoryReceipt');
 
         return DB::transaction(function () use ($allocation, $workOrder) {
-            $pt = PickTicket::create([
-                'sale_id'       => $allocation->sale_id,
-                'work_order_id' => $workOrder?->id,
-                'status'        => 'pending',
-            ]);
+            // Consolidate into an existing pending PT for the same sale + WO rather than
+            // creating a new ticket for every allocation (which causes duplicate PTs per job).
+            $pt = PickTicket::where('sale_id', $allocation->sale_id)
+                ->where('status', 'pending')
+                ->where('work_order_id', $workOrder?->id)
+                ->first();
+
+            if (! $pt) {
+                $pt = PickTicket::create([
+                    'sale_id'       => $allocation->sale_id,
+                    'work_order_id' => $workOrder?->id,
+                    'status'        => 'pending',
+                ]);
+            }
+
+            $nextSort = (int) $pt->items()->max('sort_order') + 1;
 
             PickTicketItem::create([
                 'pick_ticket_id'          => $pt->id,
@@ -38,7 +49,7 @@ class PickTicketService
                 'item_name'               => $allocation->inventoryReceipt->item_name,
                 'unit'                    => $allocation->inventoryReceipt->unit,
                 'quantity'                => $allocation->quantity,
-                'sort_order'              => 0,
+                'sort_order'              => $nextSort,
             ]);
 
             return $pt;
