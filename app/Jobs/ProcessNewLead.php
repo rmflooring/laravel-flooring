@@ -58,6 +58,7 @@ class ProcessNewLead implements ShouldQueue
             'Service Type'    => e($lead->service_type ?? '—'),
             'Project Type'    => e($lead->project_type ?? '—'),
             'Area'            => e($lead->area ?? '—'),
+            'City'            => e($lead->city ?? '—'),
             'Timeline'        => e($lead->timeline ?? '—'),
             'Referral Source' => e($lead->referral_source ?? '—'),
             'Source'          => e($lead->source),

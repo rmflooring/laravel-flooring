@@ -309,7 +309,11 @@ $employees = Employee::query()
 
 			$backUrl = route('pages.opportunities.index', array_filter($filterParams));
 
-			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales', 'purchaseOrders', 'prev', 'next', 'backUrl', 'filterParams', 'navPosition', 'navTotal'));
+			$smsConversation = \App\Models\SmsConversation::where('opportunity_id', $opportunity->id)
+				->with(['messages' => fn ($q) => $q->latest()->limit(5)])
+				->first();
+
+			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales', 'purchaseOrders', 'prev', 'next', 'backUrl', 'filterParams', 'navPosition', 'navTotal', 'smsConversation'));
 		}
 
 

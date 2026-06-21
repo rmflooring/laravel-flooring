@@ -24,6 +24,7 @@ class IncomingLeadController extends Controller
             'timeline'        => 'nullable|string|max:100',
             'message'         => 'nullable|string|max:2000',
             'referral_source' => 'nullable|string|max:100',
+            'city'            => 'nullable|string|max:100',
         ]);
 
         $lead = IncomingLead::create($validated);

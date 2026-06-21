@@ -171,6 +171,18 @@
 		        }
 		    }
 
+		    function updateSmsBadge(count) {
+		        const badge = document.getElementById('sidebar-sms-badge');
+		        if (badge) {
+		            if (count > 0) {
+		                badge.textContent = count > 99 ? '99+' : count;
+		                badge.classList.remove('hidden');
+		            } else {
+		                badge.classList.add('hidden');
+		            }
+		        }
+		    }
+
 		    async function poll() {
 		        try {
 		            const res = await fetch('{{ route('pages.messages.unread-count') }}', {
@@ -179,6 +191,16 @@
 		            if (res.ok) {
 		                const data = await res.json();
 		                updateBadges(data.count || 0);
+		            }
+		        } catch (_) {}
+
+		        try {
+		            const smsRes = await fetch('{{ route('pages.sms.unread-count') }}', {
+		                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		            });
+		            if (smsRes.ok) {
+		                const smsData = await smsRes.json();
+		                updateSmsBadge(smsData.count || 0);
 		            }
 		        } catch (_) {}
 		    }

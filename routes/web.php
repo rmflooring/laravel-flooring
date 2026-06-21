@@ -1758,6 +1758,24 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
     Route::post('messages/{thread}/reply', [\App\Http\Controllers\Pages\MessageController::class, 'reply'])
         ->name('messages.reply');
 
+    // SMS Portal
+    Route::prefix('sms')->name('sms.')->group(function () {
+        Route::get('/unread-count', [\App\Http\Controllers\Pages\SmsPortalController::class, 'unreadCount'])
+            ->name('unread-count');
+        Route::get('/api/customers', [\App\Http\Controllers\Pages\SmsPortalController::class, 'searchCustomers'])
+            ->name('api.customers');
+        Route::post('/compose', [\App\Http\Controllers\Pages\SmsPortalController::class, 'compose'])
+            ->name('compose');
+        Route::get('/', [\App\Http\Controllers\Pages\SmsPortalController::class, 'index'])->name('index');
+        Route::get('/{conversation}', [\App\Http\Controllers\Pages\SmsPortalController::class, 'show'])->name('show');
+        Route::post('/{conversation}/reply', [\App\Http\Controllers\Pages\SmsPortalController::class, 'reply'])
+            ->name('reply');
+        Route::post('/{conversation}/link-customer', [\App\Http\Controllers\Pages\SmsPortalController::class, 'linkCustomer'])
+            ->name('link-customer');
+        Route::post('/{conversation}/create-opportunity', [\App\Http\Controllers\Pages\SmsPortalController::class, 'createOpportunity'])
+            ->name('create-opportunity');
+    });
+
     // Leads
     Route::prefix('leads')->name('leads.')->middleware('role_or_permission:admin|view leads')->group(function () {
         Route::get('/', [\App\Http\Controllers\Pages\LeadManagementController::class, 'index'])->name('index');
@@ -1768,6 +1786,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         Route::post('/{lead}/deny', [\App\Http\Controllers\Pages\LeadManagementController::class, 'deny'])
             ->middleware('role_or_permission:admin|manage leads')
             ->name('deny');
+        Route::post('/{lead}/reply-email', [\App\Http\Controllers\Pages\LeadManagementController::class, 'replyEmail'])
+            ->name('reply-email');
+        Route::post('/{lead}/reply-sms', [\App\Http\Controllers\Pages\LeadManagementController::class, 'replySms'])
+            ->name('reply-sms');
     });
 
     }); // end pages group

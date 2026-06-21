@@ -101,7 +101,7 @@ class GraphMailService
                 'subject' => $subject,
                 'body'    => $trackingToken
                     ? $this->buildHtmlBody($body, $trackingToken)
-                    : ['contentType' => 'Text', 'content' => $body],
+                    : ['contentType' => 'HTML', 'content' => $body],
                 'toRecipients' => $recipients,
                 'from'         => [
                     'emailAddress' => array_filter([
@@ -477,7 +477,7 @@ class GraphMailService
                 'subject' => $subject,
                 'body'    => $trackingToken
                     ? $this->buildHtmlBody($body, $trackingToken)
-                    : ['contentType' => 'Text', 'content' => $body],
+                    : ['contentType' => 'HTML', 'content' => $body],
                 'toRecipients' => $recipients,
             ];
 

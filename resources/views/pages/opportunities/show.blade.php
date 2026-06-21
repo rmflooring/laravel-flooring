@@ -748,6 +748,54 @@
             </div>
             @endcan
 
+            {{-- SMS Conversation --}}
+            @isset($smsConversation)
+            <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 p-5 dark:border-gray-700 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">SMS Conversation</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $smsConversation->phone }}</p>
+                    </div>
+                    <a href="{{ route('pages.sms.show', $smsConversation) }}"
+                       class="text-sm text-blue-600 hover:underline dark:text-blue-400">
+                        View full thread →
+                    </a>
+                </div>
+                <div class="p-5 space-y-3">
+                    @forelse ($smsConversation->messages->reverse() as $message)
+                        @php $isOutbound = $message->isOutbound(); @endphp
+                        <div class="flex {{ $isOutbound ? 'justify-end' : 'justify-start' }} gap-2">
+                            <div class="max-w-sm">
+                                <div class="{{ $isOutbound ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' }} rounded-xl px-3 py-2 text-sm">
+                                    {{ $message->body }}
+                                </div>
+                                <p class="mt-0.5 text-xs text-gray-400 {{ $isOutbound ? 'text-right' : '' }}">
+                                    {{ $message->created_at->diffForHumans() }}
+                                </p>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-400 dark:text-gray-500">No messages yet.</p>
+                    @endforelse
+                </div>
+                <div class="border-t border-gray-200 dark:border-gray-700 p-4">
+                    <form method="POST" action="{{ route('pages.sms.reply', $smsConversation) }}" class="flex gap-2">
+                        @csrf
+                        <input type="text" name="body" required maxlength="1600"
+                               placeholder="Quick reply…"
+                               class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <button type="submit"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+                            </svg>
+                            Send
+                        </button>
+                    </form>
+                </div>
+            </div>
+            @endisset
+
             {{-- Notes & Updates --}}
             <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="border-b border-gray-200 p-6 dark:border-gray-700">
