@@ -84,7 +84,7 @@ class ShopApiController extends Controller
             ->with([
                 'unit',
                 'productStyles' => function ($q) {
-                    $q->where('status', 'active')
+                    $q->whereIn('status', ['active', 'out_of_stock'])
                       ->where('shop_visible', true)
                       ->with('photos')
                       ->orderBy('name');
@@ -120,6 +120,8 @@ class ShopApiController extends Controller
                     'units_per'      => $style->units_per !== null ? (float) $style->units_per : null,
                     'use_box_qty'    => (bool) $style->use_box_qty,
                     'shop_show_price' => (bool) $style->shop_show_price,
+                    'in_stock'       => $style->status === 'active',
+                    'stock_note'     => $style->status === 'out_of_stock' ? 'Currently no stock available' : null,
                     'photos'       => $style->photos->map(fn ($p) => [
                         'id'         => $p->id,
                         'url'        => url(Storage::url($p->file_path)),
@@ -248,6 +250,10 @@ class ShopApiController extends Controller
         ]);
 
         $style = ProductStyle::with('productLine')->findOrFail($validated['product_style_id']);
+
+        if ($style->status !== 'active') {
+            return response()->json(['message' => 'Samples are not available for this style at this time.'], 422);
+        }
 
         $to = config('mail.from.address', 'reception@rmflooring.ca');
 

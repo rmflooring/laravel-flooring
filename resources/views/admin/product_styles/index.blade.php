@@ -139,10 +139,11 @@
                         <select name="status"
                                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-4 focus:ring-blue-300 focus:border-blue-500">
                             <option value="">All (excl. archived)</option>
-                            <option value="active"   @selected(request('status') === 'active')>Active</option>
-                            <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
-                            <option value="dropped"  @selected(request('status') === 'dropped')>Dropped</option>
-                            <option value="archived" @selected(request('status') === 'archived')>Archived</option>
+                            <option value="active"        @selected(request('status') === 'active')>Active</option>
+                            <option value="out_of_stock" @selected(request('status') === 'out_of_stock')>Out of Stock</option>
+                            <option value="inactive"     @selected(request('status') === 'inactive')>Inactive</option>
+                            <option value="dropped"      @selected(request('status') === 'dropped')>Dropped</option>
+                            <option value="archived"     @selected(request('status') === 'archived')>Archived</option>
                         </select>
                     </div>
                 </div>
@@ -240,14 +241,15 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                                 @php
                                                     $badgeClass = match($style->status) {
-                                                        'active'   => 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
-                                                        'dropped'  => 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
-                                                        'archived' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-                                                        default    => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                                                        'active'        => 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
+                                                        'out_of_stock'  => 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100',
+                                                        'dropped'       => 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
+                                                        'archived'      => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+                                                        default         => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
                                                     };
                                                 @endphp
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $badgeClass }}">
-                                                    {{ ucfirst($style->status) }}
+                                                    {{ match($style->status) { 'out_of_stock' => 'Out of Stock', default => ucfirst($style->status) } }}
                                                 </span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -424,6 +426,7 @@
                                     class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
                                 <option value="">— don't change —</option>
                                 <option value="active">Active</option>
+                                <option value="out_of_stock">Out of Stock</option>
                                 <option value="inactive">Inactive</option>
                                 <option value="dropped">Dropped</option>
                             </select>
@@ -609,9 +612,10 @@
                         <div class="col-span-2 sm:col-span-1">
                             <label for="status" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Status</label>
                             <select name="status" id="status" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                                <option value="active" {{ (session('editStyle')->status ?? 'active') == 'active' ? 'selected' : '' }}>Active</option>
-                                <option value="inactive" {{ (session('editStyle')->status ?? '') == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                                <option value="dropped" {{ (session('editStyle')->status ?? '') == 'dropped' ? 'selected' : '' }}>Dropped</option>
+                                <option value="active"        {{ (session('editStyle')->status ?? 'active') == 'active'        ? 'selected' : '' }}>Active</option>
+                                <option value="out_of_stock" {{ (session('editStyle')->status ?? '') == 'out_of_stock' ? 'selected' : '' }}>Out of Stock</option>
+                                <option value="inactive"     {{ (session('editStyle')->status ?? '') == 'inactive'     ? 'selected' : '' }}>Inactive</option>
+                                <option value="dropped"      {{ (session('editStyle')->status ?? '') == 'dropped'      ? 'selected' : '' }}>Dropped</option>
                             </select>
                         </div>
                     </div>
