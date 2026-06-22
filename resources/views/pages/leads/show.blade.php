@@ -291,7 +291,6 @@
             @endif
 
         </div>
-    </div>
 
     {{-- Approve Modal --}}
     <div x-show="showApproveModal" x-cloak
@@ -361,4 +360,6 @@
             </form>
         </div>
     </div>
+    </div>
 </x-app-layout>
+
