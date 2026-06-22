@@ -18,6 +18,8 @@ use App\Http\Controllers\Pages\RfmController;
 
 use App\Http\Controllers\OpportunityDocumentController;
 use App\Http\Controllers\Pages\OpportunityMediaController;
+use App\Http\Controllers\Pages\OpportunityShareController;
+use App\Http\Controllers\SharedMediaController;
 
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
@@ -86,6 +88,10 @@ Route::get('/t/{token}', [\App\Http\Controllers\EmailTrackingController::class, 
 // Public QR scan page — no auth required
 Route::get('/scan/{sampleId}', [\App\Http\Controllers\PublicSampleController::class, 'show'])
     ->name('scan.sample');
+
+// Public shared media links — no auth required
+Route::get('/share/{token}', [SharedMediaController::class, 'show'])
+    ->name('share.show');
 
 // E-Signature public signing routes — no auth required
 Route::get('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'show'])->name('sign.show');
@@ -1529,6 +1535,11 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
 
 			Route::get('media', [OpportunityMediaController::class, 'index'])
 				->name('opportunities.media.index');
+
+            Route::post('shares', [OpportunityShareController::class, 'store'])
+                ->name('opportunities.shares.store');
+            Route::delete('shares/{share}', [OpportunityShareController::class, 'destroy'])
+                ->name('opportunities.shares.destroy');
 			
 			Route::get('documents', [OpportunityDocumentController::class, 'index'])
                 ->name('opportunities.documents.index');

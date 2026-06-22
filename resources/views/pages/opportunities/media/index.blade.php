@@ -159,6 +159,16 @@
     </div>
 
     <div class="flex items-center gap-2" x-show="selectedCount > 0">
+        {{-- Share selected --}}
+        <button type="button"
+                @click="openShareModal()"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/>
+            </svg>
+            Share
+        </button>
+
         {{-- Soft delete (archive) --}}
         <form method="POST"
               action="{{ route('pages.opportunities.documents.bulkDestroy', $opportunity) }}"
@@ -265,6 +275,151 @@
     @endif
 </div>
 
+{{-- Share Modal --}}
+<div id="shareModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Share Selected Photos</h3>
+            <button onclick="closeShareModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="shareForm" method="POST" action="{{ route('pages.opportunities.shares.store', $opportunity) }}">
+            @csrf
+            <div id="shareHiddenIds"></div>
+            <div class="px-6 py-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Label <span class="font-normal text-gray-400">(optional)</span>
+                    </label>
+                    <input type="text" name="label" maxlength="255"
+                           placeholder="e.g. Kitchen flooring samples"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Expiry <span class="font-normal text-gray-400">(optional)</span>
+                    </label>
+                    <input type="date" name="expires_at"
+                           min="{{ now()->addDay()->format('Y-m-d') }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <p class="mt-1 text-xs text-gray-400">Leave blank for a permanent link.</p>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400" id="shareSelectedCount"></p>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                <button type="button" onclick="closeShareModal()"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/>
+                    </svg>
+                    Create Share Link
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if ($shares->isNotEmpty() || session('share_created'))
+    {{-- Shared Links section --}}
+    <div class="mt-6 bg-white border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/>
+            </svg>
+            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Shared Links</h2>
+        </div>
+
+        @if (session('share_created'))
+            <div class="px-5 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-100 dark:border-green-800 flex items-center gap-3">
+                <svg class="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                <p class="text-sm font-medium text-green-800 dark:text-green-300">Link created! Share this URL with your customer:</p>
+            </div>
+            <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                <input type="text" readonly
+                       value="{{ session('share_created') }}"
+                       id="newShareUrl"
+                       class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-1.5 text-sm font-mono focus:outline-none focus:border-blue-500">
+                <button onclick="copyUrl('newShareUrl', this)"
+                        class="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/>
+                    </svg>
+                    Copy
+                </button>
+            </div>
+        @endif
+
+        @if ($shares->isEmpty())
+            <div class="px-5 py-4 text-sm text-gray-400 dark:text-gray-500">No active share links.</div>
+        @else
+            <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach ($shares as $share)
+                    <li class="flex items-center gap-4 px-5 py-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    {{ $share->label ?: 'Untitled share' }}
+                                </p>
+                                @if ($share->isExpired())
+                                    <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">Expired</span>
+                                @endif
+                            </div>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                {{ $share->documents->count() }} file{{ $share->documents->count() !== 1 ? 's' : '' }}
+                                &middot; Created by {{ $share->createdBy?->name ?? 'Unknown' }} {{ $share->created_at->diffForHumans() }}
+                                @if ($share->expires_at && !$share->isExpired())
+                                    &middot; Expires {{ $share->expires_at->format('M j, Y') }}
+                                @endif
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <input type="text" readonly
+                                   value="{{ $share->publicUrl() }}"
+                                   id="shareUrl{{ $share->id }}"
+                                   class="w-48 hidden sm:block rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-2 py-1 text-xs font-mono focus:outline-none">
+                            <button onclick="copyUrl('shareUrl{{ $share->id }}', this)"
+                                    class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/>
+                                </svg>
+                                Copy
+                            </button>
+                            <a href="{{ $share->publicUrl() }}" target="_blank"
+                               class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
+                                </svg>
+                                Preview
+                            </a>
+                            <form method="POST" action="{{ route('pages.opportunities.shares.destroy', [$opportunity, $share]) }}"
+                                  onsubmit="return confirm('Revoke this share link? Anyone with the URL will no longer be able to access it.')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white dark:bg-gray-700 dark:border-red-800 px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                    </svg>
+                                    Revoke
+                                </button>
+                            </form>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+    </div>
+@endif
+
 </div>{{-- end x-data --}}
 
 
@@ -363,6 +518,45 @@
 </div>
 
 <script>
+function openShareModal() {
+    const ids = window._gallery ? Object.keys(window._gallery.selectedMap) : [];
+    if (ids.length === 0) return;
+
+    const container = document.getElementById('shareHiddenIds');
+    container.innerHTML = '';
+    ids.forEach(id => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'document_ids[]';
+        inp.value = id;
+        container.appendChild(inp);
+    });
+
+    const countEl = document.getElementById('shareSelectedCount');
+    if (countEl) countEl.textContent = `${ids.length} photo${ids.length !== 1 ? 's' : ''} will be included in this link.`;
+
+    document.getElementById('shareModal').classList.remove('hidden');
+}
+
+function closeShareModal() {
+    document.getElementById('shareModal').classList.add('hidden');
+}
+
+function copyUrl(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    navigator.clipboard.writeText(input.value).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Copied!';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+    });
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeShareModal(); });
+
 function mediaGallery() {
     return {
         selectMode: false,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\Opportunity;
+use App\Models\OpportunityShare;
 use Illuminate\Http\Request;
 
 class OpportunityMediaController extends Controller
@@ -40,12 +41,18 @@ class OpportunityMediaController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $shares = OpportunityShare::where('opportunity_id', $opportunity->id)
+            ->with(['documents', 'createdBy'])
+            ->latest()
+            ->get();
+
         return view('pages.opportunities.media.index', [
             'opportunity'  => $opportunity,
             'media'        => $media,
             'showArchived' => $showArchived,
             'uploaders'    => $uploaders,
             'uploadedBy'   => $uploadedBy,
+            'shares'       => $shares,
         ]);
     }
 }
