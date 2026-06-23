@@ -162,7 +162,8 @@ class TwilioSmsWebhookController extends Controller
 
         $validator = new \Twilio\Security\RequestValidator($secret);
         $signature = $request->header('X-Twilio-Signature', '');
-        $url       = $request->fullUrl();
+        // Build URL from APP_URL to avoid http/https mismatch behind nginx reverse proxy
+        $url       = rtrim(config('app.url'), '/') . $request->getRequestUri();
         $params    = $request->post();
 
         return $validator->validate($signature, $url, $params);
