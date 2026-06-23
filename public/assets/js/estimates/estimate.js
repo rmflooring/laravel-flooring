@@ -2275,6 +2275,10 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     checkGptHint();
   }
 
+  // Guard flag: set to true while the forward calc is writing to .js-total-input
+  // so the reverse calc listener knows to skip (it's not a user-typed change).
+  let _fmForwardCalcActive = false;
+
   // ── Real-time line total calculation ────────────────────────────────────
   roomsContainer.addEventListener("input", e => {
     const input = e.target;
@@ -2296,9 +2300,11 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 	  costTotalEl.value = (qty * costPrice).toFixed(2);
 	}
 
-    // Update visible total input
+    // Update visible total input — guard flag prevents reverse calc from firing
+    _fmForwardCalcActive = true;
     const totalDisplay = row.querySelector('.js-total-input');
     if (totalDisplay) totalDisplay.value = lineTotal.toFixed(2);
+    _fmForwardCalcActive = false;
 
     // Update hidden line_total
     const hidden = row.querySelector('input[name$="[line_total]"]');
@@ -2321,6 +2327,8 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
   roomsContainer.addEventListener("input", e => {
     const input = e.target;
     if (!input.matches('.js-total-input')) return;
+    // Skip if this change was triggered programmatically by the forward calc
+    if (_fmForwardCalcActive) return;
 
     const row = input.closest("tr");
     if (!row) return;
