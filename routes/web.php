@@ -1785,6 +1785,13 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             ->name('link-customer');
         Route::post('/{conversation}/create-opportunity', [\App\Http\Controllers\Pages\SmsPortalController::class, 'createOpportunity'])
             ->name('create-opportunity');
+        Route::post('/{conversation}/archive', [\App\Http\Controllers\Pages\SmsPortalController::class, 'archive'])
+            ->name('archive');
+        Route::post('/{conversation}/unarchive', [\App\Http\Controllers\Pages\SmsPortalController::class, 'unarchive'])
+            ->name('unarchive');
+        Route::delete('/{conversation}', [\App\Http\Controllers\Pages\SmsPortalController::class, 'destroy'])
+            ->middleware('role:admin')
+            ->name('destroy');
     });
 
     // Leads

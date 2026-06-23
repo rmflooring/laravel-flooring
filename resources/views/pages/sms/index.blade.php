@@ -26,7 +26,7 @@
     }">
 
         {{-- Header --}}
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">SMS Inbox</h1>
                 @if ($totalUnread > 0)
@@ -42,6 +42,21 @@
                 </svg>
                 New SMS
             </button>
+        </div>
+
+        {{-- Tabs --}}
+        <div class="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+            <a href="{{ route('pages.sms.index') }}"
+               class="px-4 py-2 text-sm font-medium border-b-2 -mb-px {{ $view === 'active' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                Active
+            </a>
+            <a href="{{ route('pages.sms.index', ['view' => 'archived']) }}"
+               class="px-4 py-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-1.5 {{ $view === 'archived' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                Archived
+                @if ($archivedCount > 0)
+                    <span class="rounded-full bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">{{ $archivedCount }}</span>
+                @endif
+            </a>
         </div>
 
         @if ($conversations->isEmpty())
@@ -63,9 +78,9 @@
                                 ? '?'
                                 : strtoupper(substr($conversation->customer->name ?? '?', 0, 1));
                         @endphp
-                        <li>
+                        <li class="group relative">
                             <a href="{{ route('pages.sms.show', $conversation) }}"
-                               class="flex items-start gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 {{ $conversation->unread_count > 0 ? 'bg-blue-50 dark:bg-blue-900/10' : '' }}">
+                               class="flex items-start gap-4 px-5 py-4 pr-24 hover:bg-gray-50 dark:hover:bg-gray-700/50 {{ $conversation->unread_count > 0 ? 'bg-blue-50 dark:bg-blue-900/10' : '' }}">
                                 <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full {{ $isUnknown ? 'bg-gray-300 dark:bg-gray-600' : 'bg-blue-100 dark:bg-blue-900' }} text-sm font-semibold {{ $isUnknown ? 'text-gray-600 dark:text-gray-300' : 'text-blue-700 dark:text-blue-300' }}">
                                     {{ $initials }}
                                 </div>
@@ -113,6 +128,38 @@
                                     </div>
                                 </div>
                             </a>
+
+                            {{-- Row actions (visible on hover) --}}
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                @if ($conversation->isArchived())
+                                    <form method="POST" action="{{ route('pages.sms.unarchive', $conversation) }}">
+                                        @csrf
+                                        <button type="submit" title="Restore to inbox"
+                                                class="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
+                                            Restore
+                                        </button>
+                                    </form>
+                                    @role('admin')
+                                    <form method="POST" action="{{ route('pages.sms.destroy', $conversation) }}"
+                                          onsubmit="return confirm('Permanently delete this conversation and all its messages? This cannot be undone.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" title="Delete permanently"
+                                                class="rounded-lg border border-red-300 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:bg-gray-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
+                                            Delete
+                                        </button>
+                                    </form>
+                                    @endrole
+                                @else
+                                    <form method="POST" action="{{ route('pages.sms.archive', $conversation) }}">
+                                        @csrf
+                                        <button type="submit" title="Archive conversation"
+                                                class="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
+                                            Archive
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         </li>
                     @endforeach
                 </ul>

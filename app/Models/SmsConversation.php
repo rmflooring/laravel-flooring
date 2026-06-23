@@ -53,6 +53,16 @@ class SmsConversation extends Model
         return $query->where('status', 'active');
     }
 
+    public function scopeArchived(Builder $query): Builder
+    {
+        return $query->where('status', 'archived');
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->status === 'archived';
+    }
+
     public function displayName(): string
     {
         return $this->customer?->name ?? $this->phone;

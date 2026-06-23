@@ -16,16 +16,24 @@ class SmsPortalController extends Controller
 {
     public function index(Request $request)
     {
-        $conversations = SmsConversation::with(['customer', 'messages' => function ($q) {
-                $q->latest()->limit(1);
-            }])
-            ->orderByDesc('last_message_at')
-            ->paginate(30)
-            ->withQueryString();
+        $view = $request->input('view', 'active');
 
-        $totalUnread = SmsConversation::sum('unread_count');
+        $query = SmsConversation::with(['customer', 'messages' => function ($q) {
+            $q->latest()->limit(1);
+        }])->orderByDesc('last_message_at');
 
-        return view('pages.sms.index', compact('conversations', 'totalUnread'));
+        if ($view === 'archived') {
+            $query->archived();
+        } else {
+            $query->active();
+        }
+
+        $conversations = $query->paginate(30)->withQueryString();
+
+        $totalUnread   = SmsConversation::sum('unread_count');
+        $archivedCount = SmsConversation::archived()->count();
+
+        return view('pages.sms.index', compact('conversations', 'totalUnread', 'archivedCount', 'view'));
     }
 
     public function show(SmsConversation $conversation)
@@ -80,6 +88,30 @@ class SmsPortalController extends Controller
         return response()->json([
             'count' => (int) SmsConversation::sum('unread_count'),
         ]);
+    }
+
+    public function archive(SmsConversation $conversation)
+    {
+        $conversation->update(['status' => 'archived']);
+
+        return redirect()->route('pages.sms.index')
+            ->with('success', 'Conversation archived.');
+    }
+
+    public function unarchive(SmsConversation $conversation)
+    {
+        $conversation->update(['status' => 'active']);
+
+        return redirect()->route('pages.sms.show', $conversation)
+            ->with('success', 'Conversation restored to inbox.');
+    }
+
+    public function destroy(SmsConversation $conversation)
+    {
+        $conversation->delete();
+
+        return redirect()->route('pages.sms.index')
+            ->with('success', 'Conversation permanently deleted.');
     }
 
     public function searchCustomers(Request $request)
