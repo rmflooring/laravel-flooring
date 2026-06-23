@@ -2300,15 +2300,18 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 	  costTotalEl.value = (qty * costPrice).toFixed(2);
 	}
 
+    // Round using Math.round to match PHP's round() — toFixed(2) has banker's rounding issues
+    const lineTotalRounded = Math.round(lineTotal * 100) / 100;
+
     // Update visible total input — guard flag prevents reverse calc from firing
     _fmForwardCalcActive = true;
     const totalDisplay = row.querySelector('.js-total-input');
-    if (totalDisplay) totalDisplay.value = lineTotal.toFixed(2);
+    if (totalDisplay) totalDisplay.value = lineTotalRounded.toFixed(2);
     _fmForwardCalcActive = false;
 
     // Update hidden line_total
     const hidden = row.querySelector('input[name$="[line_total]"]');
-    if (hidden) hidden.value = lineTotal.toFixed(2);
+    if (hidden) hidden.value = lineTotalRounded.toFixed(2);
 
 	// --- update cost_total as well ---
 	const costPriceInput = row.querySelector('input[name$="[cost_price]"]');
@@ -2337,7 +2340,8 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const qty = parseNumber(row.querySelector('input[name*="quantity"]')?.value || 0);
 
     if (qty !== 0) {
-      const sell = total / qty;
+      // Round to 2dp to avoid float division imprecision (e.g. 886.70/38.67 = 22.9299 not 22.93)
+      const sell = Math.round((total / qty) * 100) / 100;
       const sellInput = row.querySelector('input[name*="sell_price"]');
       if (sellInput) sellInput.value = formatPrice(sell);
 
