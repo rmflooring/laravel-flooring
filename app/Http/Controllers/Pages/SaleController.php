@@ -82,6 +82,7 @@ class SaleController extends Controller
 
 			$searchableCols = [
 				'id',
+				'sale_number',
 				'source_estimate_number',
 				'status',
 				'job_name',
