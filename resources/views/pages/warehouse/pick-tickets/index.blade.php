@@ -20,6 +20,10 @@
 
             {{-- Filter bar --}}
             <form method="GET" action="{{ route('pages.warehouse.pick-tickets.index') }}" class="flex flex-wrap gap-2 items-end">
+                @if(request('sort'))
+                    <input type="hidden" name="sort" value="{{ request('sort') }}">
+                    <input type="hidden" name="direction" value="{{ request('direction') }}">
+                @endif
                 <input type="text"
                        name="search"
                        value="{{ request('search') }}"
@@ -36,7 +40,7 @@
                         class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
                     Filter
                 </button>
-                @if (request()->hasAny(['search', 'status']))
+                @if (request()->hasAny(['search', 'status', 'sort']))
                     <a href="{{ route('pages.warehouse.pick-tickets.index') }}"
                        class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                         Clear
@@ -45,18 +49,48 @@
             </form>
 
             {{-- Table --}}
+            @php
+                $currentSort = request('sort');
+                $currentDir  = request('direction', 'asc');
+                $sortUrl = fn($col) => request()->fullUrlWithQuery([
+                    'sort'      => $col,
+                    'direction' => ($currentSort === $col && $currentDir === 'asc') ? 'desc' : 'asc',
+                    'page'      => 1,
+                ]);
+                $sortIcon = fn($col) => $currentSort === $col
+                    ? ($currentDir === 'asc' ? '↑' : '↓')
+                    : '↕';
+                $thBase   = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400';
+                $linkBase = 'inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400';
+            @endphp
             <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">PT #</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sale</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Work Order</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Items</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Install Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Created</th>
-                            <th class="px-4 py-3"></th>
+                            <th class="{{ $thBase }}">
+                                <a href="{{ $sortUrl('pt_number') }}" class="{{ $linkBase }}">
+                                    PT # <span>{{ $sortIcon('pt_number') }}</span>
+                                </a>
+                            </th>
+                            <th class="{{ $thBase }}">Sale</th>
+                            <th class="{{ $thBase }}">Work Order</th>
+                            <th class="{{ $thBase }}">Items</th>
+                            <th class="{{ $thBase }}">
+                                <a href="{{ $sortUrl('status') }}" class="{{ $linkBase }}">
+                                    Status <span>{{ $sortIcon('status') }}</span>
+                                </a>
+                            </th>
+                            <th class="{{ $thBase }}">
+                                <a href="{{ $sortUrl('delivery_date') }}" class="{{ $linkBase }}">
+                                    Install Date <span>{{ $sortIcon('delivery_date') }}</span>
+                                </a>
+                            </th>
+                            <th class="{{ $thBase }}">
+                                <a href="{{ $sortUrl('created_at') }}" class="{{ $linkBase }}">
+                                    Created <span>{{ $sortIcon('created_at') }}</span>
+                                </a>
+                            </th>
+                            <th class="{{ $thBase }}"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
