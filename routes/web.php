@@ -93,6 +93,11 @@ Route::get('/scan/{sampleId}', [\App\Http\Controllers\PublicSampleController::cl
 Route::get('/share/{token}', [SharedMediaController::class, 'show'])
     ->name('share.show');
 
+Route::get('/review/{token}', [\App\Http\Controllers\ReviewController::class, 'show'])
+    ->name('review.show');
+Route::post('/review/{token}', [\App\Http\Controllers\ReviewController::class, 'submit'])
+    ->name('review.submit');
+
 // E-Signature public signing routes — no auth required
 Route::get('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'show'])->name('sign.show');
 Route::get('/sign/{uuid}/document', [\App\Http\Controllers\SigningController::class, 'document'])->name('sign.document');
@@ -1540,6 +1545,9 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->name('opportunities.shares.store');
             Route::delete('shares/{share}', [OpportunityShareController::class, 'destroy'])
                 ->name('opportunities.shares.destroy');
+
+            Route::post('reviews', [\App\Http\Controllers\Pages\ReviewRequestController::class, 'store'])
+                ->name('opportunities.reviews.store');
 			
 			Route::get('documents', [OpportunityDocumentController::class, 'index'])
                 ->name('opportunities.documents.index');

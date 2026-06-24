@@ -918,4 +918,131 @@
 
         </div>
     </div>
+
+    {{-- ── Review Requests Panel ──────────────────────────────────────────── --}}
+    <div class="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8" x-data="{ showReviewForm: false }">
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-200 p-5 dark:border-gray-700">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        Google Review Requests
+                    </h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Send a review link to the customer after job completion.</p>
+                </div>
+                <button @click="showReviewForm = !showReviewForm"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Request Review
+                </button>
+            </div>
+
+            {{-- Send Form --}}
+            <div x-show="showReviewForm" x-cloak class="border-b border-gray-200 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900">
+                <form method="POST" action="{{ route('pages.opportunities.reviews.store', $opportunity) }}" class="space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Customer Name</label>
+                            <input type="text" name="customer_name" required
+                                value="{{ $opportunity->jobSiteCustomer?->name ?? $opportunity->parentCustomer?->name ?? '' }}"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Send Via</label>
+                            <select name="sent_via" id="sent-via-select" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="sms">SMS</option>
+                                <option value="email">Email</option>
+                            </select>
+                        </div>
+                        <div id="phone-field">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                            <input type="text" name="customer_phone"
+                                value="{{ $opportunity->jobSiteCustomer?->phone ?? $opportunity->jobSiteCustomer?->mobile ?? $opportunity->parentCustomer?->phone ?? '' }}"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div id="email-field" class="hidden">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                            <input type="email" name="customer_email"
+                                value="{{ $opportunity->jobSiteCustomer?->email ?? $opportunity->parentCustomer?->email ?? '' }}"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Message <span class="font-normal text-gray-400">(optional — leave blank for default)</span>
+                        </label>
+                        <textarea name="message" rows="3"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Hi [Name], thank you for choosing RM Flooring! We'd love to hear about your experience…"></textarea>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            Send Request
+                        </button>
+                        <button type="button" @click="showReviewForm = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {{-- Past requests --}}
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                @forelse ($reviewRequests as $rr)
+                    <div class="flex items-start justify-between gap-4 px-5 py-4">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5">
+                                @if ($rr->isSubmitted())
+                                    @if ($rr->isPositive())
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                            ★ {{ $rr->rating }}/5
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                                            ★ {{ $rr->rating }}/5
+                                        </span>
+                                    @endif
+                                @else
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                        Pending
+                                    </span>
+                                @endif
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $rr->customer_name }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    Sent via {{ strtoupper($rr->sent_via) }} by {{ $rr->sentBy?->name ?? 'Staff' }}
+                                    · {{ $rr->created_at->diffForHumans() }}
+                                </p>
+                                @if ($rr->feedback)
+                                    <p class="mt-1 text-xs text-gray-600 dark:text-gray-300 italic">"{{ Str::limit($rr->feedback, 120) }}"</p>
+                                @endif
+                            </div>
+                        </div>
+                        <a href="{{ $rr->publicUrl() }}" target="_blank"
+                            class="shrink-0 text-xs text-blue-600 hover:underline dark:text-blue-400">
+                            View link
+                        </a>
+                    </div>
+                @empty
+                    <div class="px-5 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                        No review requests sent yet for this job.
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('sent-via-select')?.addEventListener('change', function () {
+            document.getElementById('phone-field').classList.toggle('hidden', this.value === 'email');
+            document.getElementById('email-field').classList.toggle('hidden', this.value === 'sms');
+        });
+    </script>
+
 </x-app-layout>

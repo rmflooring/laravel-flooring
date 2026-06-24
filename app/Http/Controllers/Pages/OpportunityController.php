@@ -313,7 +313,12 @@ $employees = Employee::query()
 				->with(['messages' => fn ($q) => $q->latest()->limit(5)])
 				->first();
 
-			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales', 'purchaseOrders', 'prev', 'next', 'backUrl', 'filterParams', 'navPosition', 'navTotal', 'smsConversation'));
+			$reviewRequests = \App\Models\ReviewRequest::where('opportunity_id', $opportunity->id)
+				->with('sentBy')
+				->latest()
+				->get();
+
+			return view('pages.opportunities.show', compact('opportunity', 'salesPeople', 'sales', 'purchaseOrders', 'prev', 'next', 'backUrl', 'filterParams', 'navPosition', 'navTotal', 'smsConversation', 'reviewRequests'));
 		}
 
 
