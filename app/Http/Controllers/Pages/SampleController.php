@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\ProductLine;
 use App\Models\ProductStyle;
+use App\Models\ProductType;
 use App\Models\Sample;
 use App\Models\SampleCheckout;
 use App\Models\SampleSet;
@@ -320,6 +321,103 @@ class SampleController extends Controller
             'line_name'   => $s->productLine?->name,
             'manufacturer'=> $s->productLine?->manufacturer,
         ]));
+    }
+
+    // -----------------------------------------------------------------------
+    // PRODUCT LINE LABEL FORM
+    // -----------------------------------------------------------------------
+
+    public function productLineLabelForm(Request $request)
+    {
+        $search    = $request->input('search', '');
+        $typeId    = $request->input('type_id', '');
+
+        $q = ProductLine::with('productType')
+            ->where('status', 'active')
+            ->orderBy('name');
+
+        if ($search) {
+            $q->where(function ($sq) use ($search) {
+                $sq->where('name', 'like', "%{$search}%")
+                   ->orWhere('manufacturer', 'like', "%{$search}%");
+            });
+        }
+
+        if ($typeId) {
+            $q->where('product_type_id', $typeId);
+        }
+
+        $productLines = $q->withCount(['productStyles' => fn ($sq) => $sq->where('status', 'active')])->get();
+        $productTypes = ProductType::orderBy('name')->get(['id', 'name']);
+
+        return view('pages.samples.product-line-label-form', compact(
+            'productLines', 'productTypes', 'search', 'typeId'
+        ));
+    }
+
+    // -----------------------------------------------------------------------
+    // PRODUCT LINE LABEL PDF
+    // -----------------------------------------------------------------------
+
+    public function productLineLabel(Request $request)
+    {
+        $lineIds      = array_filter(array_map('intval', (array) $request->input('lines', [])));
+        $showPrice    = $request->boolean('show_price', false);
+        $qty          = $request->input('qty', []);
+        $topOffsetMm  = max(-20, min(20, (float) $request->input('top_offset_mm', 0)));
+        $leftOffsetMm = max(-20, min(20, (float) $request->input('left_offset_mm', 0)));
+
+        if (empty($lineIds)) {
+            return redirect()->route('pages.samples.product-line-labels.form')
+                ->with('error', 'Select at least one product line before printing labels.');
+        }
+
+        $lines = ProductLine::whereIn('id', $lineIds)
+            ->with(['productType', 'unit'])
+            ->withCount(['productStyles' => fn ($q) => $q->where('status', 'active')])
+            ->get()
+            ->keyBy('id');
+
+        // Branding
+        $logoPath    = Setting::get('branding_logo_path');
+        $logoDataUri = null;
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            $logoData    = Storage::disk('public')->get($logoPath);
+            $logoMime    = Storage::disk('public')->mimeType($logoPath);
+            $logoDataUri = 'data:' . $logoMime . ';base64,' . base64_encode($logoData);
+        }
+        $companyName = Setting::get('branding_company_name', 'RM Flooring');
+
+        $labels = [];
+
+        foreach ($lineIds as $id) {
+            if (! $lines->has($id)) {
+                continue;
+            }
+            $line   = $lines[$id];
+            $copies = max(1, min(20, (int) ($qty["l_{$id}"] ?? 1)));
+            $qrSvg  = base64_encode(QrCode::format('svg')->size(100)->generate(route('scan.product-line', $line->id)));
+            for ($i = 0; $i < $copies; $i++) {
+                $labels[] = [
+                    'model'       => $line,
+                    'qrSvg'       => $qrSvg,
+                    'style_count' => $line->product_styles_count,
+                ];
+            }
+        }
+
+        if (empty($labels)) {
+            return redirect()->route('pages.samples.product-line-labels.form')
+                ->with('error', 'No valid product lines found for the selection.');
+        }
+
+        $rows = array_chunk($labels, 2);
+
+        return Pdf::loadView('pdf.product-line-batch-labels-5163', compact(
+            'rows', 'logoDataUri', 'companyName', 'showPrice', 'topOffsetMm', 'leftOffsetMm'
+        ))
+            ->setPaper('letter')
+            ->stream('product-line-labels.pdf');
     }
 
     // -----------------------------------------------------------------------

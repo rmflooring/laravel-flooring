@@ -35,8 +35,18 @@
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Samples</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Showroom sample inventory and checkout tracking.</p>
                 </div>
-                @can('create samples')
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    @can('view samples')
+                    <a href="{{ route('pages.samples.product-line-labels.form') }}"
+                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L9.568 3Z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/>
+                        </svg>
+                        Product Line Labels
+                    </a>
+                    @endcan
+                    @can('create samples')
                     <a href="{{ route('pages.samples.create') }}"
                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -51,8 +61,8 @@
                         </svg>
                         Add Sample Set
                     </a>
+                    @endcan
                 </div>
-                @endcan
             </div>
 
             {{-- Flash --}}

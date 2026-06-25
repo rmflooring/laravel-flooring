@@ -85,7 +85,10 @@ Route::get('/legal/privacy', fn () => view('legal.privacy'))->name('legal.privac
 Route::get('/t/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'pixel'])
     ->name('email.tracking.pixel');
 
-// Public QR scan page — no auth required
+// Public QR scan pages — no auth required
+Route::get('/scan/line/{productLine}', [\App\Http\Controllers\PublicProductLineController::class, 'show'])
+    ->name('scan.product-line');
+
 Route::get('/scan/{sampleId}', [\App\Http\Controllers\PublicSampleController::class, 'show'])
     ->name('scan.sample');
 
@@ -1686,6 +1689,14 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
     Route::post('samples/batch', [\App\Http\Controllers\Pages\SampleController::class, 'batchLabel'])
         ->middleware('role_or_permission:admin|view samples')
         ->name('samples.batch-label');
+
+    Route::get('samples/product-lines', [\App\Http\Controllers\Pages\SampleController::class, 'productLineLabelForm'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.product-line-labels.form');
+
+    Route::post('samples/product-lines', [\App\Http\Controllers\Pages\SampleController::class, 'productLineLabel'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.product-line-labels');
 
     Route::get('samples/add-from-styles', [\App\Http\Controllers\Pages\SampleController::class, 'addFromStylesForm'])
         ->middleware('role_or_permission:admin|create samples')
