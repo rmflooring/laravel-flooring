@@ -133,30 +133,61 @@ class QboSyncService
 
     /**
      * When QBO returns a 6240 duplicate-name error, find the conflicting vendor
-     * (including inactive ones — QBO IQL doesn't support filtering by Id),
-     * reactivate it if needed, and return it so we can link to it.
+     * (including inactive ones), reactivate if needed, and return it.
+     *
+     * Three-step fallback because:
+     * - GET by Id fails for inactive vendors (QBO returns 610)
+     * - Query by DisplayName fails when the name in FM differs from QBO
+     * - Last resort: page through all vendors (active+inactive) and match by Id
      */
     private function fetchQboDuplicateVendor(string $errorMessage, string $displayName): ?array
     {
         if (! preg_match('/"code"\s*:\s*"6240"/', $errorMessage)) {
             return null;
         }
-
-        // Try active vendors first (same as findQboVendorByName but we need to
-        // handle the inactive case too)
-        $escaped = addslashes($displayName);
-
-        // QBO IQL does not support filtering by Id — query by name including inactive
-        $result  = $this->qbo->query("SELECT * FROM Vendor WHERE DisplayName = '{$escaped}' AND Active IN (true,false) STARTPOSITION 1 MAXRESULTS 1");
-        $vendors = $result['QueryResponse']['Vendor'] ?? [];
-
-        if (empty($vendors)) {
+        if (! preg_match('/Id=(\d+)/', $errorMessage, $m)) {
             return null;
         }
+        $qboId = $m[1];
 
-        $qboVendor = $vendors[0];
+        // Step 1: direct GET — works when vendor is active
+        try {
+            $response = $this->qbo->get('vendor/' . $qboId);
+            if (! empty($response['Vendor'])) {
+                return $this->ensureVendorActive($response['Vendor']);
+            }
+        } catch (\RuntimeException) {
+            // inactive vendor — fall through
+        }
 
-        // Reactivate if inactive so it can be used on bills
+        // Step 2: query by name including inactive — works when name matches exactly
+        $escaped = addslashes($displayName);
+        $result  = $this->qbo->query("SELECT * FROM Vendor WHERE DisplayName = '{$escaped}' AND Active IN (true,false) STARTPOSITION 1 MAXRESULTS 1");
+        $vendors = $result['QueryResponse']['Vendor'] ?? [];
+        if (! empty($vendors)) {
+            return $this->ensureVendorActive($vendors[0]);
+        }
+
+        // Step 3: page through all vendors (active+inactive) and match by Id
+        // — needed when FM name differs from QBO DisplayName
+        $startPos = 1;
+        $pageSize = 500;
+        do {
+            $result = $this->qbo->query("SELECT Id, DisplayName, SyncToken, Active FROM Vendor WHERE Active IN (true,false) STARTPOSITION {$startPos} MAXRESULTS {$pageSize}");
+            $page   = $result['QueryResponse']['Vendor'] ?? [];
+            foreach ($page as $v) {
+                if ((string) $v['Id'] === $qboId) {
+                    return $this->ensureVendorActive($v);
+                }
+            }
+            $startPos += $pageSize;
+        } while (count($page) === $pageSize);
+
+        return null;
+    }
+
+    private function ensureVendorActive(array $qboVendor): array
+    {
         if (($qboVendor['Active'] ?? true) === false) {
             $response  = $this->qbo->post('vendor', [
                 'Id'        => $qboVendor['Id'],
@@ -165,7 +196,6 @@ class QboSyncService
             ]);
             $qboVendor = $response['Vendor'];
         }
-
         return $qboVendor;
     }
 
