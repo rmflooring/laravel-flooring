@@ -76,16 +76,19 @@
                     </div>
                 </div>
 
-                {{-- Attendees placeholder row (UI only for now) --}}
-                <div class="flex items-center gap-3 py-4">
-                    <div class="text-gray-400">
+                {{-- Attendees row --}}
+                <div class="flex items-start gap-3 py-4">
+                    <div class="mt-2 text-gray-400">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H2v-2a4 4 0 015-3.87m10-5.13a4 4 0 10-8 0 4 4 0 008 0zm-10 0a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
                     </div>
                     <div class="flex-1">
-                        <div class="text-lg text-gray-300 select-none">Invite required attendees</div>
+                        <div id="event-editor-attendee-tags" class="flex flex-wrap gap-2 mb-1"></div>
+                        <input type="email" id="event-editor-attendee-input"
+                               class="w-full border-0 p-0 text-lg text-gray-800 placeholder-gray-300 focus:ring-0 focus:outline-none"
+                               placeholder="Invite required attendees" autocomplete="off">
                         <div class="mt-2 h-px bg-gray-200"></div>
                     </div>
                 </div>

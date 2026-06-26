@@ -100,6 +100,16 @@ $payload['end'] = [
             $payload['location'] = ['displayName' => ''];
         }
 
+        if (!empty($data['attendees'])) {
+            $payload['attendees'] = array_map(fn($a) => [
+                'emailAddress' => ['address' => $a['email'], 'name' => $a['name'] ?? $a['email']],
+                'type'         => 'required',
+            ], $data['attendees']);
+        } elseif (array_key_exists('attendees', $data)) {
+            // Explicitly clear attendees when an empty array is sent
+            $payload['attendees'] = [];
+        }
+
         return $payload;
     }
 
@@ -107,13 +117,16 @@ public function store(Request $request)
 {
     try {
         $data = $request->validate([
-            'microsoft_calendar_id' => ['required', 'integer'],
-            'title'      => ['required', 'string', 'max:255'],
-            'start'      => ['required', 'date'],
-            'end'        => ['required', 'date', 'after:start'],
-            'location'   => ['nullable', 'string', 'max:255'],
-            'notes'      => ['nullable', 'string'],
-            'is_all_day' => ['nullable'],
+            'microsoft_calendar_id'  => ['required', 'integer'],
+            'title'                  => ['required', 'string', 'max:255'],
+            'start'                  => ['required', 'date'],
+            'end'                    => ['required', 'date', 'after:start'],
+            'location'               => ['nullable', 'string', 'max:255'],
+            'notes'                  => ['nullable', 'string'],
+            'is_all_day'             => ['nullable'],
+            'attendees'              => ['nullable', 'array'],
+            'attendees.*.email'      => ['required', 'email'],
+            'attendees.*.name'       => ['nullable', 'string', 'max:255'],
         ]);
 
         $user = Auth::user();
@@ -230,12 +243,15 @@ public function store(Request $request)
 
         try {
             $data = $request->validate([
-                'title'      => ['required', 'string', 'max:255'],
-                'start'      => ['required', 'date'],
-                'end'        => ['required', 'date', 'after:start'],
-                'location'   => ['nullable', 'string', 'max:255'],
-                'notes'      => ['nullable', 'string'],
-                'is_all_day' => ['nullable'],
+                'title'             => ['required', 'string', 'max:255'],
+                'start'             => ['required', 'date'],
+                'end'               => ['required', 'date', 'after:start'],
+                'location'          => ['nullable', 'string', 'max:255'],
+                'notes'             => ['nullable', 'string'],
+                'is_all_day'        => ['nullable'],
+                'attendees'         => ['nullable', 'array'],
+                'attendees.*.email' => ['required', 'email'],
+                'attendees.*.name'  => ['nullable', 'string', 'max:255'],
             ]);
 
             $user = Auth::user();
@@ -558,6 +574,48 @@ if (!$calendar) {
     ]);
 }
 
-	
-	
+    /**
+     * Fetch attendees for an existing event from Microsoft Graph.
+     */
+    public function attendees($event)
+    {
+        try {
+            $user    = Auth::user();
+            $account = MicrosoftAccount::where('user_id', $user->id)->where('is_connected', 1)->first();
+            if (!$account) return response()->json(['attendees' => []]);
+
+            $link = ExternalEventLink::where('calendar_event_id', (int) $event)
+                ->where('microsoft_account_id', $account->id)
+                ->where('provider', 'microsoft')
+                ->first();
+            if (!$link) return response()->json(['attendees' => []]);
+
+            $calendar = MicrosoftCalendar::where('calendar_id', $link->external_calendar_id)
+                ->where(function ($q) use ($account) {
+                    $q->whereNotNull('group_id')->orWhere('microsoft_account_id', $account->id);
+                })->first();
+            if (!$calendar) return response()->json(['attendees' => []]);
+
+            $accessToken = $this->ensureMicrosoftAccessToken($account);
+
+            $url = !empty($calendar->group_id)
+                ? "https://graph.microsoft.com/v1.0/groups/{$calendar->group_id}/events/{$link->external_event_id}?\$select=attendees"
+                : "https://graph.microsoft.com/v1.0/me/events/{$link->external_event_id}?\$select=attendees";
+
+            $resp = Http::withToken($accessToken)->acceptJson()->get($url);
+            if (!$resp->successful()) return response()->json(['attendees' => []]);
+
+            $attendees = collect($resp->json('attendees', []))
+                ->map(fn ($a) => [
+                    'email' => $a['emailAddress']['address'] ?? '',
+                    'name'  => $a['emailAddress']['name']    ?? '',
+                ])
+                ->filter(fn ($a) => !empty($a['email']))
+                ->values();
+
+            return response()->json(['attendees' => $attendees]);
+        } catch (\Exception $e) {
+            return response()->json(['attendees' => []]);
+        }
+    }
 }

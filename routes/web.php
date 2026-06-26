@@ -1519,6 +1519,9 @@ Route::get('calendar/events/feed', function (\Illuminate\Http\Request $request) 
 Route::post('calendar/events', [CalendarEventController::class, 'store'])
     ->name('calendar.events.store');
 
+Route::get('calendar/events/{event}/attendees', [CalendarEventController::class, 'attendees'])
+    ->name('calendar.events.attendees');
+
 Route::patch('calendar/events/{event}', [CalendarEventController::class, 'update'])
     ->name('calendar.events.update');
 

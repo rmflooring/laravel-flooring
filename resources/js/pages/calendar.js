@@ -71,6 +71,79 @@ document.addEventListener('DOMContentLoaded', () => {
     if (safe && typeof safe.focus === 'function') safe.focus();
   };
 
+  // -----------------------------
+  // Attendee tag management
+  // -----------------------------
+  let _attendees = []; // [{ email, name }]
+
+  function renderAttendeeTags() {
+    const container = document.getElementById('event-editor-attendee-tags');
+    if (!container) return;
+    container.innerHTML = '';
+    _attendees.forEach((a, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium';
+      tag.innerHTML = `${a.name && a.name !== a.email ? `<span class="font-semibold">${a.name}</span> <span class="text-blue-600 opacity-70">&lt;${a.email}&gt;</span>` : `<span>${a.email}</span>`}
+        <button type="button" data-idx="${i}" class="ml-1 text-blue-500 hover:text-blue-800 font-bold leading-none">&times;</button>`;
+      container.appendChild(tag);
+    });
+    // Remove buttons
+    container.querySelectorAll('button[data-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _attendees.splice(parseInt(btn.dataset.idx, 10), 1);
+        renderAttendeeTags();
+      });
+    });
+  }
+
+  function addAttendeeFromInput() {
+    const input = document.getElementById('event-editor-attendee-input');
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) return;
+    // Basic email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return;
+    // Avoid duplicates
+    if (_attendees.some(a => a.email.toLowerCase() === val.toLowerCase())) {
+      input.value = '';
+      return;
+    }
+    _attendees.push({ email: val, name: val });
+    input.value = '';
+    renderAttendeeTags();
+  }
+
+  function clearAttendees() {
+    _attendees = [];
+    renderAttendeeTags();
+    const input = document.getElementById('event-editor-attendee-input');
+    if (input) input.value = '';
+  }
+
+  async function loadAttendeesForEvent(eventId) {
+    try {
+      const tpl = window.FM_EVENT_ATTENDEES_URL_TEMPLATE || '/pages/calendar/events/__ID__/attendees';
+      const url  = tpl.replace('__ID__', encodeURIComponent(eventId));
+      const res  = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) return;
+      const json = await res.json();
+      _attendees = json.attendees || [];
+      renderAttendeeTags();
+    } catch (_) { /* silently ignore */ }
+  }
+
+  // Wire up the email input: add on Enter or comma
+  const attendeeInput = document.getElementById('event-editor-attendee-input');
+  if (attendeeInput) {
+    attendeeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addAttendeeFromInput();
+      }
+    });
+    attendeeInput.addEventListener('blur', addAttendeeFromInput);
+  }
+
   // Fix aria-hidden warning: move focus outside modal BEFORE Flowbite hides it
   const closeBtn = document.getElementById('event-editor-close');
   if (closeBtn) closeBtn.addEventListener('click', focusCalendar);
@@ -257,6 +330,7 @@ eventSources: [
       subjectEl.value = '';
       if (locEl) locEl.value = '';
       if (notesEl) notesEl.value = '';
+      clearAttendees();
 
       // All-day default (month view often implies all-day)
       if (allDayEl) {
@@ -364,6 +438,10 @@ calEl.dataset.originalCalendarId = String(calEl.value || '');
 
   // Show delete in edit mode
   document.getElementById('event-editor-delete')?.classList.remove('hidden');
+
+  // Clear then load attendees from Graph for this event
+  clearAttendees();
+  if (event.id) loadAttendeesForEvent(event.id);
 
   const modalInstance = window.FlowbiteInstances?.getInstance('Modal', 'event-editor-modal');
   if (modalInstance) modalInstance.show();
@@ -475,14 +553,18 @@ if (!microsoftCalendarId || Number.isNaN(microsoftCalendarId)) {
         return;
       }
 
+      // Flush any typed-but-not-yet-added email before saving
+      addAttendeeFromInput();
+
       const payload = {
-  microsoft_calendar_id: microsoftCalendarId, // always send
+  microsoft_calendar_id: microsoftCalendarId,
   title,
   start: startVal,
   end: endVal,
   location: (locEl?.value || '').trim(),
   notes: notesEl?.value || '',
   is_all_day: isAllDay ? 1 : 0,
+  attendees: _attendees,
 };
 
 if (isEdit && provider === 'microsoft' && calendarChanged) {
