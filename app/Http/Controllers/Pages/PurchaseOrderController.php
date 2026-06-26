@@ -608,10 +608,14 @@ class PurchaseOrderController extends Controller
         $orderedByOthers = $this->orderedQtys($purchaseOrder->sale_id, $purchaseOrder->id);
         $maxQtys = $purchaseOrder->items->mapWithKeys(function ($poItem) use ($orderedByOthers) {
             $saleItem = $poItem->saleItem;
-            $saleQty  = $saleItem
-                ? ($saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity)
-                : 0.0;
-            $max = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
+            if ($saleItem) {
+                $saleQty = $saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity;
+                $max     = max(0, $saleQty - ($orderedByOthers[$poItem->sale_item_id] ?? 0));
+            } else {
+                // No linked sale item — fall back to the PO item's own quantity so the input isn't blocked
+                $saleQty = (float) $poItem->quantity;
+                $max     = $saleQty;
+            }
             return [$poItem->id => ['max' => $max, 'sale_qty' => $saleQty]];
         })->toArray();
 
