@@ -44,9 +44,19 @@ class QboSyncService
                     $qboVendor = $existing;
                     $action = 'linked';
                 } else {
-                    $response = $this->qbo->post('vendor', $payload);
-                    $qboVendor = $response['Vendor'];
-                    $action = 'created';
+                    try {
+                        $response = $this->qbo->post('vendor', $payload);
+                        $qboVendor = $response['Vendor'];
+                        $action = 'created';
+                    } catch (\RuntimeException $e) {
+                        $duplicate = $this->fetchQboDuplicateVendor($e->getMessage());
+                        if ($duplicate) {
+                            $qboVendor = $duplicate;
+                            $action    = 'linked';
+                        } else {
+                            throw $e;
+                        }
+                    }
                 }
             }
 
@@ -121,6 +131,23 @@ class QboSyncService
         return $vendors[0] ?? null;
     }
 
+    /**
+     * When QBO returns a 6240 duplicate-name error, extract the existing vendor Id
+     * from the error detail ("The name supplied already exists. : Id=1432") and
+     * fetch that vendor so we can link to it instead of failing.
+     */
+    private function fetchQboDuplicateVendor(string $errorMessage): ?array
+    {
+        if (! preg_match('/"code"\s*:\s*"6240"/', $errorMessage)) {
+            return null;
+        }
+        if (! preg_match('/Id=(\d+)/', $errorMessage, $m)) {
+            return null;
+        }
+        $response = $this->qbo->get('vendor/' . $m[1]);
+        return $response['Vendor'] ?? null;
+    }
+
     // =========================================================================
     // Installers (pushed to QBO as Vendors / subcontractors)
     // =========================================================================
@@ -169,9 +196,19 @@ class QboSyncService
                     $qboVendor = $existing;
                     $action    = 'linked';
                 } else {
-                    $response  = $this->qbo->post('vendor', $payload);
-                    $qboVendor = $response['Vendor'];
-                    $action    = 'created';
+                    try {
+                        $response  = $this->qbo->post('vendor', $payload);
+                        $qboVendor = $response['Vendor'];
+                        $action    = 'created';
+                    } catch (\RuntimeException $e) {
+                        $duplicate = $this->fetchQboDuplicateVendor($e->getMessage());
+                        if ($duplicate) {
+                            $qboVendor = $duplicate;
+                            $action    = 'linked';
+                        } else {
+                            throw $e;
+                        }
+                    }
                 }
             }
 
