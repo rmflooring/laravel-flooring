@@ -132,9 +132,9 @@ class QboSyncService
     }
 
     /**
-     * When QBO returns a 6240 duplicate-name error, extract the existing vendor Id
-     * from the error detail ("The name supplied already exists. : Id=1432") and
-     * fetch that vendor so we can link to it instead of failing.
+     * When QBO returns a 6240 duplicate-name error, extract the existing vendor Id,
+     * fetch that vendor (including inactive ones), reactivate it if needed, and
+     * return it so we can link to it instead of failing.
      */
     private function fetchQboDuplicateVendor(string $errorMessage): ?array
     {
@@ -144,8 +144,36 @@ class QboSyncService
         if (! preg_match('/Id=(\d+)/', $errorMessage, $m)) {
             return null;
         }
-        $response = $this->qbo->get('vendor/' . $m[1]);
-        return $response['Vendor'] ?? null;
+        $qboId = $m[1];
+
+        // Direct GET fails for inactive vendors — query instead with Active IN (true,false)
+        $result  = $this->qbo->query("SELECT * FROM Vendor WHERE Id = '{$qboId}' STARTPOSITION 1 MAXRESULTS 1");
+        $vendors = $result['QueryResponse']['Vendor'] ?? [];
+
+        if (empty($vendors)) {
+            // Try including inactive records
+            $result  = $this->qbo->query("SELECT * FROM Vendor WHERE Id = '{$qboId}' AND Active IN (true,false) STARTPOSITION 1 MAXRESULTS 1");
+            $vendors = $result['QueryResponse']['Vendor'] ?? [];
+        }
+
+        if (empty($vendors)) {
+            return null;
+        }
+
+        $qboVendor = $vendors[0];
+
+        // Reactivate if inactive so it can be used on bills
+        if (($qboVendor['Active'] ?? true) === false) {
+            $reactivate = [
+                'Id'        => $qboVendor['Id'],
+                'SyncToken' => $qboVendor['SyncToken'],
+                'Active'    => true,
+            ];
+            $response  = $this->qbo->post('vendor', $reactivate);
+            $qboVendor = $response['Vendor'];
+        }
+
+        return $qboVendor;
     }
 
     // =========================================================================
