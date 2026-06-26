@@ -49,7 +49,7 @@ class QboSyncService
                         $qboVendor = $response['Vendor'];
                         $action = 'created';
                     } catch (\RuntimeException $e) {
-                        $duplicate = $this->fetchQboDuplicateVendor($e->getMessage());
+                        $duplicate = $this->fetchQboDuplicateVendor($e->getMessage(), $vendor->company_name);
                         if ($duplicate) {
                             $qboVendor = $duplicate;
                             $action    = 'linked';
@@ -132,29 +132,23 @@ class QboSyncService
     }
 
     /**
-     * When QBO returns a 6240 duplicate-name error, extract the existing vendor Id,
-     * fetch that vendor (including inactive ones), reactivate it if needed, and
-     * return it so we can link to it instead of failing.
+     * When QBO returns a 6240 duplicate-name error, find the conflicting vendor
+     * (including inactive ones — QBO IQL doesn't support filtering by Id),
+     * reactivate it if needed, and return it so we can link to it.
      */
-    private function fetchQboDuplicateVendor(string $errorMessage): ?array
+    private function fetchQboDuplicateVendor(string $errorMessage, string $displayName): ?array
     {
         if (! preg_match('/"code"\s*:\s*"6240"/', $errorMessage)) {
             return null;
         }
-        if (! preg_match('/Id=(\d+)/', $errorMessage, $m)) {
-            return null;
-        }
-        $qboId = $m[1];
 
-        // Direct GET fails for inactive vendors — query instead with Active IN (true,false)
-        $result  = $this->qbo->query("SELECT * FROM Vendor WHERE Id = '{$qboId}' STARTPOSITION 1 MAXRESULTS 1");
+        // Try active vendors first (same as findQboVendorByName but we need to
+        // handle the inactive case too)
+        $escaped = addslashes($displayName);
+
+        // QBO IQL does not support filtering by Id — query by name including inactive
+        $result  = $this->qbo->query("SELECT * FROM Vendor WHERE DisplayName = '{$escaped}' AND Active IN (true,false) STARTPOSITION 1 MAXRESULTS 1");
         $vendors = $result['QueryResponse']['Vendor'] ?? [];
-
-        if (empty($vendors)) {
-            // Try including inactive records
-            $result  = $this->qbo->query("SELECT * FROM Vendor WHERE Id = '{$qboId}' AND Active IN (true,false) STARTPOSITION 1 MAXRESULTS 1");
-            $vendors = $result['QueryResponse']['Vendor'] ?? [];
-        }
 
         if (empty($vendors)) {
             return null;
@@ -164,12 +158,11 @@ class QboSyncService
 
         // Reactivate if inactive so it can be used on bills
         if (($qboVendor['Active'] ?? true) === false) {
-            $reactivate = [
+            $response  = $this->qbo->post('vendor', [
                 'Id'        => $qboVendor['Id'],
                 'SyncToken' => $qboVendor['SyncToken'],
                 'Active'    => true,
-            ];
-            $response  = $this->qbo->post('vendor', $reactivate);
+            ]);
             $qboVendor = $response['Vendor'];
         }
 
@@ -229,7 +222,7 @@ class QboSyncService
                         $qboVendor = $response['Vendor'];
                         $action    = 'created';
                     } catch (\RuntimeException $e) {
-                        $duplicate = $this->fetchQboDuplicateVendor($e->getMessage());
+                        $duplicate = $this->fetchQboDuplicateVendor($e->getMessage(), $installer->company_name);
                         if ($duplicate) {
                             $qboVendor = $duplicate;
                             $action    = 'linked';
