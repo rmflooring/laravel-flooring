@@ -54,7 +54,7 @@ class QboSyncService
                             $qboVendor = $duplicate;
                             $action    = 'linked';
                         } else {
-                            throw $e;
+                            throw new \RuntimeException($this->buildDuplicateNameError($e->getMessage(), $vendor->company_name));
                         }
                     }
                 }
@@ -186,6 +186,14 @@ class QboSyncService
         return null;
     }
 
+    private function buildDuplicateNameError(string $rawError, string $displayName): string
+    {
+        if (preg_match('/Id=(\d+)/', $rawError, $m)) {
+            return "The name \"{$displayName}\" conflicts with a deleted QuickBooks vendor (Id={$m[1]}) that can no longer be accessed via the API. To fix: in QuickBooks go to Expenses → Vendors → click the gear icon → check \"Include inactive\" → find this vendor → make it active. Then sync again.";
+        }
+        return $rawError;
+    }
+
     private function ensureVendorActive(array $qboVendor): array
     {
         if (($qboVendor['Active'] ?? true) === false) {
@@ -257,7 +265,7 @@ class QboSyncService
                             $qboVendor = $duplicate;
                             $action    = 'linked';
                         } else {
-                            throw $e;
+                            throw new \RuntimeException($this->buildDuplicateNameError($e->getMessage(), $installer->company_name));
                         }
                     }
                 }
