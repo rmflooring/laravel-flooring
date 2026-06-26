@@ -220,9 +220,13 @@
                                 <span class="font-medium">$<span x-text="subtotal.toFixed(2)"></span></span>
                             </div>
 
-                            <div class="flex justify-between w-72 text-amber-700 dark:text-amber-400" x-show="chargeTotal > 0">
+                            <div class="flex justify-between w-72 text-amber-700 dark:text-amber-400" x-show="grossChargesTotal > 0">
                                 <span>Additional Charges</span>
-                                <span class="font-medium">$<span x-text="chargeTotal.toFixed(2)"></span></span>
+                                <span class="font-medium">$<span x-text="grossChargesTotal.toFixed(2)"></span></span>
+                            </div>
+                            <div class="flex justify-between w-72 text-green-700 dark:text-green-400" x-show="grossCreditsTotal > 0">
+                                <span>Credits</span>
+                                <span class="font-medium">−$<span x-text="grossCreditsTotal.toFixed(2)"></span></span>
                             </div>
 
                             {{-- GST row --}}
@@ -270,32 +274,32 @@
                     </div>
                 </div>
 
-                {{-- Additional Charges --}}
+                {{-- Additional Charges & Credits --}}
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm mt-4">
                     <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                         <div>
-                            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Additional Charges</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Fuel surcharges, freight, or other charges that appear on the vendor invoice.</p>
+                            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Additional Charges &amp; Credits</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Fuel surcharges, freight, early payment credits, or other adjustments from the vendor invoice.</p>
                         </div>
                         <button type="button" @click="addCharge"
                             class="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 hover:text-amber-800 dark:text-amber-400">
                             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"/>
                             </svg>
-                            Add Charge
+                            Add Charge / Credit
                         </button>
                     </div>
 
                     <template x-if="chargeRows.length === 0">
-                        <p class="px-6 py-4 text-sm text-gray-400 dark:text-gray-500 italic">No additional charges. Click "Add Charge" if the vendor invoice includes a fuel or freight fee.</p>
+                        <p class="px-6 py-4 text-sm text-gray-400 dark:text-gray-500 italic">No charges or credits. Click "Add Charge / Credit" to add fuel surcharges, freight fees, or credits.</p>
                     </template>
 
                     <template x-if="chargeRows.length > 0">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                                <thead class="text-xs text-gray-500 uppercase bg-amber-50 dark:bg-gray-700 dark:text-gray-400">
+                                <thead class="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                     <tr>
-                                        <th class="px-4 py-3 w-44">Charge Type</th>
+                                        <th class="px-4 py-3 w-52">Type</th>
                                         <th class="px-4 py-3">Description</th>
                                         <th class="px-4 py-3 w-40">Amount</th>
                                         <th class="px-4 py-3 w-10"></th>
@@ -303,35 +307,48 @@
                                 </thead>
                                 <tbody>
                                     <template x-for="(charge, ci) in chargeRows" :key="charge.key">
-                                        <tr class="border-t border-gray-100 dark:border-gray-700">
+                                        <tr class="border-t border-gray-100 dark:border-gray-700"
+                                            :class="creditTypes.has(charge.charge_type)
+                                                ? 'bg-green-50/50 dark:bg-green-900/10'
+                                                : 'bg-amber-50/40 dark:bg-amber-900/10'">
                                             <td class="px-4 py-2">
                                                 <input type="hidden" :name="`items[${rows.length + ci}][id]`" :value="charge.id">
                                                 <input type="hidden" :name="`items[${rows.length + ci}][purchase_order_item_id]`" value="">
                                                 <input type="hidden" :name="`items[${rows.length + ci}][work_order_item_id]`" value="">
                                                 <input type="hidden" :name="`items[${rows.length + ci}][quantity]`" value="1">
                                                 <input type="hidden" :name="`items[${rows.length + ci}][unit]`" value="">
+                                                <input type="hidden" :name="`items[${rows.length + ci}][unit_cost]`"
+                                                    :value="creditTypes.has(charge.charge_type) ? -(parseFloat(charge.unit_cost)||0) : (parseFloat(charge.unit_cost)||0)">
                                                 <select :name="`items[${rows.length + ci}][charge_type]`"
                                                     x-model="charge.charge_type"
-                                                    @change="charge.item_name = chargeTypeLabels[charge.charge_type] || charge.item_name; recalculate()"
-                                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                                    <option value="fuel">Fuel Surcharge</option>
-                                                    <option value="freight">Freight / Delivery</option>
-                                                    <option value="other">Other Charge</option>
+                                                    @change="charge.item_name = chargeTypeLabels[charge.charge_type] || charge.item_name; charge.line_total = (creditTypes.has(charge.charge_type) ? -1 : 1) * (parseFloat(charge.unit_cost)||0); recalculate()"
+                                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                                    <optgroup label="Charges">
+                                                        <option value="fuel">Fuel Surcharge</option>
+                                                        <option value="freight">Freight / Delivery</option>
+                                                        <option value="other">Other Charge</option>
+                                                    </optgroup>
+                                                    <optgroup label="Credits">
+                                                        <option value="early_payment">Early Payment Credit</option>
+                                                        <option value="other_credit">Other Credit</option>
+                                                    </optgroup>
                                                 </select>
                                             </td>
                                             <td class="px-4 py-2">
                                                 <input type="text" :name="`items[${rows.length + ci}][item_name]`"
                                                     x-model="charge.item_name"
                                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                                    placeholder="Charge description" required>
+                                                    placeholder="Description" required>
                                             </td>
                                             <td class="px-4 py-2">
                                                 <div class="flex items-center gap-1">
-                                                    <span class="text-gray-500 text-sm">$</span>
-                                                    <input type="text" inputmode="decimal" :name="`items[${rows.length + ci}][unit_cost]`"
+                                                    <span class="text-sm font-medium"
+                                                        :class="creditTypes.has(charge.charge_type) ? 'text-green-600 dark:text-green-400' : 'text-gray-500'"
+                                                        x-text="creditTypes.has(charge.charge_type) ? '−$' : '$'"></span>
+                                                    <input type="text" inputmode="decimal"
                                                         x-model="charge.unit_cost"
-                                                        @input="charge.line_total = charge.unit_cost; recalculate()"
-                                                        @blur="charge.unit_cost = charge.unit_cost !== '' && !isNaN(parseFloat(charge.unit_cost)) ? parseFloat(charge.unit_cost).toFixed(2) : charge.unit_cost"
+                                                        @input="charge.line_total = (creditTypes.has(charge.charge_type) ? -1 : 1) * (parseFloat(charge.unit_cost)||0); recalculate()"
+                                                        @blur="charge.unit_cost = charge.unit_cost !== '' && !isNaN(parseFloat(charge.unit_cost)) ? Math.abs(parseFloat(charge.unit_cost)).toFixed(2) : charge.unit_cost"
                                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                                         placeholder="0.00" required>
                                                 </div>
@@ -389,7 +406,7 @@
             'id'          => $item->id,
             'charge_type' => $item->charge_type,
             'item_name'   => $item->item_name,
-            'unit_cost'   => (float) $item->unit_cost,
+            'unit_cost'   => abs((float) $item->unit_cost),
             'line_total'  => (float) $item->line_total,
         ])->values()->toArray();
 @endphp
@@ -410,10 +427,14 @@ function billEditForm() {
     const savedPstAmount = {{ (float) $bill->pst_amount }};
     const taxGroupData = @json($taxGroups);
 
+    const creditTypes = new Set(['early_payment', 'other_credit']);
+
     const chargeTypeLabels = {
-        fuel:    'Fuel Surcharge',
-        freight: 'Freight / Delivery',
-        other:   'Other Charge',
+        fuel:          'Fuel Surcharge',
+        freight:       'Freight / Delivery',
+        other:         'Other Charge',
+        early_payment: 'Early Payment Credit',
+        other_credit:  'Other Credit',
     };
 
     function detectTaxGroup(gst, pst) {
@@ -429,6 +450,7 @@ function billEditForm() {
         chargeRows: initialChargeRows.map(r => ({ ...r })),
         chargeKey: initialChargeRows.length,
         chargeTypeLabels,
+        creditTypes,
         billDate: '{{ $bill->bill_date->toDateString() }}',
         termId: '{{ $bill->payment_term_id ?? '' }}',
         dueDate: '{{ $bill->due_date?->toDateString() ?? '' }}',
@@ -438,7 +460,7 @@ function billEditForm() {
         taxManual: savedTaxManual,
         gstAmountOverride: savedTaxManual ? savedGstAmount : 0,
         pstAmountOverride: savedTaxManual ? savedPstAmount : 0,
-        subtotal: 0, chargeTotal: 0, gstAmount: 0, pstAmount: 0, grandTotal: 0,
+        subtotal: 0, chargeTotal: 0, grossChargesTotal: 0, grossCreditsTotal: 0, gstAmount: 0, pstAmount: 0, grandTotal: 0,
 
         init() { this.recalculate(); },
 
@@ -479,8 +501,14 @@ function billEditForm() {
         recalcRow(row) { row.line_total = Math.round(row.quantity * row.unit_cost * 100) / 100; },
 
         recalculate() {
-            this.subtotal    = this.rows.reduce((s, r) => s + (r.line_total || 0), 0);
-            this.chargeTotal = this.chargeRows.reduce((s, c) => s + (parseFloat(c.unit_cost) || 0), 0);
+            this.subtotal = this.rows.reduce((s, r) => s + (r.line_total || 0), 0);
+            this.grossChargesTotal = this.chargeRows
+                .filter(c => !creditTypes.has(c.charge_type))
+                .reduce((s, c) => s + (parseFloat(c.unit_cost) || 0), 0);
+            this.grossCreditsTotal = this.chargeRows
+                .filter(c => creditTypes.has(c.charge_type))
+                .reduce((s, c) => s + (parseFloat(c.unit_cost) || 0), 0);
+            this.chargeTotal = this.grossChargesTotal - this.grossCreditsTotal;
             const taxBase = this.subtotal + this.chargeTotal;
             if (this.taxManual) {
                 this.gstAmount = Math.round((parseFloat(this.gstAmountOverride) || 0) * 100) / 100;

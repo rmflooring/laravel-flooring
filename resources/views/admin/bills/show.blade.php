@@ -155,20 +155,40 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($bill->items as $item)
-                        <tr @class(['bg-amber-50/40 dark:bg-amber-900/10' => $item->charge_type])>
+                        @php
+                            $isCredit = in_array($item->charge_type, \App\Models\BillItem::CREDIT_TYPES);
+                            $typeLabels = [
+                                'fuel'          => 'Fuel Surcharge',
+                                'freight'       => 'Freight',
+                                'other'         => 'Other Charge',
+                                'early_payment' => 'Early Payment Credit',
+                                'other_credit'  => 'Other Credit',
+                            ];
+                        @endphp
+                        <tr @class([
+                            'bg-green-50/50 dark:bg-green-900/10' => $isCredit,
+                            'bg-amber-50/40 dark:bg-amber-900/10' => $item->charge_type && !$isCredit,
+                        ])>
                             <td class="px-4 py-3">
                                 {{ $item->item_name }}
                                 @if ($item->charge_type)
-                                    @php $chargeLabels = ['fuel' => 'Fuel Surcharge', 'freight' => 'Freight', 'other' => 'Other']; @endphp
-                                    <span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                                        {{ $chargeLabels[$item->charge_type] ?? $item->charge_type }}
+                                    <span @class([
+                                        'ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                                        'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' => $isCredit,
+                                        'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' => !$isCredit,
+                                    ])>
+                                        {{ $typeLabels[$item->charge_type] ?? $item->charge_type }}
                                     </span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-right">{{ $item->charge_type ? '—' : rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
                             <td class="px-4 py-3 text-gray-500">{{ $item->unit ?? '—' }}</td>
-                            <td class="px-4 py-3 text-right">${{ number_format($item->unit_cost, 2) }}</td>
-                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">${{ number_format($item->line_total, 2) }}</td>
+                            <td class="px-4 py-3 text-right @if($isCredit) text-green-700 dark:text-green-400 @endif">
+                                {{ $isCredit ? '−$'.number_format(abs($item->unit_cost), 2) : '$'.number_format($item->unit_cost, 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right font-medium @if($isCredit) text-green-700 dark:text-green-400 @else text-gray-900 dark:text-white @endif">
+                                {{ $isCredit ? '−$'.number_format(abs($item->line_total), 2) : '$'.number_format($item->line_total, 2) }}
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>

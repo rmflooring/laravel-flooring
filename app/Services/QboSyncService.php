@@ -411,8 +411,14 @@ class QboSyncService
         $lines = [];
 
         foreach ($bill->items as $item) {
-            // Installer bills are always labour; vendor bills resolve by sale item type
-            if ($bill->bill_type === 'installer') {
+            // Charge/credit rows resolve by charge_type; regular rows by sale item type or bill type
+            if ($item->charge_type) {
+                $accountId = match ($item->charge_type) {
+                    'fuel', 'freight'              => $accountIds['freight'],
+                    'early_payment', 'other_credit' => $accountIds['credit'] ?? $accountIds['product'],
+                    default                         => $accountIds['product'],
+                };
+            } elseif ($bill->bill_type === 'installer') {
                 $accountId = $accountIds['labour'];
             } else {
                 $saleItemType = $item->purchaseOrderItem?->saleItem?->type ?? 'material';

@@ -10,10 +10,14 @@ class BillItem extends Model
     protected $guarded = ['id'];
 
     const CHARGE_TYPES = [
-        'fuel'    => 'Fuel Surcharge',
-        'freight' => 'Freight / Delivery',
-        'other'   => 'Other Charge',
+        'fuel'          => 'Fuel Surcharge',
+        'freight'       => 'Freight / Delivery',
+        'other'         => 'Other Charge',
+        'early_payment' => 'Early Payment Credit',
+        'other_credit'  => 'Other Credit',
     ];
+
+    const CREDIT_TYPES = ['early_payment', 'other_credit'];
 
     protected $casts = [
         'quantity'   => 'decimal:2',
