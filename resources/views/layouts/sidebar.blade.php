@@ -184,9 +184,9 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('pages.quick-returns.create') }}"
+                            <a href="{{ route('pages.quick-returns.index') }}"
                                class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.quick-returns.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
-                                Quick Return
+                                Quick Returns
                             </a>
                         </li>
                         @endcan

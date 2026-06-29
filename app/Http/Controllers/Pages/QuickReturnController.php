@@ -17,6 +17,36 @@ use Illuminate\Support\Facades\DB;
 
 class QuickReturnController extends Controller
 {
+    public function index(Request $request)
+    {
+        $q        = trim($request->input('q', ''));
+        $dateFrom = $request->input('date_from', '');
+        $dateTo   = $request->input('date_to', '');
+
+        $query = QuickReturn::with('sale')
+            ->orderBy('created_at', 'desc');
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('return_number', 'like', "%{$q}%")
+                    ->orWhere('customer_name', 'like', "%{$q}%")
+                    ->orWhereHas('sale', fn ($s) => $s->where('sale_number', 'like', "%{$q}%"));
+            });
+        }
+
+        if ($dateFrom !== '') {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo !== '') {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $returns = $query->paginate(25)->withQueryString();
+
+        return view('pages.quick-returns.index', compact('returns', 'q', 'dateFrom', 'dateTo'));
+    }
+
     public function create()
     {
         $refundMethods = InvoicePayment::PAYMENT_METHODS;

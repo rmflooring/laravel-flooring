@@ -846,6 +846,10 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|view sales');
 
 		// Quick Returns
+		Route::get('quick-returns', [\App\Http\Controllers\Pages\QuickReturnController::class, 'index'])
+			->name('quick-returns.index')
+			->middleware('role_or_permission:admin|view sales');
+
 		Route::get('quick-returns/create', [\App\Http\Controllers\Pages\QuickReturnController::class, 'create'])
 			->name('quick-returns.create')
 			->middleware('role_or_permission:admin|create sales');
