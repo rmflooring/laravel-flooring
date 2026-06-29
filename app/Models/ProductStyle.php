@@ -12,12 +12,15 @@ class ProductStyle extends Model
     use HasFactory;
 
     protected $casts = [
-        'use_box_qty'  => 'bool',
-        'units_per'    => 'float',
-        'cost_price'   => 'float',
-        'sell_price'   => 'float',
-        'shop_visible'    => 'boolean',
-        'shop_show_price' => 'boolean',
+        'use_box_qty'         => 'bool',
+        'units_per'           => 'float',
+        'cost_price'          => 'float',
+        'sell_price'          => 'float',
+        'shop_visible'        => 'boolean',
+        'shop_show_price'     => 'boolean',
+        'price_change_date'   => 'date',
+        'pending_cost_price'  => 'float',
+        'pending_sell_price'  => 'float',
     ];
 
     protected $fillable = [
@@ -31,6 +34,9 @@ class ProductStyle extends Model
         'description',
         'cost_price',
         'sell_price',
+        'price_change_date',
+        'pending_cost_price',
+        'pending_sell_price',
         'units_per',
         'use_box_qty',
         'thickness',

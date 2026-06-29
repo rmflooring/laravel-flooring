@@ -228,6 +228,12 @@
 
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-200">
                                                 {{ $style->sell_price !== null ? '$' . number_format($style->sell_price, 2) : '—' }}
+                                                @if($style->price_change_date)
+                                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                                                          title="Price change on {{ $style->price_change_date->format('M j, Y') }}">
+                                                        ↑ {{ $style->price_change_date->format('M j') }}
+                                                    </span>
+                                                @endif
                                             </td>
 
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
@@ -454,6 +460,28 @@
                             </select>
                         </div>
 
+                        {{-- Scheduled Price Change Date (bulk) --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Price Change Date</label>
+                            <input type="date" name="price_change_date"
+                                   min="{{ now()->addDay()->format('Y-m-d') }}"
+                                   class="w-36 text-sm rounded-lg border-amber-300 dark:border-amber-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 py-1.5">
+                        </div>
+
+                        {{-- Pending Cost (bulk) --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">New Cost</label>
+                            <input type="number" name="pending_cost_price" step="any" min="0" placeholder="Future cost"
+                                   class="w-32 text-sm rounded-lg border-amber-300 dark:border-amber-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 py-1.5">
+                        </div>
+
+                        {{-- Pending Sell (bulk) --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">New Sell</label>
+                            <input type="number" name="pending_sell_price" step="any" min="0" placeholder="Future sell"
+                                   class="w-32 text-sm rounded-lg border-amber-300 dark:border-amber-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 py-1.5">
+                        </div>
+
                         {{-- Submit --}}
                         <div class="flex-shrink-0 self-end">
                             <button type="submit"
@@ -646,6 +674,62 @@
                                        {{ (session('editStyle')->shop_show_price ?? false) ? 'checked' : '' }}>
                                 <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
                             </label>
+                        </div>
+                    </div>
+
+                    {{-- Scheduled Price Change --}}
+                    <div class="mt-4" x-data="{ open: {{ (session('editStyle') && session('editStyle')->price_change_date) ? 'true' : 'false' }} }">
+                        <button type="button" @click="open = !open"
+                                class="flex items-center gap-2 w-full text-left text-sm font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 focus:outline-none">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span x-text="open ? 'Hide scheduled price change' : 'Schedule a future price change'"></span>
+                            <svg class="w-4 h-4 ml-auto transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div x-show="open" x-transition class="mt-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700 space-y-3">
+                            <p class="text-xs text-amber-700 dark:text-amber-400">
+                                Enter the effective date and the new prices. The current prices will be replaced automatically at midnight on that date. Leave a price field blank to keep it unchanged.
+                            </p>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300">Effective Date</label>
+                                    <input type="date" name="price_change_date"
+                                           value="{{ session('editStyle') ? optional(session('editStyle')->price_change_date)->format('Y-m-d') : '' }}"
+                                           min="{{ now()->addDay()->format('Y-m-d') }}"
+                                           class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-2">
+                                </div>
+                                <div>
+                                    <label class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300">New Cost Price</label>
+                                    <input type="number" step="any" min="0" name="pending_cost_price"
+                                           value="{{ session('editStyle')->pending_cost_price ?? '' }}"
+                                           placeholder="e.g. 2.35"
+                                           class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-2">
+                                </div>
+                                <div>
+                                    <label class="block mb-1 text-xs font-medium text-gray-700 dark:text-gray-300">New Sell Price</label>
+                                    <input type="number" step="any" min="0" name="pending_sell_price"
+                                           value="{{ session('editStyle')->pending_sell_price ?? '' }}"
+                                           placeholder="e.g. 4.99"
+                                           class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 p-2">
+                                </div>
+                            </div>
+                            @if(session('editStyle') && session('editStyle')->price_change_date)
+                                <p class="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                    Scheduled for {{ session('editStyle')->price_change_date->format('F j, Y') }}
+                                    @if(session('editStyle')->pending_cost_price !== null)
+                                        — Cost: ${{ rtrim(rtrim(number_format(session('editStyle')->pending_cost_price, 4), '0'), '.') }}
+                                    @endif
+                                    @if(session('editStyle')->pending_sell_price !== null)
+                                        — Sell: ${{ number_format(session('editStyle')->pending_sell_price, 2) }}
+                                    @endif
+                                </p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">To cancel the scheduled change, clear the date field and save.</p>
+                            @endif
                         </div>
                     </div>
 

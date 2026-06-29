@@ -108,14 +108,24 @@ class ProductStyleController extends Controller
             'use_box_qty' => 'boolean',
             'thickness' => 'nullable|string|max:50',
             'vendor_id' => 'nullable|exists:vendors,id',
-            'shop_visible'    => 'boolean',
-            'shop_show_price' => 'boolean',
+            'shop_visible'       => 'boolean',
+            'shop_show_price'    => 'boolean',
+            'price_change_date'  => 'nullable|date|after:today',
+            'pending_cost_price' => 'nullable|numeric|min:0',
+            'pending_sell_price' => 'nullable|numeric|min:0',
         ]);
 
         $validated['updated_by'] = auth()->id();
         $validated['use_box_qty']     = $request->boolean('use_box_qty');
         $validated['shop_visible']    = $request->boolean('shop_visible');
         $validated['shop_show_price'] = $request->boolean('shop_show_price');
+
+        // Clear the scheduled change if the date was removed
+        if (empty($validated['price_change_date'])) {
+            $validated['price_change_date']  = null;
+            $validated['pending_cost_price'] = null;
+            $validated['pending_sell_price'] = null;
+        }
 
         $style->update($validated);
 
@@ -142,14 +152,23 @@ class ProductStyleController extends Controller
             'use_box_qty' => 'boolean',
             'thickness' => 'nullable|string|max:50',
             'vendor_id' => 'nullable|exists:vendors,id',
-            'shop_visible'    => 'boolean',
-            'shop_show_price' => 'boolean',
+            'shop_visible'       => 'boolean',
+            'shop_show_price'    => 'boolean',
+            'price_change_date'  => 'nullable|date|after:today',
+            'pending_cost_price' => 'nullable|numeric|min:0',
+            'pending_sell_price' => 'nullable|numeric|min:0',
         ]);
 
         $validated['created_by'] = auth()->id();
         $validated['use_box_qty']     = $request->boolean('use_box_qty');
         $validated['shop_visible']    = $request->boolean('shop_visible');
         $validated['shop_show_price'] = $request->boolean('shop_show_price');
+
+        if (empty($validated['price_change_date'])) {
+            $validated['price_change_date']  = null;
+            $validated['pending_cost_price'] = null;
+            $validated['pending_sell_price'] = null;
+        }
 
         $product_line->productStyles()->create($validated);
 
@@ -209,15 +228,18 @@ class ProductStyleController extends Controller
     public function bulkUpdate(Request $request, ProductLine $product_line)
     {
         $request->validate([
-            'style_ids'       => 'required|array|min:1',
-            'style_ids.*'     => 'integer',
-            'cost_price'      => 'nullable|numeric|min:0',
-            'sell_price'      => 'nullable|numeric|min:0',
-            'status'          => 'nullable|in:active,out_of_stock,inactive,dropped',
-            'units_per'       => 'nullable|numeric|min:0',
-            'thickness'       => 'nullable|string|max:50',
-            'shop_visible'    => 'nullable|in:0,1',
-            'shop_show_price' => 'nullable|in:0,1',
+            'style_ids'          => 'required|array|min:1',
+            'style_ids.*'        => 'integer',
+            'cost_price'         => 'nullable|numeric|min:0',
+            'sell_price'         => 'nullable|numeric|min:0',
+            'status'             => 'nullable|in:active,out_of_stock,inactive,dropped',
+            'units_per'          => 'nullable|numeric|min:0',
+            'thickness'          => 'nullable|string|max:50',
+            'shop_visible'       => 'nullable|in:0,1',
+            'shop_show_price'    => 'nullable|in:0,1',
+            'price_change_date'  => 'nullable|date|after:today',
+            'pending_cost_price' => 'nullable|numeric|min:0',
+            'pending_sell_price' => 'nullable|numeric|min:0',
         ]);
 
         $updates = ['updated_by' => auth()->id()];
@@ -229,6 +251,11 @@ class ProductStyleController extends Controller
         if ($request->filled('thickness'))       $updates['thickness']       = $request->input('thickness');
         if ($request->filled('shop_visible'))    $updates['shop_visible']    = (bool) $request->input('shop_visible');
         if ($request->filled('shop_show_price')) $updates['shop_show_price'] = (bool) $request->input('shop_show_price');
+        if ($request->filled('price_change_date')) {
+            $updates['price_change_date']  = $request->input('price_change_date');
+            if ($request->filled('pending_cost_price')) $updates['pending_cost_price'] = $request->input('pending_cost_price');
+            if ($request->filled('pending_sell_price')) $updates['pending_sell_price'] = $request->input('pending_sell_price');
+        }
 
         if (count($updates) <= 1) {
             return redirect()

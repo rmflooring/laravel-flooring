@@ -37,6 +37,13 @@ Schedule::command('bills:mark-overdue')
     ->name('bills-mark-overdue')
     ->withoutOverlapping();
 
+// Product styles: apply scheduled price changes at midnight
+Schedule::command('styles:apply-scheduled-prices')
+    ->dailyAt('00:00')
+    ->timezone('America/Vancouver')
+    ->name('styles-apply-scheduled-prices')
+    ->withoutOverlapping();
+
 // Check if estimators have accepted their RFM calendar invites → mark confirmed
 Schedule::command('rfm:check-confirmations')
     ->everyTenMinutes()
