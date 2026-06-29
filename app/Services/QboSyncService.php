@@ -6,6 +6,7 @@ use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Installer;
 use App\Models\Invoice;
+use App\Models\QuickReturn;
 use App\Models\Vendor;
 use App\Models\VendorCreditMemo;
 use App\Services\InvoiceService;
@@ -894,6 +895,110 @@ class QboSyncService
             'other', 'credit_card'  => '21',
             default                 => null,
         };
+    }
+
+    // =========================================================================
+    // Quick Returns (RefundReceipt)
+    // =========================================================================
+
+    /**
+     * Push a QuickReturn to QBO as a RefundReceipt entity.
+     * If the return has a linked Customer, it is auto-synced first.
+     * If there is no customer record, $cashCustomerQboId is used instead.
+     * $itemIds = ['material' => QBO Item ID]
+     */
+    public function pushQuickReturn(QuickReturn $return, array $itemIds, string $cashCustomerQboId, string $refundAccountId): array
+    {
+        try {
+            $return->load(['customer', 'items']);
+
+            // Resolve customer QBO ID
+            if ($return->customer_id && $return->customer) {
+                $customer = $return->customer;
+                if (! $customer->qbo_id) {
+                    $result = $this->pushCustomer($customer);
+                    if (! $result['success']) {
+                        return ['success' => false, 'message' => 'Failed to sync customer: ' . $result['message'], 'qbo_id' => null];
+                    }
+                    $customer->refresh();
+                }
+                $customerQboId = $customer->qbo_id;
+            } else {
+                $customerQboId = $cashCustomerQboId;
+            }
+
+            $payload = $this->buildRefundReceiptPayload($return, $customerQboId, $itemIds, $refundAccountId);
+
+            if ($return->qbo_id) {
+                $payload['Id']        = $return->qbo_id;
+                $payload['SyncToken'] = $return->qbo_sync_token ?? '0';
+                $response   = $this->qbo->post('refundreceipt', $payload);
+                $qboReceipt = $response['RefundReceipt'];
+                $action     = 'updated';
+            } else {
+                $response   = $this->qbo->post('refundreceipt', $payload);
+                $qboReceipt = $response['RefundReceipt'];
+                $action     = 'created';
+            }
+
+            $return->update([
+                'qbo_id'         => $qboReceipt['Id'],
+                'qbo_sync_token' => $qboReceipt['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('quick_return', $return->id, 'push', 'success', $qboReceipt['Id'],
+                ucfirst($action) . ' refund receipt in QBO', $payload, $qboReceipt);
+
+            return ['success' => true, 'message' => 'Refund receipt ' . $action . ' in QuickBooks.', 'qbo_id' => $qboReceipt['Id']];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('quick_return', $return->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
+    }
+
+    private function buildRefundReceiptPayload(QuickReturn $return, string $customerQboId, array $itemIds, string $refundAccountId): array
+    {
+        $lines     = [];
+        $taxCodeId = $return->tax_rate_percent > 0 ? '39' : '25';
+
+        foreach ($return->items as $item) {
+            $lines[] = [
+                'Amount'      => (float) $item->line_total,
+                'DetailType'  => 'SalesItemLineDetail',
+                'Description' => $item->description,
+                'SalesItemLineDetail' => [
+                    'ItemRef'    => ['value' => $itemIds['material']],
+                    'Qty'        => (float) $item->quantity,
+                    'UnitPrice'  => (float) $item->unit_price,
+                    'TaxCodeRef' => ['value' => $taxCodeId],
+                ],
+            ];
+        }
+
+        $payload = [
+            'CustomerRef'         => ['value' => $customerQboId],
+            'DepositToAccountRef' => ['value' => $refundAccountId],
+            'TxnDate'             => $return->created_at->toDateString(),
+            'DocNumber'           => $return->return_number,
+            'Line'                => $lines,
+        ];
+
+        $methodId = $this->mapPaymentMethod($return->refund_method);
+        if ($methodId) {
+            $payload['PaymentMethodRef'] = ['value' => $methodId];
+        }
+
+        if ($return->reference_number) {
+            $payload['PaymentRefNum'] = $return->reference_number;
+        }
+
+        if ($return->notes) {
+            $payload['PrivateNote'] = $return->notes;
+        }
+
+        return $payload;
     }
 
     // =========================================================================

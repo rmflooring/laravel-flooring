@@ -34,6 +34,8 @@ class QuickBooksController extends Controller
             'qbo_income_material_item_id'  => Setting::get('qbo_income_material_item_id', ''),
             'qbo_income_freight_item_id'   => Setting::get('qbo_income_freight_item_id', ''),
             'qbo_income_labour_item_id'    => Setting::get('qbo_income_labour_item_id', ''),
+            'qbo_cash_customer_id'         => Setting::get('qbo_cash_customer_id', ''),
+            'qbo_refund_account_id'        => Setting::get('qbo_refund_account_id', ''),
         ];
 
         return view('admin.settings.quickbooks', compact('connection', 'recentLogs', 'settings'));
@@ -53,6 +55,8 @@ class QuickBooksController extends Controller
             'qbo_income_material_item_id' => 'required|string|max:50',
             'qbo_income_freight_item_id'  => 'required|string|max:50',
             'qbo_income_labour_item_id'   => 'required|string|max:50',
+            'qbo_cash_customer_id'        => 'nullable|string|max:50',
+            'qbo_refund_account_id'       => 'nullable|string|max:50',
         ]);
 
         Setting::set('qbo_ap_product_account_id',   trim($request->qbo_ap_product_account_id));
@@ -66,6 +70,8 @@ class QuickBooksController extends Controller
         Setting::set('qbo_income_material_item_id', trim($request->qbo_income_material_item_id));
         Setting::set('qbo_income_freight_item_id',  trim($request->qbo_income_freight_item_id));
         Setting::set('qbo_income_labour_item_id',   trim($request->qbo_income_labour_item_id));
+        Setting::set('qbo_cash_customer_id',        trim($request->qbo_cash_customer_id ?? ''));
+        Setting::set('qbo_refund_account_id',       trim($request->qbo_refund_account_id ?? ''));
 
         return back()->with('success', 'QuickBooks settings saved.');
     }

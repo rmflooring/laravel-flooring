@@ -11,6 +11,7 @@ use App\Models\QuickReturnItem;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Setting;
+use App\Services\QboSyncService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -204,6 +205,39 @@ class QuickReturnController extends Controller
             ->setPaper('letter', 'portrait');
 
         return $pdf->stream('return-' . $quickReturn->return_number . '.pdf');
+    }
+
+    public function pushToQbo(QuickReturn $quickReturn, QboSyncService $sync)
+    {
+        if (! app(\App\Services\QuickBooksService::class)->isConnected()) {
+            return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
+        }
+
+        $materialItemId  = Setting::get('qbo_income_material_item_id');
+        $cashCustomerId  = Setting::get('qbo_cash_customer_id');
+        $refundAccountId = Setting::get('qbo_refund_account_id');
+
+        if (! $materialItemId) {
+            return back()->with('error', 'Missing QBO income material item ID. Visit Settings → QuickBooks Online.');
+        }
+        if (! $cashCustomerId) {
+            return back()->with('error', 'Missing Cash Customer QBO ID. Visit Settings → QuickBooks Online.');
+        }
+        if (! $refundAccountId) {
+            return back()->with('error', 'Missing Refund Account QBO ID. Visit Settings → QuickBooks Online.');
+        }
+
+        $result = $sync->pushQuickReturn(
+            $quickReturn,
+            ['material' => $materialItemId],
+            $cashCustomerId,
+            $refundAccountId
+        );
+
+        return back()->with(
+            $result['success'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 
     // AJAX: search sales by number or customer name

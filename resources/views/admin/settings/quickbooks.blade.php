@@ -232,6 +232,31 @@
                         </div>
                     </div>
 
+                    {{-- Quick Returns --}}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-100">Quick Returns <span class="text-xs font-normal text-gray-400">(used when pushing refund receipts)</span></h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Cash Customer QBO ID</label>
+                                <input type="text"
+                                       name="qbo_cash_customer_id"
+                                       value="{{ $settings['qbo_cash_customer_id'] }}"
+                                       placeholder="e.g. 59"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <p class="mt-1 text-xs text-gray-400">QBO Customer ID to use for returns with no linked customer record. Create a "Cash Customer" in QBO and paste its ID here.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Refund Bank Account QBO ID</label>
+                                <input type="text"
+                                       name="qbo_refund_account_id"
+                                       value="{{ $settings['qbo_refund_account_id'] }}"
+                                       placeholder="e.g. 35"
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <p class="mt-1 text-xs text-gray-400">The bank/payment account refunds are paid from (QBO Account ID — find in Chart of Accounts URL).</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <button type="submit"
                                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
@@ -260,6 +285,10 @@
                     <div class="flex items-center gap-3">
                         <span class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>
                         <span><strong>Invoices (AR)</strong> — manually pushed from the invoice detail page</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>
+                        <span><strong>Quick Returns</strong> — manually pushed from the quick return detail page as a Refund Receipt</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="w-2 h-2 rounded-full bg-blue-300 shrink-0"></span>

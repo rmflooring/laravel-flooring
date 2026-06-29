@@ -872,6 +872,10 @@ Route::prefix('pages')
 			->name('quick-returns.receipt')
 			->middleware('role_or_permission:admin|view sales');
 
+		Route::post('quick-returns/{quickReturn}/push-to-qbo', [\App\Http\Controllers\Pages\QuickReturnController::class, 'pushToQbo'])
+			->name('quick-returns.push-to-qbo')
+			->middleware('role_or_permission:admin|view sales');
+
 		Route::get('sales/{sale}/pdf', [\App\Http\Controllers\Pages\SaleController::class, 'previewPdf'])
 			->name('sales.pdf');
 
