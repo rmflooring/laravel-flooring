@@ -444,11 +444,11 @@ foreach ($enabledCalendars as $cal) {
 
         \App\Models\ExternalEventLink::updateOrCreate(
             [
-                'provider'           => 'microsoft',
-                'external_event_id'  => $externalEventId,
+                'provider'             => 'microsoft',
+                'microsoft_account_id' => $account->id,
+                'external_event_id'    => $externalEventId,
             ],
             [
-                'microsoft_account_id' => $account->id,
                 'external_calendar_id' => $cal->calendar_id,
                 'calendar_event_id'    => $calendarEvent->id,
                 'last_synced_at'       => now(),
