@@ -33,6 +33,8 @@
     $lineNameDisplay = $lineName
         ? ($isZebra ? $lineName : \Illuminate\Support\Str::limit($lineName, 40))
         : null;
+    $unitsPer        = $receipt->productStyle?->units_per;
+    $unitLabel       = $receipt->productStyle?->productLine?->unit?->label;
 @endphp
 
 <div class="page">
@@ -56,8 +58,13 @@
 
                 {{-- Qty box --}}
                 <div style="background: #eff6ff; border: 1pt solid #bfdbfe; border-radius: 3pt; padding: 3pt 5pt; text-align: center; margin-bottom: 4pt;">
-                    <div style="font-size: {{ $qtyNumSz }}; font-weight: bold; color: #1d4ed8; line-height: 1;">{{ $qtyDisplay }}</div>
-                    <div style="font-size: 6.5pt; color: #555; margin-top: 1pt;">{{ $receipt->unit ?: 'units' }}</div>
+                    @if ($unitsPer && $unitLabel)
+                        <div style="font-size: {{ $qtyNumSz }}; font-weight: bold; color: #1d4ed8; line-height: 1;">{{ rtrim(rtrim(number_format((float) $unitsPer, 2), '0'), '.') }}</div>
+                        <div style="font-size: 6.5pt; color: #555; margin-top: 1pt;">{{ $unitLabel }}</div>
+                    @else
+                        <div style="font-size: {{ $qtyNumSz }}; font-weight: bold; color: #1d4ed8; line-height: 1;">{{ $qtyDisplay }}</div>
+                        <div style="font-size: 6.5pt; color: #555; margin-top: 1pt;">{{ $receipt->unit ?: 'units' }}</div>
+                    @endif
                 </div>
 
                 {{-- Allocation badge --}}

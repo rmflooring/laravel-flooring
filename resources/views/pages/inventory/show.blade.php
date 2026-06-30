@@ -414,11 +414,19 @@
                     <div style="font-size:10px; color:#777; margin-bottom:5px;">SKU: {{ $styleSku }}</div>
                 @endif
 
-                {{-- Qty + Date --}}
+                {{-- Units per / unit measure --}}
+                @php
+                    $previewUnitsPer  = $inventoryReceipt->productStyle?->units_per;
+                    $previewUnitLabel = $inventoryReceipt->productStyle?->productLine?->unit?->label;
+                @endphp
                 <div style="font-size:11px; color:#555; margin-bottom:3px;">
-                    <strong>Qty:</strong>
-                    {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }}
-                    {{ $inventoryReceipt->unit }}
+                    @if ($previewUnitsPer && $previewUnitLabel)
+                        <strong>{{ rtrim(rtrim(number_format((float) $previewUnitsPer, 2), '0'), '.') }}</strong> {{ $previewUnitLabel }}
+                    @else
+                        <strong>Qty:</strong>
+                        {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }}
+                        {{ $inventoryReceipt->unit }}
+                    @endif
                 </div>
                 <div style="font-size:11px; color:#777; margin-bottom:8px;">
                     Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}
@@ -511,6 +519,11 @@ function printTag() {
         $tagSku          = $inventoryReceipt->productStyle?->sku ?? '';
     @endphp
 
+    @php
+        $tagUnitsPer  = $inventoryReceipt->productStyle?->units_per;
+        $tagUnitLabel = $inventoryReceipt->productStyle?->productLine?->unit?->label;
+    @endphp
+
     const mfrHtml  = @json($tagManufacturer !== '')
         ? `<div class="tag-detail"><strong>Manufacturer:</strong> {{ addslashes($tagManufacturer) }}</div>`
         : '';
@@ -520,6 +533,12 @@ function printTag() {
     const skuHtml  = @json($tagSku !== '')
         ? `<div class="tag-detail"><strong>SKU:</strong> {{ addslashes($tagSku) }}</div>`
         : '';
+
+    const tagUnitsPer  = @json($tagUnitsPer);
+    const tagUnitLabel = @json($tagUnitLabel);
+    const qtyHtml = (tagUnitsPer && tagUnitLabel)
+        ? `<div class="tag-detail"><strong>${parseFloat(tagUnitsPer).toLocaleString('en', {maximumFractionDigits: 2})}</strong> ${tagUnitLabel}</div>`
+        : `<div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>`;
 
     const noteHtml = note
         ? `<div class="tag-notes">
@@ -591,7 +610,7 @@ function printTag() {
             ${mfrHtml}
             ${lineHtml}
             ${skuHtml}
-            <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
+            ${qtyHtml}
             <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
             ${poHtml}
             ${jobHtml}
@@ -650,7 +669,7 @@ function printTag() {
     ${mfrHtml}
     ${lineHtml}
     ${skuHtml}
-    <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $inventoryReceipt->quantity_received, 2), '0'), '.') }} {{ $inventoryReceipt->unit }}</div>
+    ${qtyHtml}
     <div class="tag-date">Received: {{ $inventoryReceipt->received_date?->format('M j, Y') ?? '—' }}</div>
     ${poHtml}
     ${jobHtml}
