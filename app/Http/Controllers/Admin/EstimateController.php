@@ -1095,6 +1095,8 @@ public function apiStyles(Request $request)
                 'line_total'              => (float) ($ei->line_total ?? 0),
 				'cost_price'              => (float) ($ei->cost_price ?? 0),
                 'notes'                   => $ei->notes,
+                'customer_notes'          => $ei->customer_notes,
+                'internal_notes'          => $ei->internal_notes,
                 'sort_order'              => (int) ($ei->sort_order ?? 0),
 
                 'product_type'            => $ei->product_type,

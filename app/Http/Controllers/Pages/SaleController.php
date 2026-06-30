@@ -584,6 +584,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
                     'notes'            => $item['notes'] ?? null,
+                    'internal_notes'   => $item['internal_notes'] ?? null,
                 ]);
             }
 
@@ -606,6 +607,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
                     'notes'              => $item['notes'] ?? null,
+                    'internal_notes'     => $item['internal_notes'] ?? null,
                 ]);
             }
 
@@ -629,7 +631,9 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
                     'line_total'   => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
 
-                    'notes'        => $item['notes'] ?? null,
+                    'notes'          => $item['notes'] ?? null,
+                    'customer_notes' => $item['customer_notes'] ?? null,
+                    'internal_notes' => $item['internal_notes'] ?? null,
                 ]);
             }
 
