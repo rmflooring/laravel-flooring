@@ -398,9 +398,10 @@ foreach ($enabledCalendars as $cal) {
 
         if (!$startDt || !$endDt) continue;
 
+        // Look up by external_event_id alone — it is globally unique in Graph.
+        // Scoping by microsoft_account_id caused duplicates when multiple connected
+        // users synced the same group calendar event.
         $link = \App\Models\ExternalEventLink::where('provider', 'microsoft')
-            ->where('microsoft_account_id', $account->id)
-            ->where('external_calendar_id', $cal->calendar_id)
             ->where('external_event_id', $externalEventId)
             ->first();
 
@@ -444,11 +445,11 @@ foreach ($enabledCalendars as $cal) {
 
         \App\Models\ExternalEventLink::updateOrCreate(
             [
-                'provider'             => 'microsoft',
-                'microsoft_account_id' => $account->id,
-                'external_event_id'    => $externalEventId,
+                'provider'          => 'microsoft',
+                'external_event_id' => $externalEventId,
             ],
             [
+                'microsoft_account_id' => $account->id,
                 'external_calendar_id' => $cal->calendar_id,
                 'calendar_event_id'    => $calendarEvent->id,
                 'last_synced_at'       => now(),
