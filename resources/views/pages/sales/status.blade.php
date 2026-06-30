@@ -386,7 +386,7 @@
                                     {{ $itemName }}
                                 </span>
                                 <span class="text-gray-400 whitespace-nowrap shrink-0">
-                                    {{ $item->quantity }} {{ $item->unit }}
+                                    {{ $item->order_qty ?? $item->quantity }} {{ $item->unit }}
                                 </span>
                                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap shrink-0 {{ $badgeColor }}">
                                     {{ $badgeLabel }}
