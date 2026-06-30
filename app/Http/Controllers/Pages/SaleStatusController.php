@@ -123,6 +123,36 @@ class SaleStatusController extends Controller
             }
         }
 
+        // Fallback for items without a product_style_id: look up receipts via the explicit
+        // PO item link (purchase_order_items → inventory_receipts.purchase_order_item_id).
+        // This handles custom/free-text items that are ordered and received but not in the catalog.
+        $receiptsByPoItemId = [];
+        $linkedPoItemIds = collect($poItemsBySaleItemId)
+            ->flatten(1)
+            ->pluck('poItem.id')
+            ->filter()
+            ->unique()
+            ->all();
+        if (! empty($linkedPoItemIds)) {
+            InventoryReceipt::with('allocations')
+                ->whereIn('purchase_order_item_id', $linkedPoItemIds)
+                ->whereNull('product_style_id')
+                ->orderBy('received_date')
+                ->get()
+                ->each(function ($receipt) use (&$receiptsByPoItemId) {
+                    $available = max(0, (float) $receipt->quantity_received - $receipt->allocations->sum('quantity'));
+                    if ($available > 0) {
+                        $receiptsByPoItemId[$receipt->purchase_order_item_id][] = [
+                            'id'        => $receipt->id,
+                            'item_name' => $receipt->item_name,
+                            'unit'      => $receipt->unit,
+                            'available' => $available,
+                            'date'      => $receipt->received_date?->format('M j, Y'),
+                        ];
+                    }
+                });
+        }
+
         // ── Coverage items ─────────────────────────────────────────
         // Priority: delivered(4) > received(3) > inventory(2.5) > ordered(2) > pending(1) > none(0)
         $statusPriority = ['received' => 3, 'ordered' => 2, 'pending' => 1];
@@ -132,12 +162,25 @@ class SaleStatusController extends Controller
             $statusPriority,
             $invAllocatedQtys,
             $receiptsByStyleId,
+            $receiptsByPoItemId,
             $ptBySaleItemId
         ) {
             $matches        = $poItemsBySaleItemId[$item->id] ?? [];
             $invQty         = $invAllocatedQtys[$item->id] ?? 0;
             $hasInvCoverage = $invQty > 0;
             $pickTicket     = $ptBySaleItemId[$item->id] ?? null;
+
+            // Resolve available receipts: by product_style_id first, then fall back to
+            // PO item link for free-text items that have no catalog entry.
+            $availableReceipts = $receiptsByStyleId[$item->product_style_id] ?? [];
+            if (empty($availableReceipts) && ! $item->product_style_id) {
+                foreach ($matches as $m) {
+                    $poItemId = $m['poItem']->id ?? null;
+                    if ($poItemId && isset($receiptsByPoItemId[$poItemId])) {
+                        $availableReceipts = array_merge($availableReceipts, $receiptsByPoItemId[$poItemId]);
+                    }
+                }
+            }
 
             if (empty($matches)) {
                 if ($hasInvCoverage) {
@@ -147,7 +190,7 @@ class SaleStatusController extends Controller
                         'dot_status'         => $invDotStatus,
                         'po'                 => null,
                         'inv_qty'            => $invQty,
-                        'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                        'available_receipts' => $availableReceipts,
                         'pick_ticket'        => $pickTicket,
                     ];
                 }
@@ -157,7 +200,7 @@ class SaleStatusController extends Controller
                     'dot_status'         => 'none',
                     'po'                 => null,
                     'inv_qty'            => 0,
-                    'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                    'available_receipts' => $availableReceipts,
                     'pick_ticket'        => null,
                 ];
             }
@@ -174,7 +217,7 @@ class SaleStatusController extends Controller
                     'dot_status'         => 'inventory',
                     'po'                 => $best['po'],
                     'inv_qty'            => $invQty,
-                    'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                    'available_receipts' => $availableReceipts,
                     'pick_ticket'        => $pickTicket,
                 ];
             }
@@ -191,7 +234,7 @@ class SaleStatusController extends Controller
                 'dot_status'         => $finalStatus,
                 'po'                 => $best['po'],
                 'inv_qty'            => $invQty,
-                'available_receipts' => $receiptsByStyleId[$item->product_style_id] ?? [],
+                'available_receipts' => $availableReceipts,
                 'pick_ticket'        => $pickTicket,
             ];
         });

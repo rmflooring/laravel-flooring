@@ -667,41 +667,73 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     fn($m) => implode('|', [$m->product_type, $m->manufacturer, $m->style, $m->color_item_number])
                 );
 
+                // Fallback: loose signature (without color_item_number) used when color
+                // changes between saves and the exact signature no longer matches. Only
+                // used when the loose key is unique in this room — avoids mismatching
+                // two rows of the same product/style in different colors.
+                $looseGroups = [];
+                foreach ($newMaterialItems as $m) {
+                    $looseGroups[implode('|', [$m->product_type, $m->manufacturer, $m->style])][] = $m;
+                }
+                $newMatByLooseSig = collect($looseGroups)
+                    ->filter(fn ($grp) => count($grp) === 1)
+                    ->map(fn ($grp) => $grp[0]);
+
+                $resolveNewItem = function (string $sig) use ($newMatBySignature, $newMatByLooseSig) {
+                    if (isset($newMatBySignature[$sig])) {
+                        return $newMatBySignature[$sig];
+                    }
+                    // Strip color (last segment) and try the loose map
+                    $parts    = explode('|', $sig);
+                    $looseSig = implode('|', array_slice($parts, 0, 3));
+                    return $newMatByLooseSig[$looseSig] ?? null;
+                };
+
                 // WO material links (cascade-deleted → recreate)
                 foreach ($matLinkSnapshots as $snap) {
-                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    if (!$snap['signature']) continue;
+                    $newItem = $resolveNewItem($snap['signature']);
+                    if (!$newItem) continue;
                     \App\Models\WorkOrderItemMaterial::create([
                         'work_order_item_id' => $snap['work_order_item_id'],
-                        'sale_item_id'       => $newMatBySignature[$snap['signature']]->id,
+                        'sale_item_id'       => $newItem->id,
                     ]);
                 }
 
                 // PO items (nulled via nullOnDelete → restore sale_item_id)
                 foreach ($poItemSnaps as $snap) {
-                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    if (!$snap['signature']) continue;
+                    $newItem = $resolveNewItem($snap['signature']);
+                    if (!$newItem) continue;
                     \App\Models\PurchaseOrderItem::where('id', $snap['id'])
-                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
+                        ->update(['sale_item_id' => $newItem->id]);
                 }
 
                 // Allocations (nulled via nullOnDelete → restore sale_item_id)
                 foreach ($allocSnaps as $snap) {
-                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    if (!$snap['signature']) continue;
+                    $newItem = $resolveNewItem($snap['signature']);
+                    if (!$newItem) continue;
                     \App\Models\InventoryAllocation::where('id', $snap['id'])
-                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
+                        ->update(['sale_item_id' => $newItem->id]);
                 }
 
                 // Pick ticket items (nulled via nullOnDelete → restore sale_item_id)
                 foreach ($ptItemSnaps as $snap) {
-                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    if (!$snap['signature']) continue;
+                    $newItem = $resolveNewItem($snap['signature']);
+                    if (!$newItem) continue;
                     \App\Models\PickTicketItem::where('id', $snap['id'])
-                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
+                        ->update(['sale_item_id' => $newItem->id]);
                 }
 
                 // RTV items (nulled via nullOnDelete → restore sale_item_id)
                 foreach ($rtvItemSnaps as $snap) {
-                    if (!$snap['signature'] || !isset($newMatBySignature[$snap['signature']])) continue;
+                    if (!$snap['signature']) continue;
+                    $newItem = $resolveNewItem($snap['signature']);
+                    if (!$newItem) continue;
                     \App\Models\InventoryReturnItem::where('id', $snap['id'])
-                        ->update(['sale_item_id' => $newMatBySignature[$snap['signature']]->id]);
+                        ->update(['sale_item_id' => $newItem->id]);
                 }
             }
         }
