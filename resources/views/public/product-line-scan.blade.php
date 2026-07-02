@@ -93,4 +93,47 @@
     </div>
     @endif
 
+    {{-- Staff: sample set check in / out --}}
+    @if ($sampleSets->isNotEmpty())
+    <div class="pt-2 space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 px-1">Sample Sets</p>
+
+        @foreach ($sampleSets as $set)
+            @php $isAvailable = $set->status === 'active'; @endphp
+
+            @auth
+                @can('manage sample checkouts')
+                    @if ($isAvailable)
+                        <a href="{{ route('mobile.sample-sets.checkout', $set->set_id) }}"
+                           class="flex items-center justify-between w-full gap-2 px-5 py-3.5 text-base font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-sm">
+                            <span class="font-mono">{{ $set->set_id }}{{ $set->name ? ' – ' . $set->name : '' }}</span>
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/>
+                            </svg>
+                        </a>
+                    @else
+                        <div class="flex flex-col w-full px-5 py-3.5 text-sm font-medium text-blue-700 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
+                            <span class="font-semibold font-mono">{{ $set->set_id }}{{ $set->name ? ' – ' . $set->name : '' }}</span>
+                            <span class="text-xs text-blue-500 mt-0.5">
+                                Checked out{{ $set->activeCheckout?->borrower_name ? ' to ' . $set->activeCheckout->borrower_name : '' }}
+                            </span>
+                        </div>
+                    @endif
+                @endcan
+            @else
+                <a href="{{ route('mobile.sample-sets.checkout', $set->set_id) }}"
+                   class="flex items-center justify-between w-full gap-2 px-5 py-3.5 text-base font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-sm">
+                    <span class="font-mono">{{ $set->set_id }}{{ $set->name ? ' – ' . $set->name : '' }}</span>
+                    <span class="flex items-center gap-1.5 text-sm font-normal">
+                        Staff — Check In / Out
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/>
+                        </svg>
+                    </span>
+                </a>
+            @endauth
+        @endforeach
+    </div>
+    @endif
+
 </x-public-scan-layout>
