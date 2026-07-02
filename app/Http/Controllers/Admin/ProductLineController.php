@@ -466,6 +466,55 @@ public function update(Request $request, ProductLine $product_line)
             ->with('success', "Import successful: {$lineCount} product " . Str::plural('line', $lineCount) . " and {$styleCount} product " . Str::plural('style', $styleCount) . " created.");
     }
 
+    public function duplicate(ProductLine $product_line)
+    {
+        $copy = ProductLine::create([
+            'product_type_id'    => $product_line->product_type_id,
+            'name'               => 'Copy of ' . $product_line->name,
+            'vendor_id'          => $product_line->vendor_id,
+            'manufacturer'       => $product_line->manufacturer,
+            'model'              => $product_line->model,
+            'collection'         => $product_line->collection,
+            'default_cost_price' => $product_line->default_cost_price,
+            'default_sell_price' => $product_line->default_sell_price,
+            'unit_id'            => $product_line->unit_id,
+            'width'              => $product_line->width,
+            'length'             => $product_line->length,
+            'status'             => $product_line->status === 'dropped' ? 'active' : $product_line->status,
+            'shop_visible'       => false,
+            'shop_show_price'    => $product_line->shop_show_price,
+            'shop_description'   => $product_line->shop_description,
+            'store_available'    => $product_line->store_available,
+            'store_qty'          => $product_line->store_qty,
+            'created_by'         => Auth::id(),
+        ]);
+
+        $product_line->productStyles()
+            ->where('status', '<>', 'archived')
+            ->get()
+            ->each(function ($style) use ($copy) {
+                $copy->productStyles()->create([
+                    'name'         => $style->name,
+                    'sku'          => null,
+                    'style_number' => null,
+                    'color'        => $style->color,
+                    'pattern'      => $style->pattern,
+                    'description'  => $style->description,
+                    'cost_price'   => $style->cost_price,
+                    'sell_price'   => $style->sell_price,
+                    'units_per'    => $style->units_per,
+                    'use_box_qty'  => $style->use_box_qty,
+                    'thickness'    => $style->thickness,
+                    'vendor_id'    => $style->vendor_id,
+                    'status'       => $style->status === 'dropped' ? 'active' : $style->status,
+                    'created_by'   => Auth::id(),
+                ]);
+            });
+
+        return redirect()->route('admin.product_lines.edit', $copy)
+            ->with('success', 'Product line duplicated. Review and update the details below.');
+    }
+
     public function destroy(ProductLine $product_line)
     {
         if ($product_line->hasActivity()) {

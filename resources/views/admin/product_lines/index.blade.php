@@ -192,6 +192,15 @@
                                                class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4">
                                                 Edit
                                             </a>
+                                            @if($line->status !== 'archived')
+                                                <form action="{{ route('admin.product_lines.duplicate', $line->id) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 mr-4">
+                                                        Duplicate
+                                                    </button>
+                                                </form>
+                                            @endif
                                             @if($line->status === 'archived')
                                                 <form action="{{ route('admin.product_lines.unarchive', $line->id) }}" method="POST" class="inline">
                                                     @csrf
