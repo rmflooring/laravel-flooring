@@ -39,15 +39,27 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Product Line <span class="text-red-500">*</span>
                             </label>
-                            <select name="product_line_id" x-model="selectedLineId" @change="loadStyles"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                                <option value="">— Select a Product Line —</option>
-                                @foreach ($productLines as $line)
-                                    <option value="{{ $line->id }}" data-name="{{ $line->name }}">
-                                        {{ $line->manufacturer ? $line->manufacturer . ' — ' : '' }}{{ $line->name }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div class="relative">
+                                <input type="text"
+                                       x-model="lineSearch"
+                                       @focus="lineDropdownOpen = true"
+                                       @input="lineDropdownOpen = true; if (lineSearch === '') clearLine()"
+                                       placeholder="Search by name or manufacturer…"
+                                       autocomplete="off"
+                                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                <div x-show="lineDropdownOpen && filteredLines.length > 0"
+                                     @click.outside="lineDropdownOpen = false"
+                                     class="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                    <template x-for="line in filteredLines" :key="line.id">
+                                        <button type="button"
+                                                @click="selectLine(line)"
+                                                class="w-full text-left px-3 py-2.5 text-sm text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                                                x-text="lineLabel(line)">
+                                        </button>
+                                    </template>
+                                </div>
+                                <input type="hidden" name="product_line_id" :value="selectedLineId">
+                            </div>
                         </div>
 
                         <div>
@@ -172,6 +184,36 @@
                 selectedStyleIds: [],
                 loading: false,
                 submitAttempted: false,
+
+                lines: @json($productLines->map(fn($l) => ['id' => $l->id, 'name' => $l->name, 'manufacturer' => $l->manufacturer ?? ''])),
+                lineSearch: '',
+                lineDropdownOpen: false,
+
+                get filteredLines() {
+                    const q = this.lineSearch.toLowerCase();
+                    return this.lines.filter(l =>
+                        !q ||
+                        l.name.toLowerCase().includes(q) ||
+                        l.manufacturer.toLowerCase().includes(q)
+                    );
+                },
+
+                lineLabel(line) {
+                    return line.manufacturer ? line.manufacturer + ' — ' + line.name : line.name;
+                },
+
+                selectLine(line) {
+                    this.selectedLineId = String(line.id);
+                    this.lineSearch = this.lineLabel(line);
+                    this.lineDropdownOpen = false;
+                    this.loadStyles();
+                },
+
+                clearLine() {
+                    this.selectedLineId = '';
+                    this.styles = [];
+                    this.selectedStyleIds = [];
+                },
 
                 async loadStyles() {
                     if (!this.selectedLineId) {
