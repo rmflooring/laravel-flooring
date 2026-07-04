@@ -150,22 +150,38 @@ class TwilioSmsWebhookController extends Controller
     {
         $authToken = Setting::get('sms_auth_token', '');
         if (! $authToken) {
-            // No token configured — skip validation (dev/test environments)
             return true;
         }
 
         try {
-            $secret    = decrypt($authToken);
+            $secret = decrypt($authToken);
         } catch (\Throwable) {
             $secret = $authToken;
         }
 
         $validator = new \Twilio\Security\RequestValidator($secret);
         $signature = $request->header('X-Twilio-Signature', '');
-        // Build URL from APP_URL to avoid http/https mismatch behind nginx reverse proxy
         $url       = rtrim(config('app.url'), '/') . $request->getRequestUri();
-        $params    = $request->post();
 
-        return $validator->validate($signature, $url, $params);
+        // Attempt 1: middleware-transformed params (TrimStrings + ConvertEmptyStringsToNull may alter values)
+        $valid = $validator->validate($signature, $url, $request->post());
+
+        // Attempt 2: raw POST body parsed directly — bypasses TrimStrings/ConvertEmptyStringsToNull
+        // which can change values and break Twilio's HMAC computation
+        if (! $valid) {
+            $rawParams = [];
+            parse_str($request->getContent(), $rawParams);
+            $valid = $validator->validate($signature, $url, $rawParams);
+        }
+
+        if (! $valid) {
+            Log::warning('[Twilio Webhook] Signature validation failed', [
+                'url'       => $url,
+                'signature' => $signature,
+                'ip'        => $request->ip(),
+            ]);
+        }
+
+        return $valid;
     }
 }
