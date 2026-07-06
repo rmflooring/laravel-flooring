@@ -75,6 +75,23 @@
                     </div>
                 </a>
 
+                {{-- Aging Estimates --}}
+                <a href="{{ route('admin.reports.agingEstimates') }}"
+                   class="block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-yellow-300 transition-all p-6 group">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center group-hover:bg-yellow-100 transition-colors">
+                            <svg class="w-6 h-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900 mb-1">Aging Estimates</h2>
+                            <p class="text-sm text-gray-500">Track sent estimates that haven't converted. See which are overdue for a follow-up, then send a pre-drafted email or SMS directly from the report.</p>
+                            <span class="inline-block mt-3 text-xs font-medium text-yellow-600">View Report →</span>
+                        </div>
+                    </div>
+                </a>
+
             </div>
         </div>
     </div>

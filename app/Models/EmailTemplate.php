@@ -16,11 +16,14 @@ class EmailTemplate extends Model
 
     // Types available to regular users (customer-facing)
     public const USER_TYPES = [
-        'estimate'       => 'Estimate',
-        'sale'           => 'Sale',
-        'work_order'     => 'Work Order',
-        'purchase_order' => 'Purchase Order',
-        'invoice'        => 'Invoice',
+        'estimate'             => 'Estimate',
+        'sale'                 => 'Sale',
+        'work_order'           => 'Work Order',
+        'purchase_order'       => 'Purchase Order',
+        'invoice'              => 'Invoice',
+        'estimate_follow_up_1' => 'Estimate Follow-up — Stage 1 (7 days)',
+        'estimate_follow_up_2' => 'Estimate Follow-up — Stage 2 (14 days)',
+        'estimate_follow_up_3' => 'Estimate Follow-up — Stage 3 (30 days)',
     ];
 
     // Types restricted to admin (system notifications)
@@ -92,6 +95,21 @@ class EmailTemplate extends Model
             '{{first_name}}', '{{last_name}}', '{{phone}}',
             '{{product_reference}}', '{{color_reference}}', '{{sq_footage}}',
         ],
+        'estimate_follow_up_1' => [
+            '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
+            '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{days_since_sent}}', '{{sender_name}}', '{{sender_email}}',
+        ],
+        'estimate_follow_up_2' => [
+            '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
+            '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{days_since_sent}}', '{{sender_name}}', '{{sender_email}}',
+        ],
+        'estimate_follow_up_3' => [
+            '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
+            '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{days_since_sent}}', '{{sender_name}}', '{{sender_email}}',
+        ],
     ];
 
     // Built-in defaults — used when a user has no saved template
@@ -135,6 +153,18 @@ class EmailTemplate extends Model
         'shop_quote_confirmation' => [
             'subject' => 'We received your quote request — RM Flooring',
             'body'    => "Hi {{first_name}},\n\nThank you for reaching out! We've received your quote request and one of our team members will be in touch with you shortly.\n\nIf you have any questions in the meantime, feel free to contact us at reception@rmflooring.ca.\n\nWarm regards,\nRM Flooring",
+        ],
+        'estimate_follow_up_1' => [
+            'subject' => 'Following up on your estimate {{estimate_number}} — RM Flooring',
+            'body'    => "Hi {{customer_name}},\n\nI just wanted to follow up on the estimate we sent over for {{job_name}}.\n\nEstimate #: {{estimate_number}}\nTotal: {{grand_total}}\n\nPlease don't hesitate to reach out if you have any questions or would like to go over any of the details — we're happy to help.\n\n{{sender_name}}\n{{sender_email}}",
+        ],
+        'estimate_follow_up_2' => [
+            'subject' => 'Checking in — Estimate {{estimate_number}}',
+            'body'    => "Hi {{customer_name}},\n\nI wanted to check in again regarding the estimate we provided for {{job_name}}.\n\nEstimate #: {{estimate_number}}\nTotal: {{grand_total}}\n\nIf you have any questions, want to adjust anything, or would like to schedule a time to chat, we're here to help.\n\n{{sender_name}}\n{{sender_email}}",
+        ],
+        'estimate_follow_up_3' => [
+            'subject' => 'Last check-in — Estimate {{estimate_number}}',
+            'body'    => "Hi {{customer_name}},\n\nI wanted to reach out one more time regarding the estimate for {{job_name}}.\n\nEstimate #: {{estimate_number}}\nTotal: {{grand_total}}\n\nIf the timing isn't right or you've decided to go in a different direction, no worries at all — just let us know and we'll update our records. Otherwise, we'd love the opportunity to work with you.\n\n{{sender_name}}\n{{sender_email}}",
         ],
     ];
 }

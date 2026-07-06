@@ -9,16 +9,19 @@ class SmsTemplate extends Model
     protected $fillable = ['type', 'body'];
 
     public const TYPES = [
-        'wo_scheduled'           => 'Work Order Scheduled',
-        'wo_reminder'            => 'Work Order Day-Before Reminder',
-        'wo_scheduled_customer'  => 'WO Scheduled — Customer',
-        'wo_reminder_customer'   => 'WO Reminder — Customer',
-        'rfm_booked'             => 'RFM Booked',
-        'rfm_updated'            => 'RFM Updated',
-        'rfm_reminder'           => 'RFM Day-Before Reminder',
-        'rfm_booked_customer'    => 'RFM Booked — Customer',
-        'rfm_updated_customer'   => 'RFM Updated — Customer',
-        'rfm_reminder_customer'  => 'RFM Reminder — Customer',
+        'wo_scheduled'             => 'Work Order Scheduled',
+        'wo_reminder'              => 'Work Order Day-Before Reminder',
+        'wo_scheduled_customer'    => 'WO Scheduled — Customer',
+        'wo_reminder_customer'     => 'WO Reminder — Customer',
+        'rfm_booked'               => 'RFM Booked',
+        'rfm_updated'              => 'RFM Updated',
+        'rfm_reminder'             => 'RFM Day-Before Reminder',
+        'rfm_booked_customer'      => 'RFM Booked — Customer',
+        'rfm_updated_customer'     => 'RFM Updated — Customer',
+        'rfm_reminder_customer'    => 'RFM Reminder — Customer',
+        'estimate_follow_up_1'     => 'Estimate Follow-up — Stage 1 (7 days)',
+        'estimate_follow_up_2'     => 'Estimate Follow-up — Stage 2 (14 days)',
+        'estimate_follow_up_3'     => 'Estimate Follow-up — Stage 3 (30 days)',
     ];
 
     public const TAGS = [
@@ -79,6 +82,18 @@ class SmsTemplate extends Model
             '{{customer_name}}', '{{rfm_date}}', '{{rfm_time}}',
             '{{site_address}}', '{{estimator_name}}',
         ],
+        'estimate_follow_up_1' => [
+            '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
+            '{{job_name}}', '{{sender_name}}',
+        ],
+        'estimate_follow_up_2' => [
+            '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
+            '{{job_name}}', '{{sender_name}}',
+        ],
+        'estimate_follow_up_3' => [
+            '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
+            '{{job_name}}', '{{sender_name}}',
+        ],
     ];
 
     public const DEFAULTS = [
@@ -92,5 +107,8 @@ class SmsTemplate extends Model
         'rfm_booked_customer'    => "Hi {{customer_name}}, your flooring measure has been booked for {{rfm_date}} at {{rfm_time}} at {{site_address}}. Reply STOP to unsubscribe.",
         'rfm_updated_customer'   => "Hi {{customer_name}}, your flooring measure appointment has been updated to {{rfm_date}} at {{rfm_time}} at {{site_address}}. Reply STOP to unsubscribe.",
         'rfm_reminder_customer'  => "Reminder: Your flooring measure is tomorrow ({{rfm_date}}) at {{rfm_time}} at {{site_address}}. Reply STOP to unsubscribe.",
+        'estimate_follow_up_1'   => "Hi {{customer_name}}, just following up on estimate {{estimate_number}} for {{job_name}}. Any questions? We're happy to help. — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
+        'estimate_follow_up_2'   => "Hi {{customer_name}}, checking in on estimate {{estimate_number}} for {{job_name}}. Happy to adjust anything or answer questions. — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
+        'estimate_follow_up_3'   => "Hi {{customer_name}}, one last follow-up on estimate {{estimate_number}} for {{job_name}}. Let us know either way — no pressure! — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
     ];
 }

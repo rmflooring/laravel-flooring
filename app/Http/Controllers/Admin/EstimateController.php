@@ -1380,7 +1380,10 @@ public function duplicate(Estimate $estimate)
             return back()->with('error', 'Failed to send estimate email. Check the mail log for details.');
         }
 
-        $estimate->update(['status' => 'sent']);
+        $estimate->update([
+            'status'       => 'sent',
+            'first_sent_at' => $estimate->first_sent_at ?? now(),
+        ]);
 
         return back()->with('success', 'Estimate emailed to ' . $request->input('to') . ' and status updated to Sent.');
     }

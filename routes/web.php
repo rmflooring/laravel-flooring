@@ -726,7 +726,20 @@ Route::prefix('admin')
             Route::get('/invoices',       [\App\Http\Controllers\Admin\ReportController::class, 'invoices'])->name('invoices');
             Route::get('/revenue',        [\App\Http\Controllers\Admin\ReportController::class, 'revenue'])->name('revenue');
             Route::get('/purchase-orders',[\App\Http\Controllers\Admin\ReportController::class, 'purchaseOrders'])->name('purchaseOrders');
+            Route::get('/aging-estimates',[\App\Http\Controllers\Admin\ReportController::class, 'agingEstimates'])->name('agingEstimates');
         });
+
+        // Estimate follow-up actions (from aging estimates report)
+        Route::prefix('estimates/{estimate}/follow-up')->name('estimates.follow-up.')
+            ->middleware('role_or_permission:admin|view estimates')
+            ->group(function () {
+                Route::get('/draft',        [\App\Http\Controllers\Admin\EstimateFollowUpController::class, 'draft'])->name('draft');
+                Route::post('/email',       [\App\Http\Controllers\Admin\EstimateFollowUpController::class, 'sendEmail'])->name('email');
+                Route::post('/sms',         [\App\Http\Controllers\Admin\EstimateFollowUpController::class, 'sendSms'])->name('sms');
+                Route::post('/note',        [\App\Http\Controllers\Admin\EstimateFollowUpController::class, 'logNote'])->name('note');
+                Route::post('/close',       [\App\Http\Controllers\Admin\EstimateFollowUpController::class, 'markClosed'])->name('close');
+                Route::post('/reopen',      [\App\Http\Controllers\Admin\EstimateFollowUpController::class, 'reopen'])->name('reopen');
+            });
 
     });
 

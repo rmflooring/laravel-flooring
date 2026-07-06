@@ -113,3 +113,10 @@ Schedule::command('signing:send-reminders')
     ->timezone('America/Vancouver')
     ->name('signing-send-reminders')
     ->withoutOverlapping();
+
+// Estimate follow-ups: flag sent estimates due for stage 1/2/3 and notify estimator
+Schedule::command('estimates:check-follow-ups')
+    ->dailyAt('09:00')
+    ->timezone('America/Vancouver')
+    ->name('estimates-check-follow-ups')
+    ->withoutOverlapping();

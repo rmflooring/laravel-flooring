@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\Estimate;
 use App\Models\Invoice;
 use App\Models\PurchaseOrder;
 use App\Models\Sale;
@@ -269,6 +270,60 @@ class ReportController extends Controller
         $purchaseOrders = $query->paginate($perPage)->withQueryString();
 
         return view('admin.reports.purchase_orders', compact('purchaseOrders', 'statuses', 'vendors'));
+    }
+
+    // ─── Aging Estimates Report ───────────────────────────────────────────────
+
+    public function agingEstimates(Request $request)
+    {
+        $query = Estimate::whereNotNull('first_sent_at')
+            ->whereDoesntHave('sale')
+            ->with(['followUps' => fn($q) => $q->latest(), 'creator', 'opportunity.jobSiteCustomer', 'salesperson1Employee'])
+            ->orderByDesc('first_sent_at');
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(fn($q) => $q
+                ->where('estimate_number', 'like', "%{$s}%")
+                ->orWhere('customer_name', 'like', "%{$s}%")
+                ->orWhere('homeowner_name', 'like', "%{$s}%")
+                ->orWhere('job_name', 'like', "%{$s}%")
+                ->orWhere('job_no', 'like', "%{$s}%")
+            );
+        }
+
+        if ($request->filled('stage')) {
+            $query->where('follow_up_stage', $request->stage);
+        }
+
+        if ($request->boolean('show_closed')) {
+            $query->where('follow_up_closed', true);
+        } else {
+            $query->where('follow_up_closed', false);
+        }
+
+        if ($request->filled('estimator_id')) {
+            $query->where('created_by', $request->estimator_id);
+        }
+
+        $perPage   = $this->resolvePerPage($request);
+        $estimates = $query->paginate($perPage)->withQueryString();
+        $estimators = \App\Models\User::orderBy('name')->get(['id', 'name']);
+
+        // Separate "action required" set — due for a follow-up right now, not closed
+        $actionRequired = Estimate::whereNotNull('first_sent_at')
+            ->whereDoesntHave('sale')
+            ->where('follow_up_closed', false)
+            ->where(function ($q) {
+                $q->where(fn($q) => $q->where('follow_up_stage', 0)->where('first_sent_at', '<=', now()->subDays(7)))
+                  ->orWhere(fn($q) => $q->where('follow_up_stage', 1)->where('first_sent_at', '<=', now()->subDays(14)))
+                  ->orWhere(fn($q) => $q->where('follow_up_stage', 2)->where('first_sent_at', '<=', now()->subDays(30)));
+            })
+            ->with(['followUps' => fn($q) => $q->latest(), 'creator', 'opportunity.jobSiteCustomer'])
+            ->orderBy('first_sent_at')
+            ->get();
+
+        return view('admin.reports.aging_estimates', compact('estimates', 'estimators', 'actionRequired'));
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

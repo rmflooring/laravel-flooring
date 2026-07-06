@@ -50,6 +50,15 @@ class Estimate extends Model implements Auditable
 
         'created_by',
         'updated_by',
+
+        'first_sent_at',
+        'follow_up_stage',
+        'follow_up_closed',
+    ];
+
+    protected $casts = [
+        'first_sent_at'   => 'datetime',
+        'follow_up_closed' => 'boolean',
     ];
 
     public function getRevisionLabelAttribute(): ?string
@@ -120,5 +129,10 @@ public function updater()
 {
     return $this->belongsTo(\App\Models\User::class, 'updated_by');
 }
-	
+
+public function followUps(): HasMany
+{
+    return $this->hasMany(EstimateFollowUp::class)->orderBy('created_at');
+}
+
 }

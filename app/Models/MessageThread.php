@@ -72,6 +72,12 @@ class MessageThread extends Model
             return 'Sale #' . $num . ($name ? ' — ' . $name : '');
         }
 
+        if ($type === 'Estimate') {
+            $num  = $record->estimate_number ?? $record->id;
+            $name = $record->homeowner_name ?: $record->customer_name;
+            return 'Estimate #' . $num . ($name ? ' — ' . $name : '');
+        }
+
         return $type . ' #' . $this->threadable_id;
     }
 
@@ -87,6 +93,9 @@ class MessageThread extends Model
             }
             if ($type === 'Sale') {
                 return route('pages.sales.show', $this->threadable_id);
+            }
+            if ($type === 'Estimate') {
+                return route('pages.estimates.show', $this->threadable_id);
             }
         } catch (\Exception $e) {}
         return null;
