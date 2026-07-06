@@ -144,6 +144,30 @@ class TwilioSmsWebhookController extends Controller
                 $conversation->update(['opportunity_id' => $opportunity->id]);
             }
         }
+
+        $this->sendInboundAlert($conversation, $rawPhone, $body);
+    }
+
+    private function sendInboundAlert(SmsConversation $conversation, string $rawPhone, string $body): void
+    {
+        if (! Setting::get('sms_inbound_alert_enabled')) {
+            return;
+        }
+
+        $alertNumber = Setting::get('sms_inbound_alert_number', '');
+        if (! $alertNumber) {
+            return;
+        }
+
+        $conversation->load('customer');
+        $from    = $conversation->customer ? $conversation->customer->name : $rawPhone;
+        $preview = mb_strlen($body) > 100 ? mb_substr($body, 0, 97) . '...' : $body;
+
+        app(SmsService::class)->send(
+            $alertNumber,
+            "FM SMS from {$from}: {$preview}",
+            'inbound_alert'
+        );
     }
 
     private function validateSignature(Request $request): bool

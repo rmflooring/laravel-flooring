@@ -26,6 +26,9 @@ class SmsSettingsController extends Controller
             'notifyRfmReminder'       => Setting::get('sms_notify_rfm_reminder', '0'),
             'sampleSmsReminders'      => Setting::get('sample_sms_reminders_enabled', '1'),
             'sampleReminderDays'      => Setting::get('sample_reminder_days', '3'),
+            // Inbound alert
+            'inboundAlertEnabled' => (bool) Setting::get('sms_inbound_alert_enabled', '0'),
+            'inboundAlertNumber'  => Setting::get('sms_inbound_alert_number', ''),
             // Recipients per notification
             'woScheduledTo'       => Setting::get('sms_wo_scheduled_to', 'pm,installer'),
             'woReminderTo'        => Setting::get('sms_wo_reminder_to', 'pm,installer'),
@@ -57,7 +60,9 @@ class SmsSettingsController extends Controller
         Setting::set('sms_notify_wo_reminder',  $request->input('sms_notify_wo_reminder') === '1' ? '1' : '0');
         Setting::set('sms_notify_rfm_booked',   $request->input('sms_notify_rfm_booked') === '1' ? '1' : '0');
         Setting::set('sms_notify_rfm_updated',  $request->input('sms_notify_rfm_updated') === '1' ? '1' : '0');
-        Setting::set('sms_notify_rfm_reminder', $request->input('sms_notify_rfm_reminder') === '1' ? '1' : '0');
+        Setting::set('sms_notify_rfm_reminder',    $request->input('sms_notify_rfm_reminder') === '1' ? '1' : '0');
+        Setting::set('sms_inbound_alert_enabled',  $request->input('sms_inbound_alert_enabled') === '1' ? '1' : '0');
+        Setting::set('sms_inbound_alert_number',   trim($request->input('sms_inbound_alert_number', '')));
         Setting::set('sample_sms_reminders_enabled', $request->input('sample_sms_reminders_enabled') === '1' ? '1' : '0');
         Setting::set('sample_reminder_days', max(1, (int) $request->input('sample_reminder_days', 3)));
 
