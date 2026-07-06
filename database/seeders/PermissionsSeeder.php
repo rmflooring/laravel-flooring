@@ -137,7 +137,12 @@ class PermissionsSeeder extends Seeder
             'manage signing requests',
 
             // ===== Reports =====
-            'view reports',
+            'view reports',               // master key — grants access to all reports
+            'view sales report',
+            'view invoices report',
+            'view revenue report',
+            'view purchase orders report',
+            'view aging estimates report',
         ];
 
         foreach ($permissions as $permission) {

@@ -720,13 +720,26 @@ Route::prefix('admin')
         | Reports
         |----------------------------------------
         */
-        Route::prefix('reports')->name('reports.')->middleware('role_or_permission:admin|view reports')->group(function () {
-            Route::get('/',               [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('index');
-            Route::get('/sales',          [\App\Http\Controllers\Admin\ReportController::class, 'sales'])->name('sales');
-            Route::get('/invoices',       [\App\Http\Controllers\Admin\ReportController::class, 'invoices'])->name('invoices');
-            Route::get('/revenue',        [\App\Http\Controllers\Admin\ReportController::class, 'revenue'])->name('revenue');
-            Route::get('/purchase-orders',[\App\Http\Controllers\Admin\ReportController::class, 'purchaseOrders'])->name('purchaseOrders');
-            Route::get('/aging-estimates',[\App\Http\Controllers\Admin\ReportController::class, 'agingEstimates'])->name('agingEstimates');
+        // Reports — index accessible if user has any report permission; each sub-report checks its own
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ReportController::class, 'index'])
+                ->name('index')
+                ->middleware('admin_or_permission:view reports,view sales report,view invoices report,view revenue report,view purchase orders report,view aging estimates report');
+            Route::get('/sales', [\App\Http\Controllers\Admin\ReportController::class, 'sales'])
+                ->name('sales')
+                ->middleware('admin_or_permission:view reports,view sales report');
+            Route::get('/invoices', [\App\Http\Controllers\Admin\ReportController::class, 'invoices'])
+                ->name('invoices')
+                ->middleware('admin_or_permission:view reports,view invoices report');
+            Route::get('/revenue', [\App\Http\Controllers\Admin\ReportController::class, 'revenue'])
+                ->name('revenue')
+                ->middleware('admin_or_permission:view reports,view revenue report');
+            Route::get('/purchase-orders', [\App\Http\Controllers\Admin\ReportController::class, 'purchaseOrders'])
+                ->name('purchaseOrders')
+                ->middleware('admin_or_permission:view reports,view purchase orders report');
+            Route::get('/aging-estimates', [\App\Http\Controllers\Admin\ReportController::class, 'agingEstimates'])
+                ->name('agingEstimates')
+                ->middleware('admin_or_permission:view reports,view aging estimates report');
         });
 
         // Estimate follow-up actions (from aging estimates report)

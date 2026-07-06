@@ -8,6 +8,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 {{-- Sales Report --}}
+                @canany(['view reports', 'view sales report'])
                 <a href="{{ route('admin.reports.sales') }}"
                    class="block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-blue-300 transition-all p-6 group">
                     <div class="flex items-start gap-4">
@@ -23,8 +24,10 @@
                         </div>
                     </div>
                 </a>
+                @endcanany
 
                 {{-- AR / Invoices Report --}}
+                @canany(['view reports', 'view invoices report'])
                 <a href="{{ route('admin.reports.invoices') }}"
                    class="block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-orange-300 transition-all p-6 group">
                     <div class="flex items-start gap-4">
@@ -40,8 +43,10 @@
                         </div>
                     </div>
                 </a>
+                @endcanany
 
                 {{-- Revenue Summary --}}
+                @canany(['view reports', 'view revenue report'])
                 <a href="{{ route('admin.reports.revenue') }}"
                    class="block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-green-300 transition-all p-6 group">
                     <div class="flex items-start gap-4">
@@ -57,8 +62,10 @@
                         </div>
                     </div>
                 </a>
+                @endcanany
 
                 {{-- Purchase Orders --}}
+                @canany(['view reports', 'view purchase orders report'])
                 <a href="{{ route('admin.reports.purchaseOrders') }}"
                    class="block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-purple-300 transition-all p-6 group">
                     <div class="flex items-start gap-4">
@@ -74,8 +81,10 @@
                         </div>
                     </div>
                 </a>
+                @endcanany
 
                 {{-- Aging Estimates --}}
+                @canany(['view reports', 'view aging estimates report'])
                 <a href="{{ route('admin.reports.agingEstimates') }}"
                    class="block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-yellow-300 transition-all p-6 group">
                     <div class="flex items-start gap-4">
@@ -91,6 +100,7 @@
                         </div>
                     </div>
                 </a>
+                @endcanany
 
             </div>
         </div>

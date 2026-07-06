@@ -9,37 +9,26 @@ use Symfony\Component\HttpFoundation\Response;
 class AdminOrPermission
 {
     /**
-     * Allow access if user is admin OR has the given permission.
-     * Usage: ->middleware('admin_or_permission:view customers')
+     * Allow access if user is admin OR has ANY of the given permissions.
+     * Usage: ->middleware(‘admin_or_permission:view customers’)
+     *        ->middleware(‘admin_or_permission:view reports,view sales report’)
      */
-    public function handle(Request $request, Closure $next, string $permission): Response
+    public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             abort(401);
         }
 
-        // If your existing admin middleware works, this should match your app’s admin flag/role
-        if (method_exists($user, 'is_admin') && $user->is_admin) {
+        if ($user->hasRole(‘admin’)) {
             return $next($request);
         }
 
-        // If you use Spatie roles:
-        if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
+        if ($user->hasAnyPermission($permissions)) {
             return $next($request);
         }
 
-        // Spatie permission check
-        if (method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo($permission)) {
-            return $next($request);
-        }
-
-        // Laravel native permission check (in case you use policies/abilities)
-        if (method_exists($user, 'can') && $user->can($permission)) {
-            return $next($request);
-        }
-
-        abort(403, 'User does not have the right permissions.');
+        abort(403, ‘User does not have the right permissions.’);
     }
 }

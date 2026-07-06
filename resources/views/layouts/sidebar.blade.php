@@ -10,7 +10,10 @@
     $canManageUsers  = auth()->check() && $user->can('manage users');
     $canManageRoles  = auth()->check() && $user->can('manage roles');
     $canEditSettings = auth()->check() && $user->can('edit settings');
-    $canViewReports  = auth()->check() && $user->can('view reports');
+    $canViewReports  = auth()->check() && $user->hasAnyPermission([
+        'view reports', 'view sales report', 'view invoices report',
+        'view revenue report', 'view purchase orders report', 'view aging estimates report',
+    ]);
 
     // Treat as "admin nav" if they have core admin permissions OR admin role
     $showAdminNav = $isAdminRole || $canManageUsers || $canManageRoles || $canEditSettings || $canViewReports;
