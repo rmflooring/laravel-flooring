@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class EstimateController extends Controller
 {
@@ -1364,7 +1365,8 @@ public function duplicate(Estimate $estimate)
             'content'  => base64_encode($pdfContent),
         ];
 
-        $pdfUrl = route('pages.estimates.pdf', $estimate);
+        Storage::disk('local')->put("mail-attachments/estimate/{$estimate->id}.pdf", $pdfContent);
+        $pdfUrl = route('pages.mail-attachments.pdf', ['type' => 'estimate', 'id' => $estimate->id]);
 
         $sent = $user->microsoftAccount?->mail_connected
             ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment, $cc ?: null, null, $estimate->id, 'estimate', $pdfUrl, $requestReadReceipt, $trackingToken)

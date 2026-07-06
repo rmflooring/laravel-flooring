@@ -825,6 +825,9 @@ Route::prefix('pages')
 		Route::get('mail-log/{type}/{id}', [\App\Http\Controllers\Pages\MailLogController::class, 'latest'])
 			->name('mail-log.latest');
 
+		Route::get('mail-attachments/{type}/{id}', [\App\Http\Controllers\Pages\MailLogController::class, 'servePdf'])
+			->name('mail-attachments.pdf');
+
 		// Quick Sales (Cash & Carry) — static routes before {sale} wildcard
 		Route::get('quick-sales/create', [\App\Http\Controllers\Pages\QuickSaleController::class, 'create'])
 			->name('quick-sales.create')

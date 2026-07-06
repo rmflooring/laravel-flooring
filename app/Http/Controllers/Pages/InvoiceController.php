@@ -17,6 +17,7 @@ use App\Services\QboSyncService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class InvoiceController extends Controller
 {
@@ -433,7 +434,7 @@ class InvoiceController extends Controller
         $mailer = app(GraphMailService::class);
         $user   = Auth::user();
 
-        $pdfUrl = route('pages.sales.invoices.pdf', [$sale, $invoice]);
+        $pdfUrl = route('pages.mail-attachments.pdf', ['type' => 'invoice', 'id' => $invoice->id]);
 
         $sent = $user->microsoftAccount?->mail_connected
             ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'invoice', $attachment, $cc ?: null, null, $invoice->id, 'invoice', $pdfUrl, $requestReadReceipt, $trackingToken, $extraAttachments)
@@ -551,12 +552,14 @@ class InvoiceController extends Controller
                 : collect();
             $branding = $this->getBranding();
 
-            $pdf  = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxRates'))->setPaper('letter', 'portrait');
-            $data = base64_encode($pdf->output());
+            $pdf        = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxRates'))->setPaper('letter', 'portrait');
+            $pdfContent = $pdf->output();
+
+            Storage::disk('local')->put("mail-attachments/invoice/{$invoice->id}.pdf", $pdfContent);
 
             return [
                 'filename' => "invoice-{$invoice->invoice_number}.pdf",
-                'content'  => $data,
+                'content'  => base64_encode($pdfContent),
             ];
         } catch (\Throwable $e) {
             return null;

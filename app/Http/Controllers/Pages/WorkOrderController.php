@@ -30,6 +30,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class WorkOrderController extends Controller
 {
@@ -725,7 +726,8 @@ class WorkOrderController extends Controller
             );
         }
 
-        $pdfUrl  = route('pages.sales.work-orders.pdf', [$sale, $workOrder]);
+        Storage::disk('local')->put("mail-attachments/work_order/{$workOrder->id}.pdf", $pdfContent);
+        $pdfUrl  = route('pages.mail-attachments.pdf', ['type' => 'work_order', 'id' => $workOrder->id]);
         $to      = $request->input('to');
         $subject = $request->input('subject');
         $body    = $request->input('body');

@@ -21,6 +21,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PurchaseOrderController extends Controller
 {
@@ -807,7 +808,8 @@ class PurchaseOrderController extends Controller
             'content'  => base64_encode($pdfContent),
         ];
 
-        $pdfUrl = route('pages.purchase-orders.pdf', $purchaseOrder);
+        Storage::disk('local')->put("mail-attachments/purchase_order/{$purchaseOrder->id}.pdf", $pdfContent);
+        $pdfUrl = route('pages.mail-attachments.pdf', ['type' => 'purchase_order', 'id' => $purchaseOrder->id]);
 
         $to      = $request->input('to');
         $subject = $request->input('subject');

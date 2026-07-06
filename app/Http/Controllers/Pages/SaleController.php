@@ -22,6 +22,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 
 class SaleController extends Controller
@@ -1068,7 +1069,8 @@ public function showProfits(Sale $sale)
             'content'  => base64_encode($pdfContent),
         ];
 
-        $pdfUrl = route('pages.sales.pdf', $sale);
+        Storage::disk('local')->put("mail-attachments/sale/{$sale->id}.pdf", $pdfContent);
+        $pdfUrl = route('pages.mail-attachments.pdf', ['type' => 'sale', 'id' => $sale->id]);
 
         $sent = $user->microsoftAccount?->mail_connected
             ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl, $requestReadReceipt, $trackingToken)
