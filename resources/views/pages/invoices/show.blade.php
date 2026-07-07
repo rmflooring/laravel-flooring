@@ -156,18 +156,33 @@
         @endphp
         @if($parentCustomer || $jobSiteCustomer || $sale->opportunity)
             <div class="mt-5 pt-5 border-t border-gray-200 dark:border-gray-600 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                @if($parentCustomer)
+                @if($invoice->bill_to_name || $parentCustomer)
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Bill To</div>
-                        <div class="font-medium text-gray-900 dark:text-white">{{ $parentCustomer->company_name ?: $parentCustomer->name }}</div>
-                        @if($parentCustomer->company_name && $parentCustomer->name !== $parentCustomer->company_name)
-                            <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->name }}</div>
-                        @endif
-                        @if($parentCustomer->email)
-                            <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->email }}</div>
-                        @endif
-                        @if($parentCustomer->phone)
-                            <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->phone }}</div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+                            Bill To
+                            @if($invoice->bill_to_name)
+                                <span class="ml-1 normal-case font-normal text-amber-600 dark:text-amber-400">(overridden)</span>
+                            @endif
+                        </div>
+                        @if($invoice->bill_to_name)
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $invoice->bill_to_name }}</div>
+                            @if($invoice->bill_to_address)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $invoice->bill_to_address }}</div>
+                            @endif
+                            @if($invoice->bill_to_email)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $invoice->bill_to_email }}</div>
+                            @endif
+                        @elseif($parentCustomer)
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $parentCustomer->company_name ?: $parentCustomer->name }}</div>
+                            @if($parentCustomer->company_name && $parentCustomer->name !== $parentCustomer->company_name)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->name }}</div>
+                            @endif
+                            @if($parentCustomer->email)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->email }}</div>
+                            @endif
+                            @if($parentCustomer->phone)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->phone }}</div>
+                            @endif
                         @endif
                     </div>
                 @endif

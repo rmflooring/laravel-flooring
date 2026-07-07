@@ -59,6 +59,9 @@ class InvoiceController extends Controller
             'due_date'           => ['nullable', 'date'],
             'customer_po_number' => ['nullable', 'string', 'max:100'],
             'notes'              => ['nullable', 'string', 'max:2000'],
+            'bill_to_name'       => ['nullable', 'string', 'max:255'],
+            'bill_to_address'    => ['nullable', 'string', 'max:500'],
+            'bill_to_email'      => ['nullable', 'email', 'max:255'],
             'items'              => ['required', 'array', 'min:1'],
             'items.*'            => ['numeric', 'min:0'],
         ]);
@@ -159,6 +162,9 @@ class InvoiceController extends Controller
             'due_date'           => ['nullable', 'date'],
             'customer_po_number' => ['nullable', 'string', 'max:100'],
             'notes'              => ['nullable', 'string', 'max:2000'],
+            'bill_to_name'       => ['nullable', 'string', 'max:255'],
+            'bill_to_address'    => ['nullable', 'string', 'max:500'],
+            'bill_to_email'      => ['nullable', 'email', 'max:255'],
             'rooms'              => ['nullable', 'array'],
         ]);
 
@@ -168,6 +174,9 @@ class InvoiceController extends Controller
             'due_date'           => $request->due_date,
             'customer_po_number' => $request->customer_po_number,
             'notes'              => $request->notes,
+            'bill_to_name'       => $request->bill_to_name ?: null,
+            'bill_to_address'    => $request->bill_to_address ?: null,
+            'bill_to_email'      => $request->bill_to_email ?: null,
         ]);
 
         $taxRate          = (float) ($sale->tax_rate_percent ?? 0) / 100;

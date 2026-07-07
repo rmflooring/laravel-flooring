@@ -144,7 +144,15 @@
     {{-- Bill To --}}
     <div class="info-col">
         <div class="info-section-title">Bill To</div>
-        @if($parentCustomer)
+        @if($invoice->bill_to_name)
+            <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $invoice->bill_to_name }}</div>
+            @if($invoice->bill_to_address)
+                <div class="info-row">{{ $invoice->bill_to_address }}</div>
+            @endif
+            @if($invoice->bill_to_email)
+                <div class="info-row">{{ $invoice->bill_to_email }}</div>
+            @endif
+        @elseif($parentCustomer)
             @if($parentCustomer->company_name)
                 <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $parentCustomer->company_name }}</div>
                 @if($parentCustomer->name && $parentCustomer->name !== $parentCustomer->company_name)

@@ -84,6 +84,40 @@
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">{{ old('notes', $invoice->notes) }}</textarea>
             </div>
 
+            {{-- Bill To Override --}}
+            <div class="sm:col-span-3" x-data="{ override: {{ old('bill_to_name', $invoice->bill_to_name) ? 'true' : 'false' }} }">
+                <label class="flex items-center gap-2 cursor-pointer select-none mb-1">
+                    <input type="checkbox" x-model="override"
+                           class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <span class="text-sm font-medium text-gray-700">Override "Bill To" on PDF</span>
+                </label>
+                <p class="text-xs text-gray-400 mb-3">Use when billing a different party than the sale customer (e.g. homeowner overage).</p>
+
+                <div x-show="override" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-4 pl-6 border-l-2 border-blue-200">
+                    <div>
+                        <label class="block mb-1 text-xs font-medium text-gray-600">Name / Company</label>
+                        <input type="text" name="bill_to_name"
+                               value="{{ old('bill_to_name', $invoice->bill_to_name) }}"
+                               placeholder="e.g. John Smith"
+                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-xs font-medium text-gray-600">Address <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <input type="text" name="bill_to_address"
+                               value="{{ old('bill_to_address', $invoice->bill_to_address) }}"
+                               placeholder="e.g. 123 Main St, Vancouver BC"
+                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-xs font-medium text-gray-600">Email <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <input type="email" name="bill_to_email"
+                               value="{{ old('bill_to_email', $invoice->bill_to_email) }}"
+                               placeholder="e.g. homeowner@example.com"
+                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
