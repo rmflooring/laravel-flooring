@@ -129,6 +129,7 @@
                                     <th class="px-4 py-3">Estimator</th>
                                     <th class="px-4 py-3 text-right">Grand Total</th>
                                     <th class="px-4 py-3">Sent</th>
+                                    <th class="px-4 py-3">Aging</th>
                                     <th class="px-4 py-3">Created</th>
                                 </tr>
                             </thead>
@@ -162,11 +163,25 @@
                                                 </span>
                                             @endif
                                         </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            @if($estimate->first_sent_at)
+                                                @php $days = (int) $estimate->first_sent_at->diffInDays(now()); @endphp
+                                                @if($days >= 60)
+                                                    <span class="px-2 py-0.5 rounded text-xs font-medium" style="background:#fee2e2;color:#991b1b;">{{ $days }}d ago</span>
+                                                @elseif($days >= 30)
+                                                    <span class="px-2 py-0.5 rounded text-xs font-medium" style="background:#ffedd5;color:#9a3412;">{{ $days }}d ago</span>
+                                                @else
+                                                    <span class="px-2 py-0.5 rounded text-xs font-medium" style="background:#f0fdf4;color:#166534;">{{ $days }}d ago</span>
+                                                @endif
+                                            @else
+                                                <span class="text-gray-400">—</span>
+                                            @endif
+                                        </td>
                                         <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ $estimate->created_at->format('M j, Y') }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="10" class="px-4 py-8 text-center text-gray-400">No unconverted estimates found matching your filters.</td>
+                                        <td colspan="11" class="px-4 py-8 text-center text-gray-400">No unconverted estimates found matching your filters.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

@@ -156,6 +156,7 @@
                 <th>Estimator</th>
                 <th class="right">Value</th>
                 <th>Sent</th>
+                <th>Aging</th>
                 <th>Created</th>
                 <th class="notes-col">Notes / Status</th>
             </tr>
@@ -175,6 +176,20 @@
                             <span class="badge-sent">{{ $estimate->first_sent_at->format('M j, Y') }}</span>
                         @else
                             <span class="badge-unsent">Not sent</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($estimate->first_sent_at)
+                            @php $days = (int) $estimate->first_sent_at->diffInDays(now()); @endphp
+                            @if($days >= 60)
+                                <span style="background:#fee2e2;color:#991b1b;padding:1px 5px;border-radius:3px;font-size:8px;">{{ $days }}d</span>
+                            @elseif($days >= 30)
+                                <span style="background:#ffedd5;color:#9a3412;padding:1px 5px;border-radius:3px;font-size:8px;">{{ $days }}d</span>
+                            @else
+                                <span style="background:#dcfce7;color:#166534;padding:1px 5px;border-radius:3px;font-size:8px;">{{ $days }}d</span>
+                            @endif
+                        @else
+                            —
                         @endif
                     </td>
                     <td>{{ $estimate->created_at->format('M j, Y') }}</td>

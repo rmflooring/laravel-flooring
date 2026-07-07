@@ -323,7 +323,7 @@ class ReportController extends Controller
 
         if ($request->get('export') === 'csv') {
             return $this->streamCsv('unconverted-estimates', [
-                'Estimate #', 'Job Name', 'Customer', 'Homeowner', 'PM', 'Estimator', 'Grand Total', 'Sent', 'Date Sent', 'Created',
+                'Estimate #', 'Job Name', 'Customer', 'Homeowner', 'PM', 'Estimator', 'Grand Total', 'Sent', 'Date Sent', 'Days Since Sent', 'Created',
             ], (clone $query)->get()->map(fn($e) => [
                 $e->estimate_number,
                 $e->job_name,
@@ -334,6 +334,7 @@ class ReportController extends Controller
                 number_format($e->grand_total, 2),
                 $e->first_sent_at ? 'Yes' : 'No',
                 $e->first_sent_at?->format('Y-m-d') ?? '',
+                $e->first_sent_at ? (int) $e->first_sent_at->diffInDays(now()) : '',
                 $e->created_at->format('Y-m-d'),
             ])->toArray());
         }
