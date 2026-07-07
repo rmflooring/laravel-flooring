@@ -724,7 +724,7 @@ Route::prefix('admin')
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\ReportController::class, 'index'])
                 ->name('index')
-                ->middleware('admin_or_permission:view reports,view sales report,view invoices report,view revenue report,view purchase orders report,view aging estimates report');
+                ->middleware('admin_or_permission:view reports,view sales report,view invoices report,view revenue report,view purchase orders report,view aging estimates report,view unconverted estimates report');
             Route::get('/sales', [\App\Http\Controllers\Admin\ReportController::class, 'sales'])
                 ->name('sales')
                 ->middleware('admin_or_permission:view reports,view sales report');
@@ -740,6 +740,9 @@ Route::prefix('admin')
             Route::get('/aging-estimates', [\App\Http\Controllers\Admin\ReportController::class, 'agingEstimates'])
                 ->name('agingEstimates')
                 ->middleware('admin_or_permission:view reports,view aging estimates report');
+            Route::get('/unconverted-estimates', [\App\Http\Controllers\Admin\ReportController::class, 'unconvertedEstimates'])
+                ->name('unconvertedEstimates')
+                ->middleware('admin_or_permission:view reports,view unconverted estimates report');
         });
 
         // Estimate follow-up actions (from aging estimates report)

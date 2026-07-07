@@ -272,6 +272,72 @@ class ReportController extends Controller
         return view('admin.reports.purchase_orders', compact('purchaseOrders', 'statuses', 'vendors'));
     }
 
+    // ─── Unconverted Estimates Report ─────────────────────────────────────────
+
+    public function unconvertedEstimates(Request $request)
+    {
+        $query = Estimate::whereDoesntHave('sale')
+            ->with(['creator', 'opportunity.jobSiteCustomer', 'salesperson1Employee'])
+            ->orderByDesc('created_at');
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(fn($q) => $q
+                ->where('estimate_number', 'like', "%{$s}%")
+                ->orWhere('customer_name', 'like', "%{$s}%")
+                ->orWhere('homeowner_name', 'like', "%{$s}%")
+                ->orWhere('job_name', 'like', "%{$s}%")
+                ->orWhere('job_no', 'like', "%{$s}%")
+            );
+        }
+
+        if ($request->filled('sent')) {
+            if ($request->sent === 'sent') {
+                $query->whereNotNull('first_sent_at');
+            } elseif ($request->sent === 'not_sent') {
+                $query->whereNull('first_sent_at');
+            }
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        if ($request->filled('estimator_id')) {
+            $query->where('created_by', $request->estimator_id);
+        }
+
+        $totals = (clone $query)->toBase()
+            ->selectRaw('COUNT(*) as total_count, SUM(grand_total) as total_value')
+            ->reorder()
+            ->first();
+
+        if ($request->get('export') === 'csv') {
+            return $this->streamCsv('unconverted-estimates', [
+                'Estimate #', 'Job Name', 'Customer', 'Homeowner', 'Estimator', 'Grand Total', 'Sent', 'Date Sent', 'Created',
+            ], (clone $query)->get()->map(fn($e) => [
+                $e->estimate_number,
+                $e->job_name,
+                $e->customer_name,
+                $e->homeowner_name,
+                $e->creator?->name ?? '',
+                number_format($e->grand_total, 2),
+                $e->first_sent_at ? 'Yes' : 'No',
+                $e->first_sent_at?->format('Y-m-d') ?? '',
+                $e->created_at->format('Y-m-d'),
+            ])->toArray());
+        }
+
+        $perPage    = $this->resolvePerPage($request);
+        $estimates  = $query->paginate($perPage)->withQueryString();
+        $estimators = \App\Models\User::orderBy('name')->get(['id', 'name']);
+
+        return view('admin.reports.unconverted_estimates', compact('estimates', 'estimators', 'totals'));
+    }
+
     // ─── Aging Estimates Report ───────────────────────────────────────────────
 
     public function agingEstimates(Request $request)

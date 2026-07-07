@@ -83,6 +83,25 @@
                 </a>
                 @endcanany
 
+                {{-- Unconverted Estimates --}}
+                @canany(['view reports', 'view unconverted estimates report'])
+                <a href="{{ route('admin.reports.unconvertedEstimates') }}"
+                   class="block bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-teal-300 transition-all p-6 group">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 w-12 h-12 bg-teal-50 rounded-lg flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+                            <svg class="w-6 h-6 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900 mb-1">Unconverted Estimates</h2>
+                            <p class="text-sm text-gray-500">All estimates that have not yet been turned into a sale. Filter by sent status, date range, or estimator to identify stalled quotes.</p>
+                            <span class="inline-block mt-3 text-xs font-medium text-teal-600">View Report →</span>
+                        </div>
+                    </div>
+                </a>
+                @endcanany
+
                 {{-- Aging Estimates --}}
                 @canany(['view reports', 'view aging estimates report'])
                 <a href="{{ route('admin.reports.agingEstimates') }}"
