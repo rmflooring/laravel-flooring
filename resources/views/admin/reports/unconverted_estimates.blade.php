@@ -220,7 +220,7 @@
                         </table>
                     </div>
 
-                    <div class="mt-4 mb-24">
+                    <div class="mt-4 mb-40">
                         {{ $estimates->withQueryString()->links() }}
                     </div>
 
