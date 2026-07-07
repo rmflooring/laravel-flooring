@@ -22,7 +22,7 @@
                     {{-- Filters --}}
                     <form method="GET" action="{{ route('admin.reports.unconvertedEstimates') }}" class="mb-6">
                         <div class="bg-white border border-gray-200 rounded-lg p-4">
-                            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
 
                                 <div>
                                     <label class="block mb-2 text-sm font-medium text-gray-900">Search</label>
@@ -37,6 +37,16 @@
                                         <option value="">All</option>
                                         <option value="sent"     @selected(request('sent') === 'sent')>Sent to Customer</option>
                                         <option value="not_sent" @selected(request('sent') === 'not_sent')>Not Yet Sent</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block mb-2 text-sm font-medium text-gray-900">Project Manager</label>
+                                    <select name="pm_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                        <option value="">All PMs</option>
+                                        @foreach($pmNames as $pm)
+                                            <option value="{{ $pm }}" @selected(request('pm_name') === $pm)>{{ $pm }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
 
@@ -62,18 +72,6 @@
                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                                 </div>
 
-                                <div class="flex items-end">
-                                    <div class="flex items-center gap-2 w-full">
-                                        <label class="text-sm text-gray-600 whitespace-nowrap">Per page:</label>
-                                        <select name="perPage" onchange="this.form.submit()"
-                                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 flex-1">
-                                            @foreach([25, 50, 100] as $n)
-                                                <option value="{{ $n }}" @selected(request('perPage', 25) == $n)>{{ $n }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-
                             </div>
                             <div class="flex items-center gap-3 mt-4">
                                 <button type="submit"
@@ -84,6 +82,15 @@
                                    class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-4 py-2">
                                     Reset
                                 </a>
+                                <div class="ml-auto flex items-center gap-2">
+                                    <label class="text-sm text-gray-600">Per page:</label>
+                                    <select name="perPage" onchange="this.form.submit()"
+                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2">
+                                        @foreach([25, 50, 100] as $n)
+                                            <option value="{{ $n }}" @selected(request('perPage', 25) == $n)>{{ $n }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </form>
@@ -109,6 +116,7 @@
                                     <th class="px-4 py-3">Job Name</th>
                                     <th class="px-4 py-3">Customer</th>
                                     <th class="px-4 py-3">Homeowner</th>
+                                    <th class="px-4 py-3">PM</th>
                                     <th class="px-4 py-3">Estimator</th>
                                     <th class="px-4 py-3 text-right">Grand Total</th>
                                     <th class="px-4 py-3">Sent</th>
@@ -126,6 +134,7 @@
                                         <td class="px-4 py-3 text-gray-900">{{ $estimate->job_name ?? '-' }}</td>
                                         <td class="px-4 py-3">{{ $estimate->customer_name ?? '-' }}</td>
                                         <td class="px-4 py-3">{{ $estimate->homeowner_name ?? '-' }}</td>
+                                        <td class="px-4 py-3">{{ $estimate->pm_name ?? '-' }}</td>
                                         <td class="px-4 py-3">{{ $estimate->creator?->name ?? '-' }}</td>
                                         <td class="px-4 py-3 text-right font-medium text-gray-900">${{ number_format($estimate->grand_total, 2) }}</td>
                                         <td class="px-4 py-3">
@@ -143,7 +152,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="px-4 py-8 text-center text-gray-400">No unconverted estimates found matching your filters.</td>
+                                        <td colspan="9" class="px-4 py-8 text-center text-gray-400">No unconverted estimates found matching your filters.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

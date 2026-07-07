@@ -310,6 +310,10 @@ class ReportController extends Controller
             $query->where('created_by', $request->estimator_id);
         }
 
+        if ($request->filled('pm_name')) {
+            $query->where('pm_name', $request->pm_name);
+        }
+
         $totals = (clone $query)->toBase()
             ->selectRaw('COUNT(*) as total_count, SUM(grand_total) as total_value')
             ->reorder()
@@ -317,12 +321,13 @@ class ReportController extends Controller
 
         if ($request->get('export') === 'csv') {
             return $this->streamCsv('unconverted-estimates', [
-                'Estimate #', 'Job Name', 'Customer', 'Homeowner', 'Estimator', 'Grand Total', 'Sent', 'Date Sent', 'Created',
+                'Estimate #', 'Job Name', 'Customer', 'Homeowner', 'PM', 'Estimator', 'Grand Total', 'Sent', 'Date Sent', 'Created',
             ], (clone $query)->get()->map(fn($e) => [
                 $e->estimate_number,
                 $e->job_name,
                 $e->customer_name,
                 $e->homeowner_name,
+                $e->pm_name,
                 $e->creator?->name ?? '',
                 number_format($e->grand_total, 2),
                 $e->first_sent_at ? 'Yes' : 'No',
@@ -334,8 +339,14 @@ class ReportController extends Controller
         $perPage    = $this->resolvePerPage($request);
         $estimates  = $query->paginate($perPage)->withQueryString();
         $estimators = \App\Models\User::orderBy('name')->get(['id', 'name']);
+        $pmNames    = Estimate::whereDoesntHave('sale')
+            ->whereNotNull('pm_name')
+            ->where('pm_name', '<>', '')
+            ->distinct()
+            ->orderBy('pm_name')
+            ->pluck('pm_name');
 
-        return view('admin.reports.unconverted_estimates', compact('estimates', 'estimators', 'totals'));
+        return view('admin.reports.unconverted_estimates', compact('estimates', 'estimators', 'totals', 'pmNames'));
     }
 
     // ─── Aging Estimates Report ───────────────────────────────────────────────
