@@ -149,6 +149,7 @@
         <thead>
             <tr>
                 <th>Estimate #</th>
+                <th>Status</th>
                 <th>Job Name</th>
                 <th>Customer</th>
                 <th>Homeowner</th>
@@ -165,6 +166,7 @@
             @forelse($estimates as $estimate)
                 <tr>
                     <td class="mono">{{ $estimate->estimate_number }}</td>
+                    <td>{{ ucfirst($estimate->status) }}</td>
                     <td>{{ $estimate->job_name ?? '—' }}</td>
                     <td>{{ $estimate->customer_name ?? '—' }}</td>
                     <td>{{ $estimate->homeowner_name ?? '—' }}</td>

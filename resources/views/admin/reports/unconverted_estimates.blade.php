@@ -29,13 +29,23 @@
                     {{-- Filters --}}
                     <form method="GET" action="{{ route('admin.reports.unconvertedEstimates') }}" class="mb-6">
                         <div class="bg-white border border-gray-200 rounded-lg p-4">
-                            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
 
                                 <div>
                                     <label class="block mb-2 text-sm font-medium text-gray-900">Search</label>
                                     <input type="text" name="search" value="{{ request('search') }}"
                                            placeholder="Estimate #, job, customer..."
                                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                </div>
+
+                                <div>
+                                    <label class="block mb-2 text-sm font-medium text-gray-900">Status</label>
+                                    <select name="status" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                                        <option value="">All Statuses</option>
+                                        @foreach($statuses as $s)
+                                            <option value="{{ $s }}" @selected(request('status') === $s)>{{ ucfirst($s) }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
                                 <div>
@@ -79,6 +89,12 @@
 
                             </div>
                             <div class="flex items-center gap-3 mt-4">
+                                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                                    <input type="checkbox" name="include_rejected" value="1"
+                                           @checked(request()->boolean('include_rejected'))
+                                           class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    Include rejected
+                                </label>
                                 <button type="submit"
                                         class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2">
                                     Apply Filters
@@ -122,6 +138,7 @@
                                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
                                     </th>
                                     <th class="px-4 py-3">Estimate #</th>
+                                    <th class="px-4 py-3">Status</th>
                                     <th class="px-4 py-3">Job Name</th>
                                     <th class="px-4 py-3">Customer</th>
                                     <th class="px-4 py-3">Homeowner</th>
@@ -145,6 +162,21 @@
                                             <a href="{{ route('pages.estimates.show', $estimate) }}" class="text-blue-600 hover:underline">
                                                 {{ $estimate->estimate_number }}
                                             </a>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            @php
+                                                $statusColors = [
+                                                    'draft'    => 'bg-gray-100 text-gray-600',
+                                                    'sent'     => 'bg-blue-100 text-blue-800',
+                                                    'revised'  => 'bg-indigo-100 text-indigo-800',
+                                                    'approved' => 'bg-green-100 text-green-800',
+                                                    'rejected' => 'bg-red-100 text-red-800',
+                                                    'void'     => 'bg-gray-100 text-gray-500',
+                                                ];
+                                            @endphp
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium {{ $statusColors[$estimate->status] ?? 'bg-gray-100 text-gray-600' }}">
+                                                {{ ucfirst($estimate->status) }}
+                                            </span>
                                         </td>
                                         <td class="px-4 py-3 text-gray-900">{{ $estimate->job_name ?? '-' }}</td>
                                         <td class="px-4 py-3">{{ $estimate->customer_name ?? '-' }}</td>
@@ -181,7 +213,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="11" class="px-4 py-8 text-center text-gray-400">No unconverted estimates found matching your filters.</td>
+                                        <td colspan="12" class="px-4 py-8 text-center text-gray-400">No unconverted estimates found matching your filters.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

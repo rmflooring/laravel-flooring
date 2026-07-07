@@ -316,6 +316,17 @@ class ReportController extends Controller
             $query->where('pm_name', $request->pm_name);
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Exclude rejected by default unless the checkbox is ticked
+        if (! $request->boolean('include_rejected')) {
+            $query->where('status', '<>', 'rejected');
+        }
+
+        $statuses = ['draft', 'sent', 'revised', 'approved', 'rejected', 'void'];
+
         $totals = (clone $query)->toBase()
             ->selectRaw('COUNT(*) as total_count, SUM(grand_total) as total_value')
             ->reorder()
@@ -323,9 +334,10 @@ class ReportController extends Controller
 
         if ($request->get('export') === 'csv') {
             return $this->streamCsv('unconverted-estimates', [
-                'Estimate #', 'Job Name', 'Customer', 'Homeowner', 'PM', 'Estimator', 'Grand Total', 'Sent', 'Date Sent', 'Days Since Sent', 'Created',
+                'Estimate #', 'Status', 'Job Name', 'Customer', 'Homeowner', 'PM', 'Estimator', 'Grand Total', 'Sent', 'Date Sent', 'Days Since Sent', 'Created',
             ], (clone $query)->get()->map(fn($e) => [
                 $e->estimate_number,
+                $e->status,
                 $e->job_name,
                 $e->customer_name,
                 $e->homeowner_name,
@@ -349,7 +361,7 @@ class ReportController extends Controller
             ->orderBy('pm_name')
             ->pluck('pm_name');
 
-        return view('admin.reports.unconverted_estimates', compact('estimates', 'estimators', 'totals', 'pmNames'));
+        return view('admin.reports.unconverted_estimates', compact('estimates', 'estimators', 'totals', 'pmNames', 'statuses'));
     }
 
     public function unconvertedEstimatesPdf(Request $request)
