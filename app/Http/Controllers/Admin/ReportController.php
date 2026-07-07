@@ -414,15 +414,17 @@ class ReportController extends Controller
             ? array_filter(array_map('trim', explode(',', $request->cc)))
             : [];
 
+        $htmlBody = nl2br(e($request->body)) . $this->buildEstimateTableHtml($estimates);
+
         $user   = auth()->user();
         $mailer = app(GraphMailService::class);
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $toAddresses, $request->subject, $request->body, 'system', $attachment, $ccAddresses ?: null)
+            ? $mailer->sendAsUser($user, $toAddresses, $request->subject, $htmlBody, 'system', $attachment, $ccAddresses ?: null)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($toAddresses, $request->subject, $request->body, 'system', null, $attachment, $ccAddresses ?: null);
+            $sent = $mailer->send($toAddresses, $request->subject, $htmlBody, 'system', null, $attachment, $ccAddresses ?: null);
         }
 
         if (! $sent) {
@@ -487,6 +489,66 @@ class ReportController extends Controller
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    private function buildEstimateTableHtml(\Illuminate\Support\Collection $estimates): string
+    {
+        $rows = '';
+        foreach ($estimates as $e) {
+            $days = $e->first_sent_at ? (int) $e->first_sent_at->diffInDays(now()) : null;
+
+            if ($days !== null) {
+                $agingColor = $days >= 60 ? '#991b1b' : ($days >= 30 ? '#9a3412' : '#166534');
+                $agingBg    = $days >= 60 ? '#fee2e2' : ($days >= 30 ? '#ffedd5' : '#dcfce7');
+                $agingCell  = "<span style=\"background:{$agingBg};color:{$agingColor};padding:2px 6px;border-radius:4px;font-size:11px;\">{$days}d ago</span>";
+            } else {
+                $agingCell = '<span style="color:#9ca3af;">—</span>';
+            }
+
+            $sentCell = $e->first_sent_at
+                ? '<span style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-size:11px;">' . $e->first_sent_at->format('M j, Y') . '</span>'
+                : '<span style="background:#f3f4f6;color:#6b7280;padding:2px 6px;border-radius:4px;font-size:11px;">Not sent</span>';
+
+            $statusColors = [
+                'draft'    => ['#f3f4f6', '#374151'],
+                'sent'     => ['#dbeafe', '#1e40af'],
+                'revised'  => ['#e0e7ff', '#3730a3'],
+                'approved' => ['#dcfce7', '#166534'],
+                'rejected' => ['#fee2e2', '#991b1b'],
+                'void'     => ['#f3f4f6', '#6b7280'],
+            ];
+            [$sBg, $sColor] = $statusColors[$e->status] ?? ['#f3f4f6', '#374151'];
+            $statusCell = "<span style=\"background:{$sBg};color:{$sColor};padding:2px 6px;border-radius:4px;font-size:11px;\">" . ucfirst(e($e->status)) . '</span>';
+
+            $rows .= '<tr style="border-bottom:1px solid #e5e7eb;">'
+                . '<td style="padding:8px 10px;font-family:monospace;font-size:12px;">' . e($e->estimate_number) . '</td>'
+                . '<td style="padding:8px 10px;">' . $statusCell . '</td>'
+                . '<td style="padding:8px 10px;">' . e($e->job_name ?? '—') . '</td>'
+                . '<td style="padding:8px 10px;">' . e($e->customer_name ?? '—') . '</td>'
+                . '<td style="padding:8px 10px;">' . e($e->pm_name ?? '—') . '</td>'
+                . '<td style="padding:8px 10px;text-align:right;">' . '$' . number_format($e->grand_total, 2) . '</td>'
+                . '<td style="padding:8px 10px;">' . $sentCell . '</td>'
+                . '<td style="padding:8px 10px;">' . $agingCell . '</td>'
+                . '</tr>';
+        }
+
+        return '
+<br><br>
+<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;color:#374151;">
+  <thead>
+    <tr style="background:#f3f4f6;">
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Estimate #</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Status</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Job Name</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Customer</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">PM</th>
+      <th style="padding:8px 10px;text-align:right;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Value</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Date Sent</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Aging</th>
+    </tr>
+  </thead>
+  <tbody>' . $rows . '</tbody>
+</table>';
+    }
 
     private function resolvePerPage(Request $request, int $default = 25): int
     {
