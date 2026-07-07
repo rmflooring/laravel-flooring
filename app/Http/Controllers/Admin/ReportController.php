@@ -9,6 +9,8 @@ use App\Models\Invoice;
 use App\Models\PurchaseOrder;
 use App\Models\Sale;
 use App\Models\Vendor;
+use App\Services\GraphMailService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -277,7 +279,7 @@ class ReportController extends Controller
     public function unconvertedEstimates(Request $request)
     {
         $query = Estimate::whereDoesntHave('sale')
-            ->with(['creator', 'opportunity.jobSiteCustomer', 'salesperson1Employee'])
+            ->with(['creator', 'opportunity.jobSiteCustomer', 'opportunity.projectManager', 'salesperson1Employee'])
             ->orderByDesc('created_at');
 
         if ($request->filled('search')) {
@@ -347,6 +349,74 @@ class ReportController extends Controller
             ->pluck('pm_name');
 
         return view('admin.reports.unconverted_estimates', compact('estimates', 'estimators', 'totals', 'pmNames'));
+    }
+
+    public function unconvertedEstimatesPdf(Request $request)
+    {
+        $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['integer']]);
+
+        $estimates = Estimate::whereDoesntHave('sale')
+            ->whereIn('id', $request->ids)
+            ->with(['creator', 'opportunity.projectManager'])
+            ->orderBy('customer_name')
+            ->get();
+
+        $pdf = Pdf::loadView('pdf.estimate-status-list', compact('estimates'))
+            ->setPaper('letter', 'landscape');
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="estimate-status-list-' . now()->format('Y-m-d') . '.pdf"',
+        ]);
+    }
+
+    public function unconvertedEstimatesEmail(Request $request)
+    {
+        $request->validate([
+            'ids'     => ['required', 'array'],
+            'ids.*'   => ['integer'],
+            'to'      => ['required', 'string', 'max:1000'],
+            'cc'      => ['nullable', 'string', 'max:1000'],
+            'subject' => ['required', 'string', 'max:255'],
+            'body'    => ['required', 'string'],
+        ]);
+
+        $estimates = Estimate::whereDoesntHave('sale')
+            ->whereIn('id', $request->ids)
+            ->with(['creator', 'opportunity.projectManager'])
+            ->orderBy('customer_name')
+            ->get();
+
+        $pdfContent = Pdf::loadView('pdf.estimate-status-list', compact('estimates'))
+            ->setPaper('letter', 'landscape')
+            ->output();
+
+        $attachment = [
+            'filename' => 'estimate-status-list-' . now()->format('Y-m-d') . '.pdf',
+            'content'  => base64_encode($pdfContent),
+        ];
+
+        $toAddresses = array_filter(array_map('trim', explode(',', $request->to)));
+        $ccAddresses = $request->filled('cc')
+            ? array_filter(array_map('trim', explode(',', $request->cc)))
+            : [];
+
+        $user   = auth()->user();
+        $mailer = app(GraphMailService::class);
+
+        $sent = $user->microsoftAccount?->mail_connected
+            ? $mailer->sendAsUser($user, $toAddresses, $request->subject, $request->body, 'system', $attachment, $ccAddresses ?: null)
+            : false;
+
+        if (! $sent) {
+            $sent = $mailer->send($toAddresses, $request->subject, $request->body, 'system', null, $attachment, $ccAddresses ?: null);
+        }
+
+        if (! $sent) {
+            return back()->with('error', 'Failed to send email. Check the mail log for details.')->withInput();
+        }
+
+        return back()->with('success', 'Email sent to ' . implode(', ', $toAddresses) . '.');
     }
 
     // ─── Aging Estimates Report ───────────────────────────────────────────────

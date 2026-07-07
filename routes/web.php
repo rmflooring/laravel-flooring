@@ -743,6 +743,12 @@ Route::prefix('admin')
             Route::get('/unconverted-estimates', [\App\Http\Controllers\Admin\ReportController::class, 'unconvertedEstimates'])
                 ->name('unconvertedEstimates')
                 ->middleware('admin_or_permission:view reports,view unconverted estimates report');
+            Route::post('/unconverted-estimates/pdf', [\App\Http\Controllers\Admin\ReportController::class, 'unconvertedEstimatesPdf'])
+                ->name('unconvertedEstimatesPdf')
+                ->middleware('admin_or_permission:view reports,view unconverted estimates report');
+            Route::post('/unconverted-estimates/email', [\App\Http\Controllers\Admin\ReportController::class, 'unconvertedEstimatesEmail'])
+                ->name('unconvertedEstimatesEmail')
+                ->middleware('admin_or_permission:view reports,view unconverted estimates report');
         });
 
         // Estimate follow-up actions (from aging estimates report)
