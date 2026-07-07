@@ -523,7 +523,7 @@ class ReportController extends Controller
                 . '<td style="padding:8px 10px;font-family:monospace;font-size:12px;">' . e($e->estimate_number) . '</td>'
                 . '<td style="padding:8px 10px;">' . $statusCell . '</td>'
                 . '<td style="padding:8px 10px;">' . e($e->job_name ?? '—') . '</td>'
-                . '<td style="padding:8px 10px;">' . e($e->customer_name ?? '—') . '</td>'
+                . '<td style="padding:8px 10px;">' . e($e->homeowner_name ?? '—') . '</td>'
                 . '<td style="padding:8px 10px;">' . e($e->pm_name ?? '—') . '</td>'
                 . '<td style="padding:8px 10px;text-align:right;">' . '$' . number_format($e->grand_total, 2) . '</td>'
                 . '<td style="padding:8px 10px;">' . $sentCell . '</td>'
@@ -539,7 +539,7 @@ class ReportController extends Controller
       <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Estimate #</th>
       <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Status</th>
       <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Job Name</th>
-      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Customer</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Job Site</th>
       <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">PM</th>
       <th style="padding:8px 10px;text-align:right;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Value</th>
       <th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;">Date Sent</th>
