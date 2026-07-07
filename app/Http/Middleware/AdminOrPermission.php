@@ -10,8 +10,8 @@ class AdminOrPermission
 {
     /**
      * Allow access if user is admin OR has ANY of the given permissions.
-     * Usage: ->middleware(‘admin_or_permission:view customers’)
-     *        ->middleware(‘admin_or_permission:view reports,view sales report’)
+     * Usage: ->middleware('admin_or_permission:view customers')
+     *        ->middleware('admin_or_permission:view reports,view sales report')
      */
     public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
@@ -21,7 +21,7 @@ class AdminOrPermission
             abort(401);
         }
 
-        if ($user->hasRole(‘admin’)) {
+        if ($user->hasRole('admin')) {
             return $next($request);
         }
 
@@ -29,6 +29,6 @@ class AdminOrPermission
             return $next($request);
         }
 
-        abort(403, ‘User does not have the right permissions.’);
+        abort(403, 'User does not have the right permissions.');
     }
 }
