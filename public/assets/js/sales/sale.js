@@ -2323,7 +2323,8 @@ if (t.closest(".add-freight-row")) {
   const room = t.closest(".room-card");
   appendRowFromTemplate(room, ".labour-tbody", ".labour-row-template");
   const tbody = room.querySelector(".labour-tbody");
-  const newRow = tbody ? tbody.querySelector("tr:last-child") : null;
+  const dataRows = tbody ? Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('item-notes-row')) : [];
+  const newRow = dataRows.length ? dataRows[dataRows.length - 1] : null;
   if (newRow) initLabourTypeDropdownForRow(newRow);
   if (newRow) initLabourDescriptionDropdownForRow(newRow);
   if (window.initRichNotesIn) window.initRichNotesIn(room);
