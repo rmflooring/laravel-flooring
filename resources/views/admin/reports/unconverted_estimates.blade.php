@@ -418,6 +418,13 @@
 
             new bootstrap.Modal(document.getElementById('email-modal')).show();
         };
+
+        // Hide action bar while modal is open so it doesn't cover the modal footer
+        const emailModalEl = document.getElementById('email-modal');
+        emailModalEl.addEventListener('show.bs.modal', () => actionBar.classList.add('hidden'));
+        emailModalEl.addEventListener('hidden.bs.modal', () => {
+            if (checkedBoxes().length > 0) actionBar.classList.remove('hidden');
+        });
     })();
     </script>
 
