@@ -276,9 +276,11 @@ class RfmController extends Controller
             'special_instructions'=> ['nullable', 'string'],
         ]);
 
-        $notifyEstimator   = $request->boolean('notify_estimator', false);
-        $notifyPm          = $request->boolean('notify_pm', false);
-        $smsNotifyCustomer = $request->boolean('sms_notify_customer', false);
+        $notifyEstimator    = $request->boolean('notify_estimator', false);
+        $notifyPm           = $request->boolean('notify_pm', false);
+        $smsNotifyEstimator = $request->boolean('sms_notify_estimator', false);
+        $smsNotifyPm        = $request->boolean('sms_notify_pm', false);
+        $smsNotifyCustomer  = $request->boolean('sms_notify_customer', false);
 
         // Snapshot values before save for change detection
         $oldEstimatorName = $rfm->estimator
@@ -387,11 +389,11 @@ class RfmController extends Controller
                 $body         = $tpl->renderTemplate('rfm_updated', $vars);
                 $bodyCustomer = $tpl->renderTemplate('rfm_updated_customer', $vars);
 
-                if (in_array('estimator', $recipients) && $estimator?->phone) {
+                if ($smsNotifyEstimator && in_array('estimator', $recipients) && $estimator?->phone) {
                     $sms->send($estimator->phone, $body, 'rfm_updated', $rfm);
                 }
 
-                if (in_array('pm', $recipients) && $pm?->mobile) {
+                if ($smsNotifyPm && in_array('pm', $recipients) && $pm?->mobile) {
                     $sms->send($pm->mobile, $body, 'rfm_updated', $rfm);
                 }
 
