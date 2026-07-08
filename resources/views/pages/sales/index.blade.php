@@ -210,7 +210,14 @@
             </td>
 
             <td class="px-6 py-4">
-                {{ $sale->source_estimate_number ?? '—' }}
+                @if ($sale->source_estimate_id && $sale->source_estimate_number)
+                    <a href="{{ route('pages.estimates.show', $sale->source_estimate_id) }}"
+                       class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                        {{ $sale->source_estimate_number }}
+                    </a>
+                @else
+                    {{ $sale->source_estimate_number ?? '—' }}
+                @endif
             </td>
 
             <td class="px-6 py-4">
