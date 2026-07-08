@@ -167,7 +167,7 @@ class FlooringSignOffController extends Controller
             'condition_text'   => ['nullable', 'string'],
             'status'           => ['nullable', 'string', 'in:draft,finalized'],
             'items'            => ['nullable', 'array'],
-            'items.*.room_name'           => ['required_with:items', 'string'],
+            'items.*.room_name'           => ['nullable', 'string'],
             'items.*.product_description' => ['nullable', 'string'],
         ]);
 
