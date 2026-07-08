@@ -1343,12 +1343,13 @@ public function duplicate(Estimate $estimate)
     public function sendEmail(Request $request, Estimate $estimate)
     {
         $request->validate([
-            'to'         => ['required', 'email'],
-            'subject'    => ['required', 'string', 'max:255'],
-            'body'       => ['required', 'string'],
-            'cc'         => ['nullable', 'array'],
-            'cc.*'       => ['nullable', 'email'],
-            'pdf_format' => ['nullable', 'in:detailed,simple,room_totals'],
+            'to'               => ['required', 'email'],
+            'subject'          => ['required', 'string', 'max:255'],
+            'body'             => ['required', 'string'],
+            'cc'               => ['nullable', 'array'],
+            'cc.*'             => ['nullable', 'email'],
+            'pdf_format'       => ['nullable', 'in:detailed,simple,room_totals'],
+            'extra_attachment' => ['nullable', 'file', 'max:10240'],
         ]);
 
         $format             = $request->input('pdf_format', 'detailed');
@@ -1357,6 +1358,16 @@ public function duplicate(Estimate $estimate)
         $cc                 = array_filter($request->input('cc', []));
         $requestReadReceipt = $request->boolean('request_read_receipt', false);
         $trackingToken      = $requestReadReceipt ? (string) \Illuminate\Support\Str::uuid() : null;
+
+        $extraAttachments = [];
+        if ($request->hasFile('extra_attachment')) {
+            $file = $request->file('extra_attachment');
+            $extraAttachments[] = [
+                'filename' => $file->getClientOriginalName(),
+                'mime'     => $file->getMimeType() ?? 'application/octet-stream',
+                'content'  => base64_encode(file_get_contents($file->getRealPath())),
+            ];
+        }
 
         $estimate->loadMissing(['rooms.items', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
         $pdfContent = Pdf::loadView('pdf.estimate', compact('estimate', 'format'))->output();
@@ -1369,11 +1380,11 @@ public function duplicate(Estimate $estimate)
         $pdfUrl = route('pages.mail-attachments.pdf', ['type' => 'estimate', 'id' => $estimate->id]);
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment, $cc ?: null, null, $estimate->id, 'estimate', $pdfUrl, $requestReadReceipt, $trackingToken)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', $attachment, $cc ?: null, null, $estimate->id, 'estimate', $pdfUrl, $requestReadReceipt, $trackingToken, $extraAttachments)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', null, $attachment, $cc ?: null, null, $estimate->id, 'estimate', $pdfUrl, $requestReadReceipt, $trackingToken);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'estimate', null, $attachment, $cc ?: null, null, $estimate->id, 'estimate', $pdfUrl, $requestReadReceipt, $trackingToken, $extraAttachments);
         }
 
         if (! $sent) {

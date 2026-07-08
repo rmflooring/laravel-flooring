@@ -1047,12 +1047,13 @@ public function showProfits(Sale $sale)
     public function sendEmail(Request $request, Sale $sale)
     {
         $request->validate([
-            'to'         => ['required', 'email'],
-            'subject'    => ['required', 'string', 'max:255'],
-            'body'       => ['required', 'string'],
-            'cc'         => ['nullable', 'array'],
-            'cc.*'       => ['nullable', 'email'],
-            'pdf_format' => ['nullable', 'in:detailed,simple,room_totals'],
+            'to'               => ['required', 'email'],
+            'subject'          => ['required', 'string', 'max:255'],
+            'body'             => ['required', 'string'],
+            'cc'               => ['nullable', 'array'],
+            'cc.*'             => ['nullable', 'email'],
+            'pdf_format'       => ['nullable', 'in:detailed,simple,room_totals'],
+            'extra_attachment' => ['nullable', 'file', 'max:10240'],
         ]);
 
         $format             = $request->input('pdf_format', 'detailed');
@@ -1061,6 +1062,16 @@ public function showProfits(Sale $sale)
         $cc                 = array_filter($request->input('cc', []));
         $requestReadReceipt = $request->boolean('request_read_receipt', false);
         $trackingToken      = $requestReadReceipt ? (string) \Illuminate\Support\Str::uuid() : null;
+
+        $extraAttachments = [];
+        if ($request->hasFile('extra_attachment')) {
+            $file = $request->file('extra_attachment');
+            $extraAttachments[] = [
+                'filename' => $file->getClientOriginalName(),
+                'mime'     => $file->getMimeType() ?? 'application/octet-stream',
+                'content'  => base64_encode(file_get_contents($file->getRealPath())),
+            ];
+        }
 
         $sale->loadMissing(['rooms.items', 'sourceEstimate', 'deposits']);
         $pdfContent = Pdf::loadView('pdf.sale', compact('sale', 'format'))->output();
@@ -1073,11 +1084,11 @@ public function showProfits(Sale $sale)
         $pdfUrl = route('pages.mail-attachments.pdf', ['type' => 'sale', 'id' => $sale->id]);
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl, $requestReadReceipt, $trackingToken)
+            ? $mailer->sendAsUser($user, $request->input('to'), $request->input('subject'), $request->input('body'), 'sale', $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl, $requestReadReceipt, $trackingToken, $extraAttachments)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl, $requestReadReceipt, $trackingToken);
+            $sent = $mailer->send($request->input('to'), $request->input('subject'), $request->input('body'), 'sale', null, $attachment, $cc ?: null, null, $sale->id, 'sale', $pdfUrl, $requestReadReceipt, $trackingToken, $extraAttachments);
         }
 
         if (! $sent) {

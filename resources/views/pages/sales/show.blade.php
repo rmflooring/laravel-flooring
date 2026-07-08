@@ -1517,7 +1517,7 @@
             <h5 class="text-base font-semibold text-gray-800">Send Sale Email</h5>
             <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
-        <form method="POST" action="{{ route('pages.sales.send-email', $sale) }}">
+        <form method="POST" action="{{ route('pages.sales.send-email', $sale) }}" enctype="multipart/form-data">
             @csrf
             <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
@@ -1644,6 +1644,13 @@
                         <span>Sale-{{ $sale->sale_number ?? $sale->id }}.pdf</span>
                         <span class="text-xs text-gray-400 ml-1">— click to preview</span>
                     </a>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Extra Attachment <span class="text-xs text-gray-400 font-normal">(optional)</span></label>
+                    <input type="file" name="extra_attachment"
+                           class="w-full text-sm text-gray-600 bg-gray-50 border border-gray-300 rounded-lg p-2 file:mr-3 file:py-1 file:px-3 file:text-xs file:font-medium file:border-0 file:bg-blue-50 file:text-blue-700 file:rounded hover:file:bg-blue-100">
+                    <p class="mt-1 text-xs text-gray-400">Max 10 MB. Any file type.</p>
                 </div>
 
                 {{-- Read receipt --}}
