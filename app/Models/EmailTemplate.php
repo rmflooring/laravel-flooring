@@ -98,10 +98,10 @@ class EmailTemplate extends Model
             '{{product_reference}}', '{{color_reference}}', '{{sq_footage}}',
         ],
         'signature_request_flooring' => [
-            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{expires_date}}',
+            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',
         ],
         'signature_request_work_auth' => [
-            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{expires_date}}',
+            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',
         ],
         'estimate_follow_up_1' => [
             '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
@@ -164,11 +164,11 @@ class EmailTemplate extends Model
         ],
         'signature_request_flooring' => [
             'subject' => 'Action Required: Please Sign Your Flooring Selection',
-            'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\nPlease click the link below to open the document, review its contents, and add your electronic signature:\n\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
+            'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\n{{signing_link_button}}\n\nIf the button above doesn't work, copy and paste this link into your browser:\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
         ],
         'signature_request_work_auth' => [
             'subject' => 'Action Required: Please Sign Your Work Authorization',
-            'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\nPlease click the link below to open the document, review its contents, and add your electronic signature:\n\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
+            'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\n{{signing_link_button}}\n\nIf the button above doesn't work, copy and paste this link into your browser:\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
         ],
         'estimate_follow_up_1' => [
             'subject' => 'Following up on your estimate {{estimate_number}} — RM Flooring',
