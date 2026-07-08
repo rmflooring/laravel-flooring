@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\DocumentSigningRequest;
+use App\Services\EmailTemplateService;
 use App\Services\GraphMailService;
 
 class SignatureRequestMail
@@ -11,36 +12,46 @@ class SignatureRequestMail
 
     public function send(): bool
     {
-        $mailer        = app(GraphMailService::class);
+        $mailer  = app(GraphMailService::class);
+        $service = app(EmailTemplateService::class);
+
+        $templateType = $this->signingRequest->document_type === 'flooring_selection'
+            ? 'signature_request_flooring'
+            : 'signature_request_work_auth';
+
         $documentLabel = $this->signingRequest->document_type === 'flooring_selection'
             ? 'Flooring Selection'
             : 'Work Authorization';
 
-        $link    = url('/sign/' . $this->signingRequest->uuid);
-        $expires = $this->signingRequest->expires_at
-            ->timezone('America/Vancouver')
-            ->format('F j, Y');
+        $template = $service->getTemplate(null, $templateType);
 
-        $subject = "Please sign your {$documentLabel} document";
+        $vars = [
+            'client_name'    => $this->signingRequest->client_name,
+            'document_label' => $documentLabel,
+            'signing_link'   => url('/sign/' . $this->signingRequest->uuid),
+            'expires_date'   => $this->signingRequest->expires_at
+                ->timezone('America/Vancouver')
+                ->format('F j, Y'),
+        ];
 
-        $body = <<<TEXT
-Hello {$this->signingRequest->client_name},
+        $subject = $service->render($template['subject'], $vars);
+        $body    = $service->render($template['body'], $vars);
 
-Please review and sign your {$documentLabel} document at the link below.
-
-Sign here: {$link}
-
-This link expires on {$expires}.
-
-If you have any questions, please contact us.
-
-RM Flooring & Cabinetry
-TEXT;
+        // Convert plain-text body to HTML; auto-link any bare URLs
+        $escaped  = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
+        $linked   = preg_replace(
+            '/(https?:\/\/[^\s<]+)/',
+            '<a href="$1" style="color:#2563eb;word-break:break-all;">$1</a>',
+            $escaped
+        );
+        $htmlBody = '<div style="font-family:sans-serif;font-size:15px;line-height:1.7;color:#222;max-width:600px;">'
+            . $linked
+            . '</div>';
 
         return $mailer->send(
             to:      $this->signingRequest->client_email,
             subject: $subject,
-            body:    $body,
+            body:    $htmlBody,
             type:    'signature_request',
         );
     }

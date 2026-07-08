@@ -28,11 +28,13 @@ class EmailTemplate extends Model
 
     // Types restricted to admin (system notifications)
     public const SYSTEM_TYPES = [
-        'rfm_created_estimator'   => 'RFM Created — Estimator',
-        'rfm_created_pm'          => 'RFM Created — PM',
-        'rfm_updated_estimator'   => 'RFM Updated — Estimator',
-        'rfm_updated_pm'          => 'RFM Updated — PM',
-        'shop_quote_confirmation' => 'Shop Quote — Customer Confirmation',
+        'rfm_created_estimator'        => 'RFM Created — Estimator',
+        'rfm_created_pm'               => 'RFM Created — PM',
+        'rfm_updated_estimator'        => 'RFM Updated — Estimator',
+        'rfm_updated_pm'               => 'RFM Updated — PM',
+        'shop_quote_confirmation'      => 'Shop Quote — Customer Confirmation',
+        'signature_request_flooring'   => 'Signature Request — Flooring Selection',
+        'signature_request_work_auth'  => 'Signature Request — Work Authorization',
     ];
 
     // Merge tags available per type
@@ -95,6 +97,12 @@ class EmailTemplate extends Model
             '{{first_name}}', '{{last_name}}', '{{phone}}',
             '{{product_reference}}', '{{color_reference}}', '{{sq_footage}}',
         ],
+        'signature_request_flooring' => [
+            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{expires_date}}',
+        ],
+        'signature_request_work_auth' => [
+            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{expires_date}}',
+        ],
         'estimate_follow_up_1' => [
             '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
             '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
@@ -153,6 +161,14 @@ class EmailTemplate extends Model
         'shop_quote_confirmation' => [
             'subject' => 'We received your quote request — RM Flooring',
             'body'    => "Hi {{first_name}},\n\nThank you for reaching out! We've received your quote request and one of our team members will be in touch with you shortly.\n\nIf you have any questions in the meantime, feel free to contact us at reception@rmflooring.ca.\n\nWarm regards,\nRM Flooring",
+        ],
+        'signature_request_flooring' => [
+            'subject' => 'Action Required: Please Sign Your Flooring Selection',
+            'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\nPlease click the link below to open the document, review its contents, and add your electronic signature:\n\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
+        ],
+        'signature_request_work_auth' => [
+            'subject' => 'Action Required: Please Sign Your Work Authorization',
+            'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\nPlease click the link below to open the document, review its contents, and add your electronic signature:\n\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
         ],
         'estimate_follow_up_1' => [
             'subject' => 'Following up on your estimate {{estimate_number}} — RM Flooring',
