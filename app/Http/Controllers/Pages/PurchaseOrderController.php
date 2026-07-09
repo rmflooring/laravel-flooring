@@ -620,7 +620,73 @@ class PurchaseOrderController extends Controller
             return [$poItem->id => ['max' => $max, 'sale_qty' => $saleQty]];
         })->toArray();
 
-        return view('pages.purchase-orders.edit', compact('purchaseOrder', 'vendors', 'warehouseAddress', 'maxQtys'));
+        // For pending/ordered POs: find sale items that can still be added
+        $addableRooms = collect();
+        $addableRemainingQtys = [];
+
+        if (in_array($purchaseOrder->status, ['pending', 'ordered'])) {
+            $purchaseOrder->sale->load([
+                'rooms'             => fn ($q) => $q->orderBy('sort_order'),
+                'rooms.items'       => fn ($q) => $q->where('item_type', 'material')
+                                                    ->where('is_removed', false)
+                                                    ->orderBy('sort_order'),
+                'rooms.items.productLine',
+                'rooms.items.productStyle',
+            ]);
+
+            $existingPoSaleItemIds = $purchaseOrder->items->pluck('sale_item_id')->filter()->flip()->toArray();
+            $poVendorId            = $purchaseOrder->vendor_id;
+
+            foreach ($purchaseOrder->sale->rooms as $room) {
+                $roomItems = [];
+                foreach ($room->items as $item) {
+                    if (isset($existingPoSaleItemIds[$item->id])) {
+                        continue;
+                    }
+
+                    $effectiveQty = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                    $remaining    = max(0, $effectiveQty - ($orderedByOthers[$item->id] ?? 0));
+                    if ($remaining <= 0) {
+                        continue;
+                    }
+
+                    // Resolve vendor (mirrors create() logic)
+                    $vendorId = $item->productStyle?->vendor_id;
+                    if (! $vendorId) {
+                        $vendorId = $item->productLine?->vendor_id;
+                    }
+                    if (! $vendorId && $item->manufacturer && $item->style) {
+                        $pl = \App\Models\ProductLine::where('manufacturer', trim($item->manufacturer))
+                            ->where('name', trim($item->style))
+                            ->whereNotNull('vendor_id')
+                            ->first();
+                        $vendorId = $pl?->vendor_id;
+                    }
+                    if (! $vendorId && $item->manufacturer) {
+                        $mfr   = trim($item->manufacturer);
+                        $match = $vendors->first(fn ($v) => strcasecmp(trim($v->company_name), $mfr) === 0)
+                              ?? $vendors->first(fn ($v) => stripos(trim($v->company_name), $mfr) !== false);
+                        $vendorId = $match?->id;
+                    }
+
+                    // Only include items that match this PO's vendor (or have no vendor link)
+                    if ($vendorId && (int) $vendorId !== (int) $poVendorId) {
+                        continue;
+                    }
+
+                    $addableRemainingQtys[$item->id] = $remaining;
+                    $roomItems[] = $item;
+                }
+
+                if (! empty($roomItems)) {
+                    $addableRooms->push(['room' => $room, 'items' => $roomItems]);
+                }
+            }
+        }
+
+        return view('pages.purchase-orders.edit', compact(
+            'purchaseOrder', 'vendors', 'warehouseAddress', 'maxQtys', 'addableRooms', 'addableRemainingQtys'
+        ));
     }
 
     // -------------------------------------------------------------------------
@@ -651,6 +717,14 @@ class PurchaseOrderController extends Controller
             'po_items.*.po_notes'    => ['nullable', 'string'],
             'po_items.*.item_name'   => ['nullable', 'string', 'max:255'],
             'po_items.*.unit'        => ['nullable', 'string', 'max:50'],
+            'new_items'              => ['nullable', 'array'],
+            'new_items.*'            => ['integer', 'exists:sale_items,id'],
+            'new_qty'                => ['nullable', 'array'],
+            'new_qty.*'              => ['nullable', 'numeric', 'min:0'],
+            'new_cost'               => ['nullable', 'array'],
+            'new_cost.*'             => ['nullable', 'numeric', 'min:0'],
+            'new_po_notes'           => ['nullable', 'array'],
+            'new_po_notes.*'         => ['nullable', 'string'],
         ];
 
         $data = $request->validate($rules);
@@ -755,6 +829,67 @@ class PurchaseOrderController extends Controller
                 }
 
                 $poItem->update($fields);
+            }
+        }
+
+        // Add new items from sale (sale-linked POs in pending/ordered status only)
+        if (
+            ! $isStock &&
+            ! empty($data['new_items']) &&
+            in_array($data['status'], ['pending', 'ordered'])
+        ) {
+            $purchaseOrder->loadMissing(['items', 'sale']);
+            $existingPoSaleItemIds  = $purchaseOrder->items->pluck('sale_item_id')->filter()->toArray();
+            $orderedByOthersForNew  = $this->orderedQtys($purchaseOrder->sale_id, $purchaseOrder->id);
+
+            $saleItemsToAdd = $purchaseOrder->sale->items()
+                ->where('item_type', 'material')
+                ->where('is_removed', false)
+                ->whereIn('id', $data['new_items'])
+                ->whereNotIn('id', $existingPoSaleItemIds)
+                ->orderBy('sort_order')
+                ->get();
+
+            $newQtyErrors = [];
+            foreach ($saleItemsToAdd as $item) {
+                $effectiveQty = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                $remaining    = max(0, $effectiveQty - ($orderedByOthersForNew[$item->id] ?? 0));
+                $submittedQty = isset($data['new_qty'][$item->id]) && $data['new_qty'][$item->id] !== ''
+                    ? (float) $data['new_qty'][$item->id]
+                    : $remaining;
+
+                if ($submittedQty > $remaining + 0.001) {
+                    $newQtyErrors["new_qty.{$item->id}"] = '"' . $this->buildItemName($item) . '" — qty ' . $submittedQty . ' exceeds remaining available qty of ' . $remaining . '.';
+                }
+            }
+
+            if (! empty($newQtyErrors)) {
+                return back()->withErrors($newQtyErrors)->withInput();
+            }
+
+            $nextSortOrder = ($purchaseOrder->items->max('sort_order') ?? -1) + 1;
+
+            foreach ($saleItemsToAdd as $i => $item) {
+                $effectiveQty = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                $remaining    = max(0, $effectiveQty - ($orderedByOthersForNew[$item->id] ?? 0));
+                $qty   = isset($data['new_qty'][$item->id]) && $data['new_qty'][$item->id] !== ''
+                    ? (float) $data['new_qty'][$item->id]
+                    : $remaining;
+                $cost  = isset($data['new_cost'][$item->id]) && $data['new_cost'][$item->id] !== ''
+                    ? (float) $data['new_cost'][$item->id]
+                    : (float) $item->cost_price;
+                $notes = ! empty($data['new_po_notes'][$item->id]) ? $data['new_po_notes'][$item->id] : ($item->po_notes ?: null);
+
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'sale_item_id'      => $item->id,
+                    'item_name'         => $this->buildItemName($item),
+                    'quantity'          => $qty,
+                    'unit'              => $item->unit,
+                    'po_notes'          => $notes,
+                    'cost_price'        => $cost,
+                    'sort_order'        => $nextSortOrder + $i,
+                ]);
             }
         }
 

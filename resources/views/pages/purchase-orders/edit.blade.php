@@ -127,7 +127,14 @@
                      x-data="poItems()">
                     <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Items</h2>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Qty and unit cost can be adjusted. Item list is fixed at creation.</p>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Qty and unit cost can be adjusted.
+                            @if($addableRooms->isNotEmpty())
+                                Additional items from the sale can be added in the section below.
+                            @else
+                                Item list is fixed at creation.
+                            @endif
+                        </p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm text-gray-700 dark:text-gray-300">
@@ -199,6 +206,116 @@
                         </table>
                     </div>
                 </div>
+
+                {{-- Add Items from Sale (pending/ordered POs only) --}}
+                @if($addableRooms->isNotEmpty())
+                <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                     x-data="addItems()">
+                    <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Add Items from Sale</h2>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Select additional material items from the sale to include on this PO.</p>
+                    </div>
+
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($addableRooms as $roomData)
+                            {{-- Room header --}}
+                            <div class="bg-gray-50 px-6 py-3 dark:bg-gray-700/40">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                    {{ $roomData['room']->room_name ?: 'Unnamed Room' }}
+                                </span>
+                            </div>
+
+                            @foreach($roomData['items'] as $item)
+                                @php
+                                    $addParts = array_filter([
+                                        $item->product_type,
+                                        $item->manufacturer,
+                                        $item->style,
+                                        $item->color_item_number,
+                                    ]);
+                                    $addDisplayName = implode(' — ', $addParts) ?: 'Material Item';
+                                    $addRemaining   = $addableRemainingQtys[$item->id];
+                                @endphp
+                                <div class="px-6 py-4"
+                                     :class="{
+                                         'bg-blue-50 dark:bg-blue-900/10': selectedNewItems.map(String).includes('{{ $item->id }}'),
+                                         'hover:bg-gray-50 dark:hover:bg-gray-700/30': !selectedNewItems.map(String).includes('{{ $item->id }}')
+                                     }">
+                                    <label class="flex items-start gap-4 cursor-pointer">
+                                        <input type="checkbox"
+                                               name="new_items[]"
+                                               value="{{ $item->id }}"
+                                               x-model="selectedNewItems"
+                                               class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $addDisplayName }}</p>
+                                                <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                                    {{ $addRemaining }} {{ $item->unit }} remaining
+                                                </span>
+                                            </div>
+                                            <div class="mt-1 flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                                <span>Sale Qty: <strong class="text-gray-700 dark:text-gray-300">{{ $item->quantity }} {{ $item->unit }}</strong></span>
+                                                <span>Unit Cost: <strong class="text-gray-700 dark:text-gray-300">${{ number_format($item->cost_price, 2) }}</strong></span>
+                                            </div>
+                                            @if($item->po_notes)
+                                                <p class="mt-1 text-xs italic text-gray-400 dark:text-gray-500">{{ $item->po_notes }}</p>
+                                            @endif
+                                        </div>
+                                    </label>
+
+                                    {{-- Overrides — shown when item is checked --}}
+                                    <div x-show="selectedNewItems.map(String).includes('{{ $item->id }}')"
+                                         style="display:none"
+                                         class="mt-3 ml-8 space-y-3">
+                                        <div class="flex flex-wrap items-end gap-4">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                                    Qty <span class="text-gray-400">(max {{ $addRemaining }})</span>
+                                                </label>
+                                                <input type="number" name="new_qty[{{ $item->id }}]"
+                                                       value="{{ old('new_qty.' . $item->id, $addRemaining) }}"
+                                                       min="0.01" max="{{ $addRemaining }}" step="any"
+                                                       @input="validateNewQty('{{ $item->id }}', $event.target.value, {{ $addRemaining }})"
+                                                       :class="newQtyErrors['{{ $item->id }}'] ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'"
+                                                       class="w-28 rounded-lg border bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                <p x-show="newQtyErrors['{{ $item->id }}']"
+                                                   x-text="newQtyErrors['{{ $item->id }}']"
+                                                   style="display:none"
+                                                   class="mt-1 text-xs text-red-600 dark:text-red-400"></p>
+                                                @error('new_qty.' . $item->id)
+                                                    <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                                    Unit Cost
+                                                </label>
+                                                <div class="relative">
+                                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-sm text-gray-500">$</span>
+                                                    <input type="text" inputmode="decimal" name="new_cost[{{ $item->id }}]"
+                                                           value="{{ old('new_cost.' . $item->id, $item->cost_price) }}"
+                                                           onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
+                                                           class="w-32 rounded-lg border border-gray-300 bg-white py-1.5 pl-6 pr-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                                PO Notes
+                                            </label>
+                                            <textarea name="new_po_notes[{{ $item->id }}]"
+                                                      rows="2"
+                                                      placeholder="Notes for this item on the PO..."
+                                                      class="block w-full max-w-lg rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ old('new_po_notes.' . $item->id, $item->po_notes) }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endforeach
+                    </div>
+                </div>
+                @endif
 
                 {{-- Delivery & Dates --}}
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -467,6 +584,23 @@
                 document.querySelectorAll('.modal-qty-input').forEach(input => {
                     input.value = input.dataset.ordered;
                 });
+            },
+        };
+    }
+
+    function addItems() {
+        return {
+            selectedNewItems: @json(old('new_items', [])).map(String),
+            newQtyErrors: {},
+            validateNewQty(itemId, value, maxQty) {
+                const qty = parseFloat(value);
+                if (isNaN(qty) || qty <= 0) {
+                    this.newQtyErrors[itemId] = 'Qty must be greater than 0.';
+                } else if (qty > maxQty + 0.001) {
+                    this.newQtyErrors[itemId] = `Cannot exceed available qty of ${maxQty}.`;
+                } else {
+                    delete this.newQtyErrors[itemId];
+                }
             },
         };
     }
