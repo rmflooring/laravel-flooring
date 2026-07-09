@@ -25,7 +25,7 @@ class OpportunityDocumentController extends Controller
 
 public function index(Opportunity $opportunity, Request $request)
 {
-    $type         = $request->get('type'); // all | documents | media
+    $type         = $request->get('type', 'documents'); // all | documents | media — defaults to documents
     $labelId      = $request->get('label_id');
     $labelText    = $request->get('label_text');
     $search       = trim($request->get('search', ''));
@@ -76,6 +76,7 @@ public function index(Opportunity $opportunity, Request $request)
     } elseif ($type === 'media') {
         $documentsQuery->where('category', 'media');
     }
+    // 'all' or any other value → no additional filter
 
     $documents = $documentsQuery->paginate(25)->withQueryString();
 

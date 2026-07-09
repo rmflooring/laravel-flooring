@@ -243,8 +243,8 @@
                         $btnRight= 'rounded-r-lg';
                     @endphp
 
-                    <a href="{{ route('pages.opportunities.documents.index', $opportunity->id) . (count(array_merge($baseParams, ['type' => null])) ? '?' . http_build_query(array_merge($baseParams, ['type' => null])) : '') }}"
-                       class="{{ $btnBase }} {{ $btnLeft }} {{ empty($type)
+                    <a href="{{ route('pages.opportunities.documents.index', $opportunity->id) . '?' . http_build_query(array_merge($baseParams, ['type' => 'all'])) }}"
+                       class="{{ $btnBase }} {{ $btnLeft }} {{ $type === 'all'
                             ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200'
                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'
                         }}">
