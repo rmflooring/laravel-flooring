@@ -69,6 +69,11 @@ class OpportunityDocument extends Model
         return $this->belongsTo(Opportunity::class);
     }
 
+    public function sale()
+    {
+        return $this->belongsTo(\App\Models\Sale::class);
+    }
+
     public function label()
     {
         return $this->belongsTo(OpportunityDocumentLabel::class, 'label_id');
