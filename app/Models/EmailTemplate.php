@@ -35,6 +35,7 @@ class EmailTemplate extends Model
         'shop_quote_confirmation'      => 'Shop Quote — Customer Confirmation',
         'signature_request_flooring'   => 'Signature Request — Flooring Selection',
         'signature_request_work_auth'  => 'Signature Request — Work Authorization',
+        'signature_request_document'   => 'Signature Request — Generated Document',
     ];
 
     // Merge tags available per type
@@ -103,6 +104,9 @@ class EmailTemplate extends Model
         'signature_request_work_auth' => [
             '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',
         ],
+        'signature_request_document' => [
+            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',
+        ],
         'estimate_follow_up_1' => [
             '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
             '{{job_name}}', '{{job_no}}', '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
@@ -168,6 +172,10 @@ class EmailTemplate extends Model
         ],
         'signature_request_work_auth' => [
             'subject' => 'Action Required: Please Sign Your Work Authorization',
+            'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\n{{signing_link_button}}\n\nIf the button above doesn't work, copy and paste this link into your browser:\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
+        ],
+        'signature_request_document' => [
+            'subject' => 'Action Required: Please Sign — {{document_label}}',
             'body'    => "Hello {{client_name}},\n\nRM Flooring & Cabinetry has prepared a {{document_label}} document for your review and signature.\n\n{{signing_link_button}}\n\nIf the button above doesn't work, copy and paste this link into your browser:\n{{signing_link}}\n\nThis link will expire on {{expires_date}}. If you need a new link after that date, please contact us.\n\nIf you have any questions or did not expect this email, please reach out to us at reception@rmflooring.ca.\n\nThank you,\nRM Flooring & Cabinetry",
         ],
         'estimate_follow_up_1' => [

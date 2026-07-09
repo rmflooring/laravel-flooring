@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DocumentSigningRequest;
 use App\Models\DocumentTemplate;
 use App\Models\FlooringSignOff;
 use App\Models\Opportunity;
@@ -515,10 +516,16 @@ public function index(Opportunity $opportunity, Request $request)
             . ($opportunity->job_no ? ' — Job #' . $opportunity->job_no : '');
         $emailBody = 'Please find the attached document: ' . $document->original_name . '.';
 
+        $signingRequest = DocumentSigningRequest::where('document_type', 'opportunity_document')
+            ->where('document_id', $document->id)
+            ->whereIn('status', ['pending', 'signed'])
+            ->latest()
+            ->first();
+
         return view('pages.opportunities.documents.show-generated', compact(
             'opportunity', 'document', 'template',
             'jobSiteEmail', 'pmEmail', 'customerContacts',
-            'emailSubject', 'emailBody',
+            'emailSubject', 'emailBody', 'signingRequest',
         ));
     }
 

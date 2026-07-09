@@ -1658,6 +1658,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             Route::post('documents/{document}/send-email', [OpportunityDocumentController::class, 'sendEmail'])
                 ->name('opportunities.documents.send-email');
 
+            Route::post('documents/{document}/request-signature', [\App\Http\Controllers\Pages\SigningRequestController::class, 'storeFromOpportunityDocument'])
+                ->middleware('can:manage signing requests')
+                ->name('opportunities.documents.request-signature');
+
             // Flooring Sign-Off routes
             Route::get('sign-offs/create', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'create'])
                 ->name('opportunities.sign-offs.create');

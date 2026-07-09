@@ -6,6 +6,7 @@ use App\Mail\SignatureRequestMail;
 use App\Models\DocumentSigningRequest;
 use App\Models\DocumentTemplate;
 use App\Models\FlooringSignOff;
+use App\Models\OpportunityDocument;
 use App\Models\Setting;
 use App\Models\WorkOrder;
 use App\Services\DocumentTemplateService;
@@ -51,8 +52,9 @@ class DocumentSigningRequestService
         $pdfContent = $docTemplate
             ? $this->generateFromDocumentTemplate($request, $docTemplate, null)
             : match ($request->document_type) {
-                'flooring_selection' => $this->generateFlooringSignOffPdf($request->document_id),
-                'work_auth'          => $this->generateWorkOrderPdf($request->document_id),
+                'flooring_selection'   => $this->generateFlooringSignOffPdf($request->document_id),
+                'work_auth'            => $this->generateWorkOrderPdf($request->document_id),
+                'opportunity_document' => $this->generateOpportunityDocumentPdf($request->document_id),
             };
 
         $path = 'signed-documents/pending/' . $request->uuid . '.pdf';
@@ -194,6 +196,24 @@ class DocumentSigningRequestService
         return Pdf::loadView('pdf.work-order', compact('workOrder', 'processedNotes'))->output();
     }
 
+    private function generateOpportunityDocumentPdf(int $id, ?string $signatureHtml = null): string
+    {
+        $doc      = OpportunityDocument::with(['opportunity', 'sale'])->findOrFail($id);
+        $template = $doc->template_id ? DocumentTemplate::find($doc->template_id) : null;
+
+        $body = $doc->rendered_body ?? '';
+        if ($signatureHtml !== null) {
+            $body = str_replace('{{customer_signature}}', $signatureHtml, $body);
+        }
+
+        return Pdf::loadView('pdf.document-template', [
+            'body'        => $body,
+            'template'    => $template,
+            'opportunity' => $doc->opportunity,
+            'sale'        => $doc->sale,
+        ])->setPaper('letter', 'portrait')->output();
+    }
+
     // ── Inline signature tag helpers ─────────────────────────────────────────
 
     private function hasInlineSignatureTag(DocumentSigningRequest $request): bool
@@ -211,6 +231,10 @@ class DocumentSigningRequestService
                 WorkOrder::find($request->document_id)?->notes ?? '',
                 '{{customer_signature}}'
             ),
+            'opportunity_document' => str_contains(
+                OpportunityDocument::find($request->document_id)?->rendered_body ?? '',
+                '{{customer_signature}}'
+            ),
             default => false,
         };
     }
@@ -226,8 +250,9 @@ class DocumentSigningRequestService
         $pdfContent = $docTemplate
             ? $this->generateFromDocumentTemplate($request, $docTemplate, $signatureHtml)
             : match ($request->document_type) {
-                'flooring_selection' => $this->generateFlooringSignOffPdf($request->document_id, $signatureHtml),
-                'work_auth'          => $this->generateWorkOrderPdf($request->document_id, $signatureHtml),
+                'flooring_selection'   => $this->generateFlooringSignOffPdf($request->document_id, $signatureHtml),
+                'work_auth'            => $this->generateWorkOrderPdf($request->document_id, $signatureHtml),
+                'opportunity_document' => $this->generateOpportunityDocumentPdf($request->document_id, $signatureHtml),
             };
 
         $signedPath = 'signed-documents/signed/' . $request->uuid . '-signed.pdf';
@@ -284,6 +309,11 @@ class DocumentSigningRequestService
         if ($request->document_type === 'work_auth') {
             $workOrder = WorkOrder::with(['sale.opportunity'])->findOrFail($request->document_id);
             return [$workOrder->sale->opportunity, $workOrder->sale];
+        }
+
+        if ($request->document_type === 'opportunity_document') {
+            $doc = OpportunityDocument::with(['opportunity', 'sale.opportunity'])->findOrFail($request->document_id);
+            return [$doc->opportunity, $doc->sale ?? null];
         }
 
         return [null, null];

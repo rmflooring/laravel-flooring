@@ -15,13 +15,19 @@ class SignatureRequestMail
         $mailer  = app(GraphMailService::class);
         $service = app(EmailTemplateService::class);
 
-        $templateType = $this->signingRequest->document_type === 'flooring_selection'
-            ? 'signature_request_flooring'
-            : 'signature_request_work_auth';
+        $templateType = match ($this->signingRequest->document_type) {
+            'flooring_selection'   => 'signature_request_flooring',
+            'work_auth'            => 'signature_request_work_auth',
+            'opportunity_document' => 'signature_request_document',
+            default                => 'signature_request_document',
+        };
 
-        $documentLabel = $this->signingRequest->document_type === 'flooring_selection'
-            ? 'Flooring Selection'
-            : 'Work Authorization';
+        $documentLabel = match ($this->signingRequest->document_type) {
+            'flooring_selection'   => 'Flooring Selection',
+            'work_auth'            => 'Work Authorization',
+            'opportunity_document' => \App\Models\OpportunityDocument::find($this->signingRequest->document_id)?->original_name ?? 'Document',
+            default                => 'Document',
+        };
 
         $template   = $service->getTemplate(null, $templateType);
         $signingUrl = url('/sign/' . $this->signingRequest->uuid);
