@@ -384,7 +384,12 @@ document.addEventListener('fm:tax-group-selected', (e) => {
       if (!body) return;
 
       const rows = Array.from(body.querySelectorAll("tr"));
-      rows.forEach((row, itemIndex) => {
+      let mainIndex = 0;
+      rows.forEach((row) => {
+        const isNotesRow = row.classList.contains('item-notes-row');
+        // Notes rows share the same index as their preceding main row
+        const itemIndex = isNotesRow ? mainIndex - 1 : mainIndex;
+
         row.querySelectorAll("[name]").forEach(el => {
           if (el.closest("template")) return;
 
@@ -396,6 +401,8 @@ document.addEventListener('fm:tax-group-selected', (e) => {
           name = name.replace(re, `[${key}][${itemIndex}]`);
           el.setAttribute("name", name);
         });
+
+        if (!isNotesRow) mainIndex++;
       });
     });
   }
@@ -2312,6 +2319,7 @@ if (t.closest(".add-freight-row")) {
   appendRowFromTemplate(room, ".freight-tbody", ".freight-row-template");
 
   initFreightDropdownForRoom(room);
+  if (window.initRichNotesIn) window.initRichNotesIn(room);
 
   reindexAllRooms();
   updateRoomTotals(room);
