@@ -139,9 +139,9 @@ class InvoiceController extends Controller
 
     public function edit(Sale $sale, Invoice $invoice)
     {
-        if (! in_array($invoice->status, ['draft', 'sent'])) {
+        if (! in_array($invoice->status, ['draft', 'sent', 'overdue'])) {
             return redirect()->route('pages.sales.invoices.show', [$sale, $invoice])
-                ->with('error', 'Only draft or sent invoices can be edited.');
+                ->with('error', 'Only draft, sent, or overdue invoices can be edited.');
         }
 
         $invoice->load(['rooms' => fn ($q) => $q->orderBy('sort_order'), 'rooms.items' => fn ($q) => $q->orderBy('sort_order'), 'paymentTerm']);
@@ -152,12 +152,13 @@ class InvoiceController extends Controller
 
     public function update(Request $request, Sale $sale, Invoice $invoice)
     {
-        if (! in_array($invoice->status, ['draft', 'sent'])) {
-            return back()->with('error', 'Only draft or sent invoices can be edited.');
+        if (! in_array($invoice->status, ['draft', 'sent', 'overdue'])) {
+            return back()->with('error', 'Only draft, sent, or overdue invoices can be edited.');
         }
 
         $request->validate([
-            'status'             => ['required', 'in:draft,sent'],
+            'invoice_number'     => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('invoices', 'invoice_number')->ignore($invoice->id)],
+            'status'             => ['required', 'in:draft,sent,overdue'],
             'payment_term_id'    => ['nullable', 'exists:payment_terms,id'],
             'due_date'           => ['nullable', 'date'],
             'customer_po_number' => ['nullable', 'string', 'max:100'],
@@ -167,6 +168,11 @@ class InvoiceController extends Controller
             'bill_to_email'      => ['nullable', 'email', 'max:255'],
             'rooms'              => ['nullable', 'array'],
         ]);
+
+        if ($request->invoice_number !== $invoice->invoice_number) {
+            $invoice->invoice_number = $request->invoice_number;
+            $invoice->save();
+        }
 
         $invoice->update([
             'status'             => $request->status,

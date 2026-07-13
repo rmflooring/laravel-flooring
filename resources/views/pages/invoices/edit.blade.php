@@ -40,11 +40,19 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
             <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Invoice Number</label>
+                <input type="text" name="invoice_number"
+                       value="{{ old('invoice_number', $invoice->invoice_number) }}"
+                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+            </div>
+
+            <div>
                 <label class="block mb-1 text-sm font-medium text-gray-700">Status</label>
                 <select name="status"
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                    <option value="draft" {{ old('status', $invoice->status) === 'draft' ? 'selected' : '' }}>Draft</option>
-                    <option value="sent"  {{ old('status', $invoice->status) === 'sent'  ? 'selected' : '' }}>Sent</option>
+                    <option value="draft"   {{ old('status', $invoice->status) === 'draft'   ? 'selected' : '' }}>Draft</option>
+                    <option value="sent"    {{ old('status', $invoice->status) === 'sent'    ? 'selected' : '' }}>Sent</option>
+                    <option value="overdue" {{ old('status', $invoice->status) === 'overdue' ? 'selected' : '' }}>Overdue</option>
                 </select>
             </div>
 

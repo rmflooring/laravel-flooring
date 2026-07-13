@@ -802,8 +802,20 @@ class QboSyncService
             return ['success' => true, 'message' => 'Invoice ' . $action . ' in QuickBooks.', 'qbo_id' => $qboInvoice['Id']];
 
         } catch (\Exception $e) {
+            $msg = $e->getMessage();
+
+            // Parse QBO error 6140 (duplicate DocNumber) into a human-readable message
+            if (str_contains($msg, '6140') || str_contains($msg, 'Duplicate Document Number')) {
+                $detail = '';
+                $decoded = json_decode($msg, true);
+                if ($decoded && isset($decoded['Fault']['Error'][0]['Detail'])) {
+                    $detail = ' ' . $decoded['Fault']['Error'][0]['Detail'];
+                }
+                $msg = "QBO rejected invoice #{$invoice->invoice_number}: that document number is already used by another transaction in QuickBooks.{$detail} Edit the invoice to change its number, then try again.";
+            }
+
             $this->qbo->log('invoice', $invoice->id, 'push', 'error', null, $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+            return ['success' => false, 'message' => $msg, 'qbo_id' => null];
         }
     }
 
