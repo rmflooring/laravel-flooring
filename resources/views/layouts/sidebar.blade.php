@@ -431,6 +431,12 @@
                                 Records
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('pages.inventory.summary') }}"
+                               class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.inventory.summary') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                                Stock Summary
+                            </a>
+                        </li>
                         @can('view rfcs')
                         <li>
                             <a href="{{ route('pages.inventory.rfc.index') }}"

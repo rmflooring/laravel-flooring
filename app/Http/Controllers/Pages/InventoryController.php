@@ -80,6 +80,57 @@ class InventoryController extends Controller
         ));
     }
 
+    public function summary(Request $request): View
+    {
+        $q             = trim($request->input('q', ''));
+        $showZeroStock = $request->boolean('show_zero_stock', false);
+
+        $receipts = InventoryReceipt::query()
+            ->whereNotNull('product_style_id')
+            ->with(['allocations', 'transactions', 'productStyle.productLine'])
+            ->when($q, fn ($query) => $query->whereHas('productStyle', function ($ps) use ($q) {
+                $ps->where('name', 'like', "%{$q}%")
+                    ->orWhere('sku', 'like', "%{$q}%")
+                    ->orWhere('style_number', 'like', "%{$q}%")
+                    ->orWhereHas('productLine', function ($pl) use ($q) {
+                        $pl->where('name', 'like', "%{$q}%")
+                            ->orWhere('manufacturer', 'like', "%{$q}%");
+                    });
+            }))
+            ->get();
+
+        $summary = $receipts
+            ->groupBy('product_style_id')
+            ->map(function ($group) {
+                $style = $group->first()->productStyle;
+                $line  = $style?->productLine;
+
+                return (object) [
+                    'product_style_id' => $group->first()->product_style_id,
+                    'style_name'       => $style?->name,
+                    'sku'              => $style?->sku,
+                    'style_number'     => $style?->style_number,
+                    'color'            => $style?->color,
+                    'line_name'        => $line?->name,
+                    'manufacturer'     => $line?->manufacturer,
+                    'unit'             => $group->first()->unit,
+                    'total_received'   => (float) $group->sum('quantity_received'),
+                    'total_available'  => (float) $group->sum('available_qty'),
+                    'record_count'     => $group->count(),
+                ];
+            })
+            ->when(! $showZeroStock, fn ($rows) => $rows->filter(fn ($row) => $row->total_available > 0))
+            ->sortByDesc('total_available')
+            ->values();
+
+        $totalStyles         = $summary->count();
+        $totalUnitsAvailable = $summary->sum('total_available');
+
+        return view('pages.inventory.summary', compact(
+            'summary', 'q', 'showZeroStock', 'totalStyles', 'totalUnitsAvailable',
+        ));
+    }
+
     public function create(): View
     {
         $units = UnitMeasure::orderBy('label')->get(['id', 'code', 'label']);
