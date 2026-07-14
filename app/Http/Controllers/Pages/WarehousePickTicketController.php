@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryAllocation;
 use App\Models\PickTicket;
 use App\Models\PickTicketItem;
 use App\Models\SaleItem;
@@ -169,6 +170,36 @@ class WarehousePickTicketController extends Controller
         }
 
         return back()->with('success', $saleItems->count() . ' ' . \Str::plural('item', $saleItems->count()) . ' added to pick ticket.');
+    }
+
+    public function updateItem(Request $request, PickTicket $pickTicket, PickTicketItem $item): RedirectResponse
+    {
+        abort_unless(in_array($pickTicket->status, ['staged', 'pending']), 422);
+        abort_unless($item->pick_ticket_id === $pickTicket->id, 404);
+
+        $data = $request->validate([
+            'quantity' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $item->update(['quantity' => $data['quantity']]);
+
+        return back()->with('success', 'Item quantity updated.');
+    }
+
+    public function removeItem(PickTicket $pickTicket, PickTicketItem $item): RedirectResponse
+    {
+        abort_unless(in_array($pickTicket->status, ['staged', 'pending']), 422);
+        abort_unless($item->pick_ticket_id === $pickTicket->id, 404);
+
+        if ($item->inventory_allocation_id) {
+            InventoryAllocation::where('id', $item->inventory_allocation_id)
+                ->whereNull('released_at')
+                ->update(['released_at' => now()]);
+        }
+
+        $item->delete();
+
+        return back()->with('success', 'Item removed from pick ticket.');
     }
 
     public function updateStatus(Request $request, PickTicket $pickTicket, PickTicketService $service): RedirectResponse

@@ -1273,6 +1273,14 @@ Route::prefix('pages')
 			Route::post('pick-tickets/{pickTicket}/add-items', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'addItems'])
 				->middleware('role_or_permission:admin|view pick tickets')
 				->name('pick-tickets.add-items');
+
+			Route::patch('pick-tickets/{pickTicket}/items/{item}', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'updateItem'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.items.update');
+
+			Route::delete('pick-tickets/{pickTicket}/items/{item}', [\App\Http\Controllers\Pages\WarehousePickTicketController::class, 'removeItem'])
+				->middleware('role_or_permission:admin|view pick tickets')
+				->name('pick-tickets.items.remove');
 		});
 
 		// Purchase Orders — index

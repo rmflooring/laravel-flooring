@@ -462,7 +462,7 @@
                         @if ($stagingPickTicket->fulfillment_type)
                             <span>
                                 <span class="font-medium text-gray-700 dark:text-gray-300">Type:</span>
-                                {{ $stagingPickTicket->fulfillment_type === 'pickup' ? 'Pickup from vendor' : 'Deliver to warehouse' }}
+                                {{ $stagingPickTicket->fulfillment_type === 'pickup' ? 'Installer Pickup' : 'Deliver on Site' }}
                             </span>
                         @endif
                         @if ($stagingPickTicket->staging_notes)
@@ -571,13 +571,13 @@
                                 <input type="radio" name="fulfillment_type" value="delivery"
                                        x-model="fulfillmentType"
                                        class="text-orange-600 focus:ring-orange-500">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">Deliver to warehouse</span>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Deliver on Site</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="radio" name="fulfillment_type" value="pickup"
                                        x-model="fulfillmentType"
                                        class="text-orange-600 focus:ring-orange-500">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">Pickup from vendor</span>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Installer Pickup</span>
                             </label>
                         </div>
                     </div>

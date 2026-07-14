@@ -167,7 +167,10 @@
                         </div>
 
                         {{-- Items table --}}
-                        @php $hasReturns = $pickTicket->items->sum(fn($i) => (float) $i->returned_qty) > 0; @endphp
+                        @php
+                            $hasReturns = $pickTicket->items->sum(fn($i) => (float) $i->returned_qty) > 0;
+                            $itemsEditable = in_array($pickTicket->status, ['staged', 'pending']);
+                        @endphp
                         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
                             <thead>
                                 <tr class="bg-gray-50 dark:bg-gray-700/50">
@@ -180,6 +183,9 @@
                                         <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">At Site</th>
                                     @endif
                                     <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Remaining</th>
+                                    @if ($itemsEditable)
+                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Actions</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -203,7 +209,24 @@
                                             {{ $ptItem->saleItem?->room?->room_name ?? '—' }}
                                         </td>
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-300">
-                                            {{ rtrim(rtrim(number_format($ordered, 2), '0'), '.') }}
+                                            @if ($itemsEditable)
+                                                <form method="POST"
+                                                      action="{{ route('pages.warehouse.pick-tickets.items.update', [$pickTicket, $ptItem]) }}"
+                                                      class="flex items-center justify-end gap-1">
+                                                    @csrf @method('PATCH')
+                                                    <input type="number" name="quantity" value="{{ rtrim(rtrim(number_format($ordered, 2), '0'), '.') }}"
+                                                           step="0.01" min="0.01"
+                                                           class="w-20 rounded-md border border-gray-300 bg-white px-2 py-1 text-right text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                                    <button type="submit" title="Save quantity"
+                                                            class="rounded-md border border-gray-300 p-1 text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700">
+                                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                {{ rtrim(rtrim(number_format($ordered, 2), '0'), '.') }}
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3 text-right text-sm font-medium {{ $delivered > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-400' }}">
                                             {{ $delivered > 0 ? rtrim(rtrim(number_format($delivered, 2), '0'), '.') : '—' }}
@@ -219,10 +242,25 @@
                                         <td class="px-4 py-3 text-right text-sm font-medium {{ $fullyDone ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400' }}">
                                             {{ $fullyDone ? '✓' : rtrim(rtrim(number_format($remaining, 2), '0'), '.') }}
                                         </td>
+                                        @if ($itemsEditable)
+                                            <td class="px-4 py-3 text-right text-sm">
+                                                <form method="POST"
+                                                      action="{{ route('pages.warehouse.pick-tickets.items.remove', [$pickTicket, $ptItem]) }}"
+                                                      onsubmit="return confirm('Remove {{ addslashes($ptItem->item_name) }} from this pick ticket?')">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" title="Remove item"
+                                                            class="rounded-md border border-red-300 p-1 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
+                                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        @endif
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ $hasReturns ? 7 : 5 }}" class="px-6 py-6 text-center text-sm text-gray-400">No items.</td>
+                                        <td colspan="{{ $hasReturns ? ($itemsEditable ? 8 : 7) : ($itemsEditable ? 6 : 5) }}" class="px-6 py-6 text-center text-sm text-gray-400">No items.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -657,13 +695,13 @@
                                 <input type="radio" name="fulfillment_type" value="delivery"
                                        x-model="fulfillmentType"
                                        class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">Deliver to warehouse</span>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Deliver on Site</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="radio" name="fulfillment_type" value="pickup"
                                        x-model="fulfillmentType"
                                        class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">Pickup from vendor</span>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Installer Pickup</span>
                             </label>
                         </div>
                     </div>
@@ -672,7 +710,7 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span x-text="fulfillmentType === 'pickup' ? 'Pickup Date' : 'Installation Date'">Date</span>
+                                <span x-text="fulfillmentType === 'pickup' ? 'Pickup Date' : 'Delivery Date'">Date</span>
                                 <span class="text-gray-400 font-normal">(optional)</span>
                             </label>
                             <input type="date" name="delivery_date"
