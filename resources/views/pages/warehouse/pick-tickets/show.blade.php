@@ -487,8 +487,9 @@
 
     {{-- Record Delivery Modal --}}
     @if (in_array($pickTicket->status, ['staged', 'picked', 'partially_delivered']))
-    <div id="pt-deliver-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-        <div class="w-full max-w-2xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
+    <div id="pt-deliver-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 p-4">
+        <div class="flex min-h-full items-center justify-center">
+        <div class="w-full max-w-4xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                 <div>
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white">Record Delivery</h3>
@@ -511,7 +512,7 @@
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
                                 <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Item</th>
-                                <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Room</th>
+                                <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-36">Room</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ordered</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Delivered</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Remaining</th>
@@ -526,14 +527,16 @@
                                     $remaining = max(0, $ordered - $delivered);
                                 @endphp
                                 <tr class="{{ $remaining <= 0 ? 'opacity-50' : '' }}">
-                                    <td class="px-4 py-2.5 text-gray-900 dark:text-white font-medium">
-                                        {{ $ptItem->item_name }}
+                                    <td class="px-4 py-2.5 text-gray-900 dark:text-white font-medium max-w-[200px]">
+                                        <span class="block truncate" title="{{ $ptItem->item_name }}">{{ $ptItem->item_name }}</span>
                                         @if ($ptItem->unit)
-                                            <span class="text-xs text-gray-400 ml-1">{{ $ptItem->unit }}</span>
+                                            <span class="text-xs text-gray-400">{{ $ptItem->unit }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">
-                                        {{ $ptItem->saleItem?->room?->room_name ?? '—' }}
+                                    <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400 max-w-[9rem]">
+                                        <span class="block truncate" title="{{ $ptItem->saleItem?->room?->room_name ?? '' }}">
+                                            {{ $ptItem->saleItem?->room?->room_name ?? '—' }}
+                                        </span>
                                     </td>
                                     <td class="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">
                                         {{ rtrim(rtrim(number_format($ordered, 2), '0'), '.') }}
@@ -548,9 +551,9 @@
                                         @if ($remaining > 0)
                                             <input type="number"
                                                    name="items[{{ $ptItem->id }}]"
-                                                   value="{{ rtrim(rtrim(number_format($remaining, 2), '0'), '.') }}"
+                                                   value="{{ rtrim(rtrim(number_format($remaining, 2, '.', ''), '0'), '.') }}"
                                                    min="0"
-                                                   max="{{ $remaining }}"
+                                                   max="{{ rtrim(rtrim(number_format($remaining, 2, '.', ''), '0'), '.') }}"
                                                    step="any"
                                                    class="w-24 rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         @else
@@ -604,6 +607,7 @@
                     </button>
                 </div>
             </form>
+        </div>
         </div>
     </div>
     @endif
