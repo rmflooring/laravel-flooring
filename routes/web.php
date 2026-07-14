@@ -1210,7 +1210,15 @@ Route::prefix('pages')
 				->middleware('role_or_permission:admin|create rtvs')->name('destroy');
 		});
 
-		// Inventory Record show (wildcard — must come AFTER rfc/rtv groups)
+		// Inventory Record edit/update/show (wildcard — must come AFTER rfc/rtv groups)
+		Route::get('inventory/{inventoryReceipt}/edit', [\App\Http\Controllers\Pages\InventoryController::class, 'edit'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('inventory.edit');
+
+		Route::put('inventory/{inventoryReceipt}', [\App\Http\Controllers\Pages\InventoryController::class, 'update'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('inventory.update');
+
 		Route::get('inventory/{inventoryReceipt}', [\App\Http\Controllers\Pages\InventoryController::class, 'show'])
 			->middleware('role_or_permission:admin|view purchase orders')
 			->name('inventory.show');

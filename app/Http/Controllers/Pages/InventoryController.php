@@ -114,11 +114,69 @@ class InventoryController extends Controller
             ->with('success', 'Inventory record created.');
     }
 
+    public function edit(InventoryReceipt $inventoryReceipt): View
+    {
+        $inventoryReceipt->load(['productStyle.productLine.productType', 'productStyle.productLine.unit']);
+        $units = UnitMeasure::orderBy('label')->get(['id', 'code', 'label']);
+
+        $currentProduct = null;
+        if ($s = $inventoryReceipt->productStyle) {
+            $currentProduct = [
+                'id'           => $s->id,
+                'name'         => $s->name,
+                'sku'          => $s->sku,
+                'color'        => $s->color,
+                'cost_price'   => $s->cost_price,
+                'line_name'    => $s->productLine?->name,
+                'manufacturer' => $s->productLine?->manufacturer,
+                'product_type' => $s->productLine?->productType?->name,
+                'unit_code'    => $s->productLine?->unit?->code,
+            ];
+        }
+
+        return view('pages.inventory.edit', compact('inventoryReceipt', 'units', 'currentProduct'));
+    }
+
+    public function update(Request $request, InventoryReceipt $inventoryReceipt)
+    {
+        $data = $request->validate([
+            'product_style_id'  => ['nullable', 'exists:product_styles,id'],
+            'item_name'         => ['required', 'string', 'max:255'],
+            'unit'              => ['required', 'string', 'max:50'],
+            'quantity_received' => ['required', 'numeric', 'min:0.01'],
+            'cost_price'        => ['nullable', 'numeric', 'min:0'],
+            'received_date'     => ['required', 'date'],
+            'notes'             => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Don't allow reducing quantity below what's already allocated
+        $allocated = $inventoryReceipt->allocations()->sum('quantity');
+        if ((float) $data['quantity_received'] < (float) $allocated) {
+            return back()->withErrors([
+                'quantity_received' => "Cannot reduce below already-allocated quantity ({$allocated}).",
+            ])->withInput();
+        }
+
+        $inventoryReceipt->update([
+            'product_style_id'  => $data['product_style_id'] ?? null,
+            'item_name'         => $data['item_name'],
+            'unit'              => $data['unit'],
+            'quantity_received' => $data['quantity_received'],
+            'cost_price'        => $data['cost_price'] ?? null,
+            'received_date'     => $data['received_date'],
+            'notes'             => $data['notes'] ?? null,
+        ]);
+
+        return redirect()
+            ->route('pages.inventory.show', $inventoryReceipt)
+            ->with('success', 'Inventory record updated.');
+    }
+
     public function searchProducts(Request $request)
     {
         $q = trim($request->input('q', ''));
 
-        $styles = ProductStyle::with(['productLine.unit'])
+        $styles = ProductStyle::with(['productLine.unit', 'productLine.productType'])
             ->where('status', '<>', 'archived')
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($inner) use ($q) {
@@ -144,6 +202,7 @@ class InventoryController extends Controller
             'cost_price'   => $s->cost_price,
             'line_name'    => $s->productLine?->name,
             'manufacturer' => $s->productLine?->manufacturer,
+            'product_type' => $s->productLine?->productType?->name,
             'unit_code'    => $s->productLine?->unit?->code,
         ]));
     }
