@@ -43,7 +43,7 @@ class RfmController extends Controller
                         ->orWhere('rfms.site_city', 'like', "%{$q}%")
                         ->orWhereHas('parentCustomer', fn ($cq) => $cq->where('company_name', 'like', "%{$q}%")->orWhere('name', 'like', "%{$q}%"))
                         ->orWhereHas('estimator', fn ($eq) => $eq->where('first_name', 'like', "%{$q}%")->orWhere('last_name', 'like', "%{$q}%"))
-                        ->orWhereHas('opportunity', fn ($oq) => $oq->where('job_no', 'like', "%{$q}%")->orWhere('job_name', 'like', "%{$q}%"));
+                        ->orWhereHas('opportunity', fn ($oq) => $oq->where('job_no', 'like', "%{$q}%"));
                 });
             })
             ->when($status,       fn ($query) => $query->where('rfms.status', $status))
