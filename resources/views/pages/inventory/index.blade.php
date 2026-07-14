@@ -66,7 +66,7 @@
                     <div class="flex-1 min-w-48">
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search item</label>
                         <input type="text" name="q" value="{{ $q }}"
-                               placeholder="Item name…"
+                               placeholder="Item name, manufacturer, product line, or style…"
                                class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     </div>
 

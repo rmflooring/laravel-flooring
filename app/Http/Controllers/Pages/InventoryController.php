@@ -46,7 +46,16 @@ class InventoryController extends Controller
             ->with(['purchaseOrder', 'creator'])
             ->when($recordId, fn ($query) => $query->where('id', (int) $recordId))
             ->when($productStyleId, fn ($query) => $query->where('product_style_id', (int) $productStyleId))
-            ->when($q, fn ($query) => $query->where('item_name', 'like', "%{$q}%"))
+            ->when($q, fn ($query) => $query->where(function ($sub) use ($q) {
+                $sub->where('item_name', 'like', "%{$q}%")
+                    ->orWhereHas('productStyle', function ($ps) use ($q) {
+                        $ps->where('name', 'like', "%{$q}%")
+                            ->orWhereHas('productLine', function ($pl) use ($q) {
+                                $pl->where('name', 'like', "%{$q}%")
+                                    ->orWhere('manufacturer', 'like', "%{$q}%");
+                            });
+                    });
+            }))
             ->when($dateFrom, fn ($query) => $query->whereDate('received_date', '>=', $dateFrom))
             ->when($dateTo,   fn ($query) => $query->whereDate('received_date', '<=', $dateTo))
             ->when(! $showDepleted, fn ($query) => $query->whereRaw(
