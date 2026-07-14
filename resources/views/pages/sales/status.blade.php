@@ -376,6 +376,7 @@
                                 $itemName = $nameParts ? implode(' — ', $nameParts) : 'Material item';
 
                                 $canAssignFromStock = $dotStatus === 'none' && ! empty($availableReceipts);
+                                $neededQty          = max(0, ($item->order_qty ?? $item->quantity) - $invQty);
                             @endphp
 
                             <div class="flex items-center gap-3 px-5 py-3 text-sm text-gray-700 flex-wrap sm:flex-nowrap">
@@ -412,7 +413,8 @@
                                                     {{ $item->id }},
                                                     @js($itemName),
                                                     @js($availableReceipts),
-                                                    @js(route('pages.sales.inventory-allocations.store', [$sale, $item]))
+                                                    @js(route('pages.sales.inventory-allocations.store', [$sale, $item])),
+                                                    {{ $neededQty }}
                                                 )"
                                                 class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 whitespace-nowrap">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -469,7 +471,7 @@
                                                        name="inventory_receipt_id"
                                                        :value="receipt.id"
                                                        x-model.number="selectedReceiptId"
-                                                       @change="maxQty = receipt.available; qty = receipt.available"
+                                                       @change="maxQty = receipt.available; qty = Math.min(receipt.available, modalNeededQty) || receipt.available"
                                                        class="text-teal-600 focus:ring-teal-500">
                                                 <div class="flex-1 min-w-0">
                                                     <span class="text-sm font-medium text-gray-900 block truncate" x-text="receipt.item_name"></span>
@@ -544,14 +546,16 @@
                 modalItemName: '',
                 modalReceipts: [],
                 modalAction: '',
+                modalNeededQty: 0,
                 selectedReceiptId: null,
                 qty: 0,
                 maxQty: 0,
 
-                openModal(saleItemId, itemName, receipts, action) {
+                openModal(saleItemId, itemName, receipts, action, neededQty) {
                     this.modalItemName     = itemName;
                     this.modalReceipts     = receipts;
                     this.modalAction       = action;
+                    this.modalNeededQty    = neededQty;
                     this.selectedReceiptId = null;
                     this.qty               = 0;
                     this.maxQty            = 0;
