@@ -139,26 +139,34 @@ class InvoiceController extends Controller
 
     public function edit(Sale $sale, Invoice $invoice)
     {
-        if (! in_array($invoice->status, ['draft', 'sent', 'overdue'])) {
+        if (! in_array($invoice->status, ['draft', 'sent', 'overdue', 'paid'])) {
             return redirect()->route('pages.sales.invoices.show', [$sale, $invoice])
-                ->with('error', 'Only draft, sent, or overdue invoices can be edited.');
+                ->with('error', 'Only draft, sent, overdue, or paid invoices can be edited.');
         }
 
         $invoice->load(['rooms' => fn ($q) => $q->orderBy('sort_order'), 'rooms.items' => fn ($q) => $q->orderBy('sort_order'), 'paymentTerm']);
+        $sale->loadMissing(['opportunity.parentCustomer']);
         $paymentTerms = PaymentTerm::where('is_active', true)->orderBy('name')->get();
 
-        return view('pages.invoices.edit', compact('sale', 'invoice', 'paymentTerms'));
+        $parentCustomer = $sale->opportunity?->parentCustomer;
+        $defaultBillTo = [
+            'name'    => $invoice->bill_to_name    ?? ($parentCustomer ? ($parentCustomer->company_name ?: $parentCustomer->name) : $sale->customer_name),
+            'address' => $invoice->bill_to_address ?? '',
+            'email'   => $invoice->bill_to_email   ?? $parentCustomer?->email ?? '',
+        ];
+
+        return view('pages.invoices.edit', compact('sale', 'invoice', 'paymentTerms', 'defaultBillTo'));
     }
 
     public function update(Request $request, Sale $sale, Invoice $invoice)
     {
-        if (! in_array($invoice->status, ['draft', 'sent', 'overdue'])) {
-            return back()->with('error', 'Only draft, sent, or overdue invoices can be edited.');
+        if (! in_array($invoice->status, ['draft', 'sent', 'overdue', 'paid'])) {
+            return back()->with('error', 'Only draft, sent, overdue, or paid invoices can be edited.');
         }
 
         $request->validate([
             'invoice_number'     => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('invoices', 'invoice_number')->ignore($invoice->id)],
-            'status'             => ['required', 'in:draft,sent,overdue'],
+            'status'             => ['required', 'in:draft,sent,overdue,paid'],
             'payment_term_id'    => ['nullable', 'exists:payment_terms,id'],
             'due_date'           => ['nullable', 'date'],
             'customer_po_number' => ['nullable', 'string', 'max:100'],

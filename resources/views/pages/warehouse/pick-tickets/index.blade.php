@@ -127,7 +127,8 @@
                                     @include('pages.warehouse.pick-tickets._status-badge', ['status' => $pt->status])
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                    {{ $pt->delivery_date ? $pt->delivery_date->format('M j, Y') : '—' }}
+                                    @php $installDate = $pt->delivery_date ?? $pt->workOrder?->scheduled_date; @endphp
+                                    {{ $installDate ? $installDate->format('M j, Y') : '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                     {{ $pt->created_at->format('M j, Y') }}
