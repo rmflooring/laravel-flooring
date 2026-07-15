@@ -746,13 +746,13 @@ class QboSyncService
     public function pushInvoice(Invoice $invoice, array $itemIds): array
     {
         try {
-            $invoice->load(['rooms.items', 'sale.opportunity.jobSiteCustomer.parent', 'sale.opportunity.parentCustomer']);
+            $invoice->load(['rooms.items', 'sale.opportunity.jobSiteCustomer.parent', 'sale.opportunity.parentCustomer', 'sale.customer']);
 
             $sale        = $invoice->sale;
             $opportunity = $sale?->opportunity;
             $jobSite     = $opportunity?->jobSiteCustomer;
             $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
-            $billTo      = $jobSite ?? $parent;
+            $billTo      = $jobSite ?? $parent ?? $sale?->customer;
 
             if (! $billTo) {
                 return ['success' => false, 'message' => 'Invoice has no customer linked.', 'qbo_id' => null];
