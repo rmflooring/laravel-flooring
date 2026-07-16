@@ -52,9 +52,11 @@ document.addEventListener("click", function (e) {
 document.addEventListener("DOMContentLoaded", () => {
   // Kick calculations for existing rows on Edit page:
   // estimate.js updates totals when inputs fire, but edit loads with values already set.
+  // Skip .js-total-input (the visible line total) — dispatching input on it triggers the
+  // reverse calc which back-calculates sell price at 2dp and overwrites the stored 4dp value.
   setTimeout(() => {
     document.querySelectorAll(".room-card input[type='number']").forEach((el) => {
-      // Trigger the same listeners estimate.js uses for recalculation
+      if (el.classList.contains('js-total-input')) return;
       el.dispatchEvent(new Event("input", { bubbles: true }));
     });
   }, 0);
