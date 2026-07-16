@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Http\Controllers\MicrosoftCalendarConnectController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -17,8 +18,11 @@ Schedule::command('nas:check-health')
     ->withoutOverlapping();
 
 // SMS day-before reminders — runs daily at the configured time (default 4pm)
+// Guarded: routes/console.php loads at framework boot, before RefreshDatabase
+// migrates the PHPUnit testing DB — querying app_settings before it exists
+// would break every feature test's bootstrap.
 Schedule::command('sms:send-reminders')
-    ->dailyAt(\App\Models\Setting::get('sms_reminder_time', '16:00'))
+    ->dailyAt(Schema::hasTable('app_settings') ? \App\Models\Setting::get('sms_reminder_time', '16:00') : '16:00')
     ->timezone('America/Vancouver')
     ->name('sms-send-reminders')
     ->withoutOverlapping();
