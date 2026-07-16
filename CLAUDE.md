@@ -130,3 +130,4 @@ Defined via Spatie `laravel-permission`. Key permissions include: `create estima
 | Migrations | `database/migrations/` |
 | Project context | `project_context.md` (business rules & workflow) |
 | Profits page context | `Context/context_profits_page.md` |
+| AI Agent System context | `Context/context_agent_system.md` (build/handoff), `fm-agent-context.md` (original spec) |
