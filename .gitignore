@@ -75,3 +75,6 @@ project_context.md
 *context*.md.php
 *_context.md
 *_notes.md
+
+# Exception: tracked spec doc for the Floor Manager AI Agent System build
+!fm-agent-context.md
