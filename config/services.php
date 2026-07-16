@@ -55,4 +55,8 @@ return [
         'cache_bust_key'  => env('SHOP_CACHE_BUST_KEY', ''),
     ],
 
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+    ],
+
 ];

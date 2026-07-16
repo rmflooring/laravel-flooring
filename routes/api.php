@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Controllers\Api\AgentInboundEmailController;
 use App\Http\Controllers\Api\IncomingLeadController;
 use App\Http\Controllers\Api\ShopApiController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('leads/incoming', [IncomingLeadController::class, 'receive'])
     ->middleware('api.key');
+
+Route::post('agent/inbound-email', [AgentInboundEmailController::class, 'receive'])
+    ->middleware('api.key:AGENT_INBOUND_API_KEY');
 
 Route::prefix('shop')->group(function () {
     Route::middleware('throttle:60,1')->group(function () {

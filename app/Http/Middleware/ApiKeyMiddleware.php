@@ -8,9 +8,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ApiKeyMiddleware
 {
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $envKey = 'LEAD_API_KEY'): Response
     {
-        $expected = env('LEAD_API_KEY');
+        $expected = env($envKey);
 
         if (! $expected) {
             return response()->json(['error' => 'API key not configured.'], 500);
