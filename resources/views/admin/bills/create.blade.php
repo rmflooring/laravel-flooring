@@ -507,17 +507,27 @@
             ];
         }
     } elseif ($workOrder) {
-        foreach ($workOrder->items as $i => $item) {
-            $initialRows[] = [
-                'key'                    => $i,
-                'purchase_order_item_id' => null,
-                'work_order_item_id'     => $item->id,
-                'item_name'              => $item->item_name,
-                'quantity'               => (float) $item->quantity,
-                'unit'                   => $item->unit ?? '',
-                'unit_cost'              => (float) $item->cost_price,
-                'line_total'             => (float) $item->cost_total,
-            ];
+        // Merge items with the same name + unit cost (e.g. same labour type across multiple rooms)
+        $mergedRows = [];
+        foreach ($workOrder->items as $item) {
+            $mergeKey = $item->item_name . '|||' . (float) $item->cost_price . '|||' . ($item->unit ?? '');
+            if (isset($mergedRows[$mergeKey])) {
+                $mergedRows[$mergeKey]['quantity']   += (float) $item->quantity;
+                $mergedRows[$mergeKey]['line_total'] += (float) $item->cost_total;
+            } else {
+                $mergedRows[$mergeKey] = [
+                    'purchase_order_item_id' => null,
+                    'work_order_item_id'     => $item->id,
+                    'item_name'              => $item->item_name,
+                    'quantity'               => (float) $item->quantity,
+                    'unit'                   => $item->unit ?? '',
+                    'unit_cost'              => (float) $item->cost_price,
+                    'line_total'             => (float) $item->cost_total,
+                ];
+            }
+        }
+        foreach (array_values($mergedRows) as $i => $row) {
+            $initialRows[] = array_merge(['key' => $i], $row);
         }
     }
 
