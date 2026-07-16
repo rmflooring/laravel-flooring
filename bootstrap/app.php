@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,6 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // rmserver2 reverse-proxies devfm.rmflooring.ca and terminates SSL there;
+        // trust its forwarded headers so Laravel generates https:// URLs and secure cookies
+        $middleware->trustProxies(at: ['192.168.1.150'], headers: Request::HEADER_X_FORWARDED_FOR |
+            Request::HEADER_X_FORWARDED_HOST |
+            Request::HEADER_X_FORWARDED_PORT |
+            Request::HEADER_X_FORWARDED_PROTO);
+
         // Restore Laravel <11 behaviour: convert empty strings to null and trim input
         $middleware->convertEmptyStringsToNull();
         $middleware->trimStrings(except: [

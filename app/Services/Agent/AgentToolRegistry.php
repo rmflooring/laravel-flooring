@@ -3,11 +3,11 @@
 namespace App\Services\Agent;
 
 /**
- * JSON tool-schema definitions handed to the Claude Messages API. Module 1
- * wires up attach_images plus the two meta-tools every task needs to be able
- * to terminate sanely (request_clarification, no_actionable_intent) — the
- * rest of the v1 tool library (find_opportunity, create_opportunity, etc.)
- * lands in later modules.
+ * JSON tool-schema definitions handed to the Claude Messages API. Modules 1-3 wire up
+ * attach_images, attach_document, find_opportunity, update_opportunity, plus the two
+ * meta-tools every task needs to be able to terminate sanely (request_clarification,
+ * no_actionable_intent) — the rest of the v1 tool library (create_opportunity,
+ * log_communication, check_status, undo_last_action) lands in later modules.
  */
 class AgentToolRegistry
 {
@@ -71,6 +71,58 @@ class AgentToolRegistry
                         ],
                     ],
                     'required' => ['opportunity_id', 'attachment_index', 'document_type'],
+                ],
+            ],
+            [
+                'name' => 'find_opportunity',
+                'description' => 'Search for the opportunity an email relates to, using whatever identifying details are '
+                    . 'mentioned — client name, job site address, and/or insurance claim number. Call this whenever no '
+                    . 'opportunity is already resolved for this task and the email appears to reference an existing job. '
+                    . 'Returns scored candidates; if a single unambiguous high-confidence match is found it is '
+                    . 'automatically resolved for the task. If the result is ambiguous or empty, use request_clarification '
+                    . 'rather than guessing.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'client_name' => [
+                            'type' => 'string',
+                            'description' => 'Name or company name of the customer/client mentioned in the email, if any.',
+                        ],
+                        'address' => [
+                            'type' => 'string',
+                            'description' => 'Job site address mentioned in the email, if any.',
+                        ],
+                        'claim_number' => [
+                            'type' => 'string',
+                            'description' => 'Insurance claim number mentioned in the email, if any.',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'update_opportunity',
+                'description' => 'Update the resolved opportunity. Only two fields are supported in this version: '
+                    . 'whether it requires an RFM (site measure) visit, and assigning a project manager by name. Any '
+                    . 'other requested change (status, job number, sales person, customer details, etc.) is out of '
+                    . 'scope — use request_clarification or no_actionable_intent instead of attempting it.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'opportunity_id' => [
+                            'type' => 'integer',
+                            'description' => 'The opportunity ID already resolved for this task. Must match exactly.',
+                        ],
+                        'requires_rfm' => [
+                            'type' => 'boolean',
+                            'description' => 'Whether this opportunity requires an RFM (site measure) visit.',
+                        ],
+                        'project_manager_name' => [
+                            'type' => 'string',
+                            'description' => 'Name of the project manager to assign, exactly as it should match an '
+                                . 'existing project manager record for this opportunity\'s customer.',
+                        ],
+                    ],
+                    'required' => ['opportunity_id'],
                 ],
             ],
             [

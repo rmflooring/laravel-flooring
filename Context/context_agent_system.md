@@ -1,5 +1,5 @@
 # Floor Manager AI Agent System — Build Context
-Updated: 2026-07-16
+Updated: 2026-07-16 (Module 3)
 
 ---
 
@@ -17,7 +17,7 @@ Full original spec (requirements, design principles, full v1 tool library, secur
 |---|---|---|
 | Module 1 — email intake + `attach_images` | Done | 2026-07-10 |
 | Module 2 — `attach_document` | Done | 2026-07-13 |
-| Module 3 — `find_opportunity` / `update_opportunity` | Not started | — |
+| Module 3 — `find_opportunity` / `update_opportunity` | Done | 2026-07-16 |
 | Module 4 — `create_opportunity` | Not started | — |
 | Module 5 — `log_communication` / `check_status` | Not started | — |
 | Chat UI, admin settings UI, task dashboard UI | Not started | — |
@@ -44,16 +44,35 @@ Migrations: `database/migrations/2026_07_10_00000{1..5}_create_agent_*_table.php
 |---|---|---|
 | `attach_images` | `app/Services/Agent/AttachImagesService.php` | Attaches email image attachments to the resolved opportunity's photo gallery. `category` (before/after/moisture/damage/completion/other) is a PHP allowlist (`AttachImagesService::CATEGORIES`), stored in `OpportunityDocument.label_text` — **no new DB column**. `OpportunityDocument.category = 'media'`. |
 | `attach_document` | `app/Services/Agent/AttachDocumentService.php` | Attaches a single email document (PDF/Word/scanned image) to the opportunity. `document_type` (scope_of_work/contract/insurance_certificate/permit/inspection_report/other) is a PHP allowlist (`AttachDocumentService::DOCUMENT_TYPES`), also stored in `label_text`. `OpportunityDocument.category = 'document'`. |
+| `find_opportunity` | `app/Services/Agent/FindOpportunityService.php` | Fuzzy-matches `client_name`/`address`/`claim_number` (whichever are given) against opportunities via their `jobSiteCustomer`/`parentCustomer`. Not terminal — Claude keeps reasoning afterward. See scoring details below. |
+| `update_opportunity` | `app/Services/Agent/UpdateOpportunityService.php` | Writes only `requires_rfm` (boolean) and/or `project_manager_id` (resolved from a freetext name — never accepted as a raw ID). See scope decision below. |
 | `request_clarification` | inline in `ProcessAgentTask::dispatchTool()` | Writes a question to `agent_messages`, sets `status = pending_clarification`. |
 | `no_actionable_intent` | inline in `ProcessAgentTask::dispatchTool()` | Sets `status = ignored` (spam/newsletter/unrelated forward). |
 
 Both attach tools share validation/decoding logic via `app/Services/Agent/Concerns/ValidatesAgentAttachments.php` (extracted in Module 2): `assertOpportunityMatches()`, `decodeAttachmentBytes()`, `storageFolderFor()`. Both reuse the existing document-storage stack unchanged — `App\Models\OpportunityDocument`, `App\Services\DocumentStorageService::disk()`, `Opportunity::storageFolderName()` — same conventions as the manual mobile photo/document upload flows. 20MB size limit on both.
 
-**Not yet built:** `find_opportunity` (fuzzy name/address/claim# matching + confidence scoring), `create_opportunity`, `update_opportunity`, `log_communication`, `check_status`, `undo_last_action`.
+`update_opportunity` also uses `ValidatesAgentAttachments::assertOpportunityMatches()` — the same "Claude cannot pick its own opportunity_id" invariant applies here too.
 
-### Deliberate scope decision: opportunity resolution
+**Not yet built:** `create_opportunity`, `log_communication`, `check_status`, `undo_last_action`.
 
-Full fuzzy `find_opportunity` has **not** been built. Instead, `ProcessAgentTask::resolveOpportunity()` does a minimal deterministic regex match: scans the email subject+body for a job-number pattern (`\b\d{2}-\d{4}\b`, e.g. `26-0001`) and matches it exactly against `Opportunity.job_no`. Anything that doesn't resolve to exactly one match stays unresolved (`opportunity_id = null`), and both attach tools **reject** any Claude-proposed `opportunity_id` that doesn't equal the one already resolved this way — Claude cannot pick its own opportunity. This keeps Module 1/2 low-risk; full fuzzy matching with confidence scoring is deferred to its own future module per the spec's rollout order.
+### Module 3 notes: `find_opportunity` scoring
+
+No fuzzy-matching library existed in this codebase (checked — only plain SQL `LIKE` searches elsewhere) or was added; `find_opportunity` scores with PHP's built-in `similar_text()`. Per candidate: exact case-insensitive `claim_number` match = 1.0 (weight 0.5), best `similar_text()` % across job-site/parent customer `name`/`company_name` (weight 0.3), `similar_text()` % on `address`+`city` (weight 0.2) — weights renormalize to whichever criteria were actually supplied. Candidates below 0.35 are dropped; top 5 kept. Auto-resolves `$task->opportunity_id` only when the top score is ≥ 0.85 **and** either the sole candidate or leads the runner-up by ≥ 0.2 — otherwise Claude must fall back to `request_clarification` (per spec: "zero or multiple ambiguous matches → triggers request_clarification"). Every search + its candidate scores is logged to `agent_messages` regardless of outcome, for audit.
+
+The pre-Module-3 stand-in in `ProcessAgentTask::resolveOpportunity()` (deterministic `\b\d{2}-\d{4}\b` job-number regex, run before Claude sees the email) is **kept**, not replaced — it's a cheap fast path for the common case where the job number is right there in the email; `find_opportunity` covers everything else.
+
+### Module 3 notes: `update_opportunity` scope decision
+
+Deliberately narrow for v1 (confirmed with the business owner) — only `requires_rfm` and `project_manager_id`. Explicitly **excluded**, and why:
+- `status` — a gated lifecycle transition with its own business rules (`OpportunityController::update` blocks setting `Lost` while active, non-cancelled sales exist). Too risky for email-triggered automation in v1; stays human-only.
+- `job_no` — the job identifier itself; changing it via automation is rare and risky, and it's exactly what the pre-Module-3 regex fast path keys off of.
+- `status_reason` — the controller force-nulls this unless `status` is already `Lost`/`Closed`, which this tool can't set — so it'd rarely apply and isn't worth the complexity yet.
+- `sales_person_1`/`sales_person_2` — despite being documented elsewhere as "Employee ID", `OpportunityController::update` validates them as plain strings with **no** `exists:employees,id` check — they're not real FKs today. Not safe to populate from agent-inferred text without adding validation the manual form itself doesn't have.
+- `parent_customer_id`/`job_site_customer_id` — structural customer linkage, human-only.
+
+`project_manager_id` resolution requires an **exact** (case-insensitive) name match — no fuzzy guessing for an FK write — scoped to `ProjectManager::where('customer_id', ...)` against the opportunity's `parent_customer_id` first, falling back to `job_site_customer_id` (mirrors `OpportunityController::projectManagersForCustomer()`'s scoping). Zero or multiple matches → validation error, which becomes the `request_clarification` prompt rather than a silent guess.
+
+**Incidental fix**: `agent_tasks.task_type` was declared on the table since Module 1 but never actually set anywhere in the code (true for Modules 1–2 too, not just this one). Now set in `ProcessAgentTask::handle()` from whichever tool concluded the task (`attach_images`, `attach_document`, `update_opportunity`, `no_actionable_intent`, or `other` for `request_clarification`/text-only/iteration-exhausted outcomes) — makes the column actually usable by the future task-dashboard UI.
 
 ---
 
@@ -68,10 +87,11 @@ Postfix pipe script (parses email)
       - reads attachments into base64, creates AgentTask (status=queued)
       - dispatches ProcessAgentTask (queued job)
   → ProcessAgentTask::handle()
-      - resolveOpportunity() — exact job_no match (see above)
+      - resolveOpportunity() — exact job_no regex fast path (see Module 3 notes)
       - loop (max 5 iterations): ClaudeAgentService::sendWithTools() → dispatchTool()
         on each tool_use block, log to agent_messages, execute the matching service
-      - sets AgentTask.status + extracted_intent from the terminal tool result
+        (find_opportunity is non-terminal — may set opportunity_id and loop continues)
+      - sets AgentTask.status + extracted_intent + task_type from the terminal tool result
       - notifyRequester() — auto-reply via GraphMailService::send(), + BCC if
         AgentNotificationSetting::bccEnabledFor($task_type), logs to agent_notifications
 ```
@@ -99,7 +119,7 @@ Both added to `.env.example`. **Not yet set up:** the actual Postfix pipe script
 
 **Caveat:** `php artisan test` does not currently complete a full fresh migration (blocks on a pre-existing, unrelated MySQL-only `SHOW INDEX` migration + ~13 other unverified raw-SQL migrations — see `feedback_broken_test_bootstrap` in session memory for full detail; fixing this was explicitly deferred as out of scope for the agent-system work). Two other pre-existing bootstrap bugs (`app_settings` boot-order crash, `labour_items` migration ordering) **were** fixed along the way and are safe/committed.
 
-Until the sqlite portability issue is resolved, verify new agent-system work against the **real dev DB** (`.env`: `DB_CONNECTION=mysql`, `DB_DATABASE=laravel_local`) via `php artisan tinker` — create test rows, `Http::fake()` the Claude/Graph calls, call `ProcessAgentTask::handle()` directly, assert DB/storage state, clean up. This is how both modules were actually verified.
+Until the sqlite portability issue is resolved, verify new agent-system work against the **real dev DB** (`.env`: `DB_CONNECTION=mysql`, `DB_DATABASE=fm_laravel_dev`) via `php artisan tinker` — create test rows, `Http::fake()` the Claude/Graph calls, call `ProcessAgentTask::handle()` directly, assert DB/storage state, clean up. This is how both modules were actually verified.
 
 ---
 
@@ -115,6 +135,6 @@ Until the sqlite portability issue is resolved, verify new agent-system work aga
 | Orchestration job | `app/Jobs/ProcessAgentTask.php` |
 | Claude API wrapper | `app/Services/Agent/ClaudeAgentService.php` |
 | Tool schemas | `app/Services/Agent/AgentToolRegistry.php` |
-| Tool services | `app/Services/Agent/Attach{Images,Document}Service.php` |
+| Tool services | `app/Services/Agent/{Attach{Images,Document},Find,Update}OpportunityService.php` |
 | Shared attachment validation | `app/Services/Agent/Concerns/ValidatesAgentAttachments.php` |
 | Tests | `tests/Feature/AgentInboundEmailTest.php` |
