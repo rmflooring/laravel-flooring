@@ -201,11 +201,11 @@ class InvoiceService
         $activeInvoices = $sale->invoices->whereNotIn('status', ['voided']);
 
         $invoicedTotal = round($activeInvoices->sum('grand_total'), 2);
-        $lockedTotal   = (float) $sale->locked_grand_total;
-        $revisedTotal  = (float) $sale->revised_contract_total;
-        $saleTotal     = $lockedTotal > 0 ? $lockedTotal : ($revisedTotal > 0 ? $revisedTotal : (float) $sale->grand_total);
+        $currentTotal  = (float) $sale->grand_total;
 
-        $isFullyInvoiced = $saleTotal > 0 && $invoicedTotal >= $saleTotal;
+        // Fully invoiced means the invoice covers the current sale items — not the locked amount.
+        // A separate locked-shortfall alert handles cases where the approved amount was higher.
+        $isFullyInvoiced = $currentTotal > 0 && $invoicedTotal >= $currentTotal;
 
         $sale->update([
             'invoiced_total'    => $invoicedTotal,

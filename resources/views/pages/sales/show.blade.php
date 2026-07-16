@@ -127,6 +127,11 @@
                 $revisedContractDisplay = $revisedContract != 0.0
                     ? $revisedContract
                     : ($lockedGrand != 0.0 ? $lockedGrand : $grandTotal);
+
+                // Positive when items were reduced after the sale was approved/locked
+                $lockedShortfall = ($lockedGrand > 0 && $lockedGrand > $grandTotal)
+                    ? round($lockedGrand - $grandTotal, 2)
+                    : 0.0;
             @endphp
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -170,6 +175,24 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Locked shortfall warning --}}
+            @if($lockedShortfall > 0)
+            <div class="rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                </svg>
+                <div>
+                    <p class="font-semibold text-amber-800">Approved amount exceeds current sale total</p>
+                    <p class="mt-1 text-sm text-amber-700">
+                        This sale was approved/locked at <strong>${{ number_format($lockedGrand, 2) }}</strong>
+                        but the current sale total is <strong>${{ number_format($grandTotal, 2) }}</strong>.
+                        The <strong>${{ number_format($lockedShortfall, 2) }}</strong> difference may require
+                        a credit note or written explanation.
+                    </p>
+                </div>
+            </div>
+            @endif
 
             {{-- Details --}}
             <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-4">

@@ -195,7 +195,10 @@
 			$revised = $revisedContract != 0.0
 				? $revisedContract
 				: ($lockedGrand != 0.0 ? $lockedGrand : $grandTotal);
-						$invoiced = (float) ($sale->invoiced_total ?? 0);
+			$invoiced        = (float) ($sale->invoiced_total ?? 0);
+			$lockedShortfall = ($lockedGrand > 0 && $lockedGrand > $grandTotal)
+				? round($lockedGrand - $grandTotal, 2)
+				: 0.0;
         @endphp
 
         <tr class="{{ $sale->trashed() ? 'bg-red-50 border-b opacity-75' : 'bg-white border-b hover:bg-gray-50' }}">
@@ -287,6 +290,9 @@
                     <div class="text-xs text-green-700 font-medium">Fully invoiced</div>
                 @elseif ($invoiced > 0)
                     <div class="text-xs text-blue-700 font-medium">Partially invoiced</div>
+                @endif
+                @if ($lockedShortfall > 0)
+                    <div class="text-xs text-amber-600 font-medium">⚠ Approved ${{ number_format($lockedGrand, 2) }}</div>
                 @endif
             </td>
 
