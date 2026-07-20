@@ -277,7 +277,7 @@
                                                                 <svg class="h-3 w-3 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                                                                 <span>{{ $matName }}</span>
                                                                 @if($si)
-                                                                    <span class="text-gray-400">— {{ number_format((float)$si->quantity, 2) }} {{ $si->unit }}</span>
+                                                                    <span class="text-gray-400">— {{ number_format($si->order_qty !== null ? (float) $si->order_qty : (float) $si->quantity, 2) }} {{ $si->unit }}</span>
                                                                 @endif
                                                             </div>
                                                         @endforeach

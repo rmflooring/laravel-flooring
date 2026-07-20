@@ -187,7 +187,7 @@
                                     $matName = $si ? implode(' — ', array_filter([$si->product_type, $si->manufacturer, $si->style, $si->color_item_number])) : 'Material';
                                 @endphp
                                 <div style="font-size:9px; color:#555; margin-bottom:2px;">
-                                    &#x25B8; {{ $matName }}@if($si) — {{ number_format((float)$si->quantity, 2) }} {{ $si->unit }}@endif
+                                    &#x25B8; {{ $matName }}@if($si) — {{ number_format($si->order_qty !== null ? (float) $si->order_qty : (float) $si->quantity, 2) }} {{ $si->unit }}@endif
                                 </div>
                             @endforeach
                         @endif

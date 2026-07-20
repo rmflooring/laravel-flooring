@@ -141,7 +141,7 @@
                                                                            class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                                     <span class="text-xs text-gray-700 dark:text-gray-300">
                                                                         {{ $matName }}
-                                                                        <span class="text-gray-400 ml-1">{{ number_format((float)$mat->quantity, 2) }} {{ $mat->unit }}</span>
+                                                                        <span class="text-gray-400 ml-1">{{ number_format($mat->order_qty !== null ? (float) $mat->order_qty : (float) $mat->quantity, 2) }} {{ $mat->unit }}</span>
                                                                     </span>
                                                                 </label>
                                                             @endforeach
@@ -314,7 +314,7 @@
                                                                                class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                                                         <span class="text-xs text-gray-700 dark:text-gray-300">
                                                                             {{ $matName }}
-                                                                            <span class="ml-1 text-gray-400">{{ number_format((float)$mat->quantity, 2) }} {{ $mat->unit }}</span>
+                                                                            <span class="ml-1 text-gray-400">{{ number_format($mat->order_qty !== null ? (float) $mat->order_qty : (float) $mat->quantity, 2) }} {{ $mat->unit }}</span>
                                                                         </span>
                                                                     </label>
                                                                 @endforeach

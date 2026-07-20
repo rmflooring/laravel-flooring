@@ -170,7 +170,7 @@
                                         <svg class="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
                                         </svg>
-                                        <span>{{ $matName }}@if($si) &nbsp;&middot;&nbsp; {{ number_format((float)$si->quantity, 2) }} {{ $si->unit }}@endif</span>
+                                        <span>{{ $matName }}@if($si) &nbsp;&middot;&nbsp; {{ number_format($si->order_qty !== null ? (float) $si->order_qty : (float) $si->quantity, 2) }} {{ $si->unit }}@endif</span>
                                     </div>
                                 @endforeach
                             </div>
