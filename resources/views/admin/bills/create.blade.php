@@ -492,18 +492,28 @@
     </div>
 
 @php
+    // Note: pre-fill only offers each item's REMAINING unbilled quantity (skipping
+    // items already fully covered by a prior bill), not the full ordered quantity —
+    // a PO/WO can be invoiced in more than one batch, so re-offering the full amount
+    // every time a second/third bill is recorded would double-count what's already
+    // been billed. See BillableQuantityService.
     $initialRows = [];
     if ($purchaseOrder) {
         foreach ($purchaseOrder->items as $i => $item) {
+            $remaining = $remainingByPoItem[$item->id]['remaining'] ?? (float) $item->quantity;
+            if ($remaining <= 0) {
+                continue;
+            }
+
             $initialRows[] = [
                 'key'                    => $i,
                 'purchase_order_item_id' => $item->id,
                 'work_order_item_id'     => null,
                 'item_name'              => $item->item_name,
-                'quantity'               => (float) $item->quantity,
+                'quantity'               => $remaining,
                 'unit'                   => $item->unit ?? '',
                 'unit_cost'              => (float) $item->cost_price,
-                'line_total'             => (float) $item->cost_total,
+                'line_total'             => round($remaining * (float) $item->cost_price, 2),
             ];
         }
     } elseif ($workOrder) {
@@ -526,8 +536,15 @@
                 ];
             }
         }
-        foreach (array_values($mergedRows) as $i => $row) {
-            $initialRows[] = array_merge(['key' => $i], $row);
+        foreach ($mergedRows as $mergeKey => $row) {
+            $remaining = $remainingByWoKey[$mergeKey]['remaining'] ?? $row['quantity'];
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            $row['quantity']   = $remaining;
+            $row['line_total'] = round($remaining * $row['unit_cost'], 2);
+            $initialRows[]     = array_merge(['key' => count($initialRows)], $row);
         }
     }
 

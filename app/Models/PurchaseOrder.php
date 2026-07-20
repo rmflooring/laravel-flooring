@@ -91,6 +91,11 @@ class PurchaseOrder extends Model
         return $this->hasMany(PurchaseOrderItem::class)->orderBy('sort_order');
     }
 
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class)->whereNotIn('status', ['voided'])->latest();
+    }
+
     public function calendarEvent(): BelongsTo
     {
         return $this->belongsTo(\App\Models\CalendarEvent::class, 'calendar_event_id');

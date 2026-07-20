@@ -16,6 +16,7 @@ use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
 use App\Models\WorkOrderItemMaterial;
 use App\Models\Setting;
+use App\Services\BillableQuantityService;
 use App\Services\CalendarTemplateService;
 use App\Services\EmailTemplateService;
 use App\Services\GraphCalendarService;
@@ -202,7 +203,7 @@ class WorkOrderController extends Controller
             ->with('success', 'Work order ' . $workOrder->wo_number . ' created.');
     }
 
-    public function show(Sale $sale, WorkOrder $workOrder)
+    public function show(Sale $sale, WorkOrder $workOrder, BillableQuantityService $billableQuantityService)
     {
         abort_if($workOrder->sale_id !== $sale->id, 404);
         $sale->loadMissing(['sourceEstimate', 'opportunity.parentCustomer.contacts']);
@@ -251,11 +252,11 @@ class WorkOrderController extends Controller
 
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($workOrder, $sale);
         $customerContacts = $sale->opportunity?->parentCustomer?->contacts ?? collect();
-        $linkedBill = \App\Models\Bill::where('work_order_id', $workOrder->id)
-            ->whereNull('deleted_at')
-            ->first();
+        $bills = $workOrder->bills()->with('installer')->get();
+        $billableQty = $billableQuantityService->forWorkOrder($workOrder);
+        $hasRemainingToBill = $billableQuantityService->hasRemainingBillableQty($workOrder);
 
-        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody', 'customerContacts', 'linkedBill'));
+        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody', 'customerContacts', 'bills', 'billableQty', 'hasRemainingToBill'));
     }
 
     private function resolveEmailTemplate(WorkOrder $workOrder, Sale $sale): array

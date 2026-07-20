@@ -120,6 +120,11 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderItem::class)->orderBy('sort_order');
     }
 
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class)->whereNotIn('status', ['voided'])->latest();
+    }
+
     public function calendarEvent(): BelongsTo
     {
         return $this->belongsTo(CalendarEvent::class, 'calendar_event_id');

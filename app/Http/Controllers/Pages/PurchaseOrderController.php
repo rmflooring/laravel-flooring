@@ -11,6 +11,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Sale;
 use App\Models\Setting;
 use App\Models\Vendor;
+use App\Services\BillableQuantityService;
 use App\Services\CalendarTemplateService;
 use App\Services\GraphCalendarService;
 use App\Services\GraphMailService;
@@ -438,7 +439,7 @@ class PurchaseOrderController extends Controller
     // Show — read-only
     // -------------------------------------------------------------------------
 
-    public function show(PurchaseOrder $purchaseOrder)
+    public function show(PurchaseOrder $purchaseOrder, BillableQuantityService $billableQuantityService)
     {
         $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy', 'documents.uploader']);
 
@@ -487,12 +488,12 @@ class PurchaseOrderController extends Controller
 
         $total = (clone $base)->count();
 
-        $linkedBill = \App\Models\Bill::where('purchase_order_id', $purchaseOrder->id)
-            ->whereNull('deleted_at')
-            ->first();
+        $bills = $purchaseOrder->bills()->with('vendor')->get();
+        $billableQty = $billableQuantityService->forPurchaseOrder($purchaseOrder);
+        $hasRemainingToBill = $billableQuantityService->hasRemainingBillableQty($purchaseOrder);
 
         return view('pages.purchase-orders.show', compact(
-            'purchaseOrder', 'prev', 'next', 'position', 'total', 'linkedBill'
+            'purchaseOrder', 'prev', 'next', 'position', 'total', 'bills', 'billableQty', 'hasRemainingToBill'
         ));
     }
 

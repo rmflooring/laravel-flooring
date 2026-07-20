@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Models\Vendor;
 use App\Models\VendorCreditMemo;
 use App\Models\WorkOrder;
+use App\Services\BillableQuantityService;
 use App\Services\QboSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,18 +103,22 @@ class BillController extends Controller
     // CREATE
     // -----------------------------------------------------------------------
 
-    public function create(Request $request)
+    public function create(Request $request, BillableQuantityService $billableQuantityService)
     {
         $purchaseOrder = null;
         $workOrder     = null;
         $billType      = 'vendor';
+        $remainingByPoItem = [];
+        $remainingByWoKey  = [];
 
         if ($request->filled('purchase_order')) {
             $purchaseOrder = PurchaseOrder::with(['vendor', 'items', 'sale'])->findOrFail($request->purchase_order);
             $billType = 'vendor';
+            $remainingByPoItem = $billableQuantityService->forPurchaseOrder($purchaseOrder);
         } elseif ($request->filled('work_order')) {
             $workOrder = WorkOrder::with(['installer', 'items', 'sale'])->findOrFail($request->work_order);
             $billType = 'installer';
+            $remainingByWoKey = $billableQuantityService->forWorkOrder($workOrder);
         }
 
         $paymentTerms = PaymentTerm::where('is_active', true)->orderBy('name')->get();
@@ -128,6 +133,8 @@ class BillController extends Controller
             'vendors'       => $vendors,
             'installers'    => $installers,
             'taxGroups'     => $this->taxGroups(),
+            'remainingByPoItem' => $remainingByPoItem,
+            'remainingByWoKey'  => $remainingByWoKey,
         ]);
     }
 
