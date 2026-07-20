@@ -115,7 +115,13 @@
 
                 @if ($receipts->isEmpty())
                     <div class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-                        @if ($recordId || $productStyleId || $q || $dateFrom || $dateTo)
+                        @if ($depletedMatchCount > 0)
+                            No in-stock records match — but
+                            <strong class="text-gray-600 dark:text-gray-300">{{ $depletedMatchCount }} depleted {{ Str::plural('record', $depletedMatchCount) }}</strong>
+                            {{ $depletedMatchCount === 1 ? 'matches' : 'match' }} your search.
+                            <a href="{{ route('pages.inventory.index', array_merge(request()->query(), ['show_depleted' => 1])) }}"
+                               class="text-teal-600 hover:underline dark:text-teal-400">Show depleted records</a>.
+                        @elseif ($recordId || $productStyleId || $q || $dateFrom || $dateTo)
                             No records match your filters.
                         @elseif (! $showDepleted)
                             No stock available. <a href="{{ route('pages.inventory.index', ['show_depleted' => 1]) }}" class="text-teal-600 hover:underline">Show depleted records</a>.

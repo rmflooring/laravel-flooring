@@ -73,10 +73,32 @@ class InventoryController extends Controller
         )->count();
         $totalDepleted   = $totalReceipts - $totalInStock;
 
+        // When search returns nothing, check if depleted records would match — so we can prompt the user
+        $depletedMatchCount = 0;
+        if ($receipts->isEmpty() && ! $showDepleted && ($q || $recordId || $productStyleId || $dateFrom || $dateTo)) {
+            $depletedMatchCount = InventoryReceipt::query()
+                ->when($recordId, fn ($query) => $query->where('id', (int) $recordId))
+                ->when($productStyleId, fn ($query) => $query->where('product_style_id', (int) $productStyleId))
+                ->when($q, fn ($query) => $query->where(function ($sub) use ($q) {
+                    $sub->where('item_name', 'like', "%{$q}%")
+                        ->orWhereHas('productStyle', function ($ps) use ($q) {
+                            $ps->where('name', 'like', "%{$q}%")
+                                ->orWhereHas('productLine', function ($pl) use ($q) {
+                                    $pl->where('name', 'like', "%{$q}%")
+                                        ->orWhere('manufacturer', 'like', "%{$q}%");
+                                });
+                        });
+                }))
+                ->when($dateFrom, fn ($query) => $query->whereDate('received_date', '>=', $dateFrom))
+                ->when($dateTo,   fn ($query) => $query->whereDate('received_date', '<=', $dateTo))
+                ->whereRaw('quantity_received <= COALESCE((SELECT SUM(quantity) FROM inventory_allocations WHERE inventory_receipt_id = inventory_receipts.id), 0)')
+                ->count();
+        }
+
         return view('pages.inventory.index', compact(
             'receipts',
             'q', 'recordId', 'productStyleId', 'dateFrom', 'dateTo', 'showDepleted',
-            'totalReceipts', 'totalInStock', 'totalDepleted',
+            'totalReceipts', 'totalInStock', 'totalDepleted', 'depletedMatchCount',
         ));
     }
 
