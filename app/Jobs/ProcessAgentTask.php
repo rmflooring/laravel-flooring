@@ -13,6 +13,7 @@ use App\Services\Agent\AgentToolValidationException;
 use App\Services\Agent\AttachDocumentService;
 use App\Services\Agent\AttachImagesService;
 use App\Services\Agent\ClaudeAgentService;
+use App\Services\Agent\CreateOpportunityService;
 use App\Services\Agent\FindOpportunityService;
 use App\Services\Agent\UpdateOpportunityService;
 use App\Services\GraphMailService;
@@ -55,6 +56,12 @@ class ProcessAgentTask implements ShouldQueue
         (status, job number, sales person, customer details, etc.) is out of scope —
         use request_clarification or no_actionable_intent instead.
 
+        Only call create_opportunity if find_opportunity has already been tried and found
+        nothing (or only low-confidence matches), and the email is clearly about a job
+        that does not exist in Floor Manager yet — never call it when an opportunity is
+        already resolved for this task. A duplicate check runs automatically; if it
+        blocks creation, use request_clarification rather than retrying or forcing it.
+
         If you cannot confidently determine what's being asked, or the email doesn't
         relate to the resolved opportunity, call request_clarification with a specific
         question. If the email is not an actionable request at all (spam, newsletter,
@@ -70,6 +77,7 @@ class ProcessAgentTask implements ShouldQueue
         AttachDocumentService $attachDocument,
         FindOpportunityService $findOpportunity,
         UpdateOpportunityService $updateOpportunity,
+        CreateOpportunityService $createOpportunity,
         GraphMailService $mailer,
     ): void {
         $task = AgentTask::find($this->taskId);
@@ -107,6 +115,7 @@ class ProcessAgentTask implements ShouldQueue
                     $attachDocument,
                     $findOpportunity,
                     $updateOpportunity,
+                    $createOpportunity,
                     $toolUse,
                 );
                 $toolResults[] = $toolResult;
@@ -189,6 +198,7 @@ class ProcessAgentTask implements ShouldQueue
         AttachDocumentService $attachDocument,
         FindOpportunityService $findOpportunity,
         UpdateOpportunityService $updateOpportunity,
+        CreateOpportunityService $createOpportunity,
         array $toolUse,
     ): array {
         $name = $toolUse['name'];
@@ -273,6 +283,34 @@ class ProcessAgentTask implements ShouldQueue
 
                     return [
                         ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($updated)],
+                        $terminal,
+                    ];
+
+                case 'create_opportunity':
+                    $created = $createOpportunity->execute(
+                        $task,
+                        (string) ($input['client_name'] ?? ''),
+                        $input['parent_customer_name'] ?? null,
+                        $input['address'] ?? null,
+                        $input['claim_number'] ?? null,
+                        $input['insurance_company'] ?? null,
+                        $input['adjuster'] ?? null,
+                        $input['policy_number'] ?? null,
+                        $input['dol'] ?? null,
+                        array_key_exists('requires_rfm', $input) ? (bool) $input['requires_rfm'] : null,
+                    );
+                    $intakeNote = empty($created['incomplete_intake_fields'])
+                        ? ''
+                        : ' (incomplete intake — missing: ' . implode(', ', $created['incomplete_intake_fields']) . ')';
+                    $terminal = [
+                        'status' => 'completed',
+                        'summary' => "Created opportunity {$created['opportunity_id']} for customer {$created['customer_id']}.{$intakeNote}",
+                        'task_type' => 'create_opportunity',
+                    ];
+                    $this->logMessage($task, 'agent', $terminal['summary']);
+
+                    return [
+                        ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($created)],
                         $terminal,
                     ];
 

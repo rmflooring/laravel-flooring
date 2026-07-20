@@ -3,11 +3,11 @@
 namespace App\Services\Agent;
 
 /**
- * JSON tool-schema definitions handed to the Claude Messages API. Modules 1-3 wire up
- * attach_images, attach_document, find_opportunity, update_opportunity, plus the two
- * meta-tools every task needs to be able to terminate sanely (request_clarification,
- * no_actionable_intent) — the rest of the v1 tool library (create_opportunity,
- * log_communication, check_status, undo_last_action) lands in later modules.
+ * JSON tool-schema definitions handed to the Claude Messages API. Modules 1-4 wire up
+ * attach_images, attach_document, find_opportunity, update_opportunity,
+ * create_opportunity, plus the two meta-tools every task needs to be able to terminate
+ * sanely (request_clarification, no_actionable_intent) — the rest of the v1 tool library
+ * (log_communication, check_status, undo_last_action) lands in later modules.
  */
 class AgentToolRegistry
 {
@@ -123,6 +123,61 @@ class AgentToolRegistry
                         ],
                     ],
                     'required' => ['opportunity_id'],
+                ],
+            ],
+            [
+                'name' => 'create_opportunity',
+                'description' => 'Create a brand new opportunity for a job that does not exist in Floor Manager yet '
+                    . '(e.g. a new insurance referral or a new lead). Only call this after find_opportunity has already '
+                    . 'been tried and found nothing (or only low-confidence matches) — never call it when an '
+                    . 'opportunity is already resolved for this task. A duplicate check runs automatically; if a '
+                    . 'similar recent opportunity is found, this will fail and you should use request_clarification '
+                    . 'instead of retrying.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'client_name' => [
+                            'type' => 'string',
+                            'description' => 'Name of the job-site contact / homeowner / claimant. The only required field.',
+                        ],
+                        'parent_customer_name' => [
+                            'type' => 'string',
+                            'description' => 'Name of an existing parent company (e.g. a property manager) to link this '
+                                . 'job under, exactly as it should match an existing customer record. Omit entirely if '
+                                . 'client_name is the only party involved — a new standalone customer record will be '
+                                . 'created and used as both parent and job site.',
+                        ],
+                        'address' => [
+                            'type' => 'string',
+                            'description' => 'Job site address mentioned in the email, if any.',
+                        ],
+                        'claim_number' => [
+                            'type' => 'string',
+                            'description' => 'Insurance claim number mentioned in the email, if any.',
+                        ],
+                        'insurance_company' => [
+                            'type' => 'string',
+                            'description' => 'Insurance company mentioned in the email, if any.',
+                        ],
+                        'adjuster' => [
+                            'type' => 'string',
+                            'description' => 'Insurance adjuster\'s name mentioned in the email, if any.',
+                        ],
+                        'policy_number' => [
+                            'type' => 'string',
+                            'description' => 'Insurance policy number mentioned in the email, if any.',
+                        ],
+                        'dol' => [
+                            'type' => 'string',
+                            'description' => 'Date of loss mentioned in the email, if any (any recognizable date format).',
+                        ],
+                        'requires_rfm' => [
+                            'type' => 'boolean',
+                            'description' => 'Whether this opportunity requires an RFM (site measure) visit. Defaults to '
+                                . 'true (a new opportunity almost always needs one) if omitted.',
+                        ],
+                    ],
+                    'required' => ['client_name'],
                 ],
             ],
             [

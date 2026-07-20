@@ -36,7 +36,7 @@ class FindOpportunityService
     /**
      * @return array{resolved: bool, opportunity_id: ?int, candidates: array<int, array{
      *     opportunity_id: int, job_no: ?string, customer_name: ?string, address: ?string,
-     *     claim_number: ?string, score: float
+     *     claim_number: ?string, created_at: ?string, score: float
      * }>}
      */
     public function execute(
@@ -45,9 +45,7 @@ class FindOpportunityService
         ?string $address,
         ?string $claimNumber,
     ): array {
-        $clientName = trim((string) $clientName) ?: null;
-        $address = trim((string) $address) ?: null;
-        $claimNumber = trim((string) $claimNumber) ?: null;
+        [$clientName, $address, $claimNumber] = $this->normalizeCriteria($clientName, $address, $claimNumber);
 
         if ($clientName === null && $address === null && $claimNumber === null) {
             throw new AgentToolValidationException(
@@ -55,20 +53,7 @@ class FindOpportunityService
             );
         }
 
-        $candidates = $this->scoreCandidates(
-            $this->gatherCandidates($clientName, $address, $claimNumber),
-            $clientName,
-            $address,
-            $claimNumber,
-        );
-
-        $candidates = array_values(array_filter(
-            $candidates,
-            fn (array $c) => $c['score'] >= self::MIN_CANDIDATE_SCORE,
-        ));
-
-        usort($candidates, fn (array $a, array $b) => $b['score'] <=> $a['score']);
-        $candidates = array_slice($candidates, 0, self::MAX_CANDIDATES);
+        $candidates = $this->searchCandidates($clientName, $address, $claimNumber);
 
         $resolvedId = $this->maybeAutoResolve($candidates);
         if ($resolvedId !== null) {
@@ -83,6 +68,44 @@ class FindOpportunityService
             'opportunity_id' => $resolvedId,
             'candidates' => $candidates,
         ];
+    }
+
+    /** @return array{0: ?string, 1: ?string, 2: ?string} */
+    private function normalizeCriteria(?string $clientName, ?string $address, ?string $claimNumber): array
+    {
+        return [
+            trim((string) $clientName) ?: null,
+            trim((string) $address) ?: null,
+            trim((string) $claimNumber) ?: null,
+        ];
+    }
+
+    /**
+     * Scored, filtered (≥ MIN_CANDIDATE_SCORE), sorted-desc, capped-at-MAX_CANDIDATES
+     * candidate list — shared between find_opportunity's own resolution and
+     * CreateOpportunityService's duplicate check. Callers are expected to have already
+     * trimmed/nulled their inputs (see normalizeCriteria()).
+     *
+     * @return array<int, array{opportunity_id: int, job_no: ?string, customer_name: ?string,
+     *     address: ?string, claim_number: ?string, created_at: ?string, score: float}>
+     */
+    public function searchCandidates(?string $clientName, ?string $address, ?string $claimNumber): array
+    {
+        $candidates = $this->scoreCandidates(
+            $this->gatherCandidates($clientName, $address, $claimNumber),
+            $clientName,
+            $address,
+            $claimNumber,
+        );
+
+        $candidates = array_values(array_filter(
+            $candidates,
+            fn (array $c) => $c['score'] >= self::MIN_CANDIDATE_SCORE,
+        ));
+
+        usort($candidates, fn (array $a, array $b) => $b['score'] <=> $a['score']);
+
+        return array_slice($candidates, 0, self::MAX_CANDIDATES);
     }
 
     /**
@@ -149,7 +172,7 @@ class FindOpportunityService
     /**
      * @param  Collection<int, Opportunity>  $opportunities
      * @return array<int, array{opportunity_id: int, job_no: ?string, customer_name: ?string,
-     *     address: ?string, claim_number: ?string, score: float}>
+     *     address: ?string, claim_number: ?string, created_at: ?string, score: float}>
      */
     private function scoreCandidates(
         Collection $opportunities,
@@ -200,6 +223,7 @@ class FindOpportunityService
                 'customer_name' => $jobSite?->name ?? $parent?->name ?? null,
                 'address' => $jobSite?->address ?? null,
                 'claim_number' => $jobSite?->claim_number ?? null,
+                'created_at' => $opportunity->created_at?->toDateTimeString(),
                 'score' => round($score / $providedWeight, 4),
             ];
         }

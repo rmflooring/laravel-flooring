@@ -1,5 +1,5 @@
 # Floor Manager AI Agent System — Build Context
-Updated: 2026-07-16 (Module 3)
+Updated: 2026-07-16 (Module 4)
 
 ---
 
@@ -18,7 +18,7 @@ Full original spec (requirements, design principles, full v1 tool library, secur
 | Module 1 — email intake + `attach_images` | Done | 2026-07-10 |
 | Module 2 — `attach_document` | Done | 2026-07-13 |
 | Module 3 — `find_opportunity` / `update_opportunity` | Done | 2026-07-16 |
-| Module 4 — `create_opportunity` | Not started | — |
+| Module 4 — `create_opportunity` | Done | 2026-07-16 |
 | Module 5 — `log_communication` / `check_status` | Not started | — |
 | Chat UI, admin settings UI, task dashboard UI | Not started | — |
 
@@ -46,6 +46,7 @@ Migrations: `database/migrations/2026_07_10_00000{1..5}_create_agent_*_table.php
 | `attach_document` | `app/Services/Agent/AttachDocumentService.php` | Attaches a single email document (PDF/Word/scanned image) to the opportunity. `document_type` (scope_of_work/contract/insurance_certificate/permit/inspection_report/other) is a PHP allowlist (`AttachDocumentService::DOCUMENT_TYPES`), also stored in `label_text`. `OpportunityDocument.category = 'document'`. |
 | `find_opportunity` | `app/Services/Agent/FindOpportunityService.php` | Fuzzy-matches `client_name`/`address`/`claim_number` (whichever are given) against opportunities via their `jobSiteCustomer`/`parentCustomer`. Not terminal — Claude keeps reasoning afterward. See scoring details below. |
 | `update_opportunity` | `app/Services/Agent/UpdateOpportunityService.php` | Writes only `requires_rfm` (boolean) and/or `project_manager_id` (resolved from a freetext name — never accepted as a raw ID). See scope decision below. |
+| `create_opportunity` | `app/Services/Agent/CreateOpportunityService.php` | Creates a new `Customer` (+ optionally links an existing parent) and `Opportunity` for a job not yet in FM. Duplicate-check gated. See notes below. |
 | `request_clarification` | inline in `ProcessAgentTask::dispatchTool()` | Writes a question to `agent_messages`, sets `status = pending_clarification`. |
 | `no_actionable_intent` | inline in `ProcessAgentTask::dispatchTool()` | Sets `status = ignored` (spam/newsletter/unrelated forward). |
 
@@ -53,7 +54,7 @@ Both attach tools share validation/decoding logic via `app/Services/Agent/Concer
 
 `update_opportunity` also uses `ValidatesAgentAttachments::assertOpportunityMatches()` — the same "Claude cannot pick its own opportunity_id" invariant applies here too.
 
-**Not yet built:** `create_opportunity`, `log_communication`, `check_status`, `undo_last_action`.
+**Not yet built:** `log_communication`, `check_status`, `undo_last_action`.
 
 ### Module 3 notes: `find_opportunity` scoring
 
@@ -74,6 +75,25 @@ Deliberately narrow for v1 (confirmed with the business owner) — only `require
 
 **Incidental fix**: `agent_tasks.task_type` was declared on the table since Module 1 but never actually set anywhere in the code (true for Modules 1–2 too, not just this one). Now set in `ProcessAgentTask::handle()` from whichever tool concluded the task (`attach_images`, `attach_document`, `update_opportunity`, `no_actionable_intent`, or `other` for `request_clarification`/text-only/iteration-exhausted outcomes) — makes the column actually usable by the future task-dashboard UI.
 
+### Module 4 notes: `create_opportunity`
+
+The riskiest tool in v1 (per spec) — it's the only one that creates new records rather than acting on an existing opportunity. Key discovery: `OpportunityController::store()` (`app/Http/Controllers/Pages/OpportunityController.php:236-260`) always requires an *existing* `parent_customer_id` — the human flow creates a new parent customer via a separate AJAX endpoint (`storeParentCustomer`) before ever submitting the opportunity form. `create_opportunity` has to do both steps itself.
+
+**Duplicate check** — reuses `FindOpportunityService`, refactored to expose a new public `searchCandidates(?clientName, ?address, ?claimNumber): array` (the scored/filtered/sorted/capped candidate list, now including each candidate's `created_at`) that both `execute()` and `CreateOpportunityService` call, instead of reimplementing the tokenized-LIKE-plus-`similar_text()` matching a second time. Any candidate scoring ≥ 0.6 (lower than `find_opportunity`'s 0.85 auto-resolve threshold — this is a warning gate, not an auto-resolve) whose opportunity was created within the last 60 days **blocks creation entirely** and becomes the `request_clarification` prompt. No override path in v1 — matches "never silently duplicate."
+
+**Customer creation scope**:
+- No `parent_customer_name` given → creates one new standalone `Customer` (`parent_id = null`) used as both `parent_customer_id` and `job_site_customer_id` — the common case (individual homeowner / direct insurance referral).
+- `parent_customer_name` given → must resolve to an **existing** standalone customer (`parent_id IS NULL`) by exact case-insensitive name/company_name match, same invariant as `update_opportunity`'s `project_manager_name` (`UpdateOpportunityService::resolveProjectManagerId()`) — zero or multiple matches → validation error → `request_clarification`. A brand-new job-site `Customer` is created under that resolved parent. **Never** auto-creates a new parent/company record from an unmatched name, to avoid spawning duplicate company records from a misspelled or misremembered name — only the job-site/individual customer is freely created new.
+- Both paths set `created_by`/`updated_by` explicitly to `$task->requester_user_id` — `Customer::booted()`'s `creating` hook sets `created_by = auth()->id()` *unconditionally* with no null-guard (unlike `Opportunity`'s hook), so in this queue context it would otherwise silently write `null`.
+
+**Opportunity creation**: `status = 'New'` (DB default and a canonical status value), `requires_rfm` defaults to `true` server-side if the tool input omits it (a brand-new opportunity almost always needs a site measure next). Sets `$task->opportunity_id` on success.
+
+**Guardrail in code, not just prompt**: throws immediately if `$task->opportunity_id` is already set when `create_opportunity` is called — an opportunity was already resolved (via the job-number regex fast path or `find_opportunity`), so creating a new one would be wrong; the system prompt tells Claude this too, but the check is enforced in the service regardless.
+
+**Incomplete intake**: per the spec, "flags" rather than blocks. Missing `address`/`claim_number`/`insurance_company` (the spec also mentions "loss type," but no such field exists anywhere in this schema — confirmed via grep, dropped) doesn't stop creation; the gap is noted in the terminal summary/logged message for staff follow-up.
+
+`dol` (date of loss) is parsed with `Carbon::parse()` and re-validated before insert — the human-facing `CustomerController`/`JobSiteCustomerController` both enforce Laravel's `date` validation rule on this field; without an equivalent check here, a malformed date from Claude would surface as a raw DB error instead of a graceful `request_clarification`.
+
 ---
 
 ## Architecture / Flow
@@ -90,7 +110,8 @@ Postfix pipe script (parses email)
       - resolveOpportunity() — exact job_no regex fast path (see Module 3 notes)
       - loop (max 5 iterations): ClaudeAgentService::sendWithTools() → dispatchTool()
         on each tool_use block, log to agent_messages, execute the matching service
-        (find_opportunity is non-terminal — may set opportunity_id and loop continues)
+        (find_opportunity is non-terminal — may set opportunity_id and loop continues;
+        create_opportunity refuses to run if opportunity_id is already set)
       - sets AgentTask.status + extracted_intent + task_type from the terminal tool result
       - notifyRequester() — auto-reply via GraphMailService::send(), + BCC if
         AgentNotificationSetting::bccEnabledFor($task_type), logs to agent_notifications
@@ -115,7 +136,7 @@ Both added to `.env.example`. **Not yet set up:** the actual Postfix pipe script
 
 ## Testing
 
-`tests/Feature/AgentInboundEmailTest.php` covers: happy path for `attach_images`, happy path for `attach_document`, sender-not-allowed rejection, no-job-number → clarification, rate-limit rejection. Uses `Http::fake()` for both the Claude and Microsoft Graph calls.
+`tests/Feature/AgentInboundEmailTest.php` covers: happy path for `attach_images`, happy path for `attach_document`, sender-not-allowed rejection, no-job-number → clarification, rate-limit rejection. `tests/Feature/AgentFindUpdateOpportunityTest.php` and `tests/Feature/AgentCreateOpportunityTest.php` cover Modules 3 and 4 respectively. All use `Http::fake()` for both the Claude and Microsoft Graph calls.
 
 **Caveat:** `php artisan test` does not currently complete a full fresh migration (blocks on a pre-existing, unrelated MySQL-only `SHOW INDEX` migration + ~13 other unverified raw-SQL migrations — see `feedback_broken_test_bootstrap` in session memory for full detail; fixing this was explicitly deferred as out of scope for the agent-system work). Two other pre-existing bootstrap bugs (`app_settings` boot-order crash, `labour_items` migration ordering) **were** fixed along the way and are safe/committed.
 
@@ -135,6 +156,6 @@ Until the sqlite portability issue is resolved, verify new agent-system work aga
 | Orchestration job | `app/Jobs/ProcessAgentTask.php` |
 | Claude API wrapper | `app/Services/Agent/ClaudeAgentService.php` |
 | Tool schemas | `app/Services/Agent/AgentToolRegistry.php` |
-| Tool services | `app/Services/Agent/{Attach{Images,Document},Find,Update}OpportunityService.php` |
+| Tool services | `app/Services/Agent/{Attach{Images,Document},Find,Update,Create}OpportunityService.php` |
 | Shared attachment validation | `app/Services/Agent/Concerns/ValidatesAgentAttachments.php` |
-| Tests | `tests/Feature/AgentInboundEmailTest.php` |
+| Tests | `tests/Feature/Agent{InboundEmail,FindUpdateOpportunity,CreateOpportunity}Test.php` |
