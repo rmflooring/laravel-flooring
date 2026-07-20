@@ -431,9 +431,9 @@
                           class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white font-mono">{{ $signatureEmailPreview['body'] }}</textarea>
             </div>
             <p class="text-xs text-gray-400 dark:text-gray-500 mb-6">
-                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ '{{signing_link_button}}' }}</code>,
-                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ '{{signing_link}}' }}</code> and
-                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ '{{expires_date}}' }}</code>
+                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">@{{signing_link_button}}</code>,
+                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">@{{signing_link}}</code> and
+                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">@{{expires_date}}</code>
                 are placeholders filled in automatically when the email is sent &mdash; leave them as-is.
             </p>
 
