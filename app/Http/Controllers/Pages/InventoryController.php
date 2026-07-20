@@ -126,8 +126,32 @@ class InventoryController extends Controller
         $totalStyles         = $summary->count();
         $totalUnitsAvailable = $summary->sum('total_available');
 
+        // RFC receipts with no linked product style — grouped by item name
+        $unlinkedRfcReceipts = InventoryReceipt::query()
+            ->whereNotNull('customer_return_item_id')
+            ->whereNull('product_style_id')
+            ->with('allocations')
+            ->when($q, fn ($query) => $query->where('item_name', 'like', "%{$q}%"))
+            ->get();
+
+        $unlinkedSummary = $unlinkedRfcReceipts
+            ->groupBy('item_name')
+            ->map(function ($group) {
+                return (object) [
+                    'item_name'       => $group->first()->item_name,
+                    'unit'            => $group->first()->unit,
+                    'total_received'  => (float) $group->sum('quantity_received'),
+                    'total_available' => (float) $group->sum('available_qty'),
+                    'record_count'    => $group->count(),
+                    'receipt_ids'     => $group->pluck('id')->implode(','),
+                ];
+            })
+            ->when(! $showZeroStock, fn ($rows) => $rows->filter(fn ($row) => $row->total_available > 0))
+            ->sortByDesc('total_available')
+            ->values();
+
         return view('pages.inventory.summary', compact(
-            'summary', 'q', 'showZeroStock', 'totalStyles', 'totalUnitsAvailable',
+            'summary', 'q', 'showZeroStock', 'totalStyles', 'totalUnitsAvailable', 'unlinkedSummary',
         ));
     }
 

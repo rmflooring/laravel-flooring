@@ -30,7 +30,7 @@ class CustomerReturnService
     ): void {
         abort_unless($rfc->status === 'draft', 422, 'Only draft RFCs can be received.');
 
-        $rfc->loadMissing(['items.pickTicketItem', 'items.saleItem', 'pickTicket.items']);
+        $rfc->loadMissing(['items.pickTicketItem.saleItem', 'items.saleItem', 'pickTicket.items']);
 
         DB::transaction(function () use ($rfc, $receivedBy, $receivedDate) {
             $date = $receivedDate ? \Carbon\Carbon::parse($receivedDate)->toDateString() : now()->toDateString();
@@ -39,7 +39,8 @@ class CustomerReturnService
                 // 1. Create a new InventoryReceipt — inventory goes UP
                 $receipt = InventoryReceipt::create([
                     'customer_return_item_id' => $rfcItem->id,
-                    'product_style_id'        => $rfcItem->saleItem?->product_style_id,
+                    'product_style_id'        => $rfcItem->saleItem?->product_style_id
+                        ?? $rfcItem->pickTicketItem?->saleItem?->product_style_id,
                     'item_name'               => $rfcItem->item_name,
                     'unit'                    => $rfcItem->unit,
                     'quantity_received'       => $rfcItem->quantity_returned,
