@@ -110,8 +110,11 @@ class DocumentTemplateService
     /**
      * Render the template body using caller-supplied field values.
      * flooring_items_table and QR codes are always rebuilt fresh from live data.
+     *
+     * Pass $signOff when rendering for a signing request so only the curated
+     * sign-off items are shown, not all sale material items.
      */
-    public function renderFromFields(DocumentTemplate $template, array $fields, ?Sale $sale = null, ?Opportunity $opportunity = null): string
+    public function renderFromFields(DocumentTemplate $template, array $fields, ?Sale $sale = null, ?Opportunity $opportunity = null, ?\App\Models\FlooringSignOff $signOff = null): string
     {
         $body = $template->body;
 
@@ -119,9 +122,12 @@ class DocumentTemplateService
             $body = str_replace('{{' . $key . '}}', $value ?? '', $body);
         }
 
-        // flooring_items_table is always re-rendered from live sale data
-        if ($template->needs_sale && $sale && str_contains($body, '{{flooring_items_table}}')) {
-            $body = str_replace('{{flooring_items_table}}', $this->buildFlooringTable($sale), $body);
+        // flooring_items_table: use sign-off items when available, otherwise fall back to all sale items
+        if (str_contains($body, '{{flooring_items_table}}')) {
+            $table = $signOff
+                ? $this->buildFlooringTableFromSignOff($signOff)
+                : ($sale ? $this->buildFlooringTable($sale) : '');
+            $body = str_replace('{{flooring_items_table}}', $table, $body);
         }
 
         // QR codes are always regenerated fresh — never stored as editable fields
@@ -191,6 +197,66 @@ class DocumentTemplateService
 
         if (! $hasRows) {
             return '<p style="color:#888; font-style:italic;">No material items found on this sale.</p>';
+        }
+
+        return '<table style="width:100%; border-collapse:collapse; font-size:11px;">'
+             . '<thead>'
+             . '<tr style="background:#1d4ed8; color:#fff;">'
+             . '<th style="padding:7px 8px; text-align:left; border:1px solid #1d4ed8;">Room</th>'
+             . '<th style="padding:7px 8px; text-align:left; border:1px solid #1d4ed8;">Product</th>'
+             . '<th style="padding:7px 8px; text-align:center; border:1px solid #1d4ed8;">Qty</th>'
+             . '<th style="padding:7px 8px; text-align:center; border:1px solid #1d4ed8;">Unit</th>'
+             . '</tr>'
+             . '</thead>'
+             . '<tbody>' . $rows . '</tbody>'
+             . '</table>';
+    }
+
+    /**
+     * Build the flooring items table from a FlooringSignOff's own curated items,
+     * rather than pulling all material items from the sale.
+     */
+    private function buildFlooringTableFromSignOff(\App\Models\FlooringSignOff $signOff): string
+    {
+        $signOff->loadMissing('items');
+
+        $items = $signOff->items;
+
+        if ($items->isEmpty()) {
+            return '<p style="color:#888; font-style:italic;">No items on this flooring sign-off.</p>';
+        }
+
+        $rows      = '';
+        $roomGroup = null;
+        $roomCount = [];
+
+        // Pre-count items per room for rowspan
+        foreach ($items as $item) {
+            $roomGroup = $item->room_name ?? '';
+            $roomCount[$roomGroup] = ($roomCount[$roomGroup] ?? 0) + 1;
+        }
+
+        $roomSeen = [];
+        foreach ($items as $item) {
+            $room    = $item->room_name ?? '';
+            $product = implode(' — ', array_filter([
+                $item->product_description,
+                $item->color_item_number,
+            ])) ?: '—';
+
+            $rows .= '<tr>';
+
+            if (! isset($roomSeen[$room])) {
+                $roomSeen[$room] = true;
+                $rows .= '<td rowspan="' . $roomCount[$room] . '" style="vertical-align:top; font-weight:bold; padding:6px 8px; border:1px solid #ccc; background:#f5f5f5;">'
+                       . e($room)
+                       . '</td>';
+            }
+
+            $rows .= '<td style="padding:6px 8px; border:1px solid #ccc;">' . e($product) . '</td>';
+            $rows .= '<td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">' . number_format((float) ($item->qty ?? 0), 2) . '</td>';
+            $rows .= '<td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">' . e($item->unit ?? '') . '</td>';
+            $rows .= '</tr>';
         }
 
         return '<table style="width:100%; border-collapse:collapse; font-size:11px;">'

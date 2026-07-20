@@ -287,8 +287,13 @@ class DocumentSigningRequestService
         $templateService = new DocumentTemplateService();
         [$opportunity, $sale] = $this->getOpportunityAndSale($request);
 
+        // For flooring sign-offs, pass the sign-off so only its curated items appear
+        $signOff = $request->document_type === 'flooring_selection'
+            ? FlooringSignOff::with('items')->find($request->document_id)
+            : null;
+
         $fields       = $templateService->getDefaultFields($docTemplate, $opportunity, $sale);
-        $renderedBody = $templateService->renderFromFields($docTemplate, $fields, $sale, $opportunity);
+        $renderedBody = $templateService->renderFromFields($docTemplate, $fields, $sale, $opportunity, $signOff);
 
         $injection    = $signatureHtml ?? $this->buildSignaturePlaceholderHtml();
         $renderedBody = str_replace('{{customer_signature}}', $injection, $renderedBody);
