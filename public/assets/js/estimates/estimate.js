@@ -1351,6 +1351,10 @@ function initManufacturerDropdownForRoom(roomCard) {
     });
 
     // Open on click/focus
+    // Snapshot the style ID + text on focus so we can restore if user blurs without selecting
+    let _focusStyleId = '';
+    let _focusText    = '';
+
     colorInput.addEventListener('mousedown', async () => {
       await loadProductStyles();
       openDropdown();
@@ -1358,9 +1362,22 @@ function initManufacturerDropdownForRoom(roomCard) {
     });
 
     colorInput.addEventListener('focus', async () => {
+      _focusStyleId = colorInput.dataset.productStyleId || '';
+      _focusText    = colorInput.value || '';
       await loadProductStyles();
       openDropdown();
       render(styles);
+    });
+
+    // If user blurs without picking from the dropdown and the text is unchanged, restore the ID
+    colorInput.addEventListener('blur', () => {
+      if (!colorInput.dataset.productStyleId && _focusStyleId) {
+        if ((colorInput.value || '').trim() === _focusText.trim()) {
+          colorInput.dataset.productStyleId = _focusStyleId;
+          const styleIdInput = row.querySelector('.js-product-style-id-input');
+          if (styleIdInput) styleIdInput.value = _focusStyleId;
+        }
+      }
     });
 
     colorInput.addEventListener('input', () => {
