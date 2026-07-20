@@ -157,7 +157,7 @@ class DocumentTemplateService
         $hasRows = false;
 
         foreach ($sale->rooms as $room) {
-            $materialItems = $room->items->where('type', 'material')->values();
+            $materialItems = $room->items->where('item_type', 'material')->values();
 
             if ($materialItems->isEmpty()) {
                 continue;
