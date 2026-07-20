@@ -71,7 +71,7 @@ class DocumentTemplateService
         $jobSiteAddress = implode('<br>', array_filter([$jobSiteStreet, $jobSiteCityLine]));
 
         $allVars = [
-            'customer_name'        => $customerName,
+            'customer_name'        => $jobSiteName ?: $customerName,
             'job_name'             => $opportunity->job_name ?? '',
             'job_no'               => $opportunity->job_no ?? '',
             'job_site_name'        => $jobSiteName,
