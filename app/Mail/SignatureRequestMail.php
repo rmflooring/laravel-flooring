@@ -8,7 +8,11 @@ use App\Services\GraphMailService;
 
 class SignatureRequestMail
 {
-    public function __construct(protected DocumentSigningRequest $signingRequest) {}
+    public function __construct(
+        protected DocumentSigningRequest $signingRequest,
+        protected ?string $customSubject = null,
+        protected ?string $customBody = null,
+    ) {}
 
     public function send(): bool
     {
@@ -41,8 +45,8 @@ class SignatureRequestMail
                 ->format('F j, Y'),
         ];
 
-        $subject = $service->render($template['subject'], $vars);
-        $body    = $service->render($template['body'], $vars);
+        $subject = $service->render($this->customSubject ?: $template['subject'], $vars);
+        $body    = $service->render($this->customBody ?: $template['body'], $vars);
 
         // Convert plain-text body to HTML; auto-link any bare URLs.
         // {{signing_link_button}} is injected after escaping so its HTML is preserved.

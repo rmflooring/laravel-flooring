@@ -396,7 +396,7 @@
 
 @can('manage signing requests')
 <div id="request-signature-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Request E-Signature</h3>
             <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
@@ -412,11 +412,31 @@
                 <input type="text" name="client_name" value="{{ $signOff->customer_name }}" required
                        class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             </div>
-            <div class="mb-6">
+            <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Email</label>
                 <input type="email" name="client_email" value="{{ $signOff->job_site_email }}" required
                        class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             </div>
+
+            <hr class="border-gray-200 dark:border-gray-700 mb-4">
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Subject</label>
+                <input type="text" name="subject" value="{{ $signatureEmailPreview['subject'] }}" required
+                       class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            </div>
+            <div class="mb-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Body</label>
+                <textarea name="body" rows="10" required
+                          class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white font-mono">{{ $signatureEmailPreview['body'] }}</textarea>
+            </div>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mb-6">
+                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ '{{signing_link_button}}' }}</code>,
+                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ '{{signing_link}}' }}</code> and
+                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ '{{expires_date}}' }}</code>
+                are placeholders filled in automatically when the email is sent &mdash; leave them as-is.
+            </p>
+
             <div class="flex justify-end gap-3">
                 <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
                         class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">

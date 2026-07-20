@@ -24,13 +24,17 @@ class SigningRequestController extends Controller
         $request->validate([
             'client_name'  => ['required', 'string', 'max:255'],
             'client_email' => ['required', 'email', 'max:255'],
+            'subject'      => ['nullable', 'string', 'max:255'],
+            'body'         => ['nullable', 'string'],
         ]);
 
         $this->service->createSigningRequest(
-            documentType: 'flooring_selection',
-            documentId:   $signOff->id,
-            clientName:   $request->client_name,
-            clientEmail:  $request->client_email,
+            documentType:  'flooring_selection',
+            documentId:    $signOff->id,
+            clientName:    $request->client_name,
+            clientEmail:   $request->client_email,
+            customSubject: $request->subject,
+            customBody:    $request->body,
         );
 
         return back()->with('success', 'Signature request sent to ' . $request->client_email . '.');

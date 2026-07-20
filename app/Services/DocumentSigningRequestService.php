@@ -21,7 +21,9 @@ class DocumentSigningRequestService
         string $documentType,
         int $documentId,
         string $clientName,
-        string $clientEmail
+        string $clientEmail,
+        ?string $customSubject = null,
+        ?string $customBody = null
     ): DocumentSigningRequest {
         $uuid = Str::uuid()->toString();
 
@@ -40,7 +42,7 @@ class DocumentSigningRequestService
         $pdfPath = $this->storePendingPdf($signingRequest);
         $signingRequest->update(['pending_pdf_path' => $pdfPath]);
 
-        (new SignatureRequestMail($signingRequest))->send();
+        (new SignatureRequestMail($signingRequest, $customSubject, $customBody))->send();
 
         return $signingRequest;
     }

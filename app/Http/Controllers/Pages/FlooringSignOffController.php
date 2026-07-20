@@ -10,6 +10,7 @@ use App\Models\FlooringSignOffItem;
 use App\Models\Opportunity;
 use App\Models\Sale;
 use App\Models\Setting;
+use App\Services\EmailTemplateService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -132,7 +133,7 @@ class FlooringSignOffController extends Controller
 
     // ── Editable sign-off page ────────────────────────────────────────────────
 
-    public function show(Opportunity $opportunity, FlooringSignOff $signOff)
+    public function show(Opportunity $opportunity, FlooringSignOff $signOff, EmailTemplateService $emailTemplates)
     {
         $this->assertBelongs($opportunity, $signOff);
 
@@ -143,8 +144,21 @@ class FlooringSignOffController extends Controller
 
         $branding = $this->branding();
 
+        // Preview of the signature-request email, pre-filled with what's known now
+        // (client name, document label); {{signing_link_button}}, {{signing_link}}
+        // and {{expires_date}} are resolved when the request is actually sent.
+        $signatureVars = [
+            'client_name'    => $signOff->customer_name,
+            'document_label' => 'Flooring Selection',
+        ];
+        $signatureTemplate = $emailTemplates->getTemplate(null, 'signature_request_flooring');
+        $signatureEmailPreview = [
+            'subject' => $emailTemplates->render($signatureTemplate['subject'], $signatureVars),
+            'body'    => $emailTemplates->render($signatureTemplate['body'], $signatureVars),
+        ];
+
         return view('pages.opportunities.sign-offs.show', compact(
-            'opportunity', 'signOff', 'conditions', 'branding'
+            'opportunity', 'signOff', 'conditions', 'branding', 'signatureEmailPreview'
         ));
     }
 
