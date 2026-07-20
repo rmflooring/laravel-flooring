@@ -7,11 +7,27 @@ use App\Models\InventoryReceipt;
 use App\Models\ProductStyle;
 use App\Models\Setting;
 use App\Models\UnitMeasure;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class InventoryController extends Controller
 {
+    /**
+     * SQL expression for a receipt's available quantity, mirroring
+     * InventoryReceipt::getAvailableQtyAttribute() exactly (received − allocated −
+     * outbound return_to_vendor/fulfilled + signed adjustments), for use in raw
+     * WHERE/COUNT queries where loading the full Eloquent accessor isn't practical.
+     */
+    private const AVAILABLE_QTY_SQL = <<<'SQL'
+        (
+            quantity_received
+            - COALESCE((SELECT SUM(quantity) FROM inventory_allocations WHERE inventory_allocations.inventory_receipt_id = inventory_receipts.id), 0)
+            - COALESCE((SELECT SUM(ABS(quantity)) FROM inventory_transactions WHERE inventory_transactions.inventory_receipt_id = inventory_receipts.id AND type IN ('return_to_vendor', 'fulfilled')), 0)
+            + COALESCE((SELECT SUM(quantity) FROM inventory_transactions WHERE inventory_transactions.inventory_receipt_id = inventory_receipts.id AND type = 'adjustment'), 0)
+        )
+        SQL;
+
     public function show(InventoryReceipt $inventoryReceipt): View
     {
         $inventoryReceipt->load([
@@ -22,14 +38,19 @@ class InventoryController extends Controller
             'allocations.saleItem.room',
             'allocations.saleItem.sale',
             'allocations.pickTicketItems.pickTicket',
+            'transactions.createdBy',
             'creator',
         ]);
 
         $allocated = $inventoryReceipt->allocations->sum('quantity');
-        $available = max(0, (float) $inventoryReceipt->quantity_received - $allocated);
+        $available = $inventoryReceipt->available_qty;
+        $adjustments = $inventoryReceipt->transactions
+            ->where('type', 'adjustment')
+            ->sortByDesc('created_at')
+            ->values();
         $tagFormat = Setting::get('label_printer_format', 'standard');
 
-        return view('pages.inventory.show', compact('inventoryReceipt', 'allocated', 'available', 'tagFormat'));
+        return view('pages.inventory.show', compact('inventoryReceipt', 'allocated', 'available', 'adjustments', 'tagFormat'));
     }
 
     public function index(Request $request): View
@@ -58,9 +79,7 @@ class InventoryController extends Controller
             }))
             ->when($dateFrom, fn ($query) => $query->whereDate('received_date', '>=', $dateFrom))
             ->when($dateTo,   fn ($query) => $query->whereDate('received_date', '<=', $dateTo))
-            ->when(! $showDepleted, fn ($query) => $query->whereRaw(
-                'quantity_received > COALESCE((SELECT SUM(quantity) FROM inventory_allocations WHERE inventory_receipt_id = inventory_receipts.id), 0)'
-            ))
+            ->when(! $showDepleted, fn ($query) => $query->whereRaw(self::AVAILABLE_QTY_SQL . ' > 0'))
             ->orderByDesc('received_date')
             ->orderByDesc('id')
             ->paginate(30)
@@ -68,9 +87,7 @@ class InventoryController extends Controller
 
         // Summary stats (unfiltered — whole inventory)
         $totalReceipts   = InventoryReceipt::count();
-        $totalInStock    = InventoryReceipt::whereRaw(
-            'quantity_received > COALESCE((SELECT SUM(quantity) FROM inventory_allocations WHERE inventory_receipt_id = inventory_receipts.id), 0)'
-        )->count();
+        $totalInStock    = InventoryReceipt::whereRaw(self::AVAILABLE_QTY_SQL . ' > 0')->count();
         $totalDepleted   = $totalReceipts - $totalInStock;
 
         // When search returns nothing, check if depleted records would match — so we can prompt the user
@@ -267,6 +284,34 @@ class InventoryController extends Controller
         return redirect()
             ->route('pages.inventory.show', $inventoryReceipt)
             ->with('success', 'Inventory record updated.');
+    }
+
+    public function adjust(Request $request, InventoryReceipt $inventoryReceipt, InventoryService $inventoryService)
+    {
+        $data = $request->validate([
+            'direction' => ['required', 'in:increase,decrease'],
+            'quantity'  => ['required', 'numeric', 'min:0.01'],
+            'reason'    => ['required', 'in:' . implode(',', InventoryService::ADJUSTMENT_REASONS)],
+            'note'      => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $signedQuantity = $data['direction'] === 'increase' ? (float) $data['quantity'] : -(float) $data['quantity'];
+
+        try {
+            $inventoryService->adjust(
+                $inventoryReceipt,
+                $signedQuantity,
+                $data['reason'],
+                $data['note'] ?? null,
+                auth()->id(),
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['quantity' => $e->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->route('pages.inventory.show', $inventoryReceipt)
+            ->with('success', 'Stock adjustment recorded.');
     }
 
     public function searchProducts(Request $request)

@@ -33,6 +33,17 @@
                 </div>
             @endif
 
+            {{-- Validation errors --}}
+            @if ($errors->any())
+                <div class="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-gray-800 dark:text-red-400">
+                    <ul class="space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
                 {{-- Main --}}
@@ -99,6 +110,13 @@
                                     </svg>
                                     Edit
                                 </a>
+                                <button type="button" onclick="document.getElementById('adjust-stock-modal').classList.remove('hidden')"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                    Adjust Stock
+                                </button>
                                 <button type="button" onclick="document.getElementById('print-tag-modal').classList.remove('hidden')"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -230,6 +248,54 @@
                                                 @else
                                                     <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Reserved</span>
                                                 @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @endif
+                    </div>
+
+                    {{-- Adjustment History --}}
+                    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Adjustment History
+                                @if ($adjustments->isNotEmpty())
+                                    <span class="ml-1.5 text-xs font-normal text-gray-400">({{ $adjustments->count() }})</span>
+                                @endif
+                            </h2>
+                        </div>
+
+                        @if ($adjustments->isEmpty())
+                            <div class="px-6 py-8 text-center text-sm text-gray-400">No manual adjustments recorded.</div>
+                        @else
+                            <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+                                <thead>
+                                    <tr class="bg-gray-50 dark:bg-gray-700/40">
+                                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
+                                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Qty</th>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Note</th>
+                                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Logged by</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    @foreach ($adjustments as $adjustment)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                            <td class="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                                {{ $adjustment->created_at->format('M j, Y g:ia') }}
+                                            </td>
+                                            <td class="px-6 py-3 text-right text-sm font-medium {{ $adjustment->quantity >= 0 ? 'text-teal-600 dark:text-teal-400' : 'text-red-600 dark:text-red-400' }}">
+                                                {{ $adjustment->quantity >= 0 ? '+' : '' }}{{ rtrim(rtrim(number_format((float) $adjustment->quantity, 2), '0'), '.') }}
+                                                @if ($inventoryReceipt->unit)
+                                                    <span class="text-xs text-gray-400 font-normal">{{ $inventoryReceipt->unit }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                {{ $adjustment->note ?: '—' }}
+                                            </td>
+                                            <td class="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                                {{ $adjustment->createdBy?->name ?? '—' }}
                                             </td>
                                         </tr>
                                     @endforeach
@@ -370,6 +436,112 @@
 
         </div>
     </div>
+
+{{-- ============================================================
+     ADJUST STOCK MODAL
+     ============================================================ --}}
+<div id="adjust-stock-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+     onclick="if(event.target===this) this.classList.add('hidden')">
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
+
+        {{-- Modal header --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Adjust Stock
+            </h2>
+            <button onclick="document.getElementById('adjust-stock-modal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <form method="POST" action="{{ route('pages.inventory.adjust', $inventoryReceipt) }}">
+            @csrf
+            <div class="px-6 py-5 space-y-4">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Direction <span class="text-red-500">*</span></label>
+                    <select name="direction" id="adjust-direction" required
+                            oninput="syncAdjustPreview()"
+                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        <option value="increase" {{ old('direction') === 'increase' ? 'selected' : '' }}>Increase (found extra stock)</option>
+                        <option value="decrease" {{ old('direction', 'decrease') === 'decrease' ? 'selected' : '' }}>Decrease (damaged / lost / count correction)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity <span class="text-red-500">*</span></label>
+                    <input type="number" name="quantity" id="adjust-quantity" step="0.01" min="0.01" required
+                           value="{{ old('quantity') }}"
+                           oninput="syncAdjustPreview()"
+                           placeholder="0.00"
+                           class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason <span class="text-red-500">*</span></label>
+                    <select name="reason" required
+                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                        @foreach (\App\Services\InventoryService::ADJUSTMENT_REASON_LABELS as $value => $label)
+                            <option value="{{ $value }}" {{ old('reason') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                    <textarea name="note" rows="2" maxlength="500"
+                              placeholder="Optional details…"
+                              class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white resize-none">{{ old('note') }}</textarea>
+                </div>
+
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-700/40 px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                    New available quantity will be:
+                    <span id="adjust-preview" class="font-semibold text-gray-900 dark:text-white">
+                        {{ rtrim(rtrim(number_format($available, 2), '0'), '.') }}
+                    </span>
+                    {{ $inventoryReceipt->unit }}
+                </div>
+
+            </div>
+
+            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 rounded-b-xl">
+                <button type="button" onclick="document.getElementById('adjust-stock-modal').classList.add('hidden')"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-700 dark:hover:bg-blue-800">
+                    Save Adjustment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function syncAdjustPreview() {
+    const direction = document.getElementById('adjust-direction').value;
+    const quantity  = parseFloat(document.getElementById('adjust-quantity').value) || 0;
+    const current   = @json((float) $available);
+
+    const delta = direction === 'increase' ? quantity : -quantity;
+    const next  = Math.max(0, current + delta);
+
+    document.getElementById('adjust-preview').textContent = next.toLocaleString('en', {maximumFractionDigits: 2});
+}
+
+@if ($errors->any())
+    document.getElementById('adjust-stock-modal').classList.remove('hidden');
+@endif
+</script>
 
 {{-- ============================================================
      PRINT TAG MODAL

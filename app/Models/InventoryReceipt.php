@@ -82,6 +82,7 @@ class InventoryReceipt extends Model
     /**
      * Quantity still available:
      *   received − allocated − outbound transactions (return_to_vendor, fulfilled)
+     *   + adjustments (signed — manual stock corrections, positive or negative)
      */
     public function getAvailableQtyAttribute(): float
     {
@@ -89,7 +90,10 @@ class InventoryReceipt extends Model
         $outbound  = $this->transactions
             ->whereIn('type', ['return_to_vendor', 'fulfilled'])
             ->sum(fn ($t) => abs((float) $t->quantity));
+        $adjustments = $this->transactions
+            ->where('type', 'adjustment')
+            ->sum(fn ($t) => (float) $t->quantity);
 
-        return max(0, (float) $this->quantity_received - (float) $allocated - (float) $outbound);
+        return max(0, (float) $this->quantity_received - (float) $allocated - (float) $outbound + (float) $adjustments);
     }
 }

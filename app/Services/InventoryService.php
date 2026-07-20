@@ -4,12 +4,24 @@ namespace App\Services;
 
 use App\Models\InventoryAllocation;
 use App\Models\InventoryReceipt;
+use App\Models\InventoryTransaction;
 use App\Models\PurchaseOrderItem;
 use App\Models\SaleItem;
 use Illuminate\Support\Facades\DB;
 
 class InventoryService
 {
+    /** Manual stock-adjustment reason codes — allowlist rather than freetext, for
+     *  consistent reporting/auditability. */
+    public const ADJUSTMENT_REASONS = ['damaged', 'lost', 'found', 'count_correction', 'other'];
+
+    public const ADJUSTMENT_REASON_LABELS = [
+        'damaged'          => 'Damaged',
+        'lost'             => 'Lost / missing',
+        'found'            => 'Found extra stock',
+        'count_correction' => 'Physical count correction',
+        'other'            => 'Other',
+    ];
     /**
      * Create a receipt from a PO item (e.g. goods received at warehouse from a PO).
      */
@@ -77,6 +89,47 @@ class InventoryService
                 'sale_id'              => $saleItem->sale_id,
                 'quantity'             => $quantity,
                 'notes'                => $notes,
+            ]);
+        });
+    }
+
+    /**
+     * Manually adjust a receipt's available stock (damaged/lost/found/count correction),
+     * logged as a signed InventoryTransaction rather than rewriting quantity_received —
+     * keeps the original received quantity as historical truth.
+     *
+     * @throws \InvalidArgumentException if $reason isn't a valid code, or a decrease
+     *                                    would take available stock below zero
+     */
+    public function adjust(
+        InventoryReceipt $receipt,
+        float $signedQuantity,
+        string $reason,
+        ?string $note,
+        ?int $userId,
+    ): InventoryTransaction {
+        if (! in_array($reason, self::ADJUSTMENT_REASONS, true)) {
+            throw new \InvalidArgumentException("Invalid adjustment reason \"{$reason}\".");
+        }
+
+        $receipt->load(['allocations', 'transactions']);
+
+        if ($signedQuantity < 0 && ($receipt->available_qty + $signedQuantity) < 0) {
+            throw new \InvalidArgumentException(
+                "Cannot decrease by " . abs($signedQuantity) . " — only {$receipt->available_qty} available in receipt #{$receipt->id}."
+            );
+        }
+
+        $reasonLabel = self::ADJUSTMENT_REASON_LABELS[$reason];
+        $body = $note ? "{$reasonLabel}: {$note}" : $reasonLabel;
+
+        return DB::transaction(function () use ($receipt, $signedQuantity, $body, $userId) {
+            return InventoryTransaction::create([
+                'inventory_receipt_id' => $receipt->id,
+                'type'                 => 'adjustment',
+                'quantity'             => $signedQuantity,
+                'note'                 => $body,
+                'created_by_user_id'   => $userId,
             ]);
         });
     }
