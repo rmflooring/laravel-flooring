@@ -108,7 +108,7 @@ class InventoryController extends Controller
                 }))
                 ->when($dateFrom, fn ($query) => $query->whereDate('received_date', '>=', $dateFrom))
                 ->when($dateTo,   fn ($query) => $query->whereDate('received_date', '<=', $dateTo))
-                ->whereRaw('quantity_received <= COALESCE((SELECT SUM(quantity) FROM inventory_allocations WHERE inventory_receipt_id = inventory_receipts.id), 0)')
+                ->whereRaw(self::AVAILABLE_QTY_SQL . ' <= 0')
                 ->count();
         }
 
