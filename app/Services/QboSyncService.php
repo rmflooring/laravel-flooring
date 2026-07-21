@@ -1207,7 +1207,13 @@ class QboSyncService
 
             $totalAmt   = (float) ($qboInvoice['TotalAmt'] ?? 0);
             $balance    = (float) ($qboInvoice['Balance'] ?? 0);
-            $amountPaid = round($totalAmt - $balance, 2);
+            $qboAmountPaid = round($totalAmt - $balance, 2);
+
+            // FM invoice_payments is the authoritative source when FM has recorded more
+            // than QBO reflects (e.g. QBO webhook fires before payments are pushed to QBO).
+            // Take the higher of the two so we never wipe FM-recorded payments.
+            $fmAmountPaid  = round((float) $invoice->payments()->sum('amount'), 2);
+            $amountPaid    = max($qboAmountPaid, $fmAmountPaid);
 
             $invoice->update([
                 'qbo_sync_token' => $qboInvoice['SyncToken'],
@@ -1221,7 +1227,7 @@ class QboSyncService
             app(InvoiceService::class)->derivePaymentStatus($invoice);
 
             $this->qbo->log('invoice', $invoice->id, 'pull', 'success', $qboId,
-                "Invoice payment sync from QBO: paid={$amountPaid}, balance={$balance}");
+                "Invoice payment sync from QBO: qbo_paid={$qboAmountPaid}, fm_paid={$fmAmountPaid}, applied={$amountPaid}, balance={$balance}");
 
         } catch (\Exception $e) {
             Log::error("[QBO Webhook] Failed to fetch Invoice #{$qboId}: " . $e->getMessage());
