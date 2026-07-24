@@ -741,14 +741,51 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Escape" && !dropdown.classList.contains("hidden")) { e.preventDefault(); close(); }
       });
 
+      let _focusStyleId = "";
+      let _focusText    = "";
+
       colorInput.addEventListener("mousedown", async () => { await loadStyles(); open(); render(styles); });
-      colorInput.addEventListener("focus",     async () => { await loadStyles(); open(); render(styles); });
+      colorInput.addEventListener("focus",     async () => {
+        _focusStyleId = colorInput.dataset.productStyleId || "";
+        _focusText    = colorInput.value || "";
+        await loadStyles(); open(); render(styles);
+      });
       colorInput.addEventListener("input",     ()       => {
         colorInput.dataset.productStyleId = "";
         const si = row.querySelector(".js-product-style-id-input");
         if (si) si.value = "";
         applyFilter();
         open();
+      });
+
+      // If user blurs without picking from the dropdown, try to keep the row linked
+      // to a catalog style rather than silently saving it unlinked:
+      //  1. text unchanged from focus → restore the style that was already linked
+      //  2. text edited but matches a catalog entry for the selected product line
+      //     exactly → link it (handles retyping/copy-paste that never opened the
+      //     dropdown, so the row doesn't look correct on screen but saves unlinked)
+      colorInput.addEventListener("blur", () => {
+        if (colorInput.dataset.productStyleId) return;
+
+        const currentText = (colorInput.value || "").trim();
+        if (!currentText) return;
+
+        if (_focusStyleId && currentText === _focusText.trim()) {
+          colorInput.dataset.productStyleId = _focusStyleId;
+          const si = row.querySelector(".js-product-style-id-input");
+          if (si) si.value = _focusStyleId;
+          return;
+        }
+
+        const exactMatches = (styles || []).filter(
+          (s) => (s.name || "").trim().toLowerCase() === currentText.toLowerCase()
+        );
+        if (exactMatches.length === 1) {
+          const match = exactMatches[0];
+          colorInput.dataset.productStyleId = String(match.id);
+          const si = row.querySelector(".js-product-style-id-input");
+          if (si) si.value = String(match.id);
+        }
       });
 
       document.addEventListener("click", (e) => { if (cell.contains(e.target)) return; close(); });

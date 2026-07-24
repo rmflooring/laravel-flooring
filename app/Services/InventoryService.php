@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\InventoryAllocation;
 use App\Models\InventoryReceipt;
 use App\Models\InventoryTransaction;
+use App\Models\ProductStyle;
 use App\Models\PurchaseOrderItem;
 use App\Models\SaleItem;
 use Illuminate\Support\Facades\DB;
@@ -183,5 +184,49 @@ class InventoryService
             'quantity'    => (float) $totalAllocated,
             'allocations' => $allocations,
         ];
+    }
+
+    /**
+     * Resolve a material item's effective catalog style id, falling back to an
+     * exact name match against the catalog when the row was saved without one
+     * linked (e.g. the Color/Item# text was retyped without re-selecting from
+     * the dropdown). Disambiguates catalog entries that share a display name
+     * by product line, then by manufacturer; returns null if still ambiguous
+     * or if nothing matches.
+     */
+    public function resolveStyleId(SaleItem $item): ?int
+    {
+        if ($item->product_style_id) {
+            return $item->product_style_id;
+        }
+
+        if (! $item->color_item_number) {
+            return null;
+        }
+
+        $candidates = ProductStyle::with('productLine')->where('name', $item->color_item_number)->get();
+
+        if ($candidates->count() === 1) {
+            return $candidates->first()->id;
+        }
+
+        if ($candidates->count() > 1) {
+            if ($item->product_line_id) {
+                $byLine = $candidates->where('product_line_id', $item->product_line_id);
+                if ($byLine->count() === 1) {
+                    return $byLine->first()->id;
+                }
+            }
+
+            $byMfr = $candidates->filter(
+                fn ($c) => $c->productLine?->manufacturer && $item->manufacturer
+                    && strcasecmp(trim($c->productLine->manufacturer), trim($item->manufacturer)) === 0
+            );
+            if ($byMfr->count() === 1) {
+                return $byMfr->first()->id;
+            }
+        }
+
+        return null;
     }
 }

@@ -103,9 +103,13 @@ class SaleStatusController extends Controller
             ->map(fn ($v) => (float) $v)
             ->all();
 
-        // For uncovered items: find available receipts matching the item's product_style_id
-        // Receipts grouped by product_style_id, with available qty pre-computed
-        $styleIds = $materialItems->pluck('product_style_id')->filter()->unique()->all();
+        // For uncovered items: find available receipts matching the item's product_style_id.
+        // Items saved without a linked style (e.g. Color/Item# retyped without re-selecting
+        // from the dropdown) fall back to an exact catalog name match.
+        $effectiveStyleIds = $materialItems->mapWithKeys(
+            fn ($item) => [$item->id => $inventory->resolveStyleId($item)]
+        );
+        $styleIds = $effectiveStyleIds->filter()->unique()->values()->all();
 
         $receiptsByStyleId = [];
         if (! empty($styleIds)) {
@@ -168,17 +172,19 @@ class SaleStatusController extends Controller
             $invAllocatedQtys,
             $receiptsByStyleId,
             $receiptsByPoItemId,
-            $ptBySaleItemId
+            $ptBySaleItemId,
+            $effectiveStyleIds
         ) {
             $matches        = $poItemsBySaleItemId[$item->id] ?? [];
             $invQty         = $invAllocatedQtys[$item->id] ?? 0;
             $hasInvCoverage = $invQty > 0;
             $pickTicket     = $ptBySaleItemId[$item->id] ?? null;
+            $effectiveStyleId = $effectiveStyleIds[$item->id] ?? null;
 
-            // Resolve available receipts: by product_style_id first, then fall back to
-            // PO item link for free-text items that have no catalog entry.
-            $availableReceipts = $receiptsByStyleId[$item->product_style_id] ?? [];
-            if (empty($availableReceipts) && ! $item->product_style_id) {
+            // Resolve available receipts: by effective product_style_id first, then fall
+            // back to PO item link for free-text items that have no catalog entry.
+            $availableReceipts = $receiptsByStyleId[$effectiveStyleId] ?? [];
+            if (empty($availableReceipts) && ! $effectiveStyleId) {
                 foreach ($matches as $m) {
                     $poItemId = $m['poItem']->id ?? null;
                     if ($poItemId && isset($receiptsByPoItemId[$poItemId])) {

@@ -1333,14 +1333,33 @@ function initManufacturerDropdownForRoom(roomCard) {
       render(styles);
     });
 
-    // If user blurs without picking from the dropdown and the text is unchanged, restore the ID
+    // If user blurs without picking from the dropdown, try to keep the row linked
+    // to a catalog style rather than silently saving it unlinked:
+    //  1. text unchanged from focus → restore the style that was already linked
+    //  2. text edited but matches a catalog entry for the selected product line
+    //     exactly → link it (handles retyping/copy-paste that never opened the
+    //     dropdown, so the row doesn't look correct on screen but save unlinked)
     colorInput.addEventListener('blur', () => {
-      if (!colorInput.dataset.productStyleId && _focusStyleId) {
-        if ((colorInput.value || '').trim() === _focusText.trim()) {
-          colorInput.dataset.productStyleId = _focusStyleId;
-          const styleIdInput = row.querySelector('.js-product-style-id-input');
-          if (styleIdInput) styleIdInput.value = _focusStyleId;
-        }
+      if (colorInput.dataset.productStyleId) return;
+
+      const currentText = (colorInput.value || '').trim();
+      if (!currentText) return;
+
+      if (_focusStyleId && currentText === _focusText.trim()) {
+        colorInput.dataset.productStyleId = _focusStyleId;
+        const styleIdInput = row.querySelector('.js-product-style-id-input');
+        if (styleIdInput) styleIdInput.value = _focusStyleId;
+        return;
+      }
+
+      const exactMatches = (styles || []).filter(
+        (s) => (s.name || '').trim().toLowerCase() === currentText.toLowerCase()
+      );
+      if (exactMatches.length === 1) {
+        const match = exactMatches[0];
+        colorInput.dataset.productStyleId = String(match.id);
+        const styleIdInput = row.querySelector('.js-product-style-id-input');
+        if (styleIdInput) styleIdInput.value = String(match.id);
       }
     });
 
