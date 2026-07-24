@@ -327,12 +327,42 @@ class PickTicketService
 
     /**
      * Cancel the pick ticket.
-     * Does not affect allocation released_at — cancelling a pending ticket
-     * leaves the inventory allocation intact (stock remains reserved).
+     *
+     * Releases any linked inventory allocations that were never delivered
+     * (released_at still null) so that reserved stock goes back into the
+     * warehouse's available pool. Allocations already released via delivery
+     * are left alone, since that stock has physically left the warehouse.
+     * Pick ticket item rows are kept (with their allocation link cleared)
+     * so the cancelled ticket's history stays visible.
      */
     public function cancel(PickTicket $pickTicket): void
     {
-        $pickTicket->update(['status' => 'cancelled']);
+        DB::transaction(function () use ($pickTicket) {
+            $pickTicket->loadMissing('items');
+
+            $allocationIds = $pickTicket->items
+                ->pluck('inventory_allocation_id')
+                ->filter()
+                ->values()
+                ->all();
+
+            if ($allocationIds) {
+                $releasableIds = InventoryAllocation::whereIn('id', $allocationIds)
+                    ->whereNull('released_at')
+                    ->pluck('id')
+                    ->all();
+
+                if ($releasableIds) {
+                    PickTicketItem::where('pick_ticket_id', $pickTicket->id)
+                        ->whereIn('inventory_allocation_id', $releasableIds)
+                        ->update(['inventory_allocation_id' => null]);
+
+                    InventoryAllocation::whereIn('id', $releasableIds)->delete();
+                }
+            }
+
+            $pickTicket->update(['status' => 'cancelled']);
+        });
     }
 
     /**

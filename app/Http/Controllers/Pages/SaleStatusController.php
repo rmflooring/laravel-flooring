@@ -91,9 +91,14 @@ class SaleStatusController extends Controller
                 });
         }
 
-        $invAllocatedQtys = \App\Models\InventoryAllocation::whereIn('sale_item_id', $saleItemIds)
-            ->selectRaw('sale_item_id, SUM(quantity) as total')
-            ->groupBy('sale_item_id')
+        $invAllocatedQtys = \App\Models\InventoryAllocation::whereIn('inventory_allocations.sale_item_id', $saleItemIds)
+            ->leftJoin('pick_ticket_items', 'pick_ticket_items.inventory_allocation_id', '=', 'inventory_allocations.id')
+            ->leftJoin('pick_tickets', 'pick_tickets.id', '=', 'pick_ticket_items.pick_ticket_id')
+            ->where(function ($q) {
+                $q->whereNull('pick_tickets.id')->orWhere('pick_tickets.status', '<>', 'cancelled');
+            })
+            ->selectRaw('inventory_allocations.sale_item_id, SUM(inventory_allocations.quantity) as total')
+            ->groupBy('inventory_allocations.sale_item_id')
             ->pluck('total', 'sale_item_id')
             ->map(fn ($v) => (float) $v)
             ->all();
