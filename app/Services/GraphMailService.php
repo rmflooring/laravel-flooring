@@ -99,9 +99,7 @@ class GraphMailService
 
             $message = [
                 'subject' => $subject,
-                'body'    => $trackingToken
-                    ? $this->buildHtmlBody($body, $trackingToken)
-                    : ['contentType' => 'HTML', 'content' => $body],
+                'body'    => $this->buildHtmlBody($body, $trackingToken),
                 'toRecipients' => $recipients,
                 'from'         => [
                     'emailAddress' => array_filter([
@@ -475,9 +473,7 @@ class GraphMailService
         try {
             $message = [
                 'subject' => $subject,
-                'body'    => $trackingToken
-                    ? $this->buildHtmlBody($body, $trackingToken)
-                    : ['contentType' => 'HTML', 'content' => $body],
+                'body'    => $this->buildHtmlBody($body, $trackingToken),
                 'toRecipients' => $recipients,
             ];
 
@@ -623,14 +619,16 @@ class GraphMailService
     // Admin failure notification
     // =========================================================================
 
-    private function buildHtmlBody(string $body, string $trackingToken): array
+    private function buildHtmlBody(string $body, ?string $trackingToken = null): array
     {
-        $pixelUrl = url('/t/' . $trackingToken);
-        $escaped  = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
-        $html     = '<div style="font-family:sans-serif;font-size:14px;line-height:1.6;color:#222;">'
-                  . $escaped
-                  . '<img src="' . $pixelUrl . '" width="1" height="1" style="display:block;width:1px;height:1px;border:0;" alt="" />'
-                  . '</div>';
+        $escaped = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
+        $pixel   = $trackingToken
+            ? '<img src="' . url('/t/' . $trackingToken) . '" width="1" height="1" style="display:block;width:1px;height:1px;border:0;" alt="" />'
+            : '';
+        $html    = '<div style="font-family:sans-serif;font-size:14px;line-height:1.6;color:#222;">'
+                 . $escaped
+                 . $pixel
+                 . '</div>';
 
         return ['contentType' => 'HTML', 'content' => $html];
     }
