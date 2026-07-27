@@ -135,13 +135,12 @@ class QuickReturnController extends Controller
                 $saleItem  = SaleItem::with('productStyle.productLine')->find($itemData['sale_item_id']);
                 $lineTotal = round((float) $itemData['quantity'] * (float) $saleItem->sell_price, 2);
 
-                $label = $saleItem->style
-                    ? ($saleItem->style . ($saleItem->color_item_number ? ' — ' . $saleItem->color_item_number : ''))
-                    : ($saleItem->description ?? 'Item');
+                $label = $this->resolveItemLabel($saleItem);
 
                 $returnItem = QuickReturnItem::create([
                     'quick_return_id'  => $quickReturn->id,
                     'sale_item_id'     => $saleItem->id,
+                    'item_type'        => $saleItem->item_type,
                     'product_style_id' => $saleItem->product_style_id,
                     'description'      => $label,
                     'quantity'         => $itemData['quantity'],
@@ -213,12 +212,18 @@ class QuickReturnController extends Controller
             return back()->with('error', 'QuickBooks is not connected. Visit Settings → QuickBooks Online.');
         }
 
-        $materialItemId  = Setting::get('qbo_income_material_item_id');
+        $itemIds = [
+            'material' => Setting::get('qbo_income_material_item_id'),
+            'freight'  => Setting::get('qbo_income_freight_item_id'),
+            'labour'   => Setting::get('qbo_income_labour_item_id'),
+        ];
         $cashCustomerId  = Setting::get('qbo_cash_customer_id');
         $refundAccountId = Setting::get('qbo_refund_account_id');
 
-        if (! $materialItemId) {
-            return back()->with('error', 'Missing QBO income material item ID. Visit Settings → QuickBooks Online.');
+        $typesUsed = $quickReturn->items()->distinct()->pluck('item_type');
+        $missingItemIds = $typesUsed->filter(fn ($type) => empty($itemIds[$type]));
+        if ($missingItemIds->isNotEmpty()) {
+            return back()->with('error', 'Missing QBO income item ID for: ' . $missingItemIds->implode(', ') . '. Visit Settings → QuickBooks Online.');
         }
         if (! $cashCustomerId) {
             return back()->with('error', 'Missing Cash Customer QBO ID. Visit Settings → QuickBooks Online.');
@@ -229,7 +234,7 @@ class QuickReturnController extends Controller
 
         $result = $sync->pushQuickReturn(
             $quickReturn,
-            ['material' => $materialItemId],
+            $itemIds,
             $cashCustomerId,
             $refundAccountId
         );
@@ -277,7 +282,6 @@ class QuickReturnController extends Controller
     public function getSaleItems(Sale $sale)
     {
         $items = SaleItem::where('sale_id', $sale->id)
-            ->where('item_type', 'material')
             ->where('is_removed', false)
             ->orderBy('sort_order')
             ->get();
@@ -286,13 +290,10 @@ class QuickReturnController extends Controller
             $alreadyReturned = (float) QuickReturnItem::where('sale_item_id', $item->id)->sum('quantity');
             $returnable      = max(0, (float) $item->quantity - $alreadyReturned);
 
-            $label = $item->style
-                ? ($item->style . ($item->color_item_number ? ' — ' . $item->color_item_number : ''))
-                : ($item->description ?? 'Item');
-
             return [
                 'id'               => $item->id,
-                'label'            => $label,
+                'label'            => $this->resolveItemLabel($item),
+                'item_type'        => $item->item_type,
                 'manufacturer'     => $item->manufacturer,
                 'unit'             => $item->unit,
                 'quantity_sold'    => (float) $item->quantity,
@@ -302,6 +303,24 @@ class QuickReturnController extends Controller
                 'product_style_id' => $item->product_style_id,
             ];
         }));
+    }
+
+    /**
+     * Human-readable label for a sale item, regardless of item_type
+     * (material / labour / freight).
+     */
+    private function resolveItemLabel(SaleItem $item): string
+    {
+        return match ($item->item_type) {
+            'material' => $item->style
+                ? ($item->style . ($item->color_item_number ? ' — ' . $item->color_item_number : ''))
+                : ($item->description ?? 'Material'),
+            'labour' => ($item->labour_type && $item->description)
+                ? ($item->labour_type . ' — ' . $item->description)
+                : ($item->labour_type ?: ($item->description ?: 'Labour')),
+            'freight' => $item->freight_description ?: 'Freight',
+            default => $item->description ?? 'Item',
+        };
     }
 
     private function brandingSettings(): array

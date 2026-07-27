@@ -1343,6 +1343,61 @@
                 @endif
             </div>
 
+            {{-- Returns Section --}}
+            @if($sale->quickReturns->isNotEmpty())
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Returns</h3>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300">
+                        ${{ number_format($sale->quickReturns->sum('grand_total'), 2) }} refunded
+                    </span>
+                </div>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-xs uppercase text-gray-500 bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                            <th class="px-5 py-2 text-left">Return #</th>
+                            <th class="px-5 py-2 text-left">Date</th>
+                            <th class="px-5 py-2 text-left">Refund Method</th>
+                            <th class="px-5 py-2 text-left">QBO</th>
+                            <th class="px-5 py-2 text-right">Amount</th>
+                            <th class="px-5 py-2 w-16"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach($sale->quickReturns as $qr)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <td class="px-5 py-3 font-medium">
+                                    <a href="{{ route('pages.quick-returns.show', $qr) }}"
+                                       class="text-blue-600 hover:underline dark:text-blue-400">{{ $qr->return_number }}</a>
+                                </td>
+                                <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $qr->created_at->format('M j, Y') }}</td>
+                                <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ \App\Models\InvoicePayment::PAYMENT_METHODS[$qr->refund_method] ?? ucfirst(str_replace('_', ' ', $qr->refund_method)) }}</td>
+                                <td class="px-5 py-3">
+                                    @if($qr->qbo_id)
+                                        <span class="text-xs text-green-600 dark:text-green-400">Synced</span>
+                                    @else
+                                        <span class="text-xs text-gray-400">Not synced</span>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-3 text-right font-semibold text-rose-700 dark:text-rose-400">−${{ number_format((float)$qr->grand_total, 2) }}</td>
+                                <td class="px-5 py-3 text-right">
+                                    <a href="{{ route('pages.quick-returns.show', $qr) }}"
+                                       class="text-xs text-blue-600 hover:underline">View</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-gray-50 dark:bg-gray-700 text-sm font-semibold">
+                            <td colspan="4" class="px-5 py-3 text-right text-gray-700 dark:text-gray-300">Total Refunded</td>
+                            <td class="px-5 py-3 text-right text-rose-700 dark:text-rose-400">−${{ number_format($sale->quickReturns->sum('grand_total'), 2) }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            @endif
+
             {{-- Archived Records (admin only) --}}
             @role('admin')
             @if ($trashedWorkOrders->isNotEmpty() || $trashedPurchaseOrders->isNotEmpty() || $draftRfcs->isNotEmpty())

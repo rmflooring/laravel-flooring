@@ -110,7 +110,16 @@
                                             class="rounded border-gray-300 text-rose-600 focus:ring-rose-400 disabled:cursor-not-allowed">
                                     </td>
                                     <td class="py-3 pr-4">
-                                        <p class="font-medium text-gray-800" x-text="item.label"></p>
+                                        <p class="font-medium text-gray-800">
+                                            <span x-text="item.label"></span>
+                                            <span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                                                  :class="{
+                                                      'bg-blue-100 text-blue-700': item.item_type === 'material',
+                                                      'bg-amber-100 text-amber-700': item.item_type === 'labour',
+                                                      'bg-purple-100 text-purple-700': item.item_type === 'freight',
+                                                  }"
+                                                  x-text="item.item_type"></span>
+                                        </p>
                                         <p x-show="item.manufacturer" class="text-xs text-gray-400" x-text="item.manufacturer"></p>
                                         <p x-show="item.returnable <= 0" class="text-xs text-rose-400 mt-0.5">Fully returned</p>
                                     </td>

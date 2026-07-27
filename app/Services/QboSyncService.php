@@ -917,7 +917,7 @@ class QboSyncService
      * Push a QuickReturn to QBO as a RefundReceipt entity.
      * If the return has a linked Customer, it is auto-synced first.
      * If there is no customer record, $cashCustomerQboId is used instead.
-     * $itemIds = ['material' => QBO Item ID]
+     * $itemIds = ['material' => QBO Item ID, 'labour' => QBO Item ID, 'freight' => QBO Item ID]
      */
     public function pushQuickReturn(QuickReturn $return, array $itemIds, string $cashCustomerQboId, string $refundAccountId): array
     {
@@ -972,16 +972,32 @@ class QboSyncService
 
     private function buildRefundReceiptPayload(QuickReturn $return, string $customerQboId, array $itemIds, string $refundAccountId): array
     {
-        $lines     = [];
-        $taxCodeId = $return->tax_rate_percent > 0 ? '39' : '25';
+        $lines = [];
+
+        // Same rule as invoices: if any labour line is present, the job is
+        // supply-and-install (service) — GST only on everything. Otherwise
+        // it's materials-only — GST+PST BC on material/freight, GST on labour.
+        $hasLabour = $return->items->contains(
+            fn ($i) => $i->item_type === 'labour' && $i->line_total > 0
+        );
 
         foreach ($return->items as $item) {
+            $itemType = $item->item_type ?: 'material';
+            $itemId   = $itemIds[$itemType] ?? $itemIds['material'];
+
+            $taxCodeId = match (true) {
+                $return->tax_amount <= 0     => '25',
+                $hasLabour                   => '37',
+                $itemType === 'labour'       => '37',
+                default                      => '39',
+            };
+
             $lines[] = [
                 'Amount'      => (float) $item->line_total,
                 'DetailType'  => 'SalesItemLineDetail',
                 'Description' => $item->description,
                 'SalesItemLineDetail' => [
-                    'ItemRef'    => ['value' => $itemIds['material']],
+                    'ItemRef'    => ['value' => $itemId],
                     'Qty'        => (float) $item->quantity,
                     'UnitPrice'  => (float) $item->unit_price,
                     'TaxCodeRef' => ['value' => $taxCodeId],

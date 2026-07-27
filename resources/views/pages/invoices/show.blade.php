@@ -395,6 +395,47 @@
         @endif
     </div>
 
+    {{-- Returns --}}
+    @if($sale->quickReturns->isNotEmpty())
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Returns</h2>
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300">
+                ${{ number_format($sale->quickReturns->sum('grand_total'), 2) }} refunded
+            </span>
+        </div>
+        <p class="px-5 pt-3 text-xs text-gray-400 dark:text-gray-500">Returns are recorded against the sale, not this specific invoice.</p>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-xs uppercase text-gray-500 bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                    <th class="px-5 py-2 text-left">Return #</th>
+                    <th class="px-5 py-2 text-left">Date</th>
+                    <th class="px-5 py-2 text-left">Refund Method</th>
+                    <th class="px-5 py-2 text-right">Amount</th>
+                    <th class="px-5 py-2 w-16"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach($sale->quickReturns as $qr)
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-5 py-3 font-medium">
+                            <a href="{{ route('pages.quick-returns.show', $qr) }}"
+                               class="text-blue-600 hover:underline dark:text-blue-400">{{ $qr->return_number }}</a>
+                        </td>
+                        <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ $qr->created_at->format('M j, Y') }}</td>
+                        <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ \App\Models\InvoicePayment::PAYMENT_METHODS[$qr->refund_method] ?? ucfirst(str_replace('_', ' ', $qr->refund_method)) }}</td>
+                        <td class="px-5 py-3 text-right font-semibold text-rose-700 dark:text-rose-400">−${{ number_format((float)$qr->grand_total, 2) }}</td>
+                        <td class="px-5 py-3 text-right">
+                            <a href="{{ route('pages.quick-returns.show', $qr) }}"
+                               class="text-xs text-blue-600 hover:underline">View</a>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
     {{-- QuickBooks status --}}
     @if (app(\App\Services\QuickBooksService::class)->isConnected())
     <div class="bg-white border border-gray-200 rounded-lg p-4 dark:bg-gray-800 dark:border-gray-700">

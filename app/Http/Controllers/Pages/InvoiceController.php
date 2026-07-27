@@ -104,7 +104,7 @@ class InvoiceController extends Controller
     public function show(Sale $sale, Invoice $invoice)
     {
         $invoice->load(['rooms.items', 'payments.recordedBy', 'payments.salePayment', 'paymentTerm']);
-        $sale->load(['opportunity.projectManager', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
+        $sale->load(['opportunity.projectManager', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer', 'quickReturns']);
 
         $paymentMethods   = InvoicePayment::PAYMENT_METHODS;
         $pmEmail          = $sale->opportunity?->projectManager?->email;

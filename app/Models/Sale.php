@@ -84,6 +84,11 @@ class Sale extends Model implements Auditable
         return $this->hasMany(CustomerReturn::class);
     }
 
+    public function quickReturns(): HasMany
+    {
+        return $this->hasMany(QuickReturn::class)->orderByDesc('created_at');
+    }
+
     public function rooms(): HasMany
     {
         return $this->hasMany(SaleRoom::class)->orderBy('sort_order');

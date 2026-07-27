@@ -165,6 +165,7 @@ class SaleController extends Controller
 			'invoices',
 			'invoices.payments',
 			'deposits.payerCustomer',
+			'quickReturns',
 		]);
 		[$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale);
 		$itemPoStatusMap  = $this->buildItemPoStatusMap($sale);
