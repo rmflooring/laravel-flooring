@@ -254,6 +254,11 @@ public function show(Customer $customer)
 
     $customerBalance = $sales->flatMap->invoices->sum(fn ($invoice) => $invoice->balance_due);
 
+    $invoices = $sales->flatMap(fn ($sale) => $sale->invoices->map(function ($invoice) use ($sale) {
+        $invoice->sale_number = $sale->sale_number;
+        return $invoice;
+    }))->sortByDesc('created_at')->values();
+
     $customer->load('contacts');
 
     return view('admin.customers.show', compact(
@@ -261,7 +266,8 @@ public function show(Customer $customer)
         'opportunitiesAsParent',
         'opportunitiesAsJobSite',
         'sales',
-        'customerBalance'
+        'customerBalance',
+        'invoices'
     ));
 }
 

@@ -560,6 +560,83 @@
             </div>
             @endif
 
+            {{-- Invoices --}}
+            @if($invoices->isNotEmpty())
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-base font-semibold text-gray-700">
+                        Invoices
+                        <span class="ml-2 bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">{{ $invoices->count() }}</span>
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    @php
+                        $invStatusColors = [
+                            'draft'          => 'bg-gray-100 text-gray-700',
+                            'sent'           => 'bg-sky-100 text-sky-800',
+                            'paid'           => 'bg-green-100 text-green-800',
+                            'overdue'        => 'bg-red-100 text-red-800',
+                            'partially_paid' => 'bg-amber-100 text-amber-800',
+                            'voided'         => 'bg-red-100 text-red-600',
+                        ];
+                    @endphp
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3">Invoice #</th>
+                                <th class="px-6 py-3">Sale #</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3 text-right">Total</th>
+                                <th class="px-6 py-3 text-right">Balance</th>
+                                <th class="px-6 py-3">Date</th>
+                                <th class="px-6 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($invoices as $invoice)
+                                <tr class="bg-white border-b hover:bg-gray-50 {{ $invoice->status === 'voided' ? 'opacity-50' : '' }}">
+                                    <td class="px-6 py-4 font-medium text-gray-900">
+                                        {{ $invoice->invoice_number }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        #{{ $invoice->sale_number }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded {{ $invStatusColors[$invoice->status] ?? 'bg-gray-100 text-gray-700' }}">
+                                            {{ match($invoice->status) {
+                                                'draft'          => 'Draft',
+                                                'sent'           => 'Sent',
+                                                'paid'           => 'Paid',
+                                                'overdue'        => 'Overdue',
+                                                'partially_paid' => 'Partially Paid',
+                                                'voided'         => 'Voided',
+                                                default          => ucfirst($invoice->status),
+                                            } }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right text-gray-700">
+                                        ${{ number_format((float) $invoice->grand_total, 2) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-right {{ $invoice->balance_due > 0 && $invoice->status !== 'voided' ? 'text-red-600 font-semibold' : 'text-gray-400' }}">
+                                        ${{ number_format(max(0, $invoice->balance_due), 2) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-500">
+                                        {{ $invoice->created_at->format('M j, Y') }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <a href="{{ route('pages.sales.invoices.show', [$invoice->sale_id, $invoice->id]) }}"
+                                           class="font-medium text-blue-600 hover:underline">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
             {{-- No activity --}}
             @if($opportunitiesAsParent->isEmpty() && $opportunitiesAsJobSite->isEmpty() && $sales->isEmpty())
             <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-10 text-center text-gray-500">
