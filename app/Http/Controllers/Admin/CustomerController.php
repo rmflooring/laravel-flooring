@@ -256,8 +256,13 @@ public function show(Customer $customer)
 
     $invoices = $sales->flatMap(fn ($sale) => $sale->invoices->map(function ($invoice) use ($sale) {
         $invoice->sale_number = $sale->sale_number;
+        // sale_number isn't a real invoices column — sync it into "original" so
+        // it's never treated as dirty and swept into a later ->update() call.
+        $invoice->syncOriginal();
         return $invoice;
     }))->sortByDesc('created_at')->values();
+
+    $openInvoices = $this->openInvoicesFor($customer);
 
     $customer->load('contacts');
 
@@ -267,8 +272,122 @@ public function show(Customer $customer)
         'opportunitiesAsJobSite',
         'sales',
         'customerBalance',
-        'invoices'
+        'invoices',
+        'openInvoices'
     ));
+}
+
+/**
+ * All non-voided, unpaid invoices across every sale tied to this customer
+ * (as either the parent or job site customer), oldest first.
+ */
+private function openInvoicesFor(Customer $customer): \Illuminate\Support\Collection
+{
+    $opportunityIds = $customer->opportunitiesAsParent()->pluck('id')
+        ->merge($customer->opportunitiesAsJobSite()->pluck('id'))
+        ->unique();
+
+    $sales = \App\Models\Sale::whereIn('opportunity_id', $opportunityIds)
+        ->with(['invoices' => fn ($q) => $q->whereNotIn('status', ['voided'])])
+        ->get();
+
+    return $sales->flatMap(fn ($sale) => $sale->invoices->map(function ($invoice) use ($sale) {
+            $invoice->sale_number = $sale->sale_number;
+            // sale_number isn't a real invoices column — sync it into "original"
+            // so it's never treated as dirty and swept into a later ->update() call.
+            $invoice->syncOriginal();
+            return $invoice;
+        }))
+        ->filter(fn ($invoice) => $invoice->balance_due > 0.004)
+        ->sortBy('created_at')
+        ->values();
+}
+
+/**
+ * Record a single payment and split it across multiple open invoices
+ * belonging to this customer.
+ */
+public function storeSplitPayment(Request $request, Customer $customer, QboSyncService $sync)
+{
+    $eligibleInvoices = $this->openInvoicesFor($customer)->keyBy('id');
+
+    $data = $request->validate([
+        'amount'           => ['required', 'numeric', 'min:0.01'],
+        'payment_date'     => ['required', 'date'],
+        'payment_method'   => ['required', 'in:' . implode(',', array_keys(\App\Models\InvoicePayment::PAYMENT_METHODS))],
+        'reference_number' => ['nullable', 'string', 'max:100'],
+        'notes'            => ['nullable', 'string', 'max:500'],
+        'allocations'      => ['required', 'array', 'min:1'],
+        'allocations.*'    => ['nullable', 'numeric', 'min:0'],
+    ]);
+
+    $allocations = collect($data['allocations'])
+        ->map(fn ($v) => round((float) $v, 2))
+        ->filter(fn ($v) => $v > 0);
+
+    if ($allocations->isEmpty()) {
+        return back()->with('error', 'Allocate the payment to at least one invoice.')->withInput();
+    }
+
+    $allocatedTotal = round($allocations->sum(), 2);
+    $enteredTotal   = round((float) $data['amount'], 2);
+
+    if (abs($allocatedTotal - $enteredTotal) > 0.01) {
+        return back()
+            ->with('error', 'Allocated total ($' . number_format($allocatedTotal, 2) . ') must equal the payment amount ($' . number_format($enteredTotal, 2) . ').')
+            ->withInput();
+    }
+
+    foreach ($allocations as $invoiceId => $amt) {
+        $invoice = $eligibleInvoices->get((int) $invoiceId);
+
+        if (! $invoice) {
+            return back()->with('error', 'One of the selected invoices is not valid for this customer.')->withInput();
+        }
+
+        if ($amt > (float) $invoice->balance_due + 0.01) {
+            return back()
+                ->with('error', 'Cannot allocate more than the balance due ($' . number_format($invoice->balance_due, 2) . ') on invoice ' . $invoice->invoice_number . '.')
+                ->withInput();
+        }
+    }
+
+    $invoiceService = app(\App\Services\InvoiceService::class);
+    $qboConnected   = app(\App\Services\QuickBooksService::class)->isConnected();
+    $splitAcrossMany = $allocations->count() > 1;
+    $count = 0;
+
+    \Illuminate\Support\Facades\DB::transaction(function () use ($allocations, $eligibleInvoices, $data, $invoiceService, $qboConnected, $sync, $splitAcrossMany, &$count) {
+        foreach ($allocations as $invoiceId => $amt) {
+            $invoice = $eligibleInvoices->get((int) $invoiceId);
+
+            $notes = trim($data['notes'] ?? '');
+            if ($splitAcrossMany) {
+                $notes = trim($notes . ' (split payment across ' . $allocations->count() . ' invoices)');
+            }
+
+            $payment = \App\Models\InvoicePayment::create([
+                'invoice_id'       => $invoice->id,
+                'amount'           => $amt,
+                'payment_date'     => $data['payment_date'],
+                'payment_method'   => $data['payment_method'],
+                'reference_number' => $data['reference_number'] ?? null,
+                'notes'            => $notes ?: null,
+                'recorded_by'      => auth()->id(),
+            ]);
+
+            $invoiceService->recalculateAfterPayment($invoice);
+
+            if ($qboConnected && $invoice->qbo_id) {
+                $sync->pushPayment($payment);
+            }
+
+            $count++;
+        }
+    });
+
+    return redirect()->route('admin.customers.show', $customer)
+        ->with('success', 'Payment of $' . number_format($enteredTotal, 2) . ' recorded across ' . $count . ' invoice(s).');
 }
 
 //add edit method

@@ -378,6 +378,10 @@ Route::prefix('admin')
             ->middleware('role_or_permission:admin|edit customers')
             ->name('customers.push-to-qbo');
 
+        Route::post('customers/{customer}/payments', [CustomerController::class, 'storeSplitPayment'])
+            ->middleware('role_or_permission:admin|edit invoices')
+            ->name('customers.payments.store');
+
         // Customer Contacts
         Route::post('customers/{customer}/contacts', [CustomerContactController::class, 'store'])
             ->middleware('role_or_permission:admin|edit customers')

@@ -563,11 +563,19 @@
             {{-- Invoices --}}
             @if($invoices->isNotEmpty())
             <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                <div class="px-6 py-4 border-b border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                     <h2 class="text-base font-semibold text-gray-700">
                         Invoices
                         <span class="ml-2 bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">{{ $invoices->count() }}</span>
                     </h2>
+                    @can('edit invoices')
+                        @if($openInvoices->isNotEmpty())
+                            <button type="button" onclick="document.getElementById('record-payment-modal').classList.remove('hidden')"
+                                class="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-100">
+                                + Record Payment
+                            </button>
+                        @endif
+                    @endcan
                 </div>
                 <div class="overflow-x-auto">
                     @php
@@ -646,4 +654,146 @@
 
         </div>
     </div>
+
+    {{-- Record Payment Modal --}}
+    @if($openInvoices->isNotEmpty())
+    <div id="record-payment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+         x-data="recordPaymentForm({{ $openInvoices->map(fn ($i) => [
+             'id'             => $i->id,
+             'invoice_number' => $i->invoice_number,
+             'sale_number'    => $i->sale_number,
+             'balance_due'    => round((float) $i->balance_due, 2),
+         ])->values()->toJson() }})">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                <h3 class="text-base font-semibold text-gray-900">Record Payment</h3>
+                <button type="button" onclick="document.getElementById('record-payment-modal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('admin.customers.payments.store', $customer) }}" class="p-5 space-y-4">
+                @csrf
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Payment Amount <span class="text-red-500">*</span></label>
+                        <input type="text" inputmode="decimal" name="amount" x-model="totalAmount" @input="autoFill()"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            required>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Date <span class="text-red-500">*</span></label>
+                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Method <span class="text-red-500">*</span></label>
+                        <select name="payment_method"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            required>
+                            @foreach(\App\Models\InvoicePayment::PAYMENT_METHODS as $value => $label)
+                                <option value="{{ $value }}" {{ $value === 'e-transfer' ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Reference #</label>
+                        <input type="text" name="reference_number"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    </div>
+                </div>
+                <div>
+                    <label class="block mb-1 text-sm font-medium text-gray-700">Notes</label>
+                    <textarea name="notes" rows="2"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></textarea>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm font-medium text-gray-700">Allocate to Invoices <span class="text-red-500">*</span></label>
+                        <button type="button" @click="autoFill()" class="text-xs text-blue-600 hover:underline">Auto-fill oldest first</button>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Invoice</th>
+                                    <th class="px-3 py-2 text-right">Balance Due</th>
+                                    <th class="px-3 py-2 text-right w-32">Allocate</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <template x-for="inv in invoices" :key="inv.id">
+                                    <tr>
+                                        <td class="px-3 py-2 text-gray-700">
+                                            <span x-text="inv.invoice_number"></span>
+                                            <span class="text-xs text-gray-400" x-text="'(Sale #' + inv.sale_number + ')'"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-right text-gray-600" x-text="'$' + inv.balance_due.toFixed(2)"></td>
+                                        <td class="px-3 py-2 text-right">
+                                            <input type="text" inputmode="decimal"
+                                                :name="'allocations[' + inv.id + ']'"
+                                                x-model="allocations[inv.id]"
+                                                class="w-24 border border-gray-300 rounded-lg px-2 py-1 text-sm text-right focus:ring-2 focus:ring-blue-400">
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-between text-sm mt-2 px-1">
+                        <span class="text-gray-500">Allocated: <span class="font-medium text-gray-800" x-text="'$' + allocatedTotal.toFixed(2)"></span></span>
+                        <span :class="Math.abs(remaining) < 0.01 ? 'text-green-600' : 'text-red-600'" x-text="'Remaining: $' + remaining.toFixed(2)"></span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-1">
+                    <button type="submit" :disabled="!isValid"
+                        class="flex-1 text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                        Record Payment
+                    </button>
+                    <button type="button" onclick="document.getElementById('record-payment-modal').classList.add('hidden')"
+                        class="flex-1 py-2.5 px-5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function recordPaymentForm(invoices) {
+        return {
+            invoices: invoices,
+            totalAmount: '',
+            allocations: Object.fromEntries(invoices.map(inv => [inv.id, ''])),
+
+            autoFill() {
+                let remaining = parseFloat(this.totalAmount) || 0;
+                this.invoices.forEach(inv => {
+                    if (remaining <= 0) { this.allocations[inv.id] = ''; return; }
+                    const alloc = Math.min(remaining, inv.balance_due);
+                    this.allocations[inv.id] = alloc > 0 ? alloc.toFixed(2) : '';
+                    remaining = Math.round((remaining - alloc) * 100) / 100;
+                });
+            },
+
+            get allocatedTotal() {
+                return Object.values(this.allocations).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+            },
+
+            get remaining() {
+                return Math.round(((parseFloat(this.totalAmount) || 0) - this.allocatedTotal) * 100) / 100;
+            },
+
+            get isValid() {
+                return (parseFloat(this.totalAmount) || 0) > 0 && Math.abs(this.remaining) < 0.01;
+            },
+        };
+    }
+    </script>
+    @endif
 </x-app-layout>
