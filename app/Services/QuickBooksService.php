@@ -22,10 +22,10 @@ class QuickBooksService
 
     public function __construct()
     {
-        $this->clientId     = config('services.quickbooks.client_id');
-        $this->clientSecret = config('services.quickbooks.client_secret');
-        $this->redirectUri  = config('services.quickbooks.redirect_uri');
-        $this->environment  = config('services.quickbooks.environment', 'sandbox');
+        $this->clientId     = config('services.quickbooks.client_id') ?? '';
+        $this->clientSecret = config('services.quickbooks.client_secret') ?? '';
+        $this->redirectUri  = config('services.quickbooks.redirect_uri') ?? '';
+        $this->environment  = config('services.quickbooks.environment', 'sandbox') ?? 'sandbox';
     }
 
     // =========================================================================
