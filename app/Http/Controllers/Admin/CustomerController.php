@@ -75,6 +75,8 @@ if ($sort && in_array($sort, $allowedSorts, true)) {
         ->paginate(15)
         ->withQueryString();
 
+    $this->attachBalances($customers);
+
     $statusOptions = Customer::query()
         ->select('customer_status')
         ->whereNotNull('customer_status')
@@ -90,6 +92,47 @@ if ($sort && in_array($sort, $allowedSorts, true)) {
         ->pluck('customer_type');
 
     return view('admin.customers.index', compact('customers', 'statusOptions', 'typeOptions'));
+}
+
+/**
+ * Set a computed_balance attribute on each customer in the collection:
+ * the sum of balance_due across all non-voided invoices on sales tied
+ * to that customer (as either the parent or the job site customer).
+ */
+private function attachBalances(iterable $customers): void
+{
+    $customerIds = collect($customers)->pluck('id');
+
+    if ($customerIds->isEmpty()) {
+        return;
+    }
+
+    $opportunities = \App\Models\Opportunity::query()
+        ->whereIn('parent_customer_id', $customerIds)
+        ->orWhereIn('job_site_customer_id', $customerIds)
+        ->get(['id', 'parent_customer_id', 'job_site_customer_id']);
+
+    $balanceByOpportunity = \App\Models\Sale::whereIn('opportunity_id', $opportunities->pluck('id'))
+        ->with(['invoices' => fn ($q) => $q->whereNotIn('status', ['voided'])])
+        ->get()
+        ->groupBy('opportunity_id')
+        ->map(fn ($sales) => $sales->flatMap->invoices->sum(fn ($i) => $i->balance_due));
+
+    $balancesByCustomer = [];
+    foreach ($opportunities as $opp) {
+        $balance = $balanceByOpportunity->get($opp->id, 0);
+        if (! $balance) {
+            continue;
+        }
+
+        foreach (array_unique(array_filter([$opp->parent_customer_id, $opp->job_site_customer_id])) as $cid) {
+            $balancesByCustomer[$cid] = ($balancesByCustomer[$cid] ?? 0) + $balance;
+        }
+    }
+
+    foreach ($customers as $customer) {
+        $customer->computed_balance = $balancesByCustomer[$customer->id] ?? 0;
+    }
 }
 
 
@@ -205,8 +248,11 @@ public function show(Customer $customer)
         ->unique();
 
     $sales = \App\Models\Sale::whereIn('opportunity_id', $opportunityIds)
+        ->with(['invoices' => fn ($q) => $q->whereNotIn('status', ['voided'])])
         ->latest()
         ->get();
+
+    $customerBalance = $sales->flatMap->invoices->sum(fn ($invoice) => $invoice->balance_due);
 
     $customer->load('contacts');
 
@@ -214,7 +260,8 @@ public function show(Customer $customer)
         'customer',
         'opportunitiesAsParent',
         'opportunitiesAsJobSite',
-        'sales'
+        'sales',
+        'customerBalance'
     ));
 }
 

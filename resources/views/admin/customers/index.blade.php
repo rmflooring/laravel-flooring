@@ -67,6 +67,7 @@
                                     <th scope="col" class="px-4 py-3">City / Province</th>
                                     <th scope="col" class="px-4 py-3">Type / Status</th>
                                     <th scope="col" class="px-4 py-3">Created By</th>
+                                    <th scope="col" class="px-4 py-3 text-right">Balance</th>
                                     <th scope="col" class="px-4 py-3">Actions</th>
                                 </tr>
                             </thead>
@@ -107,6 +108,16 @@
 
                                         <td class="px-4 py-3 whitespace-nowrap">
                                             {{ $customer->creator?->name ?? '-' }}
+                                        </td>
+
+                                        <td class="px-4 py-3 whitespace-nowrap text-right">
+                                            @if($customer->computed_balance > 0.004)
+                                                <span class="font-medium text-red-600">${{ number_format($customer->computed_balance, 2) }}</span>
+                                            @elseif($customer->computed_balance < -0.004)
+                                                <span class="font-medium text-green-600">${{ number_format(abs($customer->computed_balance), 2) }} cr</span>
+                                            @else
+                                                <span class="text-gray-400">$0.00</span>
+                                            @endif
                                         </td>
 
                                         <td class="px-4 py-3 whitespace-nowrap">
@@ -155,7 +166,7 @@
                                     </tr>
                                 @empty
                                     <tr class="bg-white border-b">
-                                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                                        <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                                             No customers found.
                                             <a href="{{ route('admin.customers.create') }}" class="text-blue-600 hover:underline">
                                                 Add the first one

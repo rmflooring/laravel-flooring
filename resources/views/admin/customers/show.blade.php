@@ -126,6 +126,18 @@
                             @if(!$customer->address && !$customer->city) —@endif
                         </p>
                     </div>
+                    <div>
+                        <p class="text-gray-500">Balance</p>
+                        <p class="font-medium">
+                            @if($customerBalance > 0.004)
+                                <span class="text-red-600">${{ number_format($customerBalance, 2) }}</span>
+                            @elseif($customerBalance < -0.004)
+                                <span class="text-green-600">${{ number_format(abs($customerBalance), 2) }} credit</span>
+                            @else
+                                <span class="text-gray-900">$0.00</span>
+                            @endif
+                        </p>
+                    </div>
                     @if($customer->parent)
                         <div>
                             <p class="text-gray-500">Parent Customer</p>
