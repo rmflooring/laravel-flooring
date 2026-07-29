@@ -704,8 +704,11 @@
                             this.extraFiles = [...this.extraFiles, ...Array.from(event.target.files)];
                             const dt = new DataTransfer();
                             this.extraFiles.forEach(f => dt.items.add(f));
-                            this.$refs.fileInput.files = dt.files;
+                            // Clear the input's native selection BEFORE reassigning .files —
+                            // setting .value on a file input clears .files too, so doing this
+                            // after the reassignment was wiping out the accumulated files.
                             event.target.value = '';
+                            this.$refs.fileInput.files = dt.files;
                         },
                         remove(idx) {
                             this.extraFiles.splice(idx, 1);
