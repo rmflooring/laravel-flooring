@@ -101,7 +101,7 @@ if ($sort && in_array($sort, $allowedSorts, true)) {
  */
 private function attachBalances(iterable $customers): void
 {
-    $customerIds = collect($customers)->pluck('id');
+    $customerIds = collect($customers->items())->pluck('id');
 
     if ($customerIds->isEmpty()) {
         return;
