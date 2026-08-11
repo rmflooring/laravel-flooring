@@ -48,7 +48,7 @@ class ProcessNewLead implements ShouldQueue
 
         $subject = 'New Flooring Lead — ' . $lead->name . ($lead->service_type ? ' (' . $lead->service_type . ')' : '');
 
-        $reviewUrl = url('/leads/' . $lead->id);
+        $reviewUrl = route('pages.leads.show', $lead);
 
         $rows = [
             'Name'            => e($lead->name),
@@ -107,7 +107,7 @@ class ProcessNewLead implements ShouldQueue
 
         $timeline = $lead->timeline ? ', ' . $lead->timeline : '';
         $service  = $lead->service_type ?? 'General Inquiry';
-        $url      = url('/leads/' . $lead->id);
+        $url      = route('pages.leads.show', $lead);
 
         $message = "New flooring lead from {$lead->name} — {$service}{$timeline}. Review in FM: {$url}";
 
