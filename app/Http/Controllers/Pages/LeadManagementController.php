@@ -158,7 +158,7 @@ class LeadManagementController extends Controller
         $sent = app(GraphMailService::class)->send(
             to:          $lead->email,
             subject:     $validated['subject'],
-            body:        nl2br(htmlspecialchars($validated['body'], ENT_QUOTES, 'UTF-8')),
+            body:        $validated['body'],
             type:        'lead_reply',
             relatedId:   $lead->id,
             relatedType: IncomingLead::class,

@@ -420,11 +420,11 @@ class ReportController extends Controller
         $mailer = app(GraphMailService::class);
 
         $sent = $user->microsoftAccount?->mail_connected
-            ? $mailer->sendAsUser($user, $toAddresses, $request->subject, $htmlBody, 'system', $attachment, $ccAddresses ?: null)
+            ? $mailer->sendAsUser($user, $toAddresses, $request->subject, $htmlBody, 'system', $attachment, $ccAddresses ?: null, isHtml: true)
             : false;
 
         if (! $sent) {
-            $sent = $mailer->send($toAddresses, $request->subject, $htmlBody, 'system', null, $attachment, $ccAddresses ?: null);
+            $sent = $mailer->send($toAddresses, $request->subject, $htmlBody, 'system', null, $attachment, $ccAddresses ?: null, isHtml: true);
         }
 
         if (! $sent) {

@@ -77,6 +77,7 @@ class SignatureRequestMail
             subject: $subject,
             body:    $htmlBody,
             type:    'signature_request',
+            isHtml:  true,
         );
     }
 }

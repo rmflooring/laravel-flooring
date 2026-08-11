@@ -73,6 +73,7 @@ class GraphMailService
         bool $requestReadReceipt = false,
         ?string $trackingToken = null,
         array $extraAttachments = [],
+        bool $isHtml = false,
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -99,7 +100,7 @@ class GraphMailService
 
             $message = [
                 'subject' => $subject,
-                'body'    => $this->buildHtmlBody($body, $trackingToken),
+                'body'    => $this->buildHtmlBody($body, $trackingToken, $isHtml),
                 'toRecipients' => $recipients,
                 'from'         => [
                     'emailAddress' => array_filter([
@@ -454,6 +455,7 @@ class GraphMailService
         bool $requestReadReceipt = false,
         ?string $trackingToken = null,
         array $extraAttachments = [],
+        bool $isHtml = false,
     ): bool {
         $token = $this->getUserToken($user);
 
@@ -473,7 +475,7 @@ class GraphMailService
         try {
             $message = [
                 'subject' => $subject,
-                'body'    => $this->buildHtmlBody($body, $trackingToken),
+                'body'    => $this->buildHtmlBody($body, $trackingToken, $isHtml),
                 'toRecipients' => $recipients,
             ];
 
@@ -619,16 +621,21 @@ class GraphMailService
     // Admin failure notification
     // =========================================================================
 
-    private function buildHtmlBody(string $body, ?string $trackingToken = null): array
+    private function buildHtmlBody(string $body, ?string $trackingToken = null, bool $isHtml = false): array
     {
-        $escaped = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
-        $pixel   = $trackingToken
+        $pixel = $trackingToken
             ? '<img src="' . url('/t/' . $trackingToken) . '" width="1" height="1" style="display:block;width:1px;height:1px;border:0;" alt="" />'
             : '';
-        $html    = '<div style="font-family:sans-serif;font-size:14px;line-height:1.6;color:#222;">'
-                 . $escaped
-                 . $pixel
-                 . '</div>';
+
+        if ($isHtml) {
+            $html = $body . $pixel;
+        } else {
+            $escaped = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
+            $html    = '<div style="font-family:sans-serif;font-size:14px;line-height:1.6;color:#222;">'
+                     . $escaped
+                     . $pixel
+                     . '</div>';
+        }
 
         return ['contentType' => 'HTML', 'content' => $html];
     }

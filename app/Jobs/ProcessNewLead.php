@@ -92,6 +92,7 @@ class ProcessNewLead implements ShouldQueue
             subject: $subject,
             body:    $body,
             type:    'lead_notification',
+            isHtml:  true,
         );
     }
 
