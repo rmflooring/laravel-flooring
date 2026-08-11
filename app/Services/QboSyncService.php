@@ -414,11 +414,20 @@ class QboSyncService
         if ($customer->parent_id && $customer->parent) {
             $parentName = $customer->parent->company_name ?: $customer->parent->name;
             if ($name === $parentName) {
-                return $name . ' (Site)';
+                $name .= ' (Site)';
             }
         }
 
-        return $name;
+        return $this->sanitizeQboName($name);
+    }
+
+    /**
+     * QBO rejects colons in Name/DisplayName fields — it uses ":" internally
+     * as the Parent:Child hierarchy delimiter — so strip them before sending.
+     */
+    private function sanitizeQboName(string $name): string
+    {
+        return trim(str_replace(':', '', $name));
     }
 
     private function findQboCustomerByName(string $displayName): ?array
