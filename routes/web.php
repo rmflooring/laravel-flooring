@@ -1633,58 +1633,73 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->name('opportunities.reviews.store');
 			
 			Route::get('documents', [OpportunityDocumentController::class, 'index'])
-                ->name('opportunities.documents.index');
+                ->name('opportunities.documents.index')
+                ->middleware('role_or_permission:admin|view documents');
 
             Route::post('documents', [OpportunityDocumentController::class, 'store'])
-                ->name('opportunities.documents.store');
+                ->name('opportunities.documents.store')
+                ->middleware('role_or_permission:admin|create documents');
 
 			Route::delete('documents/bulk', [OpportunityDocumentController::class, 'bulkDestroy'])
-    			->name('opportunities.documents.bulkDestroy');
-			
+    			->name('opportunities.documents.bulkDestroy')
+    			->middleware('role_or_permission:admin|delete documents');
+
 			Route::post('documents/bulk-restore', [OpportunityDocumentController::class, 'bulkRestore'])
-				->name('opportunities.documents.bulkRestore');
-			
+				->name('opportunities.documents.bulkRestore')
+				->middleware('role_or_permission:admin|edit documents');
+
 			Route::delete('documents/bulk-force', [OpportunityDocumentController::class, 'bulkForceDestroy'])
 				->name('opportunities.documents.bulkForceDestroy')
 				->middleware('role_or_permission:admin');
-			
+
 			Route::post('documents/{document}/restore', [OpportunityDocumentController::class, 'restore'])
-				->name('opportunities.documents.restore');
-			
+				->name('opportunities.documents.restore')
+				->middleware('role_or_permission:admin|edit documents');
+
             Route::delete('documents/{document}', [OpportunityDocumentController::class, 'destroy'])
-                ->name('opportunities.documents.destroy');
-			
+                ->name('opportunities.documents.destroy')
+                ->middleware('role_or_permission:admin|delete documents');
+
 			 Route::patch('documents/{document}', [OpportunityDocumentController::class, 'update'])
-                ->name('opportunities.documents.update');
+                ->name('opportunities.documents.update')
+                ->middleware('role_or_permission:admin|edit documents');
 
             Route::delete('documents/{document}/force', [OpportunityDocumentController::class, 'forceDestroy'])
                 ->name('opportunities.documents.forceDestroy')
                 ->middleware('role_or_permission:admin');
 
             Route::get('documents/{document}/reprint', [OpportunityDocumentController::class, 'reprint'])
-                ->name('opportunities.documents.reprint');
+                ->name('opportunities.documents.reprint')
+                ->middleware('role_or_permission:admin|view documents');
 
             // Generated document — new editable flow
             Route::get('documents/create/{template}', [OpportunityDocumentController::class, 'createGenerated'])
-                ->name('opportunities.documents.create-generated');
+                ->name('opportunities.documents.create-generated')
+                ->middleware('role_or_permission:admin|create documents');
 
             Route::post('documents/generated', [OpportunityDocumentController::class, 'storeGenerated'])
-                ->name('opportunities.documents.store-generated');
+                ->name('opportunities.documents.store-generated')
+                ->middleware('role_or_permission:admin|create documents');
 
             Route::get('documents/{document}/view', [OpportunityDocumentController::class, 'showGenerated'])
-                ->name('opportunities.documents.show-generated');
+                ->name('opportunities.documents.show-generated')
+                ->middleware('role_or_permission:admin|view documents');
 
             Route::get('documents/{document}/edit-fields', [OpportunityDocumentController::class, 'editGenerated'])
-                ->name('opportunities.documents.edit-generated');
+                ->name('opportunities.documents.edit-generated')
+                ->middleware('role_or_permission:admin|edit documents');
 
             Route::put('documents/{document}/generated', [OpportunityDocumentController::class, 'updateGenerated'])
-                ->name('opportunities.documents.update-generated');
+                ->name('opportunities.documents.update-generated')
+                ->middleware('role_or_permission:admin|edit documents');
 
             Route::get('documents/{document}/pdf', [OpportunityDocumentController::class, 'downloadPdf'])
-                ->name('opportunities.documents.pdf');
+                ->name('opportunities.documents.pdf')
+                ->middleware('role_or_permission:admin|view documents');
 
             Route::post('documents/{document}/send-email', [OpportunityDocumentController::class, 'sendEmail'])
-                ->name('opportunities.documents.send-email');
+                ->name('opportunities.documents.send-email')
+                ->middleware('role_or_permission:admin|edit documents');
 
             Route::post('documents/{document}/request-signature', [\App\Http\Controllers\Pages\SigningRequestController::class, 'storeFromOpportunityDocument'])
                 ->middleware('can:manage signing requests')

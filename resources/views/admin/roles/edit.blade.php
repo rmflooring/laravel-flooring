@@ -132,6 +132,12 @@
                                 'edit unit measures',
                                 'delete unit measures',
                             ],
+                            'Documents' => [
+                                'view documents',
+                                'create documents',
+                                'edit documents',
+                                'delete documents',
+                            ],
                             'E-Signatures' => [
                                 'manage signing requests',
                             ],
