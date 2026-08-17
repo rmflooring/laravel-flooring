@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Installer;
 use App\Models\Invoice;
 use App\Models\QuickReturn;
+use App\Models\Sale;
 use App\Models\Vendor;
 use App\Models\VendorCreditMemo;
 use App\Services\InvoiceService;
@@ -748,6 +749,40 @@ class QboSyncService
     // =========================================================================
 
     /**
+     * Find or create a Customer from a sale's free-text contact fields, for sales
+     * that were never linked to an Opportunity (quick estimates, legacy entries).
+     * Links the result back onto the sale so this only runs once per sale.
+     */
+    private function resolveOrCreateSaleCustomer(Sale $sale): ?Customer
+    {
+        $name = trim($sale->customer_name ?: $sale->homeowner_name ?: '');
+
+        if ($name === '') {
+            return null;
+        }
+
+        $customer = Customer::whereNull('parent_id')
+            ->where(function ($q) use ($name) {
+                $q->where('name', $name)->orWhere('company_name', $name);
+            })
+            ->first();
+
+        if (! $customer) {
+            $customer = Customer::create([
+                'name'          => $name,
+                'phone'         => $sale->job_phone,
+                'email'         => $sale->job_email,
+                'address'       => $sale->job_address,
+                'customer_type' => 'individual',
+            ]);
+        }
+
+        $sale->update(['customer_id' => $customer->id]);
+
+        return $customer;
+    }
+
+    /**
      * Push an invoice to QBO as an Invoice entity.
      * Customer (job site) is auto-synced if not already in QBO.
      * $itemIds = ['material' => QBO ID, 'freight' => QBO ID, 'labour' => QBO ID]
@@ -762,6 +797,13 @@ class QboSyncService
             $jobSite     = $opportunity?->jobSiteCustomer;
             $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
             $billTo      = $jobSite ?? $parent ?? $sale?->customer;
+
+            // Sales created without an Opportunity (quick estimates, legacy entries) only
+            // carry free-text customer info. Resolve or create a real Customer from that
+            // text and link it back onto the sale so future pushes skip this step.
+            if (! $billTo && $sale) {
+                $billTo = $this->resolveOrCreateSaleCustomer($sale);
+            }
 
             if (! $billTo) {
                 return ['success' => false, 'message' => 'Invoice has no customer linked.', 'qbo_id' => null];
