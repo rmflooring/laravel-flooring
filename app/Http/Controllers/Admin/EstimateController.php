@@ -779,7 +779,7 @@ $roomId = $room->id;
 					'cost_price'        => (float)($item['cost_price'] ?? 0),
 					'cost_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
-                    'line_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'line_total'        => (float)($item['line_total'] ?? 0),
                     'notes'             => $item['notes'] ?? null,
                     'internal_notes'    => $item['internal_notes'] ?? null,
                 ]);
@@ -800,7 +800,7 @@ $roomId = $room->id;
 					'cost_price' => (float)($item['cost_price'] ?? 0),
 					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
-                    'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'line_total'         => (float)($item['line_total'] ?? 0),
                     'notes'              => $item['notes'] ?? null,
                     'internal_notes'     => $item['internal_notes'] ?? null,
                 ]);
@@ -823,7 +823,7 @@ $roomId = $room->id;
 					'cost_price' => (float)($item['cost_price'] ?? 0),
 					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
-                    'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'line_total'       => (float)($item['line_total'] ?? 0),
                     'notes'          => $item['notes'] ?? null,
                     'customer_notes' => $item['customer_notes'] ?? null,
                     'internal_notes' => $item['internal_notes'] ?? null,
