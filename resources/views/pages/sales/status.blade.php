@@ -375,8 +375,12 @@
                                 ]);
                                 $itemName = $nameParts ? implode(' — ', $nameParts) : 'Material item';
 
-                                $canAssignFromStock = $dotStatus === 'none' && ! empty($availableReceipts);
                                 $neededQty          = max(0, ($item->order_qty ?? $item->quantity) - $invQty);
+                                // Show the button whenever there's unallocated need and matching stock
+                                // exists — not just when no PO exists yet. A PO/receipt being marked
+                                // "Received" only means the stock arrived, not that it's been assigned
+                                // to this specific sale item.
+                                $canAssignFromStock = $dotStatus !== 'delivered' && $neededQty > 0 && ! empty($availableReceipts);
                             @endphp
 
                             <div class="flex items-center gap-3 px-5 py-3 text-sm text-gray-700 flex-wrap sm:flex-nowrap">
