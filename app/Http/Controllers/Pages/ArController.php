@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ArController extends Controller
 {
@@ -16,31 +17,63 @@ class ArController extends Controller
     public function index(Request $request)
     {
         $query = Invoice::with(['sale.opportunity.parentCustomer'])
-            ->whereNotIn('status', ['voided']);
+            ->leftJoin('sales', 'sales.id', '=', 'invoices.sale_id')
+            ->leftJoin('opportunities', 'opportunities.id', '=', 'sales.opportunity_id')
+            ->leftJoin('customers', 'customers.id', '=', 'opportunities.parent_customer_id')
+            ->select('invoices.*', DB::raw('COALESCE(customers.company_name, sales.homeowner_name) as customer_sort_name'))
+            ->whereNotIn('invoices.status', ['voided']);
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('invoices.status', $request->status);
         }
 
         if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function ($q) use ($search) {
-                $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhereHas('sale', fn ($s) => $s->where('sale_number', 'like', "%{$search}%")
-                      ->orWhere('homeowner_name', 'like', "%{$search}%"))
-                  ->orWhereHas('sale.opportunity.parentCustomer', fn ($c) => $c->where('company_name', 'like', "%{$search}%"));
+                $q->where('invoices.invoice_number', 'like', "%{$search}%")
+                  ->orWhere('sales.sale_number', 'like', "%{$search}%")
+                  ->orWhere('sales.homeowner_name', 'like', "%{$search}%")
+                  ->orWhere('customers.company_name', 'like', "%{$search}%");
             });
         }
 
         if ($request->filled('due_from')) {
-            $query->where('due_date', '>=', $request->due_from);
+            $query->where('invoices.due_date', '>=', $request->due_from);
         }
 
         if ($request->filled('due_to')) {
-            $query->where('due_date', '<=', $request->due_to);
+            $query->where('invoices.due_date', '<=', $request->due_to);
         }
 
-        $invoices = $query->orderBy('due_date')->orderByDesc('id')->paginate(25)->withQueryString();
+        // Sortable columns — clicking a table header sorts by it (see index.blade.php)
+        $sortColumns = [
+            'invoice'  => 'invoices.invoice_number',
+            'sale'     => 'sales.sale_number',
+            'customer' => 'customer_sort_name',
+            'due_date' => 'invoices.due_date',
+            'total'    => 'invoices.grand_total',
+            'paid'     => 'invoices.amount_paid',
+            'balance'  => null, // computed, handled below
+            'status'   => 'invoices.status',
+        ];
+
+        $sort = $request->get('sort', 'invoice');
+        if (! array_key_exists($sort, $sortColumns)) {
+            $sort = 'invoice';
+        }
+
+        $dir = strtolower($request->get('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        if ($sort === 'balance') {
+            $query->orderByRaw("(invoices.grand_total - invoices.amount_paid) {$dir}");
+        } else {
+            $query->orderBy($sortColumns[$sort], $dir);
+        }
+
+        // Stable tiebreaker so equal-value rows still show latest invoices first
+        $query->orderByDesc('invoices.id');
+
+        $invoices = $query->paginate(25)->withQueryString();
 
         // Stat cards
         $baseQuery = Invoice::whereNotIn('status', ['voided']);

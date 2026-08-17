@@ -105,16 +105,40 @@
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                @php
+                    $currentSort = request('sort', 'invoice');
+                    $currentDir  = strtolower(request('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+                    $sortState = function (string $column) use ($currentSort, $currentDir) {
+                        return [
+                            'active' => $currentSort === $column,
+                            'dir'    => $currentDir,
+                            'url'    => route('pages.ar.index', array_merge(
+                                request()->except(['sort', 'dir', 'page']),
+                                ['sort' => $column, 'dir' => ($currentSort === $column && $currentDir === 'asc') ? 'desc' : 'asc']
+                            )),
+                        ];
+                    };
+                @endphp
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                     <tr>
-                        <th class="px-4 py-3">Invoice #</th>
-                        <th class="px-4 py-3">Sale #</th>
-                        <th class="px-4 py-3">Customer / Homeowner</th>
-                        <th class="px-4 py-3">Due Date</th>
-                        <th class="px-4 py-3 text-right">Total</th>
-                        <th class="px-4 py-3 text-right">Paid</th>
-                        <th class="px-4 py-3 text-right">Balance</th>
-                        <th class="px-4 py-3">Status</th>
+                        @foreach ([
+                            ['invoice', 'Invoice #', ''],
+                            ['sale', 'Sale #', ''],
+                            ['customer', 'Customer / Homeowner', ''],
+                            ['due_date', 'Due Date', ''],
+                            ['total', 'Total', 'text-right'],
+                            ['paid', 'Paid', 'text-right'],
+                            ['balance', 'Balance', 'text-right'],
+                            ['status', 'Status', ''],
+                        ] as [$col, $label, $align])
+                            @php($s = $sortState($col))
+                            <th class="px-4 py-3 {{ $align }}">
+                                <a href="{{ $s['url'] }}" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white {{ $align === 'text-right' ? 'justify-end w-full' : '' }}">
+                                    {{ $label }}
+                                    <span class="text-[10px] {{ $s['active'] ? '' : 'invisible' }}">{{ $s['dir'] === 'asc' ? '▲' : '▼' }}</span>
+                                </a>
+                            </th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
