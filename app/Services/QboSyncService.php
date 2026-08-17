@@ -876,14 +876,14 @@ class QboSyncService
     public function pushPayment(\App\Models\InvoicePayment $payment): array
     {
         try {
-            $payment->load(['invoice.sale.opportunity.jobSiteCustomer.parent', 'invoice.sale.opportunity.parentCustomer']);
+            $payment->load(['invoice.sale.opportunity.jobSiteCustomer.parent', 'invoice.sale.opportunity.parentCustomer', 'invoice.sale.customer']);
 
             $invoice     = $payment->invoice;
             $sale        = $invoice->sale;
             $opportunity = $sale?->opportunity;
             $jobSite     = $opportunity?->jobSiteCustomer;
             $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
-            $billTo      = $jobSite ?? $parent;
+            $billTo      = $jobSite ?? $parent ?? $sale?->customer;
 
             if (! $invoice->qbo_id) {
                 return ['success' => false, 'message' => 'Invoice must be synced to QBO before pushing a payment.'];
