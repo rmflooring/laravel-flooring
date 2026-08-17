@@ -150,12 +150,16 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse ($invoices as $invoice)
                         @php
-                            $sale        = $invoice->sale;
-                            $customer    = $sale?->opportunity?->parentCustomer?->company_name ?? '—';
-                            $homeowner   = $sale?->homeowner_name;
-                            $balanceDue  = $invoice->balance_due;
-                            $isOverdue   = $invoice->status === 'overdue';
-                            $isPaid      = $invoice->status === 'paid';
+                            $sale          = $invoice->sale;
+                            $opportunity   = $sale?->opportunity;
+                            $jobSite       = $opportunity?->jobSiteCustomer;
+                            $parentCust    = $jobSite?->parent ?? $opportunity?->parentCustomer;
+                            $billToCust    = $jobSite ?? $parentCust ?? $sale?->customer;
+                            $customer      = $billToCust?->company_name ?: $billToCust?->name ?: $sale?->customer_name ?: '—';
+                            $homeowner     = $sale?->homeowner_name;
+                            $balanceDue    = $invoice->balance_due;
+                            $isOverdue     = $invoice->status === 'overdue';
+                            $isPaid        = $invoice->status === 'paid';
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                             <td class="px-4 py-3 font-medium">

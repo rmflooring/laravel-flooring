@@ -16,11 +16,27 @@ class ArController extends Controller
 
     public function index(Request $request)
     {
-        $query = Invoice::with(['sale.opportunity.parentCustomer'])
+        // Bill-to customer priority mirrors QboSyncService::pushInvoice: job site
+        // customer, then its parent (or the opportunity's parent customer), then
+        // the sale's directly-linked customer, then the sale's free-text name.
+        $query = Invoice::with([
+                'sale.opportunity.jobSiteCustomer.parent',
+                'sale.opportunity.parentCustomer',
+                'sale.customer',
+            ])
             ->leftJoin('sales', 'sales.id', '=', 'invoices.sale_id')
             ->leftJoin('opportunities', 'opportunities.id', '=', 'sales.opportunity_id')
-            ->leftJoin('customers', 'customers.id', '=', 'opportunities.parent_customer_id')
-            ->select('invoices.*', DB::raw('COALESCE(customers.company_name, sales.homeowner_name) as customer_sort_name'))
+            ->leftJoin('customers as job_site_customers', 'job_site_customers.id', '=', 'opportunities.job_site_customer_id')
+            ->leftJoin('customers as job_site_parents', 'job_site_parents.id', '=', 'job_site_customers.parent_id')
+            ->leftJoin('customers as parent_customers', 'parent_customers.id', '=', 'opportunities.parent_customer_id')
+            ->leftJoin('customers as sale_customers', 'sale_customers.id', '=', 'sales.customer_id')
+            ->select('invoices.*', DB::raw("COALESCE(
+                NULLIF(job_site_customers.company_name, ''), job_site_customers.name,
+                NULLIF(job_site_parents.company_name, ''), job_site_parents.name,
+                NULLIF(parent_customers.company_name, ''), parent_customers.name,
+                NULLIF(sale_customers.company_name, ''), sale_customers.name,
+                sales.customer_name, sales.homeowner_name
+            ) as customer_sort_name"))
             ->whereNotIn('invoices.status', ['voided']);
 
         if ($request->filled('status')) {
@@ -33,7 +49,13 @@ class ArController extends Controller
                 $q->where('invoices.invoice_number', 'like', "%{$search}%")
                   ->orWhere('sales.sale_number', 'like', "%{$search}%")
                   ->orWhere('sales.homeowner_name', 'like', "%{$search}%")
-                  ->orWhere('customers.company_name', 'like', "%{$search}%");
+                  ->orWhere('sales.customer_name', 'like', "%{$search}%")
+                  ->orWhere('job_site_customers.company_name', 'like', "%{$search}%")
+                  ->orWhere('job_site_customers.name', 'like', "%{$search}%")
+                  ->orWhere('parent_customers.company_name', 'like', "%{$search}%")
+                  ->orWhere('parent_customers.name', 'like', "%{$search}%")
+                  ->orWhere('sale_customers.company_name', 'like', "%{$search}%")
+                  ->orWhere('sale_customers.name', 'like', "%{$search}%");
             });
         }
 
