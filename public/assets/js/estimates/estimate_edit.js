@@ -510,9 +510,13 @@ closeCopyModal();
     recalcFromRow(row);
   });
 
-  // On initial page load, compute everything once
+  // On initial page load, refresh the summary panel by summing each row's already-
+  // correct stored line_total. Do NOT call recalcFromRow/updateRowTotal here — that
+  // force-recomputes line_total = qty * sell_price and would discard a total that
+  // was set by typing it directly (rounding means those don't always match).
   document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".room-card tr").forEach((row) => recalcFromRow(row));
+    document.querySelectorAll(".room-card").forEach((roomCard) => updateRoomTotals(roomCard));
+    updateEstimateTotals();
   });
 
   // Expose a helper so your copy code (or add-row code) can force recalculation
