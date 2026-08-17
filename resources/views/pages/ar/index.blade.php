@@ -118,20 +118,26 @@
                             )),
                         ];
                     };
+                    $arColumns = [
+                        ['invoice', 'Invoice #', ''],
+                        ['sale', 'Sale #', ''],
+                        ['customer', 'Customer / Homeowner', ''],
+                        ['due_date', 'Due Date', ''],
+                        ['total', 'Total', 'text-right'],
+                        ['paid', 'Paid', 'text-right'],
+                        ['balance', 'Balance', 'text-right'],
+                        ['status', 'Status', ''],
+                    ];
                 @endphp
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                     <tr>
-                        @foreach ([
-                            ['invoice', 'Invoice #', ''],
-                            ['sale', 'Sale #', ''],
-                            ['customer', 'Customer / Homeowner', ''],
-                            ['due_date', 'Due Date', ''],
-                            ['total', 'Total', 'text-right'],
-                            ['paid', 'Paid', 'text-right'],
-                            ['balance', 'Balance', 'text-right'],
-                            ['status', 'Status', ''],
-                        ] as [$col, $label, $align])
-                            @php($s = $sortState($col))
+                        @foreach ($arColumns as $colDef)
+                            @php
+                                $col   = $colDef[0];
+                                $label = $colDef[1];
+                                $align = $colDef[2];
+                                $s     = $sortState($col);
+                            @endphp
                             <th class="px-4 py-3 {{ $align }}">
                                 <a href="{{ $s['url'] }}" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white {{ $align === 'text-right' ? 'justify-end w-full' : '' }}">
                                     {{ $label }}
