@@ -25,10 +25,13 @@ class PickTicketService
         $allocation->loadMissing('inventoryReceipt');
 
         return DB::transaction(function () use ($allocation, $workOrder) {
-            // Consolidate into an existing pending PT for the same sale + WO rather than
-            // creating a new ticket for every allocation (which causes duplicate PTs per job).
+            // Consolidate into an existing open PT for the same sale + WO rather than
+            // creating a new ticket for every allocation (which causes duplicate PTs per
+            // job). This must also catch 'staged' tickets — not just 'pending' — since a
+            // material can be staged from the sale/WO page before any stock is allocated
+            // to it, and allocating afterward should land on that same ticket.
             $pt = PickTicket::where('sale_id', $allocation->sale_id)
-                ->where('status', 'pending')
+                ->whereIn('status', ['pending', 'staged'])
                 ->where('work_order_id', $workOrder?->id)
                 ->first();
 
@@ -38,6 +41,25 @@ class PickTicketService
                     'work_order_id' => $workOrder?->id,
                     'status'        => 'pending',
                 ]);
+            }
+
+            // If this sale item is already on the ticket as an unallocated placeholder
+            // (added when staged, before any stock was allocated), claim that line
+            // instead of adding a duplicate row for the same material. A line that
+            // already has its own allocation is left alone — that's a genuine second
+            // batch (e.g. stock pulled from two different receipts).
+            $existingItem = $pt->items()
+                ->where('sale_item_id', $allocation->sale_item_id)
+                ->whereNull('inventory_allocation_id')
+                ->first();
+
+            if ($existingItem) {
+                $existingItem->update([
+                    'inventory_allocation_id' => $allocation->id,
+                    'quantity'                => $allocation->quantity,
+                ]);
+
+                return $pt;
             }
 
             $nextSort = (int) $pt->items()->max('sort_order') + 1;
