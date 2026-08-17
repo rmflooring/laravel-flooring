@@ -166,7 +166,27 @@
 
             {{-- Estimate Header Card --}}
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Customer & Job Information</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Customer & Job Information</h2>
+                    @if (! $estimate->opportunity_id)
+                        <button type="button"
+                                onclick="window.dispatchEvent(new Event('open-link-opportunity-modal'))"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 010 5.656l-4 4a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l4-4a4 4 0 015.656 5.656l-1.5 1.5"/>
+                            </svg>
+                            Link to Opportunity
+                        </button>
+                    @else
+                        <a href="{{ route('pages.opportunities.show', $estimate->opportunity_id) }}"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 010 5.656l-4 4a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l4-4a4 4 0 015.656 5.656l-1.5 1.5"/>
+                            </svg>
+                            View Opportunity #{{ $estimate->opportunity_id }}
+                        </a>
+                    @endif
+                </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -2719,6 +2739,10 @@
 @include('components.modals.box-qty-modal')
 
 <x-modals.sent-email-modal type="estimate" :related-id="$estimate->id" />
+
+@if (! $estimate->opportunity_id)
+    <x-modals.link-opportunity-modal :estimate="$estimate" />
+@endif
 
 {{-- GPT Tax Warning Modal --}}
 <div id="fm-gpt-warn-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50">
