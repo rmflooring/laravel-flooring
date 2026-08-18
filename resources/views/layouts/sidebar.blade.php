@@ -88,6 +88,17 @@
                     </a>
                 </li>
 
+                {{-- Knowledge Assistant --}}
+                <li>
+                    <a href="{{ route('pages.knowledge-chat.index') }}"
+                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.knowledge-chat.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
+                        </svg>
+                        <span class="sidebar-label flex-1">Knowledge Assistant</span>
+                    </a>
+                </li>
+
                 {{-- SMS Inbox --}}
                 <li>
                     <a href="{{ route('pages.sms.index') }}"
