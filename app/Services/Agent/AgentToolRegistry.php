@@ -301,6 +301,40 @@ class AgentToolRegistry
                 ],
             ],
             [
+                'name' => 'search_labour_catalog',
+                'description' => 'Search the labour/installation rate catalog — use this for questions about what '
+                    . 'we charge to install or service something (e.g. "what do we charge to install laminate", '
+                    . '"hardwood install rate"). Distinct from search_knowledge_base: this is the live labour item '
+                    . 'catalog (per labour type, e.g. Laminate, Hardwood, Carpet, LVP/LVT), not written policy docs.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => [
+                            'type' => 'string',
+                            'description' => 'What to search for — a labour type, install method, or keyword from the item description.',
+                        ],
+                    ],
+                    'required' => ['query'],
+                ],
+            ],
+            [
+                'name' => 'search_material_catalog',
+                'description' => 'Search the material/product catalog for sell prices — use this for questions about '
+                    . 'what a specific product or product line costs the customer (e.g. "price on the Oak Ridge '
+                    . 'laminate", "how much is LVP X"). Sell price only, no cost/margin. Distinct from '
+                    . 'search_knowledge_base: this is the live product catalog, not written policy docs.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => [
+                            'type' => 'string',
+                            'description' => 'What to search for — a product name, SKU, manufacturer, or product type/line.',
+                        ],
+                    ],
+                    'required' => ['query'],
+                ],
+            ],
+            [
                 'name' => 'get_work_order_status',
                 'description' => 'Look up a work order\'s current status, schedule, and assigned installer by '
                     . 'its WO number or ID.',

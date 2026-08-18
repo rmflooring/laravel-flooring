@@ -21,13 +21,17 @@ class RunKnowledgeChatQuery
         you answer using only the tools available to you — you never have direct database
         access, and you never take any write/update action; every tool here is read-only.
 
-        Use search_knowledge_base for questions about pricing, protocols, policies, SOPs,
-        or FAQs. Use get_work_order_status, check_inventory, get_customer_estimate, or
-        get_schedule_for_crew for questions about live operational data. Use more than one
-        tool if a question needs it (e.g. a knowledge-base protocol plus a specific work
-        order's status). If a tool result has "authorized": false, tell the user plainly
-        that they don't have access to that information — don't try another tool to work
-        around it, and don't speculate about why.
+        Use search_knowledge_base for questions about protocols, policies, SOPs, FAQs, or
+        general pricing guidance written up as knowledge (e.g. markup rules, pricing
+        policy). Use search_labour_catalog for what we charge to install/service
+        something, and search_material_catalog for what a specific product costs — these
+        are the live catalogs, not written docs, so prefer them for a specific rate or
+        product price question. Use get_work_order_status, check_inventory,
+        get_customer_estimate, or get_schedule_for_crew for other live operational data.
+        Use more than one tool if a question needs it (e.g. a knowledge-base protocol plus
+        a specific labour rate). If a tool result has "authorized": false, tell the user
+        plainly that they don't have access to that information — don't try another tool
+        to work around it, and don't speculate about why.
 
         If search_knowledge_base or a live-data tool finds nothing relevant, say so rather
         than guessing or inventing an answer. When you do have an answer, cite what it's
@@ -38,6 +42,8 @@ class RunKnowledgeChatQuery
     public function __construct(
         private ClaudeAgentService $claude,
         private KnowledgeSearchService $searchKnowledgeBase,
+        private SearchLabourCatalogService $searchLabourCatalog,
+        private SearchMaterialCatalogService $searchMaterialCatalog,
         private GetWorkOrderStatusService $getWorkOrderStatus,
         private CheckInventoryService $checkInventory,
         private GetCustomerEstimateService $getCustomerEstimate,
@@ -116,6 +122,16 @@ class RunKnowledgeChatQuery
                         ])->unique('id')->values()->all(),
                     ];
 
+                case 'search_labour_catalog':
+                    $result = $this->searchLabourCatalog->execute($user, (string) ($input['query'] ?? ''));
+
+                    return [$result, $this->catalogRefs($result, 'labour_item', 'description')];
+
+                case 'search_material_catalog':
+                    $result = $this->searchMaterialCatalog->execute($user, (string) ($input['query'] ?? ''));
+
+                    return [$result, $this->catalogRefs($result, 'material', 'name')];
+
                 case 'get_work_order_status':
                     $result = $this->getWorkOrderStatus->execute($user, (string) ($input['order_id'] ?? ''));
 
@@ -146,6 +162,19 @@ class RunKnowledgeChatQuery
         } catch (AgentToolValidationException $e) {
             return [['authorized' => true, 'error' => $e->getMessage()], []];
         }
+    }
+
+    private function catalogRefs(array $result, string $type, string $labelKey): array
+    {
+        if (($result['authorized'] ?? false) !== true) {
+            return [];
+        }
+
+        return collect($result['results'] ?? [])
+            ->map(fn (array $row) => ['type' => $type, 'label' => $row[$labelKey] ?? null])
+            ->filter(fn (array $ref) => $ref['label'] !== null)
+            ->values()
+            ->all();
     }
 
     private function liveRefIfFound(array $result, string $type, ?string $label): array

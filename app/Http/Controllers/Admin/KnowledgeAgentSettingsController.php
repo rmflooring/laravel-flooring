@@ -16,6 +16,8 @@ class KnowledgeAgentSettingsController extends Controller
     // tools (which have no per-record entry to attach a role list to) go through
     // this matrix.
     private const MATRIX_TOOLS = [
+        'search_labour_catalog',
+        'search_material_catalog',
         'get_work_order_status',
         'check_inventory',
         'get_customer_estimate',
