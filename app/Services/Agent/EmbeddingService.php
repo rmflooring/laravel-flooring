@@ -6,15 +6,15 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Thin wrapper over Voyage AI's embeddings API — Anthropic's recommended embedding
- * partner, used here because Claude's own Messages API has no embeddings endpoint.
- * Same raw Http::post() convention as ClaudeAgentService (no SDK).
+ * Thin wrapper over OpenAI's embeddings API — used here because Claude's own Messages
+ * API has no embeddings endpoint, and this app already has OpenAI billing/keys set up
+ * elsewhere. Same raw Http::post() convention as ClaudeAgentService (no SDK).
  */
 class EmbeddingService
 {
-    private const API_URL = 'https://api.voyageai.com/v1/embeddings';
+    private const API_URL = 'https://api.openai.com/v1/embeddings';
 
-    private const MODEL = 'voyage-3-lite';
+    private const MODEL = 'text-embedding-3-small';
 
     public function embed(string $text): array
     {
@@ -31,9 +31,9 @@ class EmbeddingService
      */
     public function embedBatch(array $texts): array
     {
-        $key = config('services.voyage.key');
+        $key = config('services.openai.key');
         if (! $key) {
-            throw new \RuntimeException('VOYAGE_API_KEY is not configured.');
+            throw new \RuntimeException('OPENAI_API_KEY is not configured.');
         }
 
         if (empty($texts)) {
@@ -49,7 +49,7 @@ class EmbeddingService
         ]);
 
         if (! $response->successful()) {
-            Log::error('[Agent] Voyage embeddings request failed', [
+            Log::error('[Agent] OpenAI embeddings request failed', [
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
@@ -58,12 +58,16 @@ class EmbeddingService
 
         $data = $response->json('data', []);
         if (! is_array($data) || count($data) !== count($texts)) {
-            Log::error('[Agent] Voyage embeddings response shape mismatch', [
+            Log::error('[Agent] OpenAI embeddings response shape mismatch', [
                 'expected' => count($texts),
                 'got' => is_array($data) ? count($data) : 0,
             ]);
             throw new \RuntimeException('Embedding response did not match the number of inputs sent.');
         }
+
+        // Sort by the response's own `index` (defensive — OpenAI returns results in
+        // input order in practice, but this guarantees it rather than assuming it).
+        usort($data, fn (array $a, array $b) => ($a['index'] ?? 0) <=> ($b['index'] ?? 0));
 
         return array_map(function (array $d) {
             if (! isset($d['embedding']) || ! is_array($d['embedding'])) {

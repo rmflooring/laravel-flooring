@@ -59,8 +59,8 @@ return [
         'key' => env('ANTHROPIC_API_KEY'),
     ],
 
-    'voyage' => [
-        'key' => env('VOYAGE_API_KEY'),
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
     ],
 
 ];

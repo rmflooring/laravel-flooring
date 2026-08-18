@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  * Admin-only create/update for knowledge_entries, including chunking + embedding.
  *
  * Fail-loud by design: embedBatch() is called BEFORE anything is written to the
- * database. If Voyage fails or rate-limits, the exception propagates straight up to
+ * database. If OpenAI fails or rate-limits, the exception propagates straight up to
  * the controller — nothing is saved. We never want a knowledge_entries row sitting
  * there with no (or partial) embeddings, silently unsearchable.
  */
