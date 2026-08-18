@@ -4,6 +4,7 @@ namespace App\Services\Agent;
 
 use App\Models\ProductStyle;
 use App\Models\User;
+use App\Services\Agent\Concerns\TokenizesSearchQuery;
 
 /**
  * Executes the `search_material_catalog` chat tool. Read-only — sell price only, no
@@ -11,6 +12,8 @@ use App\Models\User;
  */
 class SearchMaterialCatalogService
 {
+    use TokenizesSearchQuery;
+
     private const LIMIT = 10;
 
     public function __construct(private KnowledgeAccessGate $gate) {}
@@ -21,23 +24,46 @@ class SearchMaterialCatalogService
             return $this->gate->unauthorizedResult();
         }
 
-        $styles = ProductStyle::query()
+        $tokens = $this->tokenize($query);
+        if (empty($tokens)) {
+            $tokens = [$query];
+        }
+
+        $candidates = ProductStyle::query()
             ->where('status', 'active')
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                    ->orWhere('description', 'like', "%{$query}%")
-                    ->orWhere('sku', 'like', "%{$query}%")
-                    ->orWhereHas('productLine', fn ($l) => $l->where('name', 'like', "%{$query}%")
-                        ->orWhere('manufacturer', 'like', "%{$query}%")
-                        ->orWhereHas('productType', fn ($t) => $t->where('name', 'like', "%{$query}%")));
+            ->where(function ($q) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $q->orWhere('name', 'like', "%{$token}%")
+                        ->orWhere('description', 'like', "%{$token}%")
+                        ->orWhere('sku', 'like', "%{$token}%")
+                        ->orWhereHas('productLine', fn ($l) => $l->where('name', 'like', "%{$token}%")
+                            ->orWhere('manufacturer', 'like', "%{$token}%")
+                            ->orWhereHas('productType', fn ($t) => $t->where('name', 'like', "%{$token}%")));
+                }
             })
             ->with('productLine.productType')
-            ->limit(self::LIMIT)
+            // Safety cap before PHP-side ranking — a single common token could otherwise
+            // match a large slice of the catalog.
+            ->limit(300)
             ->get();
+
+        // Rank by how many of the query's words each row actually matches — an OR
+        // across tokens means a generic word alone shouldn't outrank a row that
+        // matches the whole query.
+        $ranked = $candidates
+            ->sortByDesc(fn (ProductStyle $style) => $this->tokenMatchScore($tokens, implode(' ', [
+                $style->name,
+                $style->description,
+                $style->sku,
+                $style->productLine?->name,
+                $style->productLine?->manufacturer,
+                $style->productLine?->productType?->name,
+            ])))
+            ->take(self::LIMIT);
 
         return [
             'authorized' => true,
-            'results' => $styles->map(fn (ProductStyle $style) => [
+            'results' => $ranked->map(fn (ProductStyle $style) => [
                 'name' => $style->name,
                 'sku' => $style->sku,
                 'product_type' => $style->productLine?->productType?->name,

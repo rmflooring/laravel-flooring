@@ -311,7 +311,9 @@ class AgentToolRegistry
                     'properties' => [
                         'query' => [
                             'type' => 'string',
-                            'description' => 'What to search for — a labour type, install method, or keyword from the item description.',
+                            'description' => 'A short keyword or two — a labour type or install method (e.g. "laminate", '
+                                . '"hardwood glue down"), not a full sentence. Matching is per-word, so extra words '
+                                . 'like "flooring" or "install" don\'t hurt, but keep it concise.',
                         ],
                     ],
                     'required' => ['query'],
@@ -328,7 +330,9 @@ class AgentToolRegistry
                     'properties' => [
                         'query' => [
                             'type' => 'string',
-                            'description' => 'What to search for — a product name, SKU, manufacturer, or product type/line.',
+                            'description' => 'A short keyword or two — a product name, SKU, manufacturer, or product '
+                                . 'type/line, not a full sentence. Matching is per-word, so extra words don\'t hurt, '
+                                . 'but keep it concise.',
                         ],
                     ],
                     'required' => ['query'],
