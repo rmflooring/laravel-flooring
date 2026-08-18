@@ -23,7 +23,7 @@ class UpdateOpportunityService
     use ValidatesAgentAttachments;
 
     /**
-     * @return array{opportunity_id: int, changes: array<string, mixed>}
+     * @return array{opportunity_id: int, changes: array<string, mixed>, previous_values: array<string, mixed>}
      */
     public function execute(
         AgentTask $task,
@@ -49,6 +49,9 @@ class UpdateOpportunityService
             $changes['project_manager_id'] = $this->resolveProjectManagerId($opportunity, $projectManagerName);
         }
 
+        // Captured before the update so undo_last_action can restore these exact values.
+        $previousValues = $opportunity->only(array_keys($changes));
+
         $changes['updated_by'] = $task->requester_user_id;
         $opportunity->update($changes);
 
@@ -57,23 +60,53 @@ class UpdateOpportunityService
         return [
             'opportunity_id' => $opportunity->id,
             'changes' => $changes,
+            'previous_values' => $previousValues,
         ];
     }
 
     /**
-     * Exact (case-insensitive) name match only — no fuzzy guessing for an FK write.
-     * Scoped first to the opportunity's parent customer (where project managers are
-     * normally attached, per OpportunityController::projectManagersForCustomer), falling
-     * back to the job-site customer if none found there.
+     * Exact (case-insensitive) name match first, falling back to a "starts with" match
+     * (e.g. "Andrew" -> "Andrew Bou-Antoun") only if nothing exact was found anywhere —
+     * still no arbitrary fuzzy guessing for an FK write, just tolerating a bare first
+     * name, which is how these get mentioned in practice (email correction requests,
+     * e.g. "update the PM to Andrew"). Scoped first to the opportunity's parent customer
+     * (where project managers are normally attached, per
+     * OpportunityController::projectManagersForCustomer), falling back to the job-site
+     * customer if none found there.
      */
     private function resolveProjectManagerId(Opportunity $opportunity, string $name): int
     {
         $name = trim($name);
+        $customerIds = array_filter([$opportunity->parent_customer_id, $opportunity->job_site_customer_id]);
 
-        foreach (array_filter([$opportunity->parent_customer_id, $opportunity->job_site_customer_id]) as $customerId) {
-            $matches = ProjectManager::where('customer_id', $customerId)
-                ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-                ->get(['id', 'name']);
+        $match = $this->findProjectManager($customerIds, $name, exact: true)
+            ?? $this->findProjectManager($customerIds, $name, exact: false);
+
+        if ($match !== null) {
+            return $match;
+        }
+
+        throw new AgentToolValidationException(
+            "No project manager named \"{$name}\" found for this opportunity's customer."
+        );
+    }
+
+    /**
+     * @param  iterable<int>  $customerIds  Checked in order; the first scope with any
+     *     match (exact or ambiguous) wins/throws without falling through to the next.
+     * @return ?int  The matched PM's id, or null if no scope had any match at all.
+     */
+    private function findProjectManager(iterable $customerIds, string $name, bool $exact): ?int
+    {
+        $needle = mb_strtolower($name);
+
+        foreach ($customerIds as $customerId) {
+            $query = ProjectManager::where('customer_id', $customerId);
+            $query = $exact
+                ? $query->whereRaw('LOWER(name) = ?', [$needle])
+                : $query->whereRaw('LOWER(name) LIKE ?', [$needle . ' %']);
+
+            $matches = $query->get(['id', 'name']);
 
             if ($matches->count() === 1) {
                 return $matches->first()->id;
@@ -86,8 +119,6 @@ class UpdateOpportunityService
             }
         }
 
-        throw new AgentToolValidationException(
-            "No project manager named \"{$name}\" found for this opportunity's customer."
-        );
+        return null;
     }
 }

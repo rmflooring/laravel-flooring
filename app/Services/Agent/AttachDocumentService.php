@@ -85,7 +85,12 @@ class AttachDocumentService
             'mime_type' => $attachment['mime_type'],
             'extension' => $extension,
             'size_bytes' => strlen($bytes),
-            'category' => 'document',
+            // Plural, matching OpportunityDocumentController::index()'s filter
+            // (whereIn('category', ['documents', 'generated_document'])) — the singular
+            // 'document' used here previously meant every agent-attached document was
+            // silently invisible in the FM UI's Documents tab despite being stored
+            // correctly (found live, 2026-08-18).
+            'category' => 'documents',
             'label_text' => $documentType,
             'description' => $label,
             'created_by' => $task->requester_user_id,

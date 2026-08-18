@@ -9,10 +9,14 @@ use Illuminate\Support\Collection;
 
 /**
  * Executes the `find_opportunity` Claude tool: fuzzy-matches a client name / address /
- * claim number mentioned in an email against existing opportunities, via their linked
- * job-site customer (where address/claim_number actually live) and parent customer
- * (either could be the name mentioned). Replaces the Module 1 job-number-regex stand-in
- * in ProcessAgentTask::resolveOpportunity() for emails that don't mention a job number.
+ * claim number / job_no mentioned in an email against existing opportunities, via their
+ * linked job-site customer (where address/claim_number actually live), parent customer
+ * (either could be the name mentioned), and job_no (lives directly on Opportunity).
+ * Complements the Module 1 job-number-regex stand-in in
+ * ProcessAgentTask::resolveOpportunity(), which only catches RM Flooring's own
+ * "26-0001"-style format before Claude ever sees the email — job_no here is matched
+ * exactly (like claim_number) but with no format assumption, since real job_no values
+ * are freeform (see Module 4 notes' job_no addendum).
  *
  * No fuzzy-matching library exists in this codebase — scoring uses PHP's built-in
  * similar_text() rather than adding a dependency for a single feature.
@@ -29,6 +33,8 @@ class FindOpportunityService
 
     private const CLAIM_WEIGHT = 0.5;
 
+    private const JOB_NO_WEIGHT = 0.5;
+
     private const NAME_WEIGHT = 0.3;
 
     private const ADDRESS_WEIGHT = 0.2;
@@ -44,16 +50,17 @@ class FindOpportunityService
         ?string $clientName,
         ?string $address,
         ?string $claimNumber,
+        ?string $jobNo = null,
     ): array {
-        [$clientName, $address, $claimNumber] = $this->normalizeCriteria($clientName, $address, $claimNumber);
+        [$clientName, $address, $claimNumber, $jobNo] = $this->normalizeCriteria($clientName, $address, $claimNumber, $jobNo);
 
-        if ($clientName === null && $address === null && $claimNumber === null) {
+        if ($clientName === null && $address === null && $claimNumber === null && $jobNo === null) {
             throw new AgentToolValidationException(
-                'At least one of client_name, address, or claim_number is required.'
+                'At least one of client_name, address, claim_number, or job_no is required.'
             );
         }
 
-        $candidates = $this->searchCandidates($clientName, $address, $claimNumber);
+        $candidates = $this->searchCandidates($clientName, $address, $claimNumber, $jobNo);
 
         $resolvedId = $this->maybeAutoResolve($candidates);
         if ($resolvedId !== null) {
@@ -61,7 +68,7 @@ class FindOpportunityService
             $task->save();
         }
 
-        $this->logSearch($task, $clientName, $address, $claimNumber, $candidates, $resolvedId);
+        $this->logSearch($task, $clientName, $address, $claimNumber, $jobNo, $candidates, $resolvedId);
 
         return [
             'resolved' => $resolvedId !== null,
@@ -70,13 +77,14 @@ class FindOpportunityService
         ];
     }
 
-    /** @return array{0: ?string, 1: ?string, 2: ?string} */
-    private function normalizeCriteria(?string $clientName, ?string $address, ?string $claimNumber): array
+    /** @return array{0: ?string, 1: ?string, 2: ?string, 3: ?string} */
+    private function normalizeCriteria(?string $clientName, ?string $address, ?string $claimNumber, ?string $jobNo = null): array
     {
         return [
             trim((string) $clientName) ?: null,
             trim((string) $address) ?: null,
             trim((string) $claimNumber) ?: null,
+            trim((string) $jobNo) ?: null,
         ];
     }
 
@@ -89,13 +97,14 @@ class FindOpportunityService
      * @return array<int, array{opportunity_id: int, job_no: ?string, customer_name: ?string,
      *     address: ?string, claim_number: ?string, created_at: ?string, score: float}>
      */
-    public function searchCandidates(?string $clientName, ?string $address, ?string $claimNumber): array
+    public function searchCandidates(?string $clientName, ?string $address, ?string $claimNumber, ?string $jobNo = null): array
     {
         $candidates = $this->scoreCandidates(
-            $this->gatherCandidates($clientName, $address, $claimNumber),
+            $this->gatherCandidates($clientName, $address, $claimNumber, $jobNo),
             $clientName,
             $address,
             $claimNumber,
+            $jobNo,
         );
 
         $candidates = array_values(array_filter(
@@ -113,14 +122,14 @@ class FindOpportunityService
      * scoring in PHP — same tokenized-LIKE-over-relations style as
      * OpportunityController::applyOpportunityFilters, extended to token-split input.
      */
-    private function gatherCandidates(?string $clientName, ?string $address, ?string $claimNumber): Collection
+    private function gatherCandidates(?string $clientName, ?string $address, ?string $claimNumber, ?string $jobNo = null): Collection
     {
         $nameTokens = $this->tokenize($clientName);
         $addressTokens = $this->tokenize($address);
 
         $query = Opportunity::query()->with(['parentCustomer', 'jobSiteCustomer']);
 
-        $query->where(function ($outer) use ($nameTokens, $addressTokens, $claimNumber) {
+        $query->where(function ($outer) use ($nameTokens, $addressTokens, $claimNumber, $jobNo) {
             $any = false;
 
             foreach ($nameTokens as $token) {
@@ -144,6 +153,11 @@ class FindOpportunityService
                 $outer->orWhereHas('jobSiteCustomer', function ($c) use ($claimNumber) {
                     $c->where('claim_number', 'like', "%{$claimNumber}%");
                 });
+            }
+
+            if ($jobNo !== null) {
+                $any = true;
+                $outer->orWhere('job_no', 'like', "%{$jobNo}%");
             }
 
             // No usable tokens at all (e.g. only very short words) — fall back to
@@ -179,8 +193,10 @@ class FindOpportunityService
         ?string $clientName,
         ?string $address,
         ?string $claimNumber,
+        ?string $jobNo = null,
     ): array {
         $providedWeight = ($claimNumber !== null ? self::CLAIM_WEIGHT : 0)
+            + ($jobNo !== null ? self::JOB_NO_WEIGHT : 0)
             + ($clientName !== null ? self::NAME_WEIGHT : 0)
             + ($address !== null ? self::ADDRESS_WEIGHT : 0);
 
@@ -200,6 +216,12 @@ class FindOpportunityService
                 $existing = trim((string) ($jobSite?->claim_number ?? ''));
                 $claimScore = ($existing !== '' && strcasecmp($existing, $claimNumber) === 0) ? 1.0 : 0.0;
                 $score += $claimScore * self::CLAIM_WEIGHT;
+            }
+
+            if ($jobNo !== null) {
+                $existingJobNo = trim((string) ($opportunity->job_no ?? ''));
+                $jobNoScore = ($existingJobNo !== '' && strcasecmp($existingJobNo, $jobNo) === 0) ? 1.0 : 0.0;
+                $score += $jobNoScore * self::JOB_NO_WEIGHT;
             }
 
             if ($clientName !== null) {
@@ -276,6 +298,7 @@ class FindOpportunityService
         ?string $clientName,
         ?string $address,
         ?string $claimNumber,
+        ?string $jobNo,
         array $candidates,
         ?int $resolvedId,
     ): void {
@@ -283,6 +306,7 @@ class FindOpportunityService
             'client_name' => $clientName,
             'address' => $address,
             'claim_number' => $claimNumber,
+            'job_no' => $jobNo,
         ])->filter()->map(fn ($v, $k) => "{$k}=\"{$v}\"")->implode(', ');
 
         $summary = empty($candidates)

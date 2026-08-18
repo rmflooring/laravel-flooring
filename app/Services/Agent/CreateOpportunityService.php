@@ -28,6 +28,14 @@ class CreateOpportunityService
 
     private const INCOMPLETE_INTAKE_FIELDS = ['address', 'claim_number', 'insurance_company'];
 
+    /** Agent-created opportunities default to Marco Bruni (employee #2) as the sales
+     *  person — confirmed with Richard (2026-08-18), agent-created only, not app-wide.
+     *  sales_person_1 has no exists:employees,id validation anywhere (see
+     *  UpdateOpportunityService's docblock for the same note) — it's a plain string in
+     *  practice populated with a numeric employee id; '2' matches that existing
+     *  convention rather than a name, so it looks identical to a human-entered value. */
+    private const DEFAULT_SALES_PERSON = '2';
+
     public function __construct(private readonly FindOpportunityService $findOpportunity)
     {
     }
@@ -47,6 +55,7 @@ class CreateOpportunityService
         ?string $policyNumber,
         ?string $dol,
         ?bool $requiresRfm,
+        ?string $jobNo,
     ): array {
         if ($task->opportunity_id !== null) {
             throw new AgentToolValidationException(
@@ -66,6 +75,7 @@ class CreateOpportunityService
         $policyNumber = trim((string) $policyNumber) ?: null;
         $dol = trim((string) $dol) ?: null;
         $parentCustomerName = trim((string) $parentCustomerName) ?: null;
+        $jobNo = trim((string) $jobNo) ?: null;
 
         if ($dol !== null) {
             try {
@@ -75,7 +85,7 @@ class CreateOpportunityService
             }
         }
 
-        $this->assertNoLikelyDuplicate($clientName, $address, $claimNumber);
+        $this->assertNoLikelyDuplicate($clientName, $address, $claimNumber, $jobNo);
 
         $parentId = $parentCustomerName !== null
             ? $this->resolveExistingParent($parentCustomerName)
@@ -99,8 +109,10 @@ class CreateOpportunityService
         $opportunity = Opportunity::create([
             'parent_customer_id' => $resolvedParentId,
             'job_site_customer_id' => $jobSiteCustomer->id,
+            'job_no' => $jobNo,
             'status' => 'New',
             'requires_rfm' => $requiresRfm ?? true,
+            'sales_person_1' => self::DEFAULT_SALES_PERSON,
             'created_by' => $task->requester_user_id,
             'updated_by' => $task->requester_user_id,
             'initiated_by' => $task->requester_user_id,
@@ -128,9 +140,9 @@ class CreateOpportunityService
      * opportunity was created within the recent window blocks creation entirely — no
      * override path, per the "never silently duplicate" design principle.
      */
-    private function assertNoLikelyDuplicate(string $clientName, ?string $address, ?string $claimNumber): void
+    private function assertNoLikelyDuplicate(string $clientName, ?string $address, ?string $claimNumber, ?string $jobNo): void
     {
-        $candidates = $this->findOpportunity->searchCandidates($clientName, $address, $claimNumber);
+        $candidates = $this->findOpportunity->searchCandidates($clientName, $address, $claimNumber, $jobNo);
         $cutoff = Carbon::now()->subDays(self::DUPLICATE_WINDOW_DAYS);
 
         $recentMatches = array_filter($candidates, function (array $c) use ($cutoff) {
@@ -155,18 +167,39 @@ class CreateOpportunityService
     }
 
     /**
-     * Exact (case-insensitive) name match only against existing standalone customers —
-     * same "never fuzzy-guess for a company-level record" invariant as
-     * UpdateOpportunityService::resolveProjectManagerId(). Never creates a new parent
-     * from an unmatched name, to avoid spawning duplicate company records from a
+     * Exact (case-insensitive) name match first, falling back to a whitespace-insensitive
+     * "prefix" match only if nothing exact was found — e.g. "First Onsite", "FirstOnSite",
+     * and "First OnSite Restoration" all normalize to the same space-stripped prefix
+     * relationship. This is the same two-pass pattern as
+     * UpdateOpportunityService::findProjectManager() (added after three separate live
+     * referral emails each spelled/spaced the same referral partner's name differently,
+     * never matching what's on file) — still no arbitrary fuzzy-guessing for a
+     * company-level record: a prefix match is either correct or it's ambiguous (multiple
+     * candidates, which still throws), never a near-miss. Never creates a new parent from
+     * an unmatched name, to avoid spawning duplicate company records from a
      * misspelled/misremembered name.
      */
     private function resolveExistingParent(string $parentCustomerName): int
     {
-        $matches = Customer::whereNull('parent_id')
-            ->where(function ($q) use ($parentCustomerName) {
-                $q->whereRaw('LOWER(name) = ?', [mb_strtolower($parentCustomerName)])
-                    ->orWhereRaw('LOWER(company_name) = ?', [mb_strtolower($parentCustomerName)]);
+        $needle = mb_strtolower($parentCustomerName);
+        $needleCompact = str_replace(' ', '', $needle);
+
+        $exact = Customer::whereNull('parent_id')
+            ->where(function ($q) use ($needle) {
+                $q->whereRaw('LOWER(name) = ?', [$needle])
+                    ->orWhereRaw('LOWER(company_name) = ?', [$needle]);
+            })
+            ->get(['id']);
+
+        $matches = $exact->isNotEmpty() ? $exact : Customer::whereNull('parent_id')
+            ->where(function ($q) use ($needleCompact) {
+                // Either direction, spaces ignored on both sides: the input is a
+                // shortened/differently-spaced form of the name on file
+                // ("FirstOnSite" -> "First OnSite Restoration"), or vice versa.
+                $q->whereRaw('REPLACE(LOWER(name), \' \', \'\') LIKE ?', [$needleCompact . '%'])
+                    ->orWhereRaw('REPLACE(LOWER(company_name), \' \', \'\') LIKE ?', [$needleCompact . '%'])
+                    ->orWhereRaw('? LIKE CONCAT(REPLACE(LOWER(name), \' \', \'\'), \'%\')', [$needleCompact])
+                    ->orWhereRaw('? LIKE CONCAT(REPLACE(LOWER(company_name), \' \', \'\'), \'%\')', [$needleCompact]);
             })
             ->get(['id']);
 

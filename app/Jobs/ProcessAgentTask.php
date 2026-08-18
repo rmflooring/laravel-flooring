@@ -12,9 +12,11 @@ use App\Services\Agent\AgentToolRegistry;
 use App\Services\Agent\AgentToolValidationException;
 use App\Services\Agent\AttachDocumentService;
 use App\Services\Agent\AttachImagesService;
+use App\Services\Agent\CheckStatusService;
 use App\Services\Agent\ClaudeAgentService;
 use App\Services\Agent\CreateOpportunityService;
 use App\Services\Agent\FindOpportunityService;
+use App\Services\Agent\LogCommunicationService;
 use App\Services\Agent\UpdateOpportunityService;
 use App\Services\GraphMailService;
 use Illuminate\Bus\Queueable;
@@ -40,9 +42,12 @@ class ProcessAgentTask implements ShouldQueue
 
         If no opportunity is already resolved for this task and the email appears to
         reference an existing job, call find_opportunity first with whatever of client
-        name, job site address, or claim number the email actually mentions. If it
-        returns an ambiguous or empty result, use request_clarification rather than
-        guessing — do not call any other tool with an opportunity_id you're not certain of.
+        name, job site address, claim number, or job/reference number the email actually
+        mentions — this includes a fresh, standalone email that simply asks you to act on
+        an existing job by number (e.g. "please update job # 00705807..."), not just
+        emails that are replies to something you already sent. If it returns an ambiguous
+        or empty result, use request_clarification rather than guessing — do not call any
+        other tool with an opportunity_id you're not certain of.
 
         Only call attach_images when the email is clearly about the opportunity already
         resolved for this task and contains photo attachments. Only call attach_document
@@ -56,17 +61,46 @@ class ProcessAgentTask implements ShouldQueue
         (status, job number, sales person, customer details, etc.) is out of scope —
         use request_clarification or no_actionable_intent instead.
 
+        A referral company's job information often comes as structured data (a table or
+        labeled fields) rather than a sentence — treat a "PM Contact"/"Project Manager"
+        field the same as an explicit instruction to assign that person, and call
+        update_opportunity with it (after create_opportunity/find_opportunity has resolved
+        the opportunity) just as you would for "please set the PM to X". Don't require the
+        email to phrase it as a request — a labeled field in the referrer's own job data is
+        the instruction.
+
         Only call create_opportunity if find_opportunity has already been tried and found
         nothing (or only low-confidence matches), and the email is clearly about a job
         that does not exist in Floor Manager yet — never call it when an opportunity is
         already resolved for this task. A duplicate check runs automatically; if it
         blocks creation, use request_clarification rather than retrying or forcing it.
 
+        Call check_status when the email is a status inquiry about the opportunity
+        already resolved for this task (e.g. "any update on this job?", "what's the
+        status of the claim?") — it is read-only and its result becomes the reply, so
+        don't also call log_communication for the same email.
+
+        Call log_communication when the email is clearly about the opportunity already
+        resolved for this task and contains information worth preserving on the activity
+        log (a client update, an adjuster call, a vendor note, etc.) that isn't better
+        captured by attach_images, attach_document, or update_opportunity. Don't log
+        communication that's purely a status inquiry — use check_status for that instead.
+
+        An email can ask for more than one thing at once — e.g. create a new opportunity
+        AND attach photos that were included AND assign a project manager, all from one
+        forward. Do all of it: keep calling tools (attach_images/attach_document for any
+        attachments, update_opportunity for a mentioned PM or RFM need, log_communication
+        for anything else worth recording) until you've addressed everything the email
+        actually asked for, then stop calling tools — you don't need to announce that
+        you're done, just stop. Only find_opportunity is purely a lookup step you always
+        continue past. If nothing more is needed after one action, stop after that one.
+
         If you cannot confidently determine what's being asked, or the email doesn't
         relate to the resolved opportunity, call request_clarification with a specific
-        question. If the email is not an actionable request at all (spam, newsletter,
-        unrelated forward), call no_actionable_intent. Call exactly one tool to conclude
-        the task (find_opportunity does not conclude the task — keep reasoning after it).
+        question — this ends the task immediately, so only call it once you're sure no
+        further action should be taken. If the email is not an actionable request at all
+        (spam, newsletter, unrelated forward), call no_actionable_intent, which also ends
+        the task immediately.
         TEXT;
 
     public function __construct(public readonly int $taskId) {}
@@ -78,6 +112,8 @@ class ProcessAgentTask implements ShouldQueue
         FindOpportunityService $findOpportunity,
         UpdateOpportunityService $updateOpportunity,
         CreateOpportunityService $createOpportunity,
+        LogCommunicationService $logCommunication,
+        CheckStatusService $checkStatus,
         GraphMailService $mailer,
     ): void {
         $task = AgentTask::find($this->taskId);
@@ -91,6 +127,7 @@ class ProcessAgentTask implements ShouldQueue
         $messages = [['role' => 'user', 'content' => $userContent]];
 
         $result = null;
+        $completedActions = [];
 
         for ($i = 0; $i < self::MAX_TOOL_ITERATIONS; $i++) {
             $response = $claude->sendWithTools($messages, AgentToolRegistry::forEmail(), self::SYSTEM_PROMPT);
@@ -100,46 +137,62 @@ class ProcessAgentTask implements ShouldQueue
             $toolUses = array_values(array_filter($content, fn (array $b) => ($b['type'] ?? null) === 'tool_use'));
 
             if ($stopReason !== 'tool_use' || empty($toolUses)) {
-                $result = $this->finalizeFromText($task, $content);
+                $result = $this->finalize($task, $content, $completedActions);
                 break;
             }
 
             $messages[] = ['role' => 'assistant', 'content' => $content];
 
             $toolResults = [];
-            $terminal = null;
+            $hardStop = null;
             foreach ($toolUses as $toolUse) {
-                [$toolResult, $maybeTerminal] = $this->dispatchTool(
+                [$toolResult, $event] = $this->dispatchTool(
                     $task,
                     $attachImages,
                     $attachDocument,
                     $findOpportunity,
                     $updateOpportunity,
                     $createOpportunity,
+                    $logCommunication,
+                    $checkStatus,
                     $toolUse,
                 );
                 $toolResults[] = $toolResult;
-                if ($maybeTerminal !== null) {
-                    $terminal = $maybeTerminal;
+
+                if ($event === null) {
+                    continue;
+                }
+                if ($event['terminal']) {
+                    $hardStop = $event;
+                } else {
+                    $completedActions[] = $event;
                 }
             }
             $messages[] = ['role' => 'user', 'content' => $toolResults];
 
-            if ($terminal !== null) {
-                $result = $terminal;
+            if ($hardStop !== null) {
+                $result = $this->finalizeHardStop($hardStop, $completedActions);
                 break;
             }
         }
 
         if ($result === null) {
-            // Ran out of iterations without a terminal tool call — don't guess.
-            $result = ['status' => 'pending_clarification', 'summary' => 'Could not resolve the request automatically.', 'task_type' => 'other'];
-            $this->logMessage($task, 'agent', $result['summary']);
+            // Ran out of iterations. If real actions already happened, report them rather
+            // than discarding that work — otherwise fall back to the old "couldn't
+            // resolve" message.
+            $result = empty($completedActions)
+                ? ['status' => 'pending_clarification', 'summary' => 'Could not resolve the request automatically.', 'task_type' => 'other']
+                : $this->finalizeFromActions($completedActions);
+
+            if (empty($completedActions)) {
+                $this->logMessage($task, 'agent', $result['summary']);
+            }
         }
 
         $task->status = $result['status'];
         $task->extracted_intent = $result['summary'];
         $task->task_type = $result['task_type'] ?? 'other';
+        $task->undo_data = $result['undo_data'] ?? null;
         $task->save();
 
         $this->notifyRequester($task, $mailer, $result);
@@ -177,7 +230,7 @@ class ProcessAgentTask implements ShouldQueue
             ? "Resolved opportunity_id: {$task->opportunity_id}"
             : 'Resolved opportunity_id: none (no unambiguous job number found in the email)';
 
-        return <<<TEXT
+        $base = <<<TEXT
             From: {$task->requester_email}
             {$opportunityLine}
 
@@ -187,10 +240,50 @@ class ProcessAgentTask implements ShouldQueue
             Attachments:
             {$attachmentList}
             TEXT;
+
+        return $base . $this->buildPriorThreadSummary($task);
     }
 
     /**
-     * @return array{0: array, 1: ?array} [tool_result content block, terminal result or null]
+     * On a resumed task (e.g. a dashboard reply to a pending_clarification task), the
+     * conversation object built for the earlier run isn't retained — the raw tool_use/
+     * tool_result blocks Claude needs for a true multi-turn history were never stored
+     * (agent_messages only logs human-readable summaries). Instead, fold the existing
+     * thread in as plain-text context on this fresh run's single user turn, so Claude
+     * sees what it already asked and how the user answered before it reasons/re-calls
+     * tools — otherwise a reply would just replay the original email and likely ask the
+     * same clarifying question again.
+     */
+    private function buildPriorThreadSummary(AgentTask $task): string
+    {
+        $messages = $task->messages()->orderBy('created_at')->get();
+
+        if ($messages->isEmpty()) {
+            return '';
+        }
+
+        $thread = $messages
+            ->map(fn (AgentMessage $m) => '[' . ($m->sender === 'user' ? 'user reply' : 'you, previously') . "]: {$m->body}")
+            ->implode("\n");
+
+        return <<<TEXT
+
+
+            This task has already been worked on. Here is the prior thread, oldest first
+            (your own earlier questions/actions, and any reply from the user) — take it
+            into account instead of starting over, and do not ask a question that's
+            already been answered below:
+            {$thread}
+            TEXT;
+    }
+
+    /**
+     * @return array{0: array, 1: ?array} [tool_result content block, event or null]
+     *     Event shape: {terminal: bool, status?, summary, task_type, undo_data?}.
+     *     terminal=true (request_clarification/no_actionable_intent) ends the task
+     *     immediately. terminal=false (every write action) is accumulated into
+     *     $completedActions by the caller and the loop continues. null (find_opportunity,
+     *     unknown tools, validation errors) means no event — Claude just keeps reasoning.
      */
     private function dispatchTool(
         AgentTask $task,
@@ -199,6 +292,8 @@ class ProcessAgentTask implements ShouldQueue
         FindOpportunityService $findOpportunity,
         UpdateOpportunityService $updateOpportunity,
         CreateOpportunityService $createOpportunity,
+        LogCommunicationService $logCommunication,
+        CheckStatusService $checkStatus,
         array $toolUse,
     ): array {
         $name = $toolUse['name'];
@@ -217,16 +312,17 @@ class ProcessAgentTask implements ShouldQueue
                         $input['label'] ?? null,
                         $input['category'] ?? '',
                     );
-                    $terminal = [
-                        'status' => 'completed',
+                    $event = [
+                        'terminal' => false,
                         'summary' => "Attached {$summary['count']} image(s) as \"{$input['category']}\" to opportunity {$task->opportunity_id}.",
                         'task_type' => 'attach_images',
+                        'undo_data' => ['type' => 'attach_images', 'document_ids' => $summary['document_ids']],
                     ];
-                    $this->logMessage($task, 'agent', $terminal['summary']);
+                    $this->logMessage($task, 'agent', $event['summary']);
 
                     return [
                         ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($summary)],
-                        $terminal,
+                        $event,
                     ];
 
                 case 'attach_document':
@@ -237,16 +333,17 @@ class ProcessAgentTask implements ShouldQueue
                         $input['label'] ?? null,
                         $input['document_type'] ?? '',
                     );
-                    $terminal = [
-                        'status' => 'completed',
+                    $event = [
+                        'terminal' => false,
                         'summary' => "Attached document as \"{$input['document_type']}\" to opportunity {$task->opportunity_id}.",
                         'task_type' => 'attach_document',
+                        'undo_data' => ['type' => 'attach_document', 'document_ids' => [$summary['document_id']]],
                     ];
-                    $this->logMessage($task, 'agent', $terminal['summary']);
+                    $this->logMessage($task, 'agent', $event['summary']);
 
                     return [
                         ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($summary)],
-                        $terminal,
+                        $event,
                     ];
 
                 case 'find_opportunity':
@@ -255,6 +352,7 @@ class ProcessAgentTask implements ShouldQueue
                         $input['client_name'] ?? null,
                         $input['address'] ?? null,
                         $input['claim_number'] ?? null,
+                        $input['job_no'] ?? null,
                     );
 
                     // Not terminal — Claude keeps reasoning with the (possibly newly
@@ -274,16 +372,21 @@ class ProcessAgentTask implements ShouldQueue
                     $changeList = collect($updated['changes'])
                         ->map(fn ($v, $k) => "{$k}=" . (is_bool($v) ? ($v ? 'true' : 'false') : $v))
                         ->implode(', ');
-                    $terminal = [
-                        'status' => 'completed',
+                    $event = [
+                        'terminal' => false,
                         'summary' => "Updated opportunity {$task->opportunity_id}: {$changeList}.",
                         'task_type' => 'update_opportunity',
+                        'undo_data' => [
+                            'type' => 'update_opportunity',
+                            'opportunity_id' => $updated['opportunity_id'],
+                            'previous_values' => $updated['previous_values'],
+                        ],
                     ];
-                    $this->logMessage($task, 'agent', $terminal['summary']);
+                    $this->logMessage($task, 'agent', $event['summary']);
 
                     return [
                         ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($updated)],
-                        $terminal,
+                        $event,
                     ];
 
                 case 'create_opportunity':
@@ -298,20 +401,56 @@ class ProcessAgentTask implements ShouldQueue
                         $input['policy_number'] ?? null,
                         $input['dol'] ?? null,
                         array_key_exists('requires_rfm', $input) ? (bool) $input['requires_rfm'] : null,
+                        $input['job_no'] ?? null,
                     );
                     $intakeNote = empty($created['incomplete_intake_fields'])
                         ? ''
                         : ' (incomplete intake — missing: ' . implode(', ', $created['incomplete_intake_fields']) . ')';
-                    $terminal = [
-                        'status' => 'completed',
+                    $event = [
+                        'terminal' => false,
                         'summary' => "Created opportunity {$created['opportunity_id']} for customer {$created['customer_id']}.{$intakeNote}",
                         'task_type' => 'create_opportunity',
                     ];
-                    $this->logMessage($task, 'agent', $terminal['summary']);
+                    $this->logMessage($task, 'agent', $event['summary']);
 
                     return [
                         ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($created)],
-                        $terminal,
+                        $event,
+                    ];
+
+                case 'log_communication':
+                    $logged = $logCommunication->execute(
+                        $task,
+                        (int) ($input['opportunity_id'] ?? 0),
+                        (string) ($input['summary'] ?? ''),
+                        $input['from'] ?? null,
+                        (string) ($input['category'] ?? ''),
+                    );
+                    $event = [
+                        'terminal' => false,
+                        'summary' => "Logged {$logged['category']} communication on opportunity {$task->opportunity_id}.",
+                        'task_type' => 'log_communication',
+                        'undo_data' => ['type' => 'log_communication', 'note_id' => $logged['note_id']],
+                    ];
+                    $this->logMessage($task, 'agent', $event['summary']);
+
+                    return [
+                        ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($logged)],
+                        $event,
+                    ];
+
+                case 'check_status':
+                    $status = $checkStatus->execute($task, (int) ($input['opportunity_id'] ?? 0));
+                    $event = [
+                        'terminal' => false,
+                        'summary' => $this->formatStatusSummary($status),
+                        'task_type' => 'check_status',
+                    ];
+                    $this->logMessage($task, 'agent', $event['summary']);
+
+                    return [
+                        ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => json_encode($status)],
+                        $event,
                     ];
 
                 case 'request_clarification':
@@ -320,7 +459,7 @@ class ProcessAgentTask implements ShouldQueue
 
                     return [
                         ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => 'Question recorded.'],
-                        ['status' => 'pending_clarification', 'summary' => $question, 'task_type' => 'other'],
+                        ['terminal' => true, 'status' => 'pending_clarification', 'summary' => $question, 'task_type' => 'other'],
                     ];
 
                 case 'no_actionable_intent':
@@ -329,7 +468,7 @@ class ProcessAgentTask implements ShouldQueue
 
                     return [
                         ['type' => 'tool_result', 'tool_use_id' => $toolUseId, 'content' => 'Acknowledged.'],
-                        ['status' => 'ignored', 'summary' => $summary, 'task_type' => 'no_actionable_intent'],
+                        ['terminal' => true, 'status' => 'ignored', 'summary' => $summary, 'task_type' => 'no_actionable_intent'],
                     ];
 
                 default:
@@ -348,17 +487,108 @@ class ProcessAgentTask implements ShouldQueue
         }
     }
 
-    private function finalizeFromText(AgentTask $task, array $content): array
+    /**
+     * Turns CheckStatusService's structured result into the plain-text summary that
+     * becomes the auto-reply email answering a status-inquiry.
+     */
+    private function formatStatusSummary(array $status): string
+    {
+        $lines = [];
+        $lines[] = 'Job ' . ($status['job_no'] ?? '(no job number)') . ' — status: ' . ($status['status'] ?? 'unknown')
+            . ($status['status_reason'] ? " ({$status['status_reason']})" : '');
+        $lines[] = 'Project manager: ' . ($status['project_manager'] ?? 'not assigned');
+
+        if ($status['requires_rfm']) {
+            $rfmLine = 'RFM (site measure): ';
+            $rfmLine .= $status['latest_rfm_status']
+                ? ucfirst($status['latest_rfm_status'])
+                : 'required, not yet scheduled';
+            if ($status['latest_rfm_scheduled_at']) {
+                $rfmLine .= ' — scheduled ' . $status['latest_rfm_scheduled_at'];
+            }
+            $lines[] = $rfmLine;
+        }
+
+        if ($status['latest_estimate_status']) {
+            $lines[] = 'Latest estimate status: ' . $status['latest_estimate_status'];
+        }
+        if ($status['latest_sale_status']) {
+            $lines[] = 'Latest sale status: ' . $status['latest_sale_status'];
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Claude stopped calling tools (returned final text, or none at all). If it had
+     * already completed real actions this task, that's a normal, successful multi-action
+     * conclusion — not a failure to resolve anything.
+     *
+     * @param  array<int, array{summary: string, task_type: string, undo_data?: array}>  $completedActions
+     */
+    private function finalize(AgentTask $task, array $content, array $completedActions): array
     {
         $text = collect($content)
             ->filter(fn (array $b) => ($b['type'] ?? null) === 'text')
             ->pluck('text')
             ->implode("\n");
 
-        $summary = $text !== '' ? $text : 'No actionable tool call was made.';
-        $this->logMessage($task, 'agent', $summary);
+        if (empty($completedActions)) {
+            $summary = $text !== '' ? $text : 'No actionable tool call was made.';
+            $this->logMessage($task, 'agent', $summary);
 
-        return ['status' => 'pending_clarification', 'summary' => $summary, 'task_type' => 'other'];
+            return ['status' => 'pending_clarification', 'summary' => $summary, 'task_type' => 'other'];
+        }
+
+        $result = $this->finalizeFromActions($completedActions);
+        if ($text !== '') {
+            $result['summary'] = trim($result['summary'] . ' ' . $text);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<int, array{summary: string, task_type: string, undo_data?: array}>  $completedActions
+     */
+    private function finalizeFromActions(array $completedActions): array
+    {
+        return [
+            'status' => 'completed',
+            'summary' => collect($completedActions)->pluck('summary')->implode(' '),
+            'task_type' => $completedActions[0]['task_type'],
+            'undo_data' => collect($completedActions)->pluck('undo_data')->filter()->values()->all() ?: null,
+        ];
+    }
+
+    /**
+     * A hard-stop tool (request_clarification/no_actionable_intent) ended the task. If
+     * actions had already completed earlier in the same task, fold their summaries in so
+     * real completed work isn't silently hidden from the reply — but the hard-stop's own
+     * status (pending_clarification/ignored) still governs, since there's now an open
+     * question or the rest was deemed not actionable.
+     *
+     * @param  array{status: string, summary: string, task_type: string}  $hardStop
+     * @param  array<int, array{summary: string, task_type: string, undo_data?: array}>  $completedActions
+     */
+    private function finalizeHardStop(array $hardStop, array $completedActions): array
+    {
+        if (empty($completedActions)) {
+            return [
+                'status' => $hardStop['status'],
+                'summary' => $hardStop['summary'],
+                'task_type' => $hardStop['task_type'],
+            ];
+        }
+
+        $priorSummary = collect($completedActions)->pluck('summary')->implode(' ');
+
+        return [
+            'status' => $hardStop['status'],
+            'summary' => trim($priorSummary . ' ' . $hardStop['summary']),
+            'task_type' => $completedActions[0]['task_type'],
+            'undo_data' => collect($completedActions)->pluck('undo_data')->filter()->values()->all() ?: null,
+        ];
     }
 
     private function logMessage(AgentTask $task, string $sender, string $body): void
@@ -378,15 +608,21 @@ class ProcessAgentTask implements ShouldQueue
             default => "We couldn't process your request",
         };
 
-        $dashboardUrl = url('/pages/agent-tasks/' . $task->id);
+        $dashboardUrl = route('admin.agent.tasks.show', $task);
+
+        $agentMailbox = env('AGENT_INBOUND_MAILBOX', 'agent@rmflooring.ca');
 
         $body = match ($result['status']) {
-            'completed' => "Done — {$result['summary']}\n\nView details: {$dashboardUrl}",
+            'completed' => "Done — {$result['summary']}\n\n"
+                . "If anything needs fixing — wrong details, a correction, additional info — just send a new email "
+                . "to {$agentMailbox} mentioning the job number or client name and what should change (replying "
+                . "directly to this email won't reach us — please address a fresh email to {$agentMailbox}).\n\n"
+                . "View details: {$dashboardUrl}",
             'pending_clarification' => "Got your request — we need a bit more info before we can proceed:\n\n{$result['summary']}\n\nRespond here: {$dashboardUrl}",
             default => "We couldn't determine what you'd like us to do with that email.\n\nIf this was a mistake, reply with more detail or check: {$dashboardUrl}",
         };
 
-        $sent = $mailer->send($task->requester_email, $subject, $body, 'agent_task_' . $result['status']);
+        $sent = $mailer->send($task->requester_email, $subject, $body, 'agent_task_' . $result['status'], $agentMailbox);
         if ($sent) {
             AgentNotification::create(['task_id' => $task->id, 'sent_to' => $task->requester_email, 'type' => 'requester_reply']);
         }

@@ -3,11 +3,11 @@
 namespace App\Services\Agent;
 
 /**
- * JSON tool-schema definitions handed to the Claude Messages API. Modules 1-4 wire up
+ * JSON tool-schema definitions handed to the Claude Messages API. Modules 1-5 wire up
  * attach_images, attach_document, find_opportunity, update_opportunity,
- * create_opportunity, plus the two meta-tools every task needs to be able to terminate
- * sanely (request_clarification, no_actionable_intent) — the rest of the v1 tool library
- * (log_communication, check_status, undo_last_action) lands in later modules.
+ * create_opportunity, log_communication, check_status, plus the two meta-tools every
+ * task needs to be able to terminate sanely (request_clarification, no_actionable_intent).
+ * `undo_last_action` is the only v1 tool not yet built.
  */
 class AgentToolRegistry
 {
@@ -76,11 +76,12 @@ class AgentToolRegistry
             [
                 'name' => 'find_opportunity',
                 'description' => 'Search for the opportunity an email relates to, using whatever identifying details are '
-                    . 'mentioned — client name, job site address, and/or insurance claim number. Call this whenever no '
-                    . 'opportunity is already resolved for this task and the email appears to reference an existing job. '
-                    . 'Returns scored candidates; if a single unambiguous high-confidence match is found it is '
-                    . 'automatically resolved for the task. If the result is ambiguous or empty, use request_clarification '
-                    . 'rather than guessing.',
+                    . 'mentioned — client name, job site address, insurance claim number, and/or a job/reference number '
+                    . '(RM Flooring\'s own, or a referring company\'s — e.g. "job # 00705807" in a subject line or body). '
+                    . 'Call this whenever no opportunity is already resolved for this task and the email appears to '
+                    . 'reference an existing job. Returns scored candidates; if a single unambiguous high-confidence '
+                    . 'match is found it is automatically resolved for the task. If the result is ambiguous or empty, '
+                    . 'use request_clarification rather than guessing.',
                 'input_schema' => [
                     'type' => 'object',
                     'properties' => [
@@ -95,6 +96,12 @@ class AgentToolRegistry
                         'claim_number' => [
                             'type' => 'string',
                             'description' => 'Insurance claim number mentioned in the email, if any.',
+                        ],
+                        'job_no' => [
+                            'type' => 'string',
+                            'description' => 'A job/work-order/reference number mentioned in the email, if any — '
+                                . 'RM Flooring\'s own or a referring company\'s. Matched exactly against the opportunity\'s '
+                                . 'job number, whatever format it\'s in.',
                         ],
                     ],
                 ],
@@ -142,10 +149,15 @@ class AgentToolRegistry
                         ],
                         'parent_customer_name' => [
                             'type' => 'string',
-                            'description' => 'Name of an existing parent company (e.g. a property manager) to link this '
-                                . 'job under, exactly as it should match an existing customer record. Omit entirely if '
-                                . 'client_name is the only party involved — a new standalone customer record will be '
-                                . 'created and used as both parent and job site.',
+                            'description' => 'Name of an existing parent company to link this job under, exactly as it '
+                                . 'should match an existing customer record. This is very often the company that sent or '
+                                . 'forwarded the referral itself — a restoration company, property manager, or similar '
+                                . '(check the sender\'s organization/domain and email signature, not just who the job is '
+                                . 'for) — not only a property manager. Omit entirely if client_name is the only party '
+                                . 'involved, or if you\'re not confident of an exact match — a new standalone customer '
+                                . 'record will be created and used as both parent and job site, and this can be '
+                                . 'corrected later. Never guess at a close-but-not-exact name; if unsure, omit it rather '
+                                . 'than risk linking to the wrong company.',
                         ],
                         'address' => [
                             'type' => 'string',
@@ -154,6 +166,15 @@ class AgentToolRegistry
                         'claim_number' => [
                             'type' => 'string',
                             'description' => 'Insurance claim number mentioned in the email, if any.',
+                        ],
+                        'job_no' => [
+                            'type' => 'string',
+                            'description' => 'A job/work-order/reference number the referring company (restoration '
+                                . 'company, insurer, property manager, etc.) uses for this job, if one is mentioned — '
+                                . 'e.g. in the subject line ("Job #00705807") or body. Pass it through as-is, whatever '
+                                . 'format it\'s in (a numeric reference, a dated code, etc.) — this becomes the '
+                                . 'opportunity\'s job number, matching how these are normally recorded. Omit if no '
+                                . 'reference number is mentioned anywhere; leaving it blank for staff to assign is fine.',
                         ],
                         'insurance_company' => [
                             'type' => 'string',
@@ -178,6 +199,53 @@ class AgentToolRegistry
                         ],
                     ],
                     'required' => ['client_name'],
+                ],
+            ],
+            [
+                'name' => 'log_communication',
+                'description' => 'Record a summary of an email/correspondence thread onto the resolved opportunity\'s '
+                    . 'activity log. Use this when the email is clearly about the opportunity already resolved for this '
+                    . 'task, contains information worth preserving (a client update, an adjuster call, a vendor note, '
+                    . 'etc.), and no other tool (attach_images, attach_document, update_opportunity) already covers it.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'opportunity_id' => [
+                            'type' => 'integer',
+                            'description' => 'The opportunity ID already resolved for this task. Must match exactly.',
+                        ],
+                        'summary' => [
+                            'type' => 'string',
+                            'description' => 'A concise summary of the correspondence to record on the activity log.',
+                        ],
+                        'from' => [
+                            'type' => 'string',
+                            'description' => 'Who the correspondence was from, if identifiable (e.g. a client or adjuster '
+                                . 'name) — not necessarily the same as the email\'s From header, which is whoever forwarded it.',
+                        ],
+                        'category' => [
+                            'type' => 'string',
+                            'enum' => LogCommunicationService::CATEGORIES,
+                            'description' => 'What kind of communication this is.',
+                        ],
+                    ],
+                    'required' => ['opportunity_id', 'summary', 'category'],
+                ],
+            ],
+            [
+                'name' => 'check_status',
+                'description' => 'Read-only lookup of the resolved opportunity\'s current status — job status, RFM '
+                    . '(site measure) status/date, latest estimate status, latest sale status, and assigned project '
+                    . 'manager. Use this to answer a status-inquiry email; it concludes the task with the summary as the reply.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'opportunity_id' => [
+                            'type' => 'integer',
+                            'description' => 'The opportunity ID already resolved for this task. Must match exactly.',
+                        ],
+                    ],
+                    'required' => ['opportunity_id'],
                 ],
             ],
             [
