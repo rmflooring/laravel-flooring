@@ -17,11 +17,15 @@ class AgentTask extends Model
         'status',
         'confidence_score',
         'opportunity_id',
+        'undo_data',
+        'undone_at',
     ];
 
     protected $casts = [
         'attachments' => 'array',
         'confidence_score' => 'float',
+        'undo_data' => 'array',
+        'undone_at' => 'datetime',
     ];
 
     public function messages()
