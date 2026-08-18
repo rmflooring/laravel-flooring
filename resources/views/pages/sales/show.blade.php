@@ -1227,6 +1227,9 @@
                             <th class="px-4 py-3 text-left">Reference #</th>
                             <th class="px-4 py-3 text-left">Notes</th>
                             <th class="px-4 py-3 text-right">Amount</th>
+                            @role('admin')
+                                <th class="px-4 py-3 w-16"></th>
+                            @endrole
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -1242,6 +1245,12 @@
                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $p->reference_number ?: '—' }}</td>
                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $p->notes ?: '—' }}</td>
                             <td class="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">${{ number_format((float)$p->amount, 2) }}</td>
+                            @role('admin')
+                                <td class="px-4 py-3 text-right">
+                                    <a href="{{ route('admin.payments.show', $p) }}"
+                                       class="text-xs text-blue-600 hover:underline">View</a>
+                                </td>
+                            @endrole
                         </tr>
                         @endforeach
                     </tbody>
@@ -1249,6 +1258,9 @@
                         <tr class="bg-gray-50 dark:bg-gray-700 text-sm font-semibold">
                             <td colspan="5" class="px-5 py-3 text-right text-gray-600 dark:text-gray-300">Total Payments</td>
                             <td class="px-4 py-3 text-right text-green-700 dark:text-green-400">${{ number_format($allInvoicePayments->sum(fn($r) => $r['payment']->amount), 2) }}</td>
+                            @role('admin')
+                                <td></td>
+                            @endrole
                         </tr>
                     </tfoot>
                 </table>
@@ -1319,15 +1331,21 @@
                                     </td>
                                     <td class="px-5 py-3 text-right font-semibold text-green-700 dark:text-green-400">${{ number_format((float)$deposit->amount, 2) }}</td>
                                     <td class="px-5 py-3 text-right">
-                                        @if(! $appliedInvoice)
-                                            @can('edit estimates')
-                                                <form action="{{ route('pages.sales.deposits.destroy', [$sale, $deposit]) }}" method="POST"
-                                                    onsubmit="return confirm('Remove this deposit?')">
-                                                    @csrf @method('DELETE')
-                                                    <button type="submit" class="text-xs text-red-500 hover:underline">Remove</button>
-                                                </form>
-                                            @endcan
-                                        @endif
+                                        <div class="flex items-center justify-end gap-3">
+                                            @role('admin')
+                                                <a href="{{ route('admin.payments.deposits.show', $deposit) }}"
+                                                   class="text-xs text-blue-600 hover:underline">View</a>
+                                            @endrole
+                                            @if(! $appliedInvoice)
+                                                @can('edit estimates')
+                                                    <form action="{{ route('pages.sales.deposits.destroy', [$sale, $deposit]) }}" method="POST"
+                                                        onsubmit="return confirm('Remove this deposit?')">
+                                                        @csrf @method('DELETE')
+                                                        <button type="submit" class="text-xs text-red-500 hover:underline">Remove</button>
+                                                    </form>
+                                                @endcan
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach

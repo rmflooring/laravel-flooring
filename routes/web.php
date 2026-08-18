@@ -308,9 +308,19 @@ Route::prefix('admin')
 			Route::put('/freight-items/{freightItem}', [\App\Http\Controllers\Admin\FreightItemController::class, 'update'])
 			  ->name('freight_items.update');
 
-            // Payments (received)
+            // Payments (received) — unified deposits + invoice payments
             Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])
                 ->name('payments.index');
+
+            // Deposits (SalePayment) admin detail/edit — declared before the generic {payment} routes below
+            Route::get('/payments/deposits/{deposit}', [\App\Http\Controllers\Admin\PaymentController::class, 'depositShow'])
+                ->name('payments.deposits.show');
+
+            Route::get('/payments/deposits/{deposit}/edit', [\App\Http\Controllers\Admin\PaymentController::class, 'depositEdit'])
+                ->name('payments.deposits.edit');
+
+            Route::put('/payments/deposits/{deposit}', [\App\Http\Controllers\Admin\PaymentController::class, 'depositUpdate'])
+                ->name('payments.deposits.update');
 
             Route::get('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'show'])
                 ->name('payments.show');

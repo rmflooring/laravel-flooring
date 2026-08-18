@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class SalePayment extends Model
+class SalePayment extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
+
     protected $guarded = ['id'];
 
     protected $casts = [

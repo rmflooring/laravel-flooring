@@ -6,7 +6,7 @@
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Payments Received</h1>
-                    <p class="text-sm text-gray-600 mt-1">All invoice payments recorded across all sales.</p>
+                    <p class="text-sm text-gray-600 mt-1">All deposits and invoice payments recorded across all sales.</p>
                 </div>
             </div>
 
@@ -23,7 +23,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 
                     {{-- Search --}}
-                    <div class="md:col-span-4">
+                    <div class="md:col-span-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -35,6 +35,17 @@
                                    placeholder="Invoice #, sale #, customer, job, reference #..."
                                    class="block w-full pl-10 p-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         </div>
+                    </div>
+
+                    {{-- Type --}}
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <select name="type"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                            <option value="">All Types</option>
+                            <option value="deposit" @selected($type === 'deposit')>Deposits</option>
+                            <option value="invoice_payment" @selected($type === 'invoice_payment')>Invoice Payments</option>
+                        </select>
                     </div>
 
                     {{-- Payment Method --}}
@@ -99,6 +110,7 @@
                                 <th class="px-6 py-3">
                                     @include('admin.partials.sort-link', ['label' => 'Date', 'field' => 'payment_date'])
                                 </th>
+                                <th class="px-6 py-3">Type</th>
                                 <th class="px-6 py-3">Invoice</th>
                                 <th class="px-6 py-3">Sale</th>
                                 <th class="px-6 py-3">Customer / Job</th>
@@ -116,8 +128,9 @@
                         <tbody>
                             @forelse ($payments as $payment)
                                 @php
-                                    $invoice = $payment->invoice;
-                                    $sale    = $invoice?->sale;
+                                    $isDeposit = $payment->payment_type === 'deposit';
+                                    $invoice   = $isDeposit ? ($payment->applied_invoice ?? null) : $payment->invoice;
+                                    $sale      = $isDeposit ? $payment->sale : $invoice?->sale;
 
                                     $methodBadge = match ($payment->payment_method) {
                                         'cash'        => 'bg-green-100 text-green-800',
@@ -126,10 +139,25 @@
                                         'credit_card' => 'bg-amber-100 text-amber-800',
                                         default       => 'bg-gray-100 text-gray-800',
                                     };
+
+                                    $showUrl = $isDeposit
+                                        ? route('admin.payments.deposits.show', $payment)
+                                        : route('admin.payments.show', $payment);
                                 @endphp
                                 <tr class="bg-white border-b hover:bg-gray-50">
                                     <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                         {{ $payment->payment_date?->format('Y-m-d') }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @if ($isDeposit)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                                                Deposit
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-800">
+                                                Invoice Payment
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4">
                                         @if ($invoice)
@@ -148,6 +176,10 @@
                                             @endphp
                                             <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{ $statusBadge }}">
                                                 {{ ucfirst(str_replace('_', ' ', $invoice->status)) }}
+                                            </span>
+                                        @elseif ($isDeposit)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                Pending
                                             </span>
                                         @else
                                             <span class="text-gray-400">—</span>
@@ -188,7 +220,7 @@
                                         {{ $payment->recordedBy?->name ?? '—' }}
                                     </td>
                                     <td class="px-6 py-4 text-right">
-                                        <a href="{{ route('admin.payments.show', $payment) }}"
+                                        <a href="{{ $showUrl }}"
                                            class="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200">
                                             View
                                         </a>
@@ -196,7 +228,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="px-6 py-10 text-center text-gray-500">
+                                    <td colspan="10" class="px-6 py-10 text-center text-gray-500">
                                         No payments found.
                                     </td>
                                 </tr>
