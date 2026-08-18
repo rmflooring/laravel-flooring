@@ -236,8 +236,11 @@
                                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                                 required>
                                         </td>
-                                        <td class="px-4 py-2 text-right font-medium text-gray-900 dark:text-white">
-                                            $<span x-text="row.line_total.toFixed(2)"></span>
+                                        <td class="px-4 py-2">
+                                            <input type="number" step="any" x-model.number="row.line_total"
+                                                @input="reverseCalcRow(row); recalculate()"
+                                                title="Enter total to back-calculate unit cost"
+                                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 text-right font-medium dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                         </td>
                                         <td class="px-4 py-2 text-center">
                                             <button type="button" @click="removeRow(index)"
@@ -663,6 +666,17 @@ function billForm() {
 
         recalcRow(row) {
             row.line_total = Math.round(row.quantity * row.unit_cost * 100) / 100;
+        },
+
+        // User typed a line total directly — back-calculate the unit cost from it.
+        // (The server always recomputes line_total = quantity * unit_cost on save,
+        // so unit_cost is the value that actually needs to end up correct.)
+        reverseCalcRow(row) {
+            const qty = parseFloat(row.quantity) || 0;
+            const total = parseFloat(row.line_total) || 0;
+            if (qty !== 0) {
+                row.unit_cost = Math.round((total / qty) * 100) / 100;
+            }
         },
 
         recalculate() {
