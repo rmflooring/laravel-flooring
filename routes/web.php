@@ -247,6 +247,16 @@ Route::prefix('admin')
             Route::delete('/settings/sms-templates/{type}', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'reset'])
                 ->name('settings.sms-templates.reset');
 
+            // AI Agent System — task dashboard
+            Route::get('/agent/tasks', [\App\Http\Controllers\Admin\AgentTaskController::class, 'index'])
+                ->name('agent.tasks.index');
+            Route::get('/agent/tasks/{agentTask}', [\App\Http\Controllers\Admin\AgentTaskController::class, 'show'])
+                ->name('agent.tasks.show');
+            Route::post('/agent/tasks/{agentTask}/reply', [\App\Http\Controllers\Admin\AgentTaskController::class, 'reply'])
+                ->name('agent.tasks.reply');
+            Route::post('/agent/tasks/{agentTask}/undo', [\App\Http\Controllers\Admin\AgentTaskController::class, 'undo'])
+                ->name('agent.tasks.undo');
+
             // QuickBooks Online
             Route::get('/settings/quickbooks', [\App\Http\Controllers\Admin\QuickBooksController::class, 'index'])
                 ->name('settings.quickbooks');
