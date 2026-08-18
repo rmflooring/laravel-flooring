@@ -2228,6 +2228,14 @@ function duplicateRoom(sourceCard) {
     updateEstimateTotals();
   }
 
+  // Exposed so estimate_edit.js can refresh the summary panel / hidden subtotal
+  // inputs on page load by SUMMING each row's already-loaded line_total, without
+  // dispatching synthetic input events on quantity/sell_price — those trigger the
+  // forward calc below, which recomputes line_total = qty * sell_price and would
+  // discard a stored line_total that was set by typing the total directly (that
+  // total intentionally doesn't always equal qty * sell_price after rounding).
+  window.fmRecalcRoomTotals = updateRoomTotals;
+
   // ✅ FIX: Estimate totals now read from hidden room subtotal inputs
   // ── GPT Tax Hint ──────────────────────────────────────────────────────────
   function checkGptHint() {

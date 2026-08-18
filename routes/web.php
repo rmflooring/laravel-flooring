@@ -969,7 +969,13 @@ Route::prefix('pages')
 					->name('estimates.api.labour-items');
 				Route::get('freight-items', [\App\Http\Controllers\Admin\FreightItemController::class, 'apiIndex'])
 					->name('estimates.api.freight-items');
+				Route::get('opportunities', [EstimateController::class, 'searchOpportunities'])
+					->name('estimates.api.opportunities.search');
 			});
+
+		Route::post('estimates/{estimate}/link-opportunity', [EstimateController::class, 'linkOpportunity'])
+			->middleware('permission:create estimates')
+			->name('estimates.link-opportunity');
 		
 		// Convert Estimate -> Sale
 		Route::post('estimates/{estimate}/convert-to-sale', [EstimateController::class, 'convertToSale'])

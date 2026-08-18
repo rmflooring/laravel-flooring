@@ -779,7 +779,7 @@ $roomId = $room->id;
 					'cost_price'        => (float)($item['cost_price'] ?? 0),
 					'cost_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
-                    'line_total'        => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'line_total'        => (float)($item['line_total'] ?? 0),
                     'notes'             => $item['notes'] ?? null,
                     'internal_notes'    => $item['internal_notes'] ?? null,
                 ]);
@@ -800,7 +800,7 @@ $roomId = $room->id;
 					'cost_price' => (float)($item['cost_price'] ?? 0),
 					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
-                    'line_total'         => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'line_total'         => (float)($item['line_total'] ?? 0),
                     'notes'              => $item['notes'] ?? null,
                     'internal_notes'     => $item['internal_notes'] ?? null,
                 ]);
@@ -823,7 +823,7 @@ $roomId = $room->id;
 					'cost_price' => (float)($item['cost_price'] ?? 0),
 					'cost_total' => round((float)($item['quantity'] ?? 0) * (float)($item['cost_price'] ?? 0), 2),
                     'sell_price' => round((float)($item['sell_price'] ?? 0), 4),
-                    'line_total'       => round((float)($item['quantity'] ?? 0) * (float)($item['sell_price'] ?? 0), 2),
+                    'line_total'       => (float)($item['line_total'] ?? 0),
                     'notes'          => $item['notes'] ?? null,
                     'customer_notes' => $item['customer_notes'] ?? null,
                     'internal_notes' => $item['internal_notes'] ?? null,
@@ -1314,6 +1314,98 @@ public function duplicate(Estimate $estimate)
 
     return redirect()->route('pages.estimates.edit', $copy->id)
         ->with('success', "Estimate #{$estimate->estimate_number} copied to new Estimate #{$copy->estimate_number}.");
+}
+
+// -------------------------------------------------------------------------
+// Link a standalone estimate to an existing Opportunity
+// -------------------------------------------------------------------------
+
+/**
+ * AJAX search used by the "Link to Opportunity" picker on the estimate edit page.
+ */
+public function searchOpportunities(Request $request)
+{
+    $q = trim((string) $request->query('q', ''));
+
+    $opportunities = \App\Models\Opportunity::with(['parentCustomer', 'jobSiteCustomer'])
+        ->when($q !== '', function ($query) use ($q) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('job_no', 'like', "%{$q}%")
+                    ->orWhereHas('parentCustomer', function ($c) use ($q) {
+                        $c->where('company_name', 'like', "%{$q}%")
+                          ->orWhere('name', 'like', "%{$q}%");
+                    })
+                    ->orWhereHas('jobSiteCustomer', function ($c) use ($q) {
+                        $c->where('company_name', 'like', "%{$q}%")
+                          ->orWhere('name', 'like', "%{$q}%");
+                    });
+            });
+        })
+        ->orderByDesc('updated_at')
+        ->limit(20)
+        ->get()
+        ->map(function ($opp) {
+            $parentName = $opp->parentCustomer?->company_name ?: $opp->parentCustomer?->name;
+            $siteName   = $opp->jobSiteCustomer?->company_name ?: $opp->jobSiteCustomer?->name;
+
+            return [
+                'id'     => $opp->id,
+                'job_no' => $opp->job_no,
+                'label'  => trim(collect([$opp->job_no ? "#{$opp->job_no}" : null, $parentName])->filter()->implode(' — ')) ?: "Opportunity #{$opp->id}",
+                'sub'    => $siteName && $siteName !== $parentName ? "Site: {$siteName}" : null,
+                'status' => $opp->status,
+            ];
+        });
+
+    return response()->json($opportunities);
+}
+
+/**
+ * Link a standalone estimate (no opportunity yet) to an existing Opportunity,
+ * copying that opportunity's parent/job-site customer info onto the estimate —
+ * the same snapshot fields populated when creating an estimate from an
+ * opportunity in the first place.
+ */
+public function linkOpportunity(Request $request, Estimate $estimate)
+{
+    abort_if($estimate->opportunity_id, 422, 'This estimate is already linked to an opportunity.');
+
+    $data = $request->validate([
+        'opportunity_id' => ['required', 'integer', 'exists:opportunities,id'],
+    ]);
+
+    $opportunity = \App\Models\Opportunity::with(['parentCustomer', 'jobSiteCustomer', 'projectManager'])
+        ->findOrFail($data['opportunity_id']);
+
+    $site = $opportunity->jobSiteCustomer;
+
+    // Only carry over salesperson IDs that resolve to a real employee — mirrors the
+    // create-form dropdown, which silently drops a stale/non-matching id.
+    $validEmployeeIds = \App\Models\Employee::whereIn('id', array_filter([$opportunity->sales_person_1, $opportunity->sales_person_2]))
+        ->pluck('id')
+        ->all();
+
+    $estimate->update([
+        'opportunity_id'            => $opportunity->id,
+        'customer_name'             => $opportunity->parentCustomer?->company_name ?: $opportunity->parentCustomer?->name,
+        'pm_name'                   => $opportunity->projectManager?->name,
+        'salesperson_1_employee_id' => in_array($opportunity->sales_person_1, $validEmployeeIds) ? $opportunity->sales_person_1 : null,
+        'salesperson_2_employee_id' => in_array($opportunity->sales_person_2, $validEmployeeIds) ? $opportunity->sales_person_2 : null,
+        'job_no'                    => $opportunity->job_no,
+        'homeowner_name'            => $site?->name ?: $site?->company_name,
+        'homeowner_phone'           => $site?->phone,
+        'homeowner_mobile'          => $site?->mobile,
+        'homeowner_email'           => $site?->email,
+        'job_address'               => $this->buildJobAddress([
+            'job_street'   => trim(collect([$site?->address, $site?->address2])->filter()->implode(', ')),
+            'job_city'     => $site?->city,
+            'job_province' => $site?->province,
+            'job_postal'   => $site?->postal_code,
+        ]),
+    ]);
+
+    return redirect()->route('pages.estimates.edit', $estimate->id)
+        ->with('success', "Estimate #{$estimate->estimate_number} linked to Opportunity #{$opportunity->id}.");
 }
 
 	public function showProfits(Estimate $estimate)

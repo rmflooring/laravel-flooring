@@ -54,11 +54,24 @@ document.addEventListener("DOMContentLoaded", () => {
   // estimate.js updates totals when inputs fire, but edit loads with values already set.
   // Skip .js-total-input (the visible line total) — dispatching input on it triggers the
   // reverse calc which back-calculates sell price at 2dp and overwrites the stored 4dp value.
+  // Also skip quantity/sell_price — dispatching input on those triggers the forward calc,
+  // which recomputes line_total = qty * sell_price and would stomp on a stored line_total
+  // that was set by typing the total directly (rounding means those don't always match).
   setTimeout(() => {
     document.querySelectorAll(".room-card input[type='number']").forEach((el) => {
       if (el.classList.contains('js-total-input')) return;
+      if (el.matches('input[name*="[quantity]"], input[name*="[sell_price]"]')) return;
       el.dispatchEvent(new Event("input", { bubbles: true }));
     });
+
+    // Still need the summary panel + hidden subtotal inputs populated on load —
+    // do that safely by summing each row's already-correct stored line_total,
+    // instead of recomputing every row from qty * sell_price.
+    if (typeof window.fmRecalcRoomTotals === 'function') {
+      document.querySelectorAll('.room-card').forEach((roomCard) => {
+        window.fmRecalcRoomTotals(roomCard);
+      });
+    }
   }, 0);
 });
 
@@ -497,9 +510,13 @@ closeCopyModal();
     recalcFromRow(row);
   });
 
-  // On initial page load, compute everything once
+  // On initial page load, refresh the summary panel by summing each row's already-
+  // correct stored line_total. Do NOT call recalcFromRow/updateRowTotal here — that
+  // force-recomputes line_total = qty * sell_price and would discard a total that
+  // was set by typing it directly (rounding means those don't always match).
   document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".room-card tr").forEach((row) => recalcFromRow(row));
+    document.querySelectorAll(".room-card").forEach((roomCard) => updateRoomTotals(roomCard));
+    updateEstimateTotals();
   });
 
   // Expose a helper so your copy code (or add-row code) can force recalculation
