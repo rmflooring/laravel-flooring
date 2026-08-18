@@ -165,6 +165,7 @@ class BillController extends Controller
             'items.*.quantity'               => 'required|numeric|min:0',
             'items.*.unit'                   => 'nullable|string|max:20',
             'items.*.unit_cost'              => 'required|numeric',
+            'items.*.line_total'             => 'nullable|numeric',
             'items.*.purchase_order_item_id' => 'nullable|exists:purchase_order_items,id',
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
             'items.*.charge_type'            => 'nullable|string',
@@ -220,7 +221,7 @@ class BillController extends Controller
                     'quantity'                => $row['quantity'],
                     'unit'                    => $row['unit'] ?? null,
                     'unit_cost'               => $row['unit_cost'],
-                    'line_total'              => round($row['quantity'] * $row['unit_cost'], 2),
+                    'line_total'              => (float) ($row['line_total'] ?? round($row['quantity'] * $row['unit_cost'], 2)),
                     'sort_order'              => $i,
                 ]);
             }
@@ -305,6 +306,7 @@ class BillController extends Controller
             'items.*.quantity'               => 'required|numeric|min:0',
             'items.*.unit'                   => 'nullable|string|max:20',
             'items.*.unit_cost'              => 'required|numeric',
+            'items.*.line_total'             => 'nullable|numeric',
             'items.*.purchase_order_item_id' => 'nullable|exists:purchase_order_items,id',
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
             'items.*.charge_type'            => 'nullable|string',
@@ -344,7 +346,7 @@ class BillController extends Controller
                     'quantity'               => $row['quantity'],
                     'unit'                   => $row['unit'] ?? null,
                     'unit_cost'              => $row['unit_cost'],
-                    'line_total'             => round($row['quantity'] * $row['unit_cost'], 2),
+                    'line_total'             => (float) ($row['line_total'] ?? round($row['quantity'] * $row['unit_cost'], 2)),
                     'sort_order'             => $i,
                 ]);
             }

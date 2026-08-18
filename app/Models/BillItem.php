@@ -28,7 +28,13 @@ class BillItem extends Model
     protected static function booted(): void
     {
         static::saving(function (BillItem $item) {
-            $item->line_total = round($item->quantity * $item->unit_cost, 2);
+            // line_total is NOT force-recomputed here — the caller passes the intended
+            // value explicitly (either qty * unit_cost, or an exact total the user typed
+            // that back-calculated unit_cost). Only fill it in as a fallback for a new
+            // item created without one at all.
+            if (! $item->exists && $item->line_total === null) {
+                $item->line_total = round($item->quantity * $item->unit_cost, 2);
+            }
         });
     }
 
