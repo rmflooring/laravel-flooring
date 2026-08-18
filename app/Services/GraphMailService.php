@@ -276,6 +276,11 @@ class GraphMailService
                 '$top'     => $top,
             ]
         );
+
+        if (! $response->successful()) {
+            throw new \RuntimeException("GraphMailService: failed to list messages for {$userEmail}: " . $response->body());
+        }
+
         return $response->json('value', []);
     }
 
@@ -285,9 +290,38 @@ class GraphMailService
     public function getMessageMime(string $userEmail, string $messageId): string
     {
         $token = $this->getAppToken();
-        return Http::withToken($token)
-            ->get("https://graph.microsoft.com/v1.0/users/{$userEmail}/messages/{$messageId}/\$value")
-            ->body();
+        $response = Http::withToken($token)
+            ->get("https://graph.microsoft.com/v1.0/users/{$userEmail}/messages/{$messageId}/\$value");
+
+        if (! $response->successful()) {
+            throw new \RuntimeException("GraphMailService: failed to fetch MIME for message {$messageId}: " . $response->body());
+        }
+
+        return $response->body();
+    }
+
+    /**
+     * Fetch a message's sender/subject/body plus its attachments in one call.
+     * Each attachment includes `isInline` (true for signature logos / images
+     * referenced inline in the HTML body — not real attachments) and, for file
+     * attachments, base64 `contentBytes`.
+     */
+    public function getMessageWithAttachments(string $userEmail, string $messageId): array
+    {
+        $token = $this->getAppToken();
+        $response = Http::withToken($token)->acceptJson()->get(
+            "https://graph.microsoft.com/v1.0/users/{$userEmail}/messages/{$messageId}",
+            [
+                '$select' => 'from,subject,body',
+                '$expand' => 'attachments',
+            ]
+        );
+
+        if (! $response->successful()) {
+            throw new \RuntimeException("GraphMailService: failed to fetch message {$messageId}: " . $response->body());
+        }
+
+        return $response->json();
     }
 
     /**
@@ -296,10 +330,14 @@ class GraphMailService
     public function markMessageRead(string $userEmail, string $messageId): void
     {
         $token = $this->getAppToken();
-        Http::withToken($token)->acceptJson()->patch(
+        $response = Http::withToken($token)->acceptJson()->patch(
             "https://graph.microsoft.com/v1.0/users/{$userEmail}/messages/{$messageId}",
             ['isRead' => true]
         );
+
+        if (! $response->successful()) {
+            throw new \RuntimeException("GraphMailService: failed to mark message {$messageId} read: " . $response->body());
+        }
     }
 
     // =========================================================================

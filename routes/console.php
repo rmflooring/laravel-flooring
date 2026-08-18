@@ -54,6 +54,12 @@ Schedule::command('rfm:check-confirmations')
     ->name('rfm-check-confirmations')
     ->withoutOverlapping();
 
+// Poll the agent inbox for new mail-triggered AI Agent tasks
+Schedule::command('agent:check-inbound-mail')
+    ->everyTwoMinutes()
+    ->name('agent-check-inbound-mail')
+    ->withoutOverlapping();
+
 Schedule::call(function () {
     $users = \App\Models\User::whereHas('microsoftAccount', function ($q) {
         $q->where('is_connected', 1);
