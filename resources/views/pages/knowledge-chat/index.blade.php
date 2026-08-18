@@ -91,10 +91,21 @@
                     return prefix + '-local-' + this.localIdSeq;
                 },
 
+                // Last line of defense against duplicate x-for keys: no matter what
+                // causes ask() to fire more than once for one action (a browser-specific
+                // Enter-key quirk on the textarea turned out to still slip past the
+                // requestSubmit() fix), the same id is never pushed twice. A duplicate
+                // key crashes Alpine's list diffing for the rest of the page — this
+                // makes that structurally impossible instead of chasing every trigger.
+                pushMessage(msg) {
+                    if (this.messages.some((m) => m.id === msg.id)) return;
+                    this.messages.push(msg);
+                },
+
                 init() {
                     (recent || []).forEach((q) => {
-                        this.messages.push({ id: 'u-query-' + q.id, sender: 'user', text: q.question });
-                        this.messages.push({
+                        this.pushMessage({ id: 'u-query-' + q.id, sender: 'user', text: q.question });
+                        this.pushMessage({
                             id: 'a-query-' + q.id,
                             queryId: q.id,
                             sender: 'agent',
@@ -110,9 +121,9 @@
                     const question = this.input.trim();
                     if (!question || this.loading) return;
 
-                    this.messages.push({ id: this.nextLocalId('u'), sender: 'user', text: question });
-                    this.input = '';
                     this.loading = true;
+                    this.pushMessage({ id: this.nextLocalId('u'), sender: 'user', text: question });
+                    this.input = '';
                     this.$nextTick(() => this.scrollDown());
 
                     try {
@@ -127,9 +138,9 @@
                         const data = await res.json();
 
                         if (!res.ok) {
-                            this.messages.push({ id: this.nextLocalId('a'), sender: 'agent', text: data.error || 'Something went wrong.' });
+                            this.pushMessage({ id: this.nextLocalId('a'), sender: 'agent', text: data.error || 'Something went wrong.' });
                         } else {
-                            this.messages.push({
+                            this.pushMessage({
                                 id: 'a-query-' + data.id,
                                 queryId: data.id,
                                 sender: 'agent',
@@ -139,7 +150,7 @@
                         }
                     } catch (e) {
                         console.error('[knowledge-chat] ask() failed', e);
-                        this.messages.push({ id: this.nextLocalId('a'), sender: 'agent', text: 'Something went wrong — please try again.' });
+                        this.pushMessage({ id: this.nextLocalId('a'), sender: 'agent', text: 'Something went wrong — please try again.' });
                     }
 
                     this.loading = false;
