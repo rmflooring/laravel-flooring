@@ -247,6 +247,12 @@ Route::prefix('admin')
             Route::delete('/settings/sms-templates/{type}', [\App\Http\Controllers\Admin\AdminSmsTemplateController::class, 'reset'])
                 ->name('settings.sms-templates.reset');
 
+            // AI Agent System — settings
+            Route::get('/settings/agent', [\App\Http\Controllers\Admin\AgentSettingsController::class, 'index'])
+                ->name('settings.agent');
+            Route::put('/settings/agent', [\App\Http\Controllers\Admin\AgentSettingsController::class, 'update'])
+                ->name('settings.agent.update');
+
             // AI Agent System — task dashboard
             Route::get('/agent/tasks', [\App\Http\Controllers\Admin\AgentTaskController::class, 'index'])
                 ->name('agent.tasks.index');
