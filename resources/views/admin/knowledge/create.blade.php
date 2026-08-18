@@ -44,11 +44,22 @@
                     </select>
                 </div>
 
+                <div class="bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-3 flex items-center gap-3">
+                    <input type="file" id="pdf-import-input" accept="application/pdf"
+                        class="text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-white file:text-gray-700 file:border file:border-gray-300 hover:file:bg-gray-50 dark:file:bg-gray-700 dark:file:text-gray-200 dark:file:border-gray-600">
+                    <button type="button" id="pdf-import-button"
+                        class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 disabled:opacity-50">
+                        Import from PDF
+                    </button>
+                    <span id="pdf-import-status" class="text-xs text-gray-500 dark:text-gray-400"></span>
+                </div>
+
                 <div>
                     <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Content <span class="text-red-500">*</span></label>
-                    <textarea name="content" rows="10" required
+                    <textarea name="content" id="content-field" rows="10" required
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         placeholder="Separate distinct points with a blank line — each paragraph becomes its own searchable chunk.">{{ old('content') }}</textarea>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">PDF import replaces this box with the extracted text — review and clean it up (tables/columns often need fixing) before saving.</p>
                 </div>
 
                 <div>
@@ -87,4 +98,54 @@
 
         </div>
     </div>
+
+    <script>
+        (function () {
+            const input = document.getElementById('pdf-import-input');
+            const button = document.getElementById('pdf-import-button');
+            const status = document.getElementById('pdf-import-status');
+            const content = document.getElementById('content-field');
+
+            button.addEventListener('click', async function () {
+                const file = input.files[0];
+                if (! file) {
+                    status.textContent = 'Choose a PDF file first.';
+                    status.className = 'text-xs text-red-600';
+                    return;
+                }
+
+                button.disabled = true;
+                status.textContent = 'Extracting text…';
+                status.className = 'text-xs text-gray-500 dark:text-gray-400';
+
+                const formData = new FormData();
+                formData.append('pdf', file);
+
+                try {
+                    const res = await fetch("{{ route('admin.knowledge.extract-pdf') }}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        },
+                        body: formData,
+                    });
+                    const data = await res.json();
+
+                    if (! res.ok) {
+                        status.textContent = data.error || 'Could not extract text from this PDF.';
+                        status.className = 'text-xs text-red-600';
+                    } else {
+                        content.value = data.text;
+                        status.textContent = 'Extracted — review the content below before saving.';
+                        status.className = 'text-xs text-green-600';
+                    }
+                } catch (e) {
+                    status.textContent = 'Something went wrong — please try again.';
+                    status.className = 'text-xs text-red-600';
+                }
+
+                button.disabled = false;
+            });
+        })();
+    </script>
 </x-app-layout>

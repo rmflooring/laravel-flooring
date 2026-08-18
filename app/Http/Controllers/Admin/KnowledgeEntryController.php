@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\KnowledgeEntry;
 use App\Services\Agent\KnowledgeEntryService;
+use App\Services\Agent\PdfTextExtractionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -83,6 +85,26 @@ class KnowledgeEntryController extends Controller
         $knowledge->delete();
 
         return back()->with('success', 'Knowledge entry deleted.');
+    }
+
+    /**
+     * Extracts text from an uploaded PDF for the create/edit form's "Import from PDF"
+     * button. Returns the raw extracted text for the admin to review/edit in the
+     * content textarea — nothing is saved or embedded here.
+     */
+    public function extractPdf(Request $request, PdfTextExtractionService $extractor): JsonResponse
+    {
+        $request->validate([
+            'pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+        ]);
+
+        try {
+            $text = $extractor->extractFromPath($request->file('pdf')->getRealPath());
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['text' => $text]);
     }
 
     private function validated(Request $request): array

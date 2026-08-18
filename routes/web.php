@@ -332,6 +332,8 @@ Route::prefix('admin')
                 ->name('payments.update');
 
             // Knowledge Base (staff chat agent) — admin-only writes
+            Route::post('/knowledge/extract-pdf', [\App\Http\Controllers\Admin\KnowledgeEntryController::class, 'extractPdf'])
+                ->name('knowledge.extract-pdf');
             Route::resource('knowledge', \App\Http\Controllers\Admin\KnowledgeEntryController::class)
                 ->except(['show']);
 
