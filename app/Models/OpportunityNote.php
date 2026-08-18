@@ -9,7 +9,7 @@ class OpportunityNote extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['opportunity_id', 'user_id', 'body'];
+    protected $fillable = ['opportunity_id', 'user_id', 'body', 'category', 'source'];
 
     public function opportunity()
     {
