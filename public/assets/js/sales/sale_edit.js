@@ -51,12 +51,28 @@ document.addEventListener("click", function (e) {
 
 document.addEventListener("DOMContentLoaded", () => {
   // Kick calculations for existing rows on Edit page:
-  // estimate.js updates totals when inputs fire, but edit loads with values already set.
+  // sale.js updates totals when inputs fire, but edit loads with values already set.
+  // Skip .js-total-input (the visible line total) — dispatching input on it triggers the
+  // reverse calc which back-calculates sell price and overwrites the stored value.
+  // Also skip quantity/sell_price — dispatching input on those triggers the forward calc,
+  // which recomputes line_total = qty * sell_price and would stomp on a stored line_total
+  // that was set by typing the total directly (rounding means those don't always match).
   setTimeout(() => {
     document.querySelectorAll(".room-card input[type='number']").forEach((el) => {
-      // Trigger the same listeners estimate.js uses for recalculation
+      if (el.classList.contains('js-total-input')) return;
+      if (el.matches('input[name*="[quantity]"], input[name*="[sell_price]"]')) return;
+      // Trigger the same listeners sale.js uses for recalculation
       el.dispatchEvent(new Event("input", { bubbles: true }));
     });
+
+    // Still need the summary panel + hidden subtotal inputs populated on load —
+    // do that safely by summing each row's already-correct stored line_total,
+    // instead of recomputing every row from qty * sell_price.
+    if (typeof window.fmRecalcRoomTotals === 'function') {
+      document.querySelectorAll('.room-card').forEach((roomCard) => {
+        window.fmRecalcRoomTotals(roomCard);
+      });
+    }
   }, 0);
 });
 
@@ -349,20 +365,21 @@ closeCopyModal();
     const sell = sellInput ? toNumber(sellInput.value) : 0;
     const total = qty * sell;
 
+    // Note: the visible .material-line-total/.freight-line-total/.labour-line-total
+    // fields are now editable inputs (js-total-input) — sale.js's own input listener
+    // already keeps their .value in sync (and guards against the reverse-calc feedback
+    // loop). Only the hidden *-line-total-input is updated here.
     if (type === "materials") {
-      setText(row.querySelector(".material-line-total"), money(total));
       const hidden = row.querySelector(".material-line-total-input");
       if (hidden) hidden.value = total.toFixed(2);
     }
 
     if (type === "freight") {
-      setText(row.querySelector(".freight-line-total"), money(total));
       const hidden = row.querySelector(".freight-line-total-input");
       if (hidden) hidden.value = total.toFixed(2);
     }
 
     if (type === "labour") {
-      setText(row.querySelector(".labour-line-total"), money(total));
       const hidden = row.querySelector(".labour-line-total-input");
       if (hidden) hidden.value = total.toFixed(2);
     }
@@ -476,9 +493,15 @@ closeCopyModal();
     recalcFromRow(row);
   });
 
-  // On initial page load, compute everything once
+  // On initial page load: sum up the already-correct stored line_totals into the
+  // summary panels. Don't recompute each row from qty*sell_price here — a row's
+  // total may have been set by typing the total directly (back-calculating sell
+  // price), which doesn't always equal qty*sell_price after rounding.
   document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".room-card tr").forEach((row) => recalcFromRow(row));
+    document.querySelectorAll(".room-card").forEach((roomCard) => {
+      updateRoomTotals(roomCard);
+    });
+    updateEstimateTotals();
   });
 
   // Expose a helper so your copy code (or add-row code) can force recalculation

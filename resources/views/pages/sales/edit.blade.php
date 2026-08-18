@@ -557,9 +557,10 @@
       </td>
 
       <td class="px-3 py-2">
-        <span class="material-line-total inline-block w-28 text-right font-medium">
-          ${{ number_format((float)($item->line_total ?? ((float)$item->quantity * (float)$item->sell_price)), 2) }}
-        </span>
+        <input type="number" step="any"
+          class="material-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+          value="{{ number_format((float)($item->line_total ?? ((float)$item->quantity * (float)$item->sell_price)), 2, '.', '') }}"
+          placeholder="0.00" title="Enter total to back-calculate sell price">
         <input type="hidden"
           name="rooms[{{ $roomIndex }}][materials][{{ $i }}][line_total]"
           class="material-line-total-input"
@@ -738,7 +739,9 @@
       </td>
 
       <td class="px-3 py-2">
-        <span class="material-line-total inline-block w-28 text-right font-medium">$0.00</span>
+        <input type="number" step="any"
+          class="material-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+          value="0.00" placeholder="0.00" title="Enter total to back-calculate sell price">
         <input type="hidden"
           name="rooms[{{ $roomIndex }}][materials][__ITEM_INDEX__][line_total]"
           class="material-line-total-input" value="0">
@@ -879,9 +882,10 @@
       </td>
 
       <td class="px-3 py-2">
-  <span class="freight-line-total inline-block w-28 text-right font-medium">
-    ${{ number_format($line, 2) }}
-  </span>
+  <input type="number" step="any"
+    class="freight-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+    value="{{ number_format($line, 2, '.', '') }}"
+    placeholder="0.00" title="Enter total to back-calculate sell price">
   <input type="hidden"
     name="rooms[{{ $roomIndex }}][freight][{{ $i }}][line_total]"
     class="freight-line-total-input"
@@ -988,7 +992,9 @@
       </td>
 
       <td class="px-3 py-2">
-  <span class="freight-line-total inline-block w-28 text-right font-medium">$0.00</span>
+  <input type="number" step="any"
+    class="freight-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+    value="0.00" placeholder="0.00" title="Enter total to back-calculate sell price">
   <input type="hidden"
     name="rooms[{{ $roomIndex }}][freight][__ITEM_INDEX__][line_total]"
     class="freight-line-total-input" value="0">
@@ -1188,9 +1194,10 @@
       </td>
 
       <td class="px-3 py-2">
-  <span class="labour-line-total inline-block w-28 text-right font-medium">
-    ${{ number_format($line, 2) }}
-  </span>
+  <input type="number" step="any"
+    class="labour-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+    value="{{ number_format($line, 2, '.', '') }}"
+    placeholder="0.00" title="Enter total to back-calculate sell price">
   <input type="hidden"
     name="rooms[{{ $roomIndex }}][labour][{{ $i }}][line_total]"
     class="labour-line-total-input"
@@ -1372,7 +1379,9 @@
       </td>
 
       <td class="px-3 py-2">
-        <span class="labour-line-total inline-block w-28 text-right font-medium">$0.00</span>
+        <input type="number" step="any"
+          class="labour-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+          value="0.00" placeholder="0.00" title="Enter total to back-calculate sell price">
         <input type="hidden"
           name="rooms[{{ $roomIndex }}][labour][__ITEM_INDEX__][line_total]"
           class="labour-line-total-input" value="0">
@@ -1629,7 +1638,9 @@
     </td>
 
     <td class="px-3 py-2">
-      <span class="material-line-total inline-block w-28 text-right font-medium">$0.00</span>
+      <input type="number" step="any"
+        class="material-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+        value="0.00" placeholder="0.00" title="Enter total to back-calculate sell price">
       <input type="hidden"
         name="rooms[__ROOM_INDEX__][materials][__ITEM_INDEX__][line_total]"
         class="material-line-total-input"
@@ -1759,7 +1770,9 @@
     </td>
 
     <td class="px-3 py-2">
-  <span class="freight-line-total inline-block w-28 text-right font-medium">$0.00</span>
+  <input type="number" step="any"
+    class="freight-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+    value="0.00" placeholder="0.00" title="Enter total to back-calculate sell price">
   <input type="hidden" name="rooms[__ROOM_INDEX__][freight][__ITEM_INDEX__][line_total]" class="freight-line-total-input" value="0">
 </td>
 
@@ -1916,7 +1929,9 @@
                             <input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][cost_total]" class="labour-cost-total-input" value="0">
                         </td>
                         <td class="px-3 py-2">
-  <span class="labour-line-total inline-block w-28 text-right font-medium">$0.00</span>
+  <input type="number" step="any"
+    class="labour-line-total js-total-input w-28 bg-gray-50 border border-gray-300 rounded-lg p-2 text-right"
+    value="0.00" placeholder="0.00" title="Enter total to back-calculate sell price">
   <input type="hidden" name="rooms[__ROOM_INDEX__][labour][__ITEM_INDEX__][line_total]" class="labour-line-total-input" value="0">
 </td>
 

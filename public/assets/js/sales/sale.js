@@ -2127,6 +2127,14 @@ function addRoom() {
     updateEstimateTotals();
   }
 
+  // Exposed so sale_edit.js can refresh the summary panel / hidden subtotal
+  // inputs on page load by SUMMING each row's already-loaded line_total, without
+  // dispatching synthetic input events on quantity/sell_price — those trigger the
+  // forward calc below, which recomputes line_total = qty * sell_price and would
+  // discard a stored line_total that was set by typing the total directly (that
+  // total intentionally doesn't always equal qty * sell_price after rounding).
+  window.fmRecalcRoomTotals = updateRoomTotals;
+
   // ✅ FIX: Estimate totals now read from hidden room subtotal inputs
   function updateEstimateTotals() {
     let materials = 0, freight = 0, labour = 0;
@@ -2209,6 +2217,10 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     }
   }
 
+  // Guard flag: set to true while the forward calc is writing to .js-total-input
+  // so the reverse calc listener knows to skip (it's not a user-typed change).
+  let _fmForwardCalcActive = false;
+
   // ── Real-time line total calculation ────────────────────────────────────
   roomsContainer.addEventListener("input", e => {
     const input = e.target;
@@ -2221,13 +2233,45 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const price = parseNumber(row.querySelector('input[name*="sell_price"]')?.value || 0);
     const lineTotal = qty * price;
 
-    // Update visible line total (your spans exist in the 2nd last td)
-    const totalSpan = row.querySelector("td:nth-last-child(2) span");
-    if (totalSpan) totalSpan.textContent = formatMoney(lineTotal);
+    // Round using Math.round to match PHP's round() — toFixed(2) has banker's rounding issues
+    const lineTotalRounded = Math.round(lineTotal * 100) / 100;
+
+    // Update visible total input — guard flag prevents reverse calc from firing
+    _fmForwardCalcActive = true;
+    const totalDisplay = row.querySelector('.js-total-input');
+    if (totalDisplay) totalDisplay.value = lineTotalRounded.toFixed(2);
+    _fmForwardCalcActive = false;
 
     // Update hidden line_total
     const hidden = row.querySelector('input[name*="line_total"]');
-    if (hidden) hidden.value = lineTotal.toFixed(2);
+    if (hidden) hidden.value = lineTotalRounded.toFixed(2);
+
+    const roomCard = row.closest(".room-card");
+    if (roomCard) updateRoomTotals(roomCard);
+  });
+
+  // ── Reverse calc: user types in total → back-calculate sell price ────────
+  roomsContainer.addEventListener("input", e => {
+    const input = e.target;
+    if (!input.matches('.js-total-input')) return;
+    // Skip if this change was triggered programmatically by the forward calc
+    if (_fmForwardCalcActive) return;
+
+    const row = input.closest("tr");
+    if (!row) return;
+
+    const total = parseNumber(input.value);
+    const qty = parseNumber(row.querySelector('input[name*="quantity"]')?.value || 0);
+
+    if (qty !== 0) {
+      // Round to 2dp to avoid float division imprecision
+      const sell = Math.round((total / qty) * 100) / 100;
+      const sellInput = row.querySelector('input[name*="sell_price"]');
+      if (sellInput) sellInput.value = formatPrice(sell);
+    }
+
+    const hidden = row.querySelector('input[name*="line_total"]');
+    if (hidden) hidden.value = total.toFixed(2);
 
     const roomCard = row.closest(".room-card");
     if (roomCard) updateRoomTotals(roomCard);
