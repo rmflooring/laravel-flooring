@@ -60,7 +60,7 @@
                 </div>
 
                 <form @submit.prevent="ask()" class="border-t border-gray-200 dark:border-gray-700 p-4 flex items-end gap-3">
-                    <textarea x-model="input" rows="1" @keydown.enter.prevent="ask()"
+                    <textarea x-model="input" rows="1" @keydown.enter.prevent="$el.closest('form').requestSubmit()"
                         placeholder="Ask a question..."
                         class="flex-1 resize-none bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
                     <button type="submit" :disabled="loading || !input.trim()"
@@ -79,12 +79,23 @@
                 messages: [],
                 input: '',
                 loading: false,
+                // Monotonic counter for locally-generated message ids — Date.now() only
+                // has millisecond resolution, which can collide if two bubbles are ever
+                // pushed in the same tick. A duplicate x-for key crashes Alpine's list
+                // diffing for the rest of the page, which is what "thinking then blank"
+                // actually was: not a failed request, a client-side render crash.
+                localIdSeq: 0,
+
+                nextLocalId(prefix) {
+                    this.localIdSeq += 1;
+                    return prefix + '-local-' + this.localIdSeq;
+                },
 
                 init() {
                     (recent || []).forEach((q) => {
-                        this.messages.push({ id: 'u' + q.id, sender: 'user', text: q.question });
+                        this.messages.push({ id: 'u-query-' + q.id, sender: 'user', text: q.question });
                         this.messages.push({
-                            id: 'a' + q.id,
+                            id: 'a-query-' + q.id,
                             queryId: q.id,
                             sender: 'agent',
                             text: q.answer,
@@ -99,7 +110,7 @@
                     const question = this.input.trim();
                     if (!question || this.loading) return;
 
-                    this.messages.push({ id: 'u' + Date.now(), sender: 'user', text: question });
+                    this.messages.push({ id: this.nextLocalId('u'), sender: 'user', text: question });
                     this.input = '';
                     this.loading = true;
                     this.$nextTick(() => this.scrollDown());
@@ -116,10 +127,10 @@
                         const data = await res.json();
 
                         if (!res.ok) {
-                            this.messages.push({ id: 'a' + Date.now(), sender: 'agent', text: data.error || 'Something went wrong.' });
+                            this.messages.push({ id: this.nextLocalId('a'), sender: 'agent', text: data.error || 'Something went wrong.' });
                         } else {
                             this.messages.push({
-                                id: 'a' + data.id,
+                                id: 'a-query-' + data.id,
                                 queryId: data.id,
                                 sender: 'agent',
                                 text: data.answer,
@@ -127,7 +138,8 @@
                             });
                         }
                     } catch (e) {
-                        this.messages.push({ id: 'a' + Date.now(), sender: 'agent', text: 'Something went wrong — please try again.' });
+                        console.error('[knowledge-chat] ask() failed', e);
+                        this.messages.push({ id: this.nextLocalId('a'), sender: 'agent', text: 'Something went wrong — please try again.' });
                     }
 
                     this.loading = false;
