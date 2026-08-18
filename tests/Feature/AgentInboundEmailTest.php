@@ -44,13 +44,25 @@ class AgentInboundEmailTest extends TestCase
         Http::fake([
             'login.microsoftonline.com/*' => Http::response(['access_token' => 'fake-token'], 200),
             'graph.microsoft.com/*' => Http::response([], 202),
-            'api.anthropic.com/*' => Http::response([
-                'id' => 'msg_test',
-                'stop_reason' => 'tool_use',
-                'content' => [
-                    ['type' => 'tool_use', 'id' => 'toolu_1', 'name' => $toolName, 'input' => $input],
-                ],
-            ], 200),
+            // A trailing "done" turn is included for tools that no longer end the task on
+            // their own (attach_images/attach_document etc. — see the multi-action
+            // redesign) — it's simply never consumed by tests using a still-terminal tool
+            // (request_clarification/no_actionable_intent), since the loop breaks before
+            // requesting a second response.
+            'api.anthropic.com/*' => Http::sequence([
+                Http::response([
+                    'id' => 'msg_test',
+                    'stop_reason' => 'tool_use',
+                    'content' => [
+                        ['type' => 'tool_use', 'id' => 'toolu_1', 'name' => $toolName, 'input' => $input],
+                    ],
+                ], 200),
+                Http::response([
+                    'id' => 'msg_test_done',
+                    'stop_reason' => 'end_turn',
+                    'content' => [['type' => 'text', 'text' => '']],
+                ], 200),
+            ]),
         ]);
     }
 
@@ -115,7 +127,11 @@ class AgentInboundEmailTest extends TestCase
 
         $this->assertSame(1, OpportunityDocument::where('opportunity_id', $opportunity->id)->count());
         $doc = OpportunityDocument::where('opportunity_id', $opportunity->id)->first();
-        $this->assertSame('document', $doc->category);
+        // Plural, matching OpportunityDocumentController::index()'s Documents-tab filter
+        // (whereIn('category', ['documents', 'generated_document'])) — was 'document'
+        // (singular) until 2026-08-18, which meant every agent-attached document was
+        // silently invisible in the FM UI despite being stored correctly. Found live.
+        $this->assertSame('documents', $doc->category);
         $this->assertSame('scope_of_work', $doc->label_text);
     }
 

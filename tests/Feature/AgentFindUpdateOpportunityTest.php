@@ -49,6 +49,15 @@ class AgentFindUpdateOpportunityTest extends TestCase
             ],
         ], 200), $turns);
 
+        // Trailing "done" turn for tools that no longer end the task on their own (the
+        // multi-action redesign) — never consumed when the last turn is a still-terminal
+        // tool (request_clarification/no_actionable_intent), since the loop breaks first.
+        $responses[] = Http::response([
+            'id' => 'msg_test_done',
+            'stop_reason' => 'end_turn',
+            'content' => [['type' => 'text', 'text' => '']],
+        ], 200);
+
         Http::fake([
             'login.microsoftonline.com/*' => Http::response(['access_token' => 'fake-token'], 200),
             'graph.microsoft.com/*' => Http::response([], 202),
@@ -124,6 +133,53 @@ class AgentFindUpdateOpportunityTest extends TestCase
         $task = AgentTask::first();
         $this->assertNull($task->opportunity_id);
         $this->assertSame('pending_clarification', $task->status);
+    }
+
+    public function test_find_opportunity_resolves_by_job_no(): void
+    {
+        $parent = Customer::create(['name' => 'First OnSite Restoration']);
+        $jobSite = Customer::create(['name' => 'Wang & Ryu', 'parent_id' => $parent->id]);
+        $opportunity = Opportunity::create([
+            'job_no' => '00705807',
+            'parent_customer_id' => $parent->id,
+            'job_site_customer_id' => $jobSite->id,
+        ]);
+
+        $this->fakeClaudeTurns([
+            ['tool' => 'find_opportunity', 'input' => ['job_no' => '00705807']],
+            ['tool' => 'no_actionable_intent', 'input' => []],
+        ]);
+
+        $response = $this->postAgentEmail('Please update job # 00705807.');
+
+        $response->assertOk();
+
+        $task = AgentTask::first();
+        $this->assertSame($opportunity->id, $task->opportunity_id);
+    }
+
+    public function test_update_opportunity_resolves_project_manager_by_partial_name(): void
+    {
+        $parent = Customer::create(['name' => 'First OnSite Restoration']);
+        $pm = ProjectManager::create(['customer_id' => $parent->id, 'name' => 'Andrew Bou-Antoun']);
+        $opportunity = Opportunity::create(['job_no' => '00705807', 'parent_customer_id' => $parent->id]);
+
+        $this->fakeClaudeTurns([
+            ['tool' => 'update_opportunity', 'input' => [
+                'opportunity_id' => $opportunity->id,
+                'project_manager_name' => 'Andrew',
+            ]],
+        ]);
+
+        $response = $this->postAgentEmail('For job 00705807, please set the PM to Andrew.');
+
+        $response->assertOk();
+
+        $task = AgentTask::first();
+        $this->assertSame('completed', $task->status);
+
+        $opportunity->refresh();
+        $this->assertSame($pm->id, $opportunity->project_manager_id);
     }
 
     public function test_update_opportunity_sets_requires_rfm_and_project_manager(): void
