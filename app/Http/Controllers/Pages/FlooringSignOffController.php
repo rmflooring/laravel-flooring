@@ -149,6 +149,7 @@ class FlooringSignOffController extends Controller
         // and {{expires_date}} are resolved when the request is actually sent.
         $signatureVars = [
             'client_name'    => $signOff->customer_name,
+            'job_site_name'  => $signOff->job_site_name,
             'document_label' => 'Flooring Selection',
         ];
         $signatureTemplate = $emailTemplates->getTemplate(null, 'signature_request_flooring');

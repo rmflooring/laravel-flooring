@@ -99,7 +99,7 @@ class EmailTemplate extends Model
             '{{product_reference}}', '{{color_reference}}', '{{sq_footage}}',
         ],
         'signature_request_flooring' => [
-            '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',
+            '{{client_name}}', '{{job_site_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',
         ],
         'signature_request_work_auth' => [
             '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',

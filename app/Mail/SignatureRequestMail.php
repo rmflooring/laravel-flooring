@@ -36,8 +36,13 @@ class SignatureRequestMail
         $template   = $service->getTemplate(null, $templateType);
         $signingUrl = url('/sign/' . $this->signingRequest->uuid);
 
+        $jobSiteName = $this->signingRequest->document_type === 'flooring_selection'
+            ? \App\Models\FlooringSignOff::find($this->signingRequest->document_id)?->job_site_name ?? ''
+            : '';
+
         $vars = [
             'client_name'    => $this->signingRequest->client_name,
+            'job_site_name'  => $jobSiteName,
             'document_label' => $documentLabel,
             'signing_link'   => $signingUrl,
             'expires_date'   => $this->signingRequest->expires_at
