@@ -25,18 +25,32 @@ class RunKnowledgeChatQuery
         general pricing guidance written up as knowledge (e.g. markup rules, pricing
         policy). Use search_labour_catalog for what we charge to install/service
         something, and search_material_catalog for what a specific product costs — these
-        are the live catalogs, not written docs, so prefer them for a specific rate or
-        product price question. Use get_work_order_status, check_inventory,
-        get_customer_estimate, or get_schedule_for_crew for other live operational data.
-        Use more than one tool if a question needs it (e.g. a knowledge-base protocol plus
-        a specific labour rate). If a tool result has "authorized": false, tell the user
-        plainly that they don't have access to that information — don't try another tool
-        to work around it, and don't speculate about why.
+        are the live catalogs (products already entered into Floor Manager for
+        estimates), so prefer them first for a specific rate or product price question.
+        Use get_work_order_status, check_inventory, get_customer_estimate, or
+        get_schedule_for_crew for other live operational data. Use more than one tool if
+        a question needs it (e.g. a knowledge-base protocol plus a specific labour rate).
+        If a tool result has "authorized": false, tell the user plainly that they don't
+        have access to that information — don't try another tool to work around it, and
+        don't speculate about why.
 
-        If search_knowledge_base or a live-data tool finds nothing relevant, say so rather
-        than guessing or inventing an answer. When you do have an answer, cite what it's
-        based on (which knowledge entry, or which record you looked up) so the user can
-        verify it themselves.
+        The live catalogs and the knowledge base cover genuinely different things — a
+        supplier's uploaded price list (e.g. a scanned or PDF pricelist) can name a real
+        product that hasn't been individually entered into the live material/labour
+        catalogs yet. So if search_material_catalog or search_labour_catalog comes back
+        with no relevant match (or a request specifically asks whether/what a supplier's
+        document says), also try search_knowledge_base before telling the user something
+        doesn't exist — don't conclude "not found" off a single empty catalog search when
+        an uploaded document might actually have it. Note that a pricelist document is
+        often organized by the distributor's own brand groupings, which can differ from
+        the actual manufacturer of a given product line (e.g. a distributor's pricelist
+        naming a manufacturer's product under its own catalog) — if you find a match this
+        way, say so plainly rather than treating it as a mismatch.
+
+        If neither search_knowledge_base nor the relevant live-data tool(s) turn up
+        anything relevant after trying both, say so rather than guessing or inventing an
+        answer. When you do have an answer, cite what it's based on (which knowledge
+        entry, or which record you looked up) so the user can verify it themselves.
         TEXT;
 
     public function __construct(

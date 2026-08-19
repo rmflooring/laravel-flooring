@@ -17,13 +17,32 @@ use Illuminate\Support\Facades\DB;
  */
 class KnowledgeEntryService
 {
+    /**
+     * Found 2026-08-19: a real uploaded PDF pricelist produced an 11KB single chunk
+     * because PDF text extraction doesn't reliably insert blank lines between sections
+     * (a table of contents, or a dense price table, can extract as one long unbroken
+     * block) — paragraph-splitting alone has no upper bound on chunk size in that case.
+     * A chunk that large embeds as one diluted vector spanning dozens of unrelated
+     * products, which both pollutes results for unrelated queries and, worse, can
+     * outscore the actual small/focused chunk that has the real answer (confirmed: a
+     * "does Centura have X" query scored the whole table-of-contents chunk above the
+     * specific pricing-table chunk that named X, pushing the right answer below
+     * TOP_K). 1500 chars keeps a chunk roughly paragraph/table-section sized without
+     * being so small it fragments a single product's SKU/price rows.
+     */
+    private const MAX_CHUNK_CHARS = 1500;
+
     public function __construct(private EmbeddingService $embeddings) {}
 
     /**
-     * Simple paragraph-based chunking — split on blank lines, trim, drop empties.
-     * No overlap between chunks. If we start seeing answers that miss context split
-     * across a paragraph boundary, add a small overlap (repeat the last sentence or
-     * two from one chunk into the start of the next) rather than something fancier.
+     * Paragraph-based chunking — split on blank lines, trim, drop empties — with a
+     * size cap: any resulting chunk still over MAX_CHUNK_CHARS (source text with long
+     * blank-line-free runs, e.g. an extracted PDF table of contents or price table)
+     * gets further split by line, grouping consecutive lines up to the cap so no line
+     * (a product/SKU row) is ever split mid-line. No overlap between chunks. If we
+     * start seeing answers that miss context split across a paragraph boundary, add a
+     * small overlap (repeat the last sentence or two from one chunk into the start of
+     * the next) rather than something fancier.
      *
      * @return array<int, string>
      */
@@ -34,8 +53,40 @@ class KnowledgeEntryService
         return collect($paragraphs)
             ->map(fn (string $p) => trim($p))
             ->filter(fn (string $p) => $p !== '')
+            ->flatMap(fn (string $p) => $this->splitOversized($p))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function splitOversized(string $paragraph): array
+    {
+        if (mb_strlen($paragraph) <= self::MAX_CHUNK_CHARS) {
+            return [$paragraph];
+        }
+
+        $lines = explode("\n", $paragraph);
+        $chunks = [];
+        $current = '';
+
+        foreach ($lines as $line) {
+            $candidate = $current === '' ? $line : $current . "\n" . $line;
+
+            if (mb_strlen($candidate) > self::MAX_CHUNK_CHARS && $current !== '') {
+                $chunks[] = $current;
+                $current = $line;
+            } else {
+                $current = $candidate;
+            }
+        }
+
+        if ($current !== '') {
+            $chunks[] = $current;
+        }
+
+        return $chunks;
     }
 
     public function create(array $data, User $creator): KnowledgeEntry

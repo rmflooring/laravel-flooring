@@ -13,7 +13,11 @@ use App\Models\User;
  */
 class KnowledgeSearchService
 {
-    private const TOP_K = 5;
+    /** Bumped from 5 (2026-08-19) alongside the chunk-size cap in KnowledgeEntryService
+     *  — smaller, more focused chunks mean more of them per entry, so a slightly wider
+     *  net costs little and adds margin against a correct-but-not-top-ranked chunk
+     *  falling just outside the cutoff (the exact failure that prompted this). */
+    private const TOP_K = 8;
 
     public function __construct(
         private EmbeddingService $embeddings,
