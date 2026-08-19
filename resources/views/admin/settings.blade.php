@@ -76,6 +76,12 @@
                         <a href="{{ route('admin.settings.agent') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             AI Agent Settings
                         </a>
+                        <a href="{{ route('admin.knowledge.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Knowledge Base
+                        </a>
+                        <a href="{{ route('admin.settings.knowledge-agent') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Knowledge Agent Settings
+                        </a>
                         <a href="{{ route('admin.document-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Document Templates
                         </a>

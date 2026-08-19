@@ -274,4 +274,133 @@ class AgentToolRegistry
             ],
         ];
     }
+
+    /**
+     * Tool schemas for the staff chat knowledge agent. All read-only. Each tool's
+     * execution service re-checks the calling user's role server-side — Claude
+     * choosing to call a tool here is never itself authorization.
+     */
+    public static function forChat(): array
+    {
+        return [
+            [
+                'name' => 'search_knowledge_base',
+                'description' => 'Search the internal knowledge base (pricing, protocols, policies, SOPs, FAQs) '
+                    . 'for information relevant to the staff member\'s question. Returns the best-matching '
+                    . 'excerpts, each with the knowledge entry it came from, so the answer can cite its source. '
+                    . 'Only returns entries the requesting user\'s role is allowed to see.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => [
+                            'type' => 'string',
+                            'description' => 'The question or topic to search for.',
+                        ],
+                    ],
+                    'required' => ['query'],
+                ],
+            ],
+            [
+                'name' => 'search_labour_catalog',
+                'description' => 'Search the labour/installation rate catalog — use this for questions about what '
+                    . 'we charge to install or service something (e.g. "what do we charge to install laminate", '
+                    . '"hardwood install rate"). Distinct from search_knowledge_base: this is the live labour item '
+                    . 'catalog (per labour type, e.g. Laminate, Hardwood, Carpet, LVP/LVT), not written policy docs.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => [
+                            'type' => 'string',
+                            'description' => 'A short keyword or two — a labour type or install method (e.g. "laminate", '
+                                . '"hardwood glue down"), not a full sentence. Matching is per-word, so extra words '
+                                . 'like "flooring" or "install" don\'t hurt, but keep it concise.',
+                        ],
+                    ],
+                    'required' => ['query'],
+                ],
+            ],
+            [
+                'name' => 'search_material_catalog',
+                'description' => 'Search the material/product catalog for sell prices — use this for questions about '
+                    . 'what a specific product or product line costs the customer (e.g. "price on the Oak Ridge '
+                    . 'laminate", "how much is LVP X"). Sell price only, no cost/margin. Distinct from '
+                    . 'search_knowledge_base: this is the live product catalog, not written policy docs.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => [
+                            'type' => 'string',
+                            'description' => 'A short keyword or two — a product name, SKU, manufacturer, or product '
+                                . 'type/line, not a full sentence. Matching is per-word, so extra words don\'t hurt, '
+                                . 'but keep it concise.',
+                        ],
+                    ],
+                    'required' => ['query'],
+                ],
+            ],
+            [
+                'name' => 'get_work_order_status',
+                'description' => 'Look up a work order\'s current status, schedule, and assigned installer by '
+                    . 'its WO number or ID.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'order_id' => [
+                            'type' => 'string',
+                            'description' => 'The work order number (e.g. "412-26-0001") or numeric ID.',
+                        ],
+                    ],
+                    'required' => ['order_id'],
+                ],
+            ],
+            [
+                'name' => 'check_inventory',
+                'description' => 'Look up how much of a product is currently available in inventory by its SKU.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'sku' => [
+                            'type' => 'string',
+                            'description' => 'The product SKU to look up.',
+                        ],
+                    ],
+                    'required' => ['sku'],
+                ],
+            ],
+            [
+                'name' => 'get_customer_estimate',
+                'description' => 'Look up a customer estimate\'s status, job info, and total by its estimate '
+                    . 'number or ID. No line-item pricing breakdown — summary only.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'estimate_id' => [
+                            'type' => 'string',
+                            'description' => 'The estimate number or numeric ID.',
+                        ],
+                    ],
+                    'required' => ['estimate_id'],
+                ],
+            ],
+            [
+                'name' => 'get_schedule_for_crew',
+                'description' => 'Look up what an install crew is scheduled to work on for a given date. '
+                    . '"Crew" refers to an installer company/person in Floor Manager.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'crew_id' => [
+                            'type' => 'string',
+                            'description' => 'The installer\'s name or numeric ID.',
+                        ],
+                        'date' => [
+                            'type' => 'string',
+                            'description' => 'The date to check, in any recognizable format.',
+                        ],
+                    ],
+                    'required' => ['crew_id', 'date'],
+                ],
+            ],
+        ];
+    }
 }

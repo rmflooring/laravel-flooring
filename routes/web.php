@@ -331,6 +331,18 @@ Route::prefix('admin')
             Route::put('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'update'])
                 ->name('payments.update');
 
+            // Knowledge Base (staff chat agent) — admin-only writes
+            Route::post('/knowledge/extract-pdf', [\App\Http\Controllers\Admin\KnowledgeEntryController::class, 'extractPdf'])
+                ->name('knowledge.extract-pdf');
+            Route::resource('knowledge', \App\Http\Controllers\Admin\KnowledgeEntryController::class)
+                ->except(['show']);
+
+            // Knowledge Agent Settings — role -> live-data-tool access matrix
+            Route::get('/settings/knowledge-agent', [\App\Http\Controllers\Admin\KnowledgeAgentSettingsController::class, 'index'])
+                ->name('settings.knowledge-agent');
+            Route::put('/settings/knowledge-agent', [\App\Http\Controllers\Admin\KnowledgeAgentSettingsController::class, 'update'])
+                ->name('settings.knowledge-agent.update');
+
             // Audit Log
             Route::get('/audits', [\App\Http\Controllers\Admin\AuditController::class, 'index'])
                 ->name('audits.index');
@@ -814,6 +826,15 @@ Route::prefix('pages')
         Route::resource('opportunities', OpportunityController::class);
         Route::post('opportunities/{opportunity}/deactivate', [OpportunityController::class, 'deactivate'])
             ->name('opportunities.deactivate');
+
+        // Staff knowledge chat agent — open to any authenticated staff member; actual
+        // scoping (which tools, which knowledge entries) happens per-call server-side.
+        Route::get('knowledge-chat', [\App\Http\Controllers\Pages\KnowledgeChatController::class, 'index'])
+            ->name('knowledge-chat.index');
+        Route::post('knowledge-chat/ask', [\App\Http\Controllers\Pages\KnowledgeChatController::class, 'ask'])
+            ->name('knowledge-chat.ask');
+        Route::post('knowledge-chat/{agentQuery}/feedback', [\App\Http\Controllers\Pages\KnowledgeChatController::class, 'feedback'])
+            ->name('knowledge-chat.feedback');
 
 		// Estimates (moved to pages)
 		Route::get('estimates', [EstimateController::class, 'index'])
