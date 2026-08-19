@@ -56,6 +56,9 @@ class GraphMailService
      * @param  string        $body         Plain text body
      * @param  string        $type         Log type label (rfm_notification, test, etc.)
      * @param  string|null   $fromAddress  Overrides the configured shared mailbox address
+     * @param  string|null   $replyTo      Overrides the configured global Setting('mail_reply_to')
+     *                                     Reply-To for this send only — use when a caller's own
+     *                                     inbox (not the shared noreply default) should receive replies.
      * @return bool
      */
     public function send(
@@ -74,6 +77,7 @@ class GraphMailService
         ?string $trackingToken = null,
         array $extraAttachments = [],
         bool $isHtml = false,
+        ?string $replyTo = null,
     ): bool {
         // Respect the global notifications toggle
         if (! Setting::get('mail_notifications_enabled', '1')) {
@@ -89,7 +93,7 @@ class GraphMailService
             ?? config('services.microsoft.mail_from_address', 'reception@rmflooring.ca');
 
         $fromName = Setting::get('mail_from_name', 'RM Flooring Notifications');
-        $replyTo  = Setting::get('mail_reply_to', 'noreply@rmflooring.ca');
+        $replyTo  = $replyTo ?? Setting::get('mail_reply_to', 'noreply@rmflooring.ca');
 
         $recipients = collect((array) $to)->map(fn ($address) => [
             'emailAddress' => ['address' => $address],

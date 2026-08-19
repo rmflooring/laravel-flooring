@@ -614,15 +614,15 @@ class ProcessAgentTask implements ShouldQueue
 
         $body = match ($result['status']) {
             'completed' => "Done — {$result['summary']}\n\n"
-                . "If anything needs fixing — wrong details, a correction, additional info — just send a new email "
-                . "to {$agentMailbox} mentioning the job number or client name and what should change (replying "
-                . "directly to this email won't reach us — please address a fresh email to {$agentMailbox}).\n\n"
+                . "If anything needs fixing — wrong details, a correction, additional info — just reply to this "
+                . "email (or send a new one to {$agentMailbox}) mentioning the job number or client name and what "
+                . "should change.\n\n"
                 . "View details: {$dashboardUrl}",
-            'pending_clarification' => "Got your request — we need a bit more info before we can proceed:\n\n{$result['summary']}\n\nRespond here: {$dashboardUrl}",
+            'pending_clarification' => "Got your request — we need a bit more info before we can proceed:\n\n{$result['summary']}\n\nReply to this email, or respond here: {$dashboardUrl}",
             default => "We couldn't determine what you'd like us to do with that email.\n\nIf this was a mistake, reply with more detail or check: {$dashboardUrl}",
         };
 
-        $sent = $mailer->send($task->requester_email, $subject, $body, 'agent_task_' . $result['status'], $agentMailbox);
+        $sent = $mailer->send($task->requester_email, $subject, $body, 'agent_task_' . $result['status'], $agentMailbox, replyTo: $agentMailbox);
         if ($sent) {
             AgentNotification::create(['task_id' => $task->id, 'sent_to' => $task->requester_email, 'type' => 'requester_reply']);
         }
@@ -631,7 +631,7 @@ class ProcessAgentTask implements ShouldQueue
         if ($settings->admin_notification_email
             && AgentNotificationSetting::bccEnabledFor($task->task_type)
         ) {
-            $bccSent = $mailer->send($settings->admin_notification_email, '[Agent BCC] ' . $subject, $body, 'agent_task_bcc');
+            $bccSent = $mailer->send($settings->admin_notification_email, '[Agent BCC] ' . $subject, $body, 'agent_task_bcc', replyTo: $agentMailbox);
             if ($bccSent) {
                 AgentNotification::create([
                     'task_id' => $task->id,

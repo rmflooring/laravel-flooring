@@ -28,6 +28,19 @@ class CreateOpportunityService
 
     private const INCOMPLETE_INTAKE_FIELDS = ['address', 'claim_number', 'insurance_company'];
 
+    /** Fuzzy-match closeness threshold for resolveExistingParent()'s third pass —
+     *  only reached when neither exact nor prefix matching found anything. 0.78 comfortably
+     *  catches an inserted-word variant like "First Onsite Property Restoration" vs the
+     *  on-file "First OnSite Restoration" (~84%) while staying well above where bare
+     *  first-name-vs-full-name collisions land (~50-67%, e.g. "Eric" vs "Eric Shin"). */
+    private const PARENT_FUZZY_THRESHOLD = 0.78;
+
+    /** Required lead over the runner-up for the fuzzy pass to auto-pick rather than
+     *  throw as ambiguous — same "don't guess between two close candidates" principle
+     *  as find_opportunity's AUTO_RESOLVE_MARGIN, just tighter since this is a single
+     *  company match rather than a ranked list. */
+    private const PARENT_FUZZY_MARGIN = 0.08;
+
     /** Agent-created opportunities default to Marco Bruni (employee #2) as the sales
      *  person — confirmed with Richard (2026-08-18), agent-created only, not app-wide.
      *  sales_person_1 has no exists:employees,id validation anywhere (see
@@ -88,7 +101,7 @@ class CreateOpportunityService
         $this->assertNoLikelyDuplicate($clientName, $address, $claimNumber, $jobNo);
 
         $parentId = $parentCustomerName !== null
-            ? $this->resolveExistingParent($parentCustomerName)
+            ? $this->resolveExistingParent($task, $parentCustomerName)
             : null;
 
         $jobSiteCustomer = Customer::create([
@@ -167,19 +180,21 @@ class CreateOpportunityService
     }
 
     /**
-     * Exact (case-insensitive) name match first, falling back to a whitespace-insensitive
-     * "prefix" match only if nothing exact was found — e.g. "First Onsite", "FirstOnSite",
-     * and "First OnSite Restoration" all normalize to the same space-stripped prefix
-     * relationship. This is the same two-pass pattern as
-     * UpdateOpportunityService::findProjectManager() (added after three separate live
-     * referral emails each spelled/spaced the same referral partner's name differently,
-     * never matching what's on file) — still no arbitrary fuzzy-guessing for a
-     * company-level record: a prefix match is either correct or it's ambiguous (multiple
-     * candidates, which still throws), never a near-miss. Never creates a new parent from
-     * an unmatched name, to avoid spawning duplicate company records from a
-     * misspelled/misremembered name.
+     * Exact (case-insensitive) name match first, then a whitespace-insensitive "prefix"
+     * match — e.g. "First Onsite", "FirstOnSite", and "First OnSite Restoration" all
+     * normalize to the same space-stripped prefix relationship — and finally, only if
+     * both of those found nothing, a similar_text() closeness pass (same function/style
+     * as FindOpportunityService::similarity()) that tolerates an inserted/extra word
+     * (e.g. referral partner signs as "First Onsite Property Restoration" when the
+     * on-file record is "First OnSite Restoration" — not a prefix relationship, but
+     * ~84% similar). Still not arbitrary fuzzy-guessing for a company-level record: the
+     * fuzzy pass only fires as a last resort, requires crossing PARENT_FUZZY_THRESHOLD,
+     * and still throws rather than guesses when the top two candidates are close
+     * (PARENT_FUZZY_MARGIN) — a match is either unambiguous or it isn't. Never creates a
+     * new parent from an unmatched name, to avoid spawning duplicate company records
+     * from a misspelled/misremembered name.
      */
-    private function resolveExistingParent(string $parentCustomerName): int
+    private function resolveExistingParent(AgentTask $task, string $parentCustomerName): int
     {
         $needle = mb_strtolower($parentCustomerName);
         $needleCompact = str_replace(' ', '', $needle);
@@ -191,7 +206,16 @@ class CreateOpportunityService
             })
             ->get(['id']);
 
-        $matches = $exact->isNotEmpty() ? $exact : Customer::whereNull('parent_id')
+        if ($exact->count() === 1) {
+            return $exact->first()->id;
+        }
+        if ($exact->count() > 1) {
+            throw new AgentToolValidationException(
+                "Multiple existing customers named \"{$parentCustomerName}\" found — cannot resolve unambiguously."
+            );
+        }
+
+        $prefix = Customer::whereNull('parent_id')
             ->where(function ($q) use ($needleCompact) {
                 // Either direction, spaces ignored on both sides: the input is a
                 // shortened/differently-spaced form of the name on file
@@ -203,19 +227,100 @@ class CreateOpportunityService
             })
             ->get(['id']);
 
-        if ($matches->count() === 1) {
-            return $matches->first()->id;
+        if ($prefix->count() === 1) {
+            return $prefix->first()->id;
         }
-
-        if ($matches->count() > 1) {
+        if ($prefix->count() > 1) {
             throw new AgentToolValidationException(
                 "Multiple existing customers named \"{$parentCustomerName}\" found — cannot resolve unambiguously."
             );
         }
 
+        $fuzzyId = $this->resolveExistingParentByFuzzyMatch($task, $parentCustomerName);
+        if ($fuzzyId !== null) {
+            return $fuzzyId;
+        }
+
         throw new AgentToolValidationException(
             "No existing customer named \"{$parentCustomerName}\" found. Omit parent_customer_name to create a new standalone customer instead."
         );
+    }
+
+    /**
+     * Last-resort closeness pass — every standalone (parent_id IS NULL) customer is
+     * scored against the needle via similar_text() on both `name` and `company_name`,
+     * keeping the best of the two per candidate. Logged to agent_messages regardless of
+     * outcome (matched, ambiguous, or no candidate crossed the threshold) per the spec's
+     * "every fuzzy-matching decision is logged with a confidence score" principle.
+     */
+    private function resolveExistingParentByFuzzyMatch(AgentTask $task, string $parentCustomerName): ?int
+    {
+        $needle = mb_strtolower(trim($parentCustomerName));
+
+        $scored = Customer::whereNull('parent_id')
+            ->get(['id', 'name', 'company_name'])
+            ->map(function (Customer $c) use ($needle) {
+                return [
+                    'id' => $c->id,
+                    'label' => $c->company_name ?: $c->name,
+                    'score' => max(
+                        $this->similarity($needle, (string) $c->name),
+                        $this->similarity($needle, (string) $c->company_name),
+                    ),
+                ];
+            })
+            ->filter(fn (array $c) => $c['score'] >= self::PARENT_FUZZY_THRESHOLD)
+            ->sortByDesc('score')
+            ->values();
+
+        if ($scored->isEmpty()) {
+            return null;
+        }
+
+        if ($scored->count() > 1 && ($scored[0]['score'] - $scored[1]['score']) < self::PARENT_FUZZY_MARGIN) {
+            $this->logFuzzyParentMatch($task, $parentCustomerName, null, $scored->take(3)->all());
+
+            throw new AgentToolValidationException(
+                "\"{$parentCustomerName}\" is ambiguous against existing customers ("
+                . $scored->take(3)->map(fn (array $c) => "{$c['label']} (" . round($c['score'] * 100) . '%)')->implode(', ')
+                . ') — cannot resolve unambiguously.'
+            );
+        }
+
+        $best = $scored->first();
+        $this->logFuzzyParentMatch($task, $parentCustomerName, $best, $scored->take(3)->all());
+
+        return $best['id'];
+    }
+
+    private function similarity(string $needle, string $candidate): float
+    {
+        $candidate = mb_strtolower(trim($candidate));
+        if ($needle === '' || $candidate === '') {
+            return 0.0;
+        }
+
+        similar_text($needle, $candidate, $percent);
+
+        return $percent / 100;
+    }
+
+    /** @param array<int, array{id: int, label: string, score: float}> $topCandidates */
+    private function logFuzzyParentMatch(AgentTask $task, string $requestedName, ?array $matched, array $topCandidates): void
+    {
+        $candidateList = collect($topCandidates)
+            ->map(fn (array $c) => "{$c['label']} (" . round($c['score'] * 100) . '%)')
+            ->implode(', ');
+
+        $outcome = $matched !== null
+            ? "matched to \"{$matched['label']}\" (customer #{$matched['id']}, " . round($matched['score'] * 100) . '% similar)'
+            : 'no unambiguous match';
+
+        AgentMessage::create([
+            'task_id' => $task->id,
+            'sender' => 'agent',
+            'body' => "create_opportunity parent-customer fuzzy match for \"{$requestedName}\": {$outcome}. Candidates considered: {$candidateList}.",
+        ]);
     }
 
     /** @return string[] */
