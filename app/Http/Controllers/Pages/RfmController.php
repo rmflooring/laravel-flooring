@@ -128,6 +128,14 @@ class RfmController extends Controller
             'status'              => 'pending',
         ]);
 
+        // Booking an RFM means the opportunity no longer needs one queued up, and — if it's
+        // still fresh — is now waiting on the site visit. Don't regress a status a user
+        // already pushed further along (e.g. booking a re-measure on an in-progress job).
+        $opportunity->update([
+            'requires_rfm' => false,
+            'status' => $opportunity->status === 'New' ? 'Awaiting Site Measure' : $opportunity->status,
+        ]);
+
         // --- MS365 Calendar Event (best-effort, never blocks the save) ---
         $this->syncCalendarCreate($rfm, $opportunity);
         // --- end calendar ---
