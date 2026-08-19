@@ -1492,6 +1492,14 @@ public function linkOpportunity(Request $request, Estimate $estimate)
             'first_sent_at' => $estimate->first_sent_at ?? now(),
         ]);
 
+        // Mirror the estimate's "sent" state onto its opportunity, same as the
+        // approved -> Approved sync above — never clobber a terminal status.
+        if ($estimate->opportunity_id) {
+            \App\Models\Opportunity::where('id', $estimate->opportunity_id)
+                ->whereNotIn('status', ['Approved', 'Lost', 'Closed'])
+                ->update(['status' => 'Estimate Sent', 'updated_by' => auth()->id()]);
+        }
+
         return back()->with('success', 'Estimate emailed to ' . $request->input('to') . ' and status updated to Sent.');
     }
 

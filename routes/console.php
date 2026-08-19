@@ -130,3 +130,10 @@ Schedule::command('estimates:check-follow-ups')
     ->timezone('America/Vancouver')
     ->name('estimates-check-follow-ups')
     ->withoutOverlapping();
+
+// Opportunities: advance Awaiting Site Measure → In Progress once the RFM visit date has passed
+Schedule::command('opportunities:advance-overdue-rfm')
+    ->dailyAt('06:00')
+    ->timezone('America/Vancouver')
+    ->name('opportunities-advance-overdue-rfm')
+    ->withoutOverlapping();
