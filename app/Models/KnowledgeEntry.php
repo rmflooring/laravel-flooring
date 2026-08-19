@@ -16,6 +16,8 @@ class KnowledgeEntry extends Model
         'policy',
         'sop',
         'faq',
+        'warranty',
+        'spec sheets',
     ];
 
     protected $fillable = [
