@@ -124,21 +124,21 @@
                         <div x-show="billTo === 'custom'" x-cloak class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 pl-6 border-l-2 border-blue-200">
                             <div>
                                 <label class="block mb-1 text-xs font-medium text-gray-600">Name / Company</label>
-                                <input type="text" name="bill_to_name"
+                                <input type="text" name="bill_to_name" :disabled="billTo !== 'custom'"
                                        value="{{ old('bill_to_name', $defaultBillTo['name']) }}"
                                        placeholder="e.g. John Smith"
                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                             </div>
                             <div>
                                 <label class="block mb-1 text-xs font-medium text-gray-600">Address <span class="text-gray-400 font-normal">(optional)</span></label>
-                                <input type="text" name="bill_to_address"
+                                <input type="text" name="bill_to_address" :disabled="billTo !== 'custom'"
                                        value="{{ old('bill_to_address', $defaultBillTo['address']) }}"
                                        placeholder="e.g. 123 Main St, Vancouver BC"
                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                             </div>
                             <div>
                                 <label class="block mb-1 text-xs font-medium text-gray-600">Email <span class="text-gray-400 font-normal">(optional)</span></label>
-                                <input type="email" name="bill_to_email"
+                                <input type="email" name="bill_to_email" :disabled="billTo !== 'custom'"
                                        value="{{ old('bill_to_email', $defaultBillTo['email']) }}"
                                        placeholder="e.g. homeowner@example.com"
                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
