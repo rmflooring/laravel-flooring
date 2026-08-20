@@ -20,6 +20,7 @@ class ArController extends Controller
         // customer, then its parent (or the opportunity's parent customer), then
         // the sale's directly-linked customer, then the sale's free-text name.
         $query = Invoice::with([
+                'billToCustomer',
                 'sale.opportunity.jobSiteCustomer.parent',
                 'sale.opportunity.parentCustomer',
                 'sale.customer',
@@ -69,14 +70,15 @@ class ArController extends Controller
 
         // Sortable columns — clicking a table header sorts by it (see index.blade.php)
         $sortColumns = [
-            'invoice'  => 'invoices.invoice_number',
-            'sale'     => 'sales.sale_number',
-            'customer' => 'customer_sort_name',
-            'due_date' => 'invoices.due_date',
-            'total'    => 'invoices.grand_total',
-            'paid'     => 'invoices.amount_paid',
-            'balance'  => null, // computed, handled below
-            'status'   => 'invoices.status',
+            'invoice'         => 'invoices.invoice_number',
+            'sale'            => 'sales.sale_number',
+            'customer'        => 'customer_sort_name',
+            'parent_customer' => null, // computed, handled below
+            'due_date'        => 'invoices.due_date',
+            'total'           => 'invoices.grand_total',
+            'paid'            => 'invoices.amount_paid',
+            'balance'         => null, // computed, handled below
+            'status'          => 'invoices.status',
         ];
 
         $sort = $request->get('sort', 'invoice');
@@ -88,6 +90,8 @@ class ArController extends Controller
 
         if ($sort === 'balance') {
             $query->orderByRaw("(invoices.grand_total - invoices.amount_paid) {$dir}");
+        } elseif ($sort === 'parent_customer') {
+            $query->orderByRaw("COALESCE(NULLIF(parent_customers.company_name, ''), parent_customers.name) {$dir}");
         } else {
             $query->orderBy($sortColumns[$sort], $dir);
         }

@@ -122,6 +122,7 @@
                         ['invoice', 'Invoice #', ''],
                         ['sale', 'Sale #', ''],
                         ['customer', 'Customer / Homeowner', ''],
+                        ['parent_customer', 'Parent Customer', ''],
                         ['due_date', 'Due Date', ''],
                         ['total', 'Total', 'text-right'],
                         ['paid', 'Paid', 'text-right'],
@@ -152,11 +153,13 @@
                         @php
                             $sale          = $invoice->sale;
                             $opportunity   = $sale?->opportunity;
-                            $jobSite       = $opportunity?->jobSiteCustomer;
-                            $parentCust    = $jobSite?->parent ?? $opportunity?->parentCustomer;
-                            $billToCust    = $jobSite ?? $parentCust ?? $sale?->customer;
+                            // An explicit Bill To pick on the invoice wins; otherwise falls back to
+                            // job site -> parent -> sale's free-text customer (Invoice::resolved_bill_to_customer).
+                            $billToCust    = $invoice->resolved_bill_to_customer;
                             $customer      = $billToCust?->company_name ?: $billToCust?->name ?: $sale?->customer_name ?: '—';
                             $homeowner     = $sale?->homeowner_name;
+                            $parentCust    = $opportunity?->parentCustomer;
+                            $parentName    = $parentCust ? ($parentCust->company_name ?: $parentCust->name) : '—';
                             $balanceDue    = $invoice->balance_due;
                             $isOverdue     = $invoice->status === 'overdue';
                             $isPaid        = $invoice->status === 'paid';
@@ -186,6 +189,16 @@
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $customer }}</div>
                                 @if ($homeowner && $homeowner !== $customer)
                                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ $homeowner }}</div>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                @if ($parentCust)
+                                    <a href="{{ route('admin.customers.show', $parentCust) }}"
+                                       class="text-blue-600 hover:underline dark:text-blue-400">
+                                        {{ $parentName }}
+                                    </a>
+                                @else
+                                    <span class="text-gray-400">—</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
@@ -232,7 +245,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">No invoices found.</td>
+                            <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">No invoices found.</td>
                         </tr>
                     @endforelse
                 </tbody>
