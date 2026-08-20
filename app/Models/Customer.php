@@ -54,6 +54,19 @@ class Customer extends Model
         return $this->hasMany(CustomerContact::class)->orderBy('name');
     }
 
+    public function credits(): HasMany
+    {
+        return $this->hasMany(CustomerCredit::class)->latest();
+    }
+
+    public function getCreditBalanceAttribute(): float
+    {
+        return round(
+            $this->credits()->where('status', 'open')->get()->sum('remaining_balance'),
+            2
+        );
+    }
+
     // Relationship: this customer has many children
     public function children(): HasMany
     {

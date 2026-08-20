@@ -420,6 +420,31 @@ Route::prefix('admin')
             ->middleware('role_or_permission:admin|edit invoices')
             ->name('customers.payments.store');
 
+        // Customer Credits
+        Route::get('customer-credits', [\App\Http\Controllers\Pages\CustomerCreditController::class, 'index'])
+            ->middleware('role_or_permission:admin|view customer credits')
+            ->name('customer-credits.index');
+
+        Route::post('customers/{customer}/credits', [\App\Http\Controllers\Pages\CustomerCreditController::class, 'store'])
+            ->middleware('role_or_permission:admin|issue customer credits')
+            ->name('customers.credits.store');
+
+        Route::post('customer-credits/{customerCredit}/void', [\App\Http\Controllers\Pages\CustomerCreditController::class, 'void'])
+            ->middleware('role_or_permission:admin|issue customer credits')
+            ->name('customer-credits.void');
+
+        Route::post('customer-credits/{customerCredit}/push-to-qbo', [\App\Http\Controllers\Pages\CustomerCreditController::class, 'pushToQbo'])
+            ->middleware('role_or_permission:admin|issue customer credits')
+            ->name('customer-credits.push-to-qbo');
+
+        Route::post('customer-credits/{customerCredit}/refund', [\App\Http\Controllers\Pages\CustomerCreditController::class, 'refund'])
+            ->middleware('role_or_permission:admin|issue customer credits')
+            ->name('customer-credits.refund');
+
+        Route::post('customer-credit-refunds/{application}/push-to-qbo', [\App\Http\Controllers\Pages\CustomerCreditController::class, 'pushRefundToQbo'])
+            ->middleware('role_or_permission:admin|issue customer credits')
+            ->name('customer-credit-refunds.push-to-qbo');
+
         // Customer Contacts
         Route::post('customers/{customer}/contacts', [CustomerContactController::class, 'store'])
             ->middleware('role_or_permission:admin|edit customers')
@@ -1197,6 +1222,10 @@ Route::prefix('pages')
 			->name('sales.invoices.push-to-qbo')
 			->middleware('role_or_permission:admin|edit invoices');
 
+		Route::post('sales/{sale}/invoices/{invoice}/apply-credit', [\App\Http\Controllers\Pages\InvoiceController::class, 'applyCredit'])
+			->name('sales.invoices.apply-credit')
+			->middleware('role_or_permission:admin|apply customer credits');
+
 		// Sale Deposits
 		Route::post('sales/{sale}/deposits', [\App\Http\Controllers\Pages\SaleController::class, 'storeDeposit'])
 			->name('sales.deposits.store')
@@ -1205,6 +1234,10 @@ Route::prefix('pages')
 		Route::delete('sales/{sale}/deposits/{deposit}', [\App\Http\Controllers\Pages\SaleController::class, 'destroyDeposit'])
 			->name('sales.deposits.destroy')
 			->middleware('role_or_permission:admin|edit estimates');
+
+		Route::post('sales/{sale}/apply-credit', [\App\Http\Controllers\Pages\SaleController::class, 'applyCredit'])
+			->name('sales.apply-credit')
+			->middleware('role_or_permission:admin|apply customer credits');
 
 		// Inventory Records
 		Route::get('inventory', [\App\Http\Controllers\Pages\InventoryController::class, 'index'])

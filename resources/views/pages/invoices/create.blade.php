@@ -66,36 +66,89 @@
                                 placeholder="Notes printed on invoice...">{{ old('notes') }}</textarea>
                         </div>
 
-                        {{-- Bill To Override --}}
-                        <div x-data="{ override: {{ old('bill_to_name') ? 'true' : 'false' }} }">
-                            <label class="flex items-center gap-2 cursor-pointer select-none">
-                                <input type="checkbox" x-model="override"
-                                       class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Override "Bill To" on PDF</span>
-                            </label>
-                            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Use when billing a different party than the sale customer (e.g. homeowner overage).</p>
+                        {{-- Bill To --}}
+                        @if($jobSiteCustomer && $parentCustomer && $jobSiteCustomer->id !== $parentCustomer->id)
+                            {{-- Both a job site and a parent company exist (e.g. insurance/referral jobs) —
+                                 let the user pick who actually gets billed. This choice drives the PDF,
+                                 QuickBooks, and any overpayment credit attribution — not just display. --}}
+                            <div x-data="{ billTo: '{{ old('bill_to_name') ? 'custom' : old('bill_to_customer_id', $defaultBillToCustomerId ?? $jobSiteCustomer->id) }}' }">
+                                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Bill To</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="radio" name="bill_to_customer_id" value="{{ $jobSiteCustomer->id }}" x-model="billTo"
+                                               class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                                            Job Site Customer &mdash; {{ $jobSiteCustomer->company_name ?: $jobSiteCustomer->name }}
+                                            <span class="text-xs text-gray-400">(recommended)</span>
+                                        </span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="radio" name="bill_to_customer_id" value="{{ $parentCustomer->id }}" x-model="billTo"
+                                               class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                                            Parent Customer &mdash; {{ $parentCustomer->company_name ?: $parentCustomer->name }}
+                                        </span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="radio" name="bill_to_customer_id" value="custom" x-model="billTo"
+                                               class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">Custom</span>
+                                    </label>
+                                </div>
 
-                            <div x-show="override" x-cloak class="mt-3 space-y-3 pl-6 border-l-2 border-blue-200 dark:border-blue-700">
-                                <div>
-                                    <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Name / Company</label>
-                                    <input type="text" name="bill_to_name" value="{{ old('bill_to_name') }}"
-                                           placeholder="e.g. John Smith"
-                                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                </div>
-                                <div>
-                                    <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Address <span class="text-gray-400 font-normal">(optional)</span></label>
-                                    <input type="text" name="bill_to_address" value="{{ old('bill_to_address') }}"
-                                           placeholder="e.g. 123 Main St, Vancouver BC"
-                                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                </div>
-                                <div>
-                                    <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Email <span class="text-gray-400 font-normal">(optional)</span></label>
-                                    <input type="email" name="bill_to_email" value="{{ old('bill_to_email') }}"
-                                           placeholder="e.g. homeowner@example.com"
-                                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <div x-show="billTo === 'custom'" x-cloak class="mt-3 space-y-3 pl-6 border-l-2 border-blue-200 dark:border-blue-700">
+                                    <div>
+                                        <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Name / Company</label>
+                                        <input type="text" name="bill_to_name" value="{{ old('bill_to_name') }}"
+                                               placeholder="e.g. John Smith"
+                                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Address <span class="text-gray-400 font-normal">(optional)</span></label>
+                                        <input type="text" name="bill_to_address" value="{{ old('bill_to_address') }}"
+                                               placeholder="e.g. 123 Main St, Vancouver BC"
+                                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Email <span class="text-gray-400 font-normal">(optional)</span></label>
+                                        <input type="email" name="bill_to_email" value="{{ old('bill_to_email') }}"
+                                               placeholder="e.g. homeowner@example.com"
+                                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @else
+                            {{-- Only one customer identity exists on this job — nothing to pick between --}}
+                            <div x-data="{ override: {{ old('bill_to_name') ? 'true' : 'false' }} }">
+                                <label class="flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" x-model="override"
+                                           class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Override "Bill To" on PDF</span>
+                                </label>
+                                <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Use when billing a different party than the sale customer (e.g. homeowner overage).</p>
+
+                                <div x-show="override" x-cloak class="mt-3 space-y-3 pl-6 border-l-2 border-blue-200 dark:border-blue-700">
+                                    <div>
+                                        <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Name / Company</label>
+                                        <input type="text" name="bill_to_name" value="{{ old('bill_to_name') }}"
+                                               placeholder="e.g. John Smith"
+                                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Address <span class="text-gray-400 font-normal">(optional)</span></label>
+                                        <input type="text" name="bill_to_address" value="{{ old('bill_to_address') }}"
+                                               placeholder="e.g. 123 Main St, Vancouver BC"
+                                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Email <span class="text-gray-400 font-normal">(optional)</span></label>
+                                        <input type="email" name="bill_to_email" value="{{ old('bill_to_email') }}"
+                                               placeholder="e.g. homeowner@example.com"
+                                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
 
                     </div>
                 </div>
@@ -133,8 +186,22 @@
                             <span>Previously Invoiced</span>
                             <span>${{ number_format((float)$sale->invoiced_total, 2) }}</span>
                         </div>
+                        @if($pendingDepositsTotal > 0)
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>Unapplied Deposits</span>
+                            <span>${{ number_format($pendingDepositsTotal, 2) }}</span>
+                        </div>
+                        @endif
                     </div>
                 </div>
+
+                @if($pendingDepositsTotal > 0)
+                <div id="deposit-warning" class="hidden p-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300">
+                    Deposits ($<span id="deposit-warning-deposits">{{ number_format($pendingDepositsTotal, 2) }}</span>)
+                    exceed this invoice's total ($<span id="deposit-warning-total">0.00</span>) —
+                    the extra $<span id="deposit-warning-excess">0.00</span> will be issued to the customer as store credit.
+                </div>
+                @endif
 
                 <button type="submit"
                     class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3 dark:bg-blue-600 dark:hover:bg-blue-700">
@@ -311,6 +378,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (singleTax) singleTax.textContent = formatMoney(tax);
 
         document.getElementById('summary-total').textContent    = formatMoney(grand);
+
+        // Warn when unapplied deposits exceed this invoice's total — the excess will be
+        // auto-issued to the customer as store credit (InvoiceService::applyDepositsToInvoice).
+        const pendingDeposits = {{ (float) $pendingDepositsTotal }};
+        const warning         = document.getElementById('deposit-warning');
+        if (warning) {
+            if (pendingDeposits > grand + 0.005) {
+                document.getElementById('deposit-warning-total').textContent   = grand.toFixed(2);
+                document.getElementById('deposit-warning-excess').textContent  = (pendingDeposits - grand).toFixed(2);
+                warning.classList.remove('hidden');
+            } else {
+                warning.classList.add('hidden');
+            }
+        }
     }
 
     // Checkbox toggles qty between 0 and remaining max

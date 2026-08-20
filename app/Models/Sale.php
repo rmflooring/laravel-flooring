@@ -49,6 +49,45 @@ class Sale extends Model implements Auditable
         return $this->hasMany(SalePayment::class)->orderBy('payment_date');
     }
 
+    public function creditApplications(): HasMany
+    {
+        return $this->hasMany(CustomerCreditApplication::class);
+    }
+
+    public function getAmountPaidAttribute(): float
+    {
+        return round((float) $this->deposits->sum('amount'), 2);
+    }
+
+    public function getBalanceDueAttribute(): float
+    {
+        return round(
+            (float) $this->grand_total - $this->amount_paid - (float) $this->creditApplications->sum('amount'),
+            2
+        );
+    }
+
+    public function getIsOverpaidAttribute(): bool
+    {
+        return $this->balance_due < -0.005;
+    }
+
+    /**
+     * The customer credits/deposits/payments are attributed to — mirrors
+     * QboSyncService::pushInvoice()'s bill-to resolution (job site -> parent -> the
+     * sale's own free-text customer link).
+     */
+    public function getBillToCustomerAttribute(): ?Customer
+    {
+        $this->loadMissing(['opportunity.jobSiteCustomer.parent', 'opportunity.parentCustomer', 'customer']);
+
+        $opportunity = $this->opportunity;
+        $jobSite     = $opportunity?->jobSiteCustomer;
+        $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
+
+        return $jobSite ?? $parent ?? $this->customer;
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class)->orderByDesc('created_at');

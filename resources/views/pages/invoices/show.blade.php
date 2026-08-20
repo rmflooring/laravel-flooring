@@ -153,10 +153,14 @@
         @php
             $parentCustomer  = $sale->opportunity?->parentCustomer;
             $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+            // An explicit "Bill To" pick on the invoice wins; otherwise falls back to
+            // job site -> parent — same priority used for the QBO invoice push and for
+            // attributing overpayment credit.
+            $defaultBillTo   = $invoice->resolved_bill_to_customer;
         @endphp
         @if($parentCustomer || $jobSiteCustomer || $sale->opportunity)
             <div class="mt-5 pt-5 border-t border-gray-200 dark:border-gray-600 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                @if($invoice->bill_to_name || $parentCustomer)
+                @if($invoice->bill_to_name || $defaultBillTo)
                     <div>
                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
                             Bill To
@@ -172,16 +176,16 @@
                             @if($invoice->bill_to_email)
                                 <div class="text-gray-500 dark:text-gray-400">{{ $invoice->bill_to_email }}</div>
                             @endif
-                        @elseif($parentCustomer)
-                            <div class="font-medium text-gray-900 dark:text-white">{{ $parentCustomer->company_name ?: $parentCustomer->name }}</div>
-                            @if($parentCustomer->company_name && $parentCustomer->name !== $parentCustomer->company_name)
-                                <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->name }}</div>
+                        @elseif($defaultBillTo)
+                            <div class="font-medium text-gray-900 dark:text-white">{{ $defaultBillTo->company_name ?: $defaultBillTo->name }}</div>
+                            @if($defaultBillTo->company_name && $defaultBillTo->name !== $defaultBillTo->company_name)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $defaultBillTo->name }}</div>
                             @endif
-                            @if($parentCustomer->email)
-                                <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->email }}</div>
+                            @if($defaultBillTo->email)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $defaultBillTo->email }}</div>
                             @endif
-                            @if($parentCustomer->phone)
-                                <div class="text-gray-500 dark:text-gray-400">{{ $parentCustomer->phone }}</div>
+                            @if($defaultBillTo->phone)
+                                <div class="text-gray-500 dark:text-gray-400">{{ $defaultBillTo->phone }}</div>
                             @endif
                         @endif
                     </div>
@@ -301,10 +305,23 @@
                 <span>Amount Paid</span>
                 <span class="w-28 text-right font-semibold">−${{ number_format((float)$invoice->amount_paid, 2) }}</span>
             </div>
+            @if($invoice->creditApplications->isNotEmpty())
+            <div class="flex gap-8 text-sm text-emerald-700 dark:text-emerald-400">
+                <span>Credit Applied</span>
+                <span class="w-28 text-right font-semibold">−${{ number_format($invoice->creditApplications->sum('amount'), 2) }}</span>
+            </div>
+            @endif
+            @if($invoice->is_overpaid)
+            <div class="flex gap-8 text-sm font-bold border-t border-gray-300 dark:border-gray-500 pt-1 text-red-600 dark:text-red-400">
+                <span>Overpaid By</span>
+                <span class="w-28 text-right">${{ number_format(abs((float)$invoice->balance_due), 2) }}</span>
+            </div>
+            @else
             <div class="flex gap-8 text-sm font-bold border-t border-gray-300 dark:border-gray-500 pt-1 {{ $invoice->balance_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400' }}">
                 <span>Balance Due</span>
                 <span class="w-28 text-right">${{ number_format(max(0, (float)$invoice->balance_due), 2) }}</span>
             </div>
+            @endif
             @endif
         </div>
     </div>
@@ -313,11 +330,24 @@
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
         <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h2 class="text-base font-semibold text-gray-900 dark:text-white">Payments</h2>
-            @if($invoice->status !== 'voided' && $invoice->status !== 'paid')
-                <button type="button" onclick="document.getElementById('add-payment-modal').classList.remove('hidden')"
-                    class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">+ Add Payment</button>
-            @endif
+            <div class="flex items-center gap-4">
+                @can('apply customer credits')
+                    @if($availableCredits->isNotEmpty() && $invoice->status !== 'voided')
+                        <button type="button" onclick="document.getElementById('apply-credit-modal').classList.remove('hidden')"
+                            class="text-sm font-medium text-emerald-600 hover:underline dark:text-emerald-400">Apply Credit</button>
+                    @endif
+                @endcan
+                @if($invoice->status !== 'voided' && $invoice->status !== 'paid')
+                    <button type="button" onclick="document.getElementById('add-payment-modal').classList.remove('hidden')"
+                        class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">+ Add Payment</button>
+                @endif
+            </div>
         </div>
+        @if($availableCredits->isNotEmpty())
+            <div class="px-5 py-2 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20">
+                This customer has ${{ number_format($availableCredits->sum('remaining_balance'), 2) }} in store credit available.
+            </div>
+        @endif
 
         @if($invoice->payments->isEmpty())
             <div class="px-5 py-6 text-sm text-gray-400">No payments recorded yet.</div>
@@ -529,6 +559,53 @@
         </form>
     </div>
 </div>
+
+{{-- Apply Credit Modal --}}
+@if($availableCredits->isNotEmpty())
+<div id="apply-credit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Apply Store Credit</h3>
+            <button type="button" onclick="document.getElementById('apply-credit-modal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form action="{{ route('pages.sales.invoices.apply-credit', [$sale, $invoice]) }}" method="POST" class="p-5 space-y-4">
+            @csrf
+            <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Credit <span class="text-red-500">*</span></label>
+                <select name="customer_credit_id" required
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    @foreach($availableCredits as $credit)
+                        <option value="{{ $credit->id }}">
+                            {{ $credit->credit_number }} — ${{ number_format($credit->remaining_balance, 2) }} remaining
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Amount to apply <span class="text-red-500">*</span></label>
+                <input type="text" inputmode="decimal" name="amount"
+                    value="{{ number_format(max(0, (float)$invoice->balance_due), 2) }}"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
+                    required>
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button type="submit"
+                    class="flex-1 text-white bg-emerald-600 hover:bg-emerald-700 font-medium rounded-lg text-sm px-5 py-2.5">
+                    Apply Credit
+                </button>
+                <button type="button" onclick="document.getElementById('apply-credit-modal').classList.add('hidden')"
+                    class="flex-1 py-2.5 px-5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 {{-- Void Modal --}}
 <div id="void-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">

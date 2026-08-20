@@ -90,6 +90,13 @@ class SaleController extends Controller
 				'job_no',
 				'customer_name',
 				'pm_name',
+				// "Site Info" column on the index — homeowner_name/job_address weren't
+				// searchable, so a search matching only the site info (e.g. the
+				// homeowner's name) silently found nothing.
+				'homeowner_name',
+				'job_address',
+				'job_phone',
+				'job_email',
 			];
 
 			$existingCols = array_values(array_filter($searchableCols, fn ($col) =>
@@ -228,6 +235,11 @@ class SaleController extends Controller
 
         $depositPaymentMethods = \App\Models\SalePayment::PAYMENT_METHODS;
 
+        $billToCustomer   = $sale->bill_to_customer;
+        $availableCredits = $billToCustomer
+            ? $billToCustomer->credits()->where('status', 'open')->get()->filter(fn ($c) => $c->remaining_balance > 0.005)
+            : collect();
+
         // Count unscheduled labour items (drives WO card badge)
         $labourItems = $sale->rooms->flatMap(
             fn($r) => $r->items->where('item_type', 'labour')->where('is_removed', false)
@@ -254,7 +266,7 @@ class SaleController extends Controller
             'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs', 'customerContacts',
             'depositPayerOptions', 'depositPaymentMethods',
             'salePickTickets', 'directPickTicket', 'materialSaleItems',
-            'unscheduledLabourCount',
+            'unscheduledLabourCount', 'availableCredits',
         ));
 	}
 
@@ -1138,6 +1150,28 @@ public function showProfits(Sale $sale)
         $deposit->delete();
 
         return back()->with('success', 'Deposit removed.');
+    }
+
+    // -------------------------------------------------------------------------
+    // Customer Credit
+    // -------------------------------------------------------------------------
+
+    public function applyCredit(Request $request, Sale $sale)
+    {
+        $data = $request->validate([
+            'customer_credit_id' => ['required', 'exists:customer_credits,id'],
+            'amount'              => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $credit = \App\Models\CustomerCredit::findOrFail($data['customer_credit_id']);
+
+        try {
+            $credit->applyTo($sale, (float) $data['amount'], "Applied to Sale #{$sale->sale_number}");
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Credit applied to sale.');
     }
 
     private function resolveEmailTemplate(Sale $sale): array

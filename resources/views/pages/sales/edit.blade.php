@@ -2162,11 +2162,19 @@
 </div>
 <div class="flex items-center justify-between pt-1">
     <span class="text-sm font-semibold text-gray-700">Balance Owing</span>
-    <span id="summary-balance-owing"
-          data-deposit-total="{{ $depositTotal }}"
-          class="text-sm font-bold text-gray-900">
-        ${{ number_format(max(0, ($sale->grand_total ?? 0) - $depositTotal), 2) }}
-    </span>
+    @if($sale->is_overpaid)
+        <span id="summary-balance-owing"
+              data-deposit-total="{{ $depositTotal }}"
+              class="text-sm font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+            Overpaid by ${{ number_format(abs($sale->balance_due), 2) }}
+        </span>
+    @else
+        <span id="summary-balance-owing"
+              data-deposit-total="{{ $depositTotal }}"
+              class="text-sm font-bold text-gray-900">
+            ${{ number_format(max(0, ($sale->grand_total ?? 0) - $depositTotal), 2) }}
+        </span>
+    @endif
 </div>
 @endif
 @if($totalReceived > 0)

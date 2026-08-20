@@ -95,31 +95,83 @@
 
             {{-- Bill To --}}
             <div class="sm:col-span-3">
-                <label class="block mb-1 text-sm font-medium text-gray-700">Bill To</label>
-                <p class="text-xs text-gray-400 mb-3">Leave blank to use the sale customer. Fill in when billing a different party (e.g. homeowner overage).</p>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block mb-1 text-xs font-medium text-gray-600">Name / Company</label>
-                        <input type="text" name="bill_to_name"
-                               value="{{ old('bill_to_name', $defaultBillTo['name']) }}"
-                               placeholder="e.g. John Smith"
-                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                @if($jobSiteCustomer && $parentCustomer && $jobSiteCustomer->id !== $parentCustomer->id)
+                    <div x-data="{ billTo: '{{ old('bill_to_name') ? 'custom' : old('bill_to_customer_id', $defaultBillToCustomerId ?? $jobSiteCustomer->id) }}' }">
+                        <label class="block mb-2 text-sm font-medium text-gray-700">Bill To</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="radio" name="bill_to_customer_id" value="{{ $jobSiteCustomer->id }}" x-model="billTo"
+                                       class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">
+                                    Job Site Customer &mdash; {{ $jobSiteCustomer->company_name ?: $jobSiteCustomer->name }}
+                                    <span class="text-xs text-gray-400">(recommended)</span>
+                                </span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="radio" name="bill_to_customer_id" value="{{ $parentCustomer->id }}" x-model="billTo"
+                                       class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">
+                                    Parent Customer &mdash; {{ $parentCustomer->company_name ?: $parentCustomer->name }}
+                                </span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="radio" name="bill_to_customer_id" value="custom" x-model="billTo"
+                                       class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                <span class="text-sm text-gray-700">Custom</span>
+                            </label>
+                        </div>
+
+                        <div x-show="billTo === 'custom'" x-cloak class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 pl-6 border-l-2 border-blue-200">
+                            <div>
+                                <label class="block mb-1 text-xs font-medium text-gray-600">Name / Company</label>
+                                <input type="text" name="bill_to_name"
+                                       value="{{ old('bill_to_name', $defaultBillTo['name']) }}"
+                                       placeholder="e.g. John Smith"
+                                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-xs font-medium text-gray-600">Address <span class="text-gray-400 font-normal">(optional)</span></label>
+                                <input type="text" name="bill_to_address"
+                                       value="{{ old('bill_to_address', $defaultBillTo['address']) }}"
+                                       placeholder="e.g. 123 Main St, Vancouver BC"
+                                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-xs font-medium text-gray-600">Email <span class="text-gray-400 font-normal">(optional)</span></label>
+                                <input type="email" name="bill_to_email"
+                                       value="{{ old('bill_to_email', $defaultBillTo['email']) }}"
+                                       placeholder="e.g. homeowner@example.com"
+                                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block mb-1 text-xs font-medium text-gray-600">Address <span class="text-gray-400 font-normal">(optional)</span></label>
-                        <input type="text" name="bill_to_address"
-                               value="{{ old('bill_to_address', $defaultBillTo['address']) }}"
-                               placeholder="e.g. 123 Main St, Vancouver BC"
-                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                @else
+                    <label class="block mb-1 text-sm font-medium text-gray-700">Bill To</label>
+                    <p class="text-xs text-gray-400 mb-3">Leave blank to use the sale customer. Fill in when billing a different party (e.g. homeowner overage).</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block mb-1 text-xs font-medium text-gray-600">Name / Company</label>
+                            <input type="text" name="bill_to_name"
+                                   value="{{ old('bill_to_name', $defaultBillTo['name']) }}"
+                                   placeholder="e.g. John Smith"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-xs font-medium text-gray-600">Address <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <input type="text" name="bill_to_address"
+                                   value="{{ old('bill_to_address', $defaultBillTo['address']) }}"
+                                   placeholder="e.g. 123 Main St, Vancouver BC"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-xs font-medium text-gray-600">Email <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <input type="email" name="bill_to_email"
+                                   value="{{ old('bill_to_email', $defaultBillTo['email']) }}"
+                                   placeholder="e.g. homeowner@example.com"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block mb-1 text-xs font-medium text-gray-600">Email <span class="text-gray-400 font-normal">(optional)</span></label>
-                        <input type="email" name="bill_to_email"
-                               value="{{ old('bill_to_email', $defaultBillTo['email']) }}"
-                               placeholder="e.g. homeowner@example.com"
-                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                    </div>
-                </div>
+                @endif
             </div>
 
         </div>

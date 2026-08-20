@@ -139,6 +139,10 @@
 @php
     $parentCustomer  = $sale->opportunity?->parentCustomer;
     $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+    // An explicit "Bill To" pick on the invoice wins; otherwise falls back to job
+    // site -> parent — same priority used for the QBO invoice push and for
+    // attributing overpayment credit.
+    $defaultBillTo   = $invoice->resolved_bill_to_customer;
 @endphp
 <div class="info-grid">
     {{-- Bill To --}}
@@ -152,20 +156,20 @@
             @if($invoice->bill_to_email)
                 <div class="info-row">{{ $invoice->bill_to_email }}</div>
             @endif
-        @elseif($parentCustomer)
-            @if($parentCustomer->company_name)
-                <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $parentCustomer->company_name }}</div>
-                @if($parentCustomer->name && $parentCustomer->name !== $parentCustomer->company_name)
-                    <div class="info-row">{{ $parentCustomer->name }}</div>
+        @elseif($defaultBillTo)
+            @if($defaultBillTo->company_name)
+                <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $defaultBillTo->company_name }}</div>
+                @if($defaultBillTo->name && $defaultBillTo->name !== $defaultBillTo->company_name)
+                    <div class="info-row">{{ $defaultBillTo->name }}</div>
                 @endif
             @else
-                <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $parentCustomer->name }}</div>
+                <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $defaultBillTo->name }}</div>
             @endif
-            @if($parentCustomer->email)
-                <div class="info-row">{{ $parentCustomer->email }}</div>
+            @if($defaultBillTo->email)
+                <div class="info-row">{{ $defaultBillTo->email }}</div>
             @endif
-            @if($parentCustomer->phone)
-                <div class="info-row">{{ $parentCustomer->phone }}</div>
+            @if($defaultBillTo->phone)
+                <div class="info-row">{{ $defaultBillTo->phone }}</div>
             @endif
         @elseif($sale->customer_name)
             <div class="info-row" style="font-weight:bold; font-size:12px;">{{ $sale->customer_name }}</div>

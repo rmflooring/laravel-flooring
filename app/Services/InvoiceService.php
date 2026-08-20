@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CustomerCredit;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\InvoiceRoom;
@@ -31,9 +32,10 @@ class InvoiceService
             'due_date'           => $invoiceData['due_date'] ?? null,
             'customer_po_number' => $invoiceData['customer_po_number'] ?? null,
             'notes'              => $invoiceData['notes'] ?? null,
-            'bill_to_name'       => $invoiceData['bill_to_name'] ?: null,
-            'bill_to_address'    => $invoiceData['bill_to_address'] ?: null,
-            'bill_to_email'      => $invoiceData['bill_to_email'] ?: null,
+            'bill_to_name'       => ($invoiceData['bill_to_name'] ?? null) ?: null,
+            'bill_to_address'    => ($invoiceData['bill_to_address'] ?? null) ?: null,
+            'bill_to_email'      => ($invoiceData['bill_to_email'] ?? null) ?: null,
+            'bill_to_customer_id'=> $invoiceData['bill_to_customer_id'] ?? null,
             'subtotal'           => 0,
             'tax_amount'         => 0,
             'grand_total'        => 0,
@@ -112,7 +114,13 @@ class InvoiceService
     }
 
     /**
-     * Apply any unallocated sale deposits to the given invoice as invoice payments.
+     * Apply any unallocated sale deposits to the given invoice as invoice payments, at their
+     * full, true amount — a payment record must always match what was actually received, so
+     * the books stay correct. If the sale was edited down after deposits were taken (or a
+     * partial invoice doesn't cover the full deposit total), the invoice legitimately ends up
+     * overpaid (see Invoice::is_overpaid) and the excess is separately issued to the customer
+     * as a redeemable CustomerCredit, for staff to later refund or let the customer apply
+     * toward future work.
      * A deposit is "unallocated" if it has no invoice_payment linked to a non-voided invoice.
      */
     public function applyDepositsToInvoice(Invoice $invoice, Sale $sale): void
@@ -131,6 +139,10 @@ class InvoiceService
             ->orderBy('payment_date')
             ->get();
 
+        if ($pendingDeposits->isEmpty()) {
+            return;
+        }
+
         foreach ($pendingDeposits as $deposit) {
             InvoicePayment::create([
                 'invoice_id'       => $invoice->id,
@@ -144,9 +156,43 @@ class InvoiceService
             ]);
         }
 
-        if ($pendingDeposits->isNotEmpty()) {
-            $this->recalculateAfterPayment($invoice);
+        $this->recalculateAfterPayment($invoice);
+
+        $pendingTotal = round((float) $pendingDeposits->sum('amount'), 2);
+        $excess       = round($pendingTotal - (float) $invoice->grand_total, 2);
+        if ($excess > 0.005) {
+            $this->issueOverpaymentCredit($sale, $invoice, $excess, $pendingTotal);
         }
+    }
+
+    /**
+     * Issue a redeemable CustomerCredit for deposit money that exceeded this invoice's total.
+     * This does not reduce the recorded payment — the full deposit stays applied to the
+     * invoice (which will show as overpaid) — it's a separate, additional record of usable
+     * credit. Attributed to the sale's resolved bill-to customer, mirroring
+     * QboSyncService::pushInvoice()'s billTo resolution (job site -> parent -> sale's
+     * free-text customer).
+     */
+    private function issueOverpaymentCredit(Sale $sale, Invoice $invoice, float $excess, float $depositsConsidered): void
+    {
+        // An explicit Bill To pick on this specific invoice wins over the sale-level default.
+        $billTo = $invoice->billToCustomer ?? $sale->bill_to_customer;
+
+        if (! $billTo) {
+            return;
+        }
+
+        CustomerCredit::create([
+            'customer_id'        => $billTo->id,
+            'source_sale_id'     => $sale->id,
+            'source_invoice_id'  => $invoice->id,
+            'amount'             => $excess,
+            'status'             => 'open',
+            'notes'              => "Auto-issued: deposits on Sale #{$sale->sale_number} ("
+                . number_format($depositsConsidered, 2)
+                . ') exceeded Invoice #' . $invoice->invoice_number . "'s total ("
+                . number_format((float) $invoice->grand_total, 2) . ').',
+        ]);
     }
 
     /**
@@ -235,7 +281,7 @@ class InvoiceService
     public function derivePaymentStatus(Invoice $invoice): void
     {
         $grand      = (float) $invoice->grand_total;
-        $paid       = (float) $invoice->amount_paid;
+        $paid       = (float) $invoice->amount_paid + (float) $invoice->creditApplications()->sum('amount');
 
         if ($paid <= 0) {
             // No payment — check if overdue

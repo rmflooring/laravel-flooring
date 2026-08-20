@@ -46,6 +46,15 @@
             'options' => $typeOptions->map(fn($v) => ['value' => $v, 'label' => ucfirst($v)])->values()->all(),
             'selected' => request('type'),
         ],
+        [
+            'name' => 'level',
+            'label' => 'Level',
+            'options' => [
+                ['value' => 'parent', 'label' => 'Parent Companies'],
+                ['value' => 'job_site', 'label' => 'Job Sites'],
+            ],
+            'selected' => request('level'),
+        ],
     ],
 ])
 

@@ -481,7 +481,13 @@
                         </div>
                         <div class="flex items-center justify-between pt-1">
                             <span class="text-sm font-semibold text-gray-700">Balance Owing</span>
-                            <span class="text-sm font-bold text-gray-900">${{ number_format(max(0, $sale->grand_total - $showDepositTotal), 2) }}</span>
+                            @if($sale->is_overpaid)
+                                <span class="text-sm font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                                    Overpaid by ${{ number_format(abs($sale->balance_due), 2) }}
+                                </span>
+                            @else
+                                <span class="text-sm font-bold text-gray-900">${{ number_format(max(0, $sale->grand_total - $showDepositTotal), 2) }}</span>
+                            @endif
                         </div>
                         @endif
                         @if($showTotalReceived > 0)
@@ -1361,6 +1367,29 @@
                 @endif
             </div>
 
+            {{-- Store Credit --}}
+            @if($availableCredits->isNotEmpty())
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <h3 class="font-semibold text-gray-900 dark:text-white">Store Credit Available</h3>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">
+                            ${{ number_format($availableCredits->sum('remaining_balance'), 2) }} available
+                        </span>
+                    </div>
+                    @can('apply customer credits')
+                        <button type="button" onclick="document.getElementById('apply-credit-modal').classList.remove('hidden')"
+                            class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">Apply Credit</button>
+                    @endcan
+                </div>
+                @if($sale->creditApplications->isNotEmpty())
+                    <div class="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        ${{ number_format($sale->creditApplications->sum('amount'), 2) }} already applied to this sale.
+                    </div>
+                @endif
+            </div>
+            @endif
+
             {{-- Returns Section --}}
             @if($sale->quickReturns->isNotEmpty())
             <div class="bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
@@ -1882,6 +1911,60 @@
         </form>
     </div>
 </div>
+
+{{-- Apply Credit Modal --}}
+@if($availableCredits->isNotEmpty())
+<div id="apply-credit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Apply Store Credit</h2>
+            <button type="button" onclick="document.getElementById('apply-credit-modal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <form action="{{ route('pages.sales.apply-credit', $sale) }}" method="POST">
+            @csrf
+            <div class="px-6 py-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credit <span class="text-red-500">*</span></label>
+                    <select name="customer_credit_id" required
+                        class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        @foreach($availableCredits as $credit)
+                            <option value="{{ $credit->id }}">
+                                {{ $credit->credit_number }} — ${{ number_format($credit->remaining_balance, 2) }} remaining
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount to apply <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <input type="text" inputmode="decimal" name="amount" required
+                            class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-7 pr-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            placeholder="0.00"
+                            onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                <button type="button" onclick="document.getElementById('apply-credit-modal').classList.add('hidden')"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-5 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">
+                    Apply Credit
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 <script>
 function updatePayerCustomer(select) {

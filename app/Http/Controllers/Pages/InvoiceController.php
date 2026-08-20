@@ -34,7 +34,16 @@ class InvoiceController extends Controller
                 ->with('error', 'Invoices can only be created on approved or active sales.');
         }
 
-        $sale->load(['rooms' => fn ($q) => $q->orderBy('sort_order'), 'rooms.items' => fn ($q) => $q->orderBy('sort_order')]);
+        $sale->load([
+            'rooms' => fn ($q) => $q->orderBy('sort_order'),
+            'rooms.items' => fn ($q) => $q->orderBy('sort_order'),
+            'opportunity.parentCustomer',
+            'opportunity.jobSiteCustomer',
+        ]);
+
+        $parentCustomer  = $sale->opportunity?->parentCustomer;
+        $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+        $defaultBillToCustomerId = $sale->bill_to_customer?->id;
 
         // How much of each sale item has already been invoiced (non-voided)
         $invoicedQty = $this->service->getInvoicedQtyBySaleItem($sale);
@@ -48,22 +57,43 @@ class InvoiceController extends Controller
                 ->get(['tax_rates.name', 'tax_rates.sales_rate'])
             : collect();
 
-        return view('pages.invoices.create', compact('sale', 'invoicedQty', 'paymentTerms', 'taxRates'));
+        // Deposits not yet applied to any non-voided invoice for this sale — used to warn
+        // the user before creating an invoice whose total won't cover them (the excess
+        // becomes a customer credit automatically; see InvoiceService::applyDepositsToInvoice).
+        $appliedDepositIds = \DB::table('invoice_payments')
+            ->join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
+            ->where('invoices.sale_id', $sale->id)
+            ->whereNotIn('invoices.status', ['voided'])
+            ->whereNotNull('invoice_payments.sale_payment_id')
+            ->pluck('invoice_payments.sale_payment_id');
+
+        $pendingDepositsTotal = $sale->deposits->whereNotIn('id', $appliedDepositIds)->sum('amount');
+
+        return view('pages.invoices.create', compact(
+            'sale', 'invoicedQty', 'paymentTerms', 'taxRates', 'pendingDepositsTotal',
+            'parentCustomer', 'jobSiteCustomer', 'defaultBillToCustomerId'
+        ));
     }
 
     public function store(Request $request, Sale $sale)
     {
+        // The "Custom" radio option shares the bill_to_customer_id field name but submits
+        // the literal string "custom" — treat that as no pick (free-text fields apply instead).
+        if ($request->input('bill_to_customer_id') === 'custom') {
+            $request->merge(['bill_to_customer_id' => null]);
+        }
 
         $data = $request->validate([
-            'payment_term_id'    => ['nullable', 'exists:payment_terms,id'],
-            'due_date'           => ['nullable', 'date'],
-            'customer_po_number' => ['nullable', 'string', 'max:100'],
-            'notes'              => ['nullable', 'string', 'max:2000'],
-            'bill_to_name'       => ['nullable', 'string', 'max:255'],
-            'bill_to_address'    => ['nullable', 'string', 'max:500'],
-            'bill_to_email'      => ['nullable', 'email', 'max:255'],
-            'items'              => ['required', 'array', 'min:1'],
-            'items.*'            => ['numeric', 'min:0'],
+            'payment_term_id'     => ['nullable', 'exists:payment_terms,id'],
+            'due_date'            => ['nullable', 'date'],
+            'customer_po_number'  => ['nullable', 'string', 'max:100'],
+            'notes'               => ['nullable', 'string', 'max:2000'],
+            'bill_to_customer_id' => ['nullable', 'exists:customers,id'],
+            'bill_to_name'        => ['nullable', 'string', 'max:255'],
+            'bill_to_address'     => ['nullable', 'string', 'max:500'],
+            'bill_to_email'       => ['nullable', 'email', 'max:255'],
+            'items'               => ['required', 'array', 'min:1'],
+            'items.*'             => ['numeric', 'min:0'],
         ]);
 
         // Filter to only items with qty > 0
@@ -103,8 +133,13 @@ class InvoiceController extends Controller
 
     public function show(Sale $sale, Invoice $invoice)
     {
-        $invoice->load(['rooms.items', 'payments.recordedBy', 'payments.salePayment', 'paymentTerm']);
+        $invoice->load(['rooms.items', 'payments.recordedBy', 'payments.salePayment', 'paymentTerm', 'creditApplications.credit']);
         $sale->load(['opportunity.projectManager', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer', 'quickReturns']);
+
+        $billToCustomer  = $sale->bill_to_customer;
+        $availableCredits = $billToCustomer
+            ? $billToCustomer->credits()->where('status', 'open')->get()->filter(fn ($c) => $c->remaining_balance > 0.005)
+            : collect();
 
         $paymentMethods   = InvoicePayment::PAYMENT_METHODS;
         $pmEmail          = $sale->opportunity?->projectManager?->email;
@@ -129,7 +164,7 @@ class InvoiceController extends Controller
         return view('pages.invoices.show', compact(
             'sale', 'invoice', 'paymentMethods', 'taxRates',
             'pmEmail', 'homeownerEmail', 'customerContacts', 'emailSubject', 'emailBody',
-            'openedAt'
+            'openedAt', 'availableCredits'
         ));
     }
 
@@ -144,18 +179,26 @@ class InvoiceController extends Controller
                 ->with('error', 'Only draft, sent, overdue, or paid invoices can be edited.');
         }
 
-        $invoice->load(['rooms' => fn ($q) => $q->orderBy('sort_order'), 'rooms.items' => fn ($q) => $q->orderBy('sort_order'), 'paymentTerm']);
-        $sale->loadMissing(['opportunity.parentCustomer']);
+        $invoice->load(['rooms' => fn ($q) => $q->orderBy('sort_order'), 'rooms.items' => fn ($q) => $q->orderBy('sort_order'), 'paymentTerm', 'billToCustomer']);
+        $sale->loadMissing(['opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
         $paymentTerms = PaymentTerm::where('is_active', true)->orderBy('name')->get();
 
-        $parentCustomer = $sale->opportunity?->parentCustomer;
+        $parentCustomer  = $sale->opportunity?->parentCustomer;
+        $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
+        // Job site is billed by default (same priority as the QBO push and credit
+        // attribution) unless this invoice already has an explicit pick or override.
+        $fallbackBillTo = $jobSiteCustomer ?? $parentCustomer;
         $defaultBillTo = [
-            'name'    => $invoice->bill_to_name    ?? ($parentCustomer ? ($parentCustomer->company_name ?: $parentCustomer->name) : $sale->customer_name),
+            'name'    => $invoice->bill_to_name    ?? ($fallbackBillTo ? ($fallbackBillTo->company_name ?: $fallbackBillTo->name) : $sale->customer_name),
             'address' => $invoice->bill_to_address ?? '',
-            'email'   => $invoice->bill_to_email   ?? $parentCustomer?->email ?? '',
+            'email'   => $invoice->bill_to_email   ?? $fallbackBillTo?->email ?? '',
         ];
+        $defaultBillToCustomerId = $invoice->bill_to_customer_id ?? $sale->bill_to_customer?->id;
 
-        return view('pages.invoices.edit', compact('sale', 'invoice', 'paymentTerms', 'defaultBillTo'));
+        return view('pages.invoices.edit', compact(
+            'sale', 'invoice', 'paymentTerms', 'defaultBillTo',
+            'parentCustomer', 'jobSiteCustomer', 'defaultBillToCustomerId'
+        ));
     }
 
     public function update(Request $request, Sale $sale, Invoice $invoice)
@@ -164,17 +207,22 @@ class InvoiceController extends Controller
             return back()->with('error', 'Only draft, sent, overdue, or paid invoices can be edited.');
         }
 
+        if ($request->input('bill_to_customer_id') === 'custom') {
+            $request->merge(['bill_to_customer_id' => null]);
+        }
+
         $request->validate([
-            'invoice_number'     => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('invoices', 'invoice_number')->ignore($invoice->id)],
-            'status'             => ['required', 'in:draft,sent,overdue,paid'],
-            'payment_term_id'    => ['nullable', 'exists:payment_terms,id'],
-            'due_date'           => ['nullable', 'date'],
-            'customer_po_number' => ['nullable', 'string', 'max:100'],
-            'notes'              => ['nullable', 'string', 'max:2000'],
-            'bill_to_name'       => ['nullable', 'string', 'max:255'],
-            'bill_to_address'    => ['nullable', 'string', 'max:500'],
-            'bill_to_email'      => ['nullable', 'email', 'max:255'],
-            'rooms'              => ['nullable', 'array'],
+            'invoice_number'      => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('invoices', 'invoice_number')->ignore($invoice->id)],
+            'status'              => ['required', 'in:draft,sent,overdue,paid'],
+            'payment_term_id'     => ['nullable', 'exists:payment_terms,id'],
+            'due_date'            => ['nullable', 'date'],
+            'customer_po_number'  => ['nullable', 'string', 'max:100'],
+            'notes'               => ['nullable', 'string', 'max:2000'],
+            'bill_to_customer_id' => ['nullable', 'exists:customers,id'],
+            'bill_to_name'        => ['nullable', 'string', 'max:255'],
+            'bill_to_address'     => ['nullable', 'string', 'max:500'],
+            'bill_to_email'       => ['nullable', 'email', 'max:255'],
+            'rooms'               => ['nullable', 'array'],
         ]);
 
         if ($request->invoice_number !== $invoice->invoice_number) {
@@ -183,14 +231,15 @@ class InvoiceController extends Controller
         }
 
         $invoice->update([
-            'status'             => $request->status,
-            'payment_term_id'    => $request->payment_term_id,
-            'due_date'           => $request->due_date,
-            'customer_po_number' => $request->customer_po_number,
-            'notes'              => $request->notes,
-            'bill_to_name'       => $request->bill_to_name ?: null,
-            'bill_to_address'    => $request->bill_to_address ?: null,
-            'bill_to_email'      => $request->bill_to_email ?: null,
+            'status'              => $request->status,
+            'payment_term_id'     => $request->payment_term_id,
+            'due_date'            => $request->due_date,
+            'customer_po_number'  => $request->customer_po_number,
+            'notes'               => $request->notes,
+            'bill_to_customer_id' => $request->bill_to_customer_id ?: null,
+            'bill_to_name'        => $request->bill_to_name ?: null,
+            'bill_to_address'     => $request->bill_to_address ?: null,
+            'bill_to_email'       => $request->bill_to_email ?: null,
         ]);
 
         $taxRate          = (float) ($sale->tax_rate_percent ?? 0) / 100;
@@ -421,6 +470,32 @@ class InvoiceController extends Controller
         $this->service->recalculateAfterPayment($invoice);
 
         return back()->with('success', 'Payment removed.');
+    }
+
+    // -------------------------------------------------------------------------
+    // Customer Credit
+    // -------------------------------------------------------------------------
+
+    public function applyCredit(Request $request, Sale $sale, Invoice $invoice)
+    {
+        if ($invoice->status === 'voided') {
+            return back()->with('error', 'Cannot apply credit to a voided invoice.');
+        }
+
+        $data = $request->validate([
+            'customer_credit_id' => ['required', 'exists:customer_credits,id'],
+            'amount'              => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $credit = \App\Models\CustomerCredit::findOrFail($data['customer_credit_id']);
+
+        try {
+            $credit->applyTo($invoice, (float) $data['amount'], "Applied to Invoice #{$invoice->invoice_number}");
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Credit applied to invoice.');
     }
 
     // -------------------------------------------------------------------------

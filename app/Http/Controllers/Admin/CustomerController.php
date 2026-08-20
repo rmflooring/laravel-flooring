@@ -34,10 +34,6 @@ if ($request->filled('search')) {
 	$perPage = (int) $request->get('perPage', 15);
 $perPage = in_array($perPage, [15, 25, 50, 100], true) ? $perPage : 15;
 
-$customers = $query->paginate($perPage)->withQueryString();
-
-
-
     // Status filter
     if ($request->filled('status')) {
         $query->where('customer_status', $request->status);
@@ -46,6 +42,13 @@ $customers = $query->paginate($perPage)->withQueryString();
     // Type filter
     if ($request->filled('type')) {
         $query->where('customer_type', $request->type);
+    }
+
+    // Level filter — parent companies (standalone) vs. job-site customers (children)
+    if ($request->get('level') === 'parent') {
+        $query->whereNull('parent_id');
+    } elseif ($request->get('level') === 'job_site') {
+        $query->whereNotNull('parent_id');
     }
 	
 	// Safe sorting (whitelist)
@@ -71,9 +74,7 @@ if ($sort && in_array($sort, $allowedSorts, true)) {
 }
 
 
-    $customers = $query->orderBy('company_name')->orderBy('name')
-        ->paginate(15)
-        ->withQueryString();
+    $customers = $query->paginate($perPage)->withQueryString();
 
     $this->attachBalances($customers);
 

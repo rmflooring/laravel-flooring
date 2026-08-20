@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Bill;
 use App\Models\Customer;
+use App\Models\CustomerCredit;
+use App\Models\CustomerCreditApplication;
 use App\Models\Installer;
 use App\Models\Invoice;
 use App\Models\QuickReturn;
@@ -790,13 +792,14 @@ class QboSyncService
     public function pushInvoice(Invoice $invoice, array $itemIds): array
     {
         try {
-            $invoice->load(['rooms.items', 'sale.opportunity.jobSiteCustomer.parent', 'sale.opportunity.parentCustomer', 'sale.customer']);
+            $invoice->load(['rooms.items', 'billToCustomer', 'sale.opportunity.jobSiteCustomer.parent', 'sale.opportunity.parentCustomer', 'sale.customer']);
 
             $sale        = $invoice->sale;
             $opportunity = $sale?->opportunity;
             $jobSite     = $opportunity?->jobSiteCustomer;
             $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
-            $billTo      = $jobSite ?? $parent ?? $sale?->customer;
+            // An explicit Bill To pick on the invoice wins over the automatic chain.
+            $billTo      = $invoice->billToCustomer ?? $jobSite ?? $parent ?? $sale?->customer;
 
             // Sales created without an Opportunity (quick estimates, legacy entries) only
             // carry free-text customer info. Resolve or create a real Customer from that
@@ -1356,6 +1359,188 @@ class QboSyncService
 
         if ($invoice->notes) {
             $payload['CustomerMemo'] = ['value' => $invoice->notes];
+        }
+
+        return $payload;
+    }
+
+    // =========================================================================
+    // Customer Credits (AR credit)
+    // =========================================================================
+
+    /**
+     * Push a CustomerCredit to QBO as a CreditMemo entity.
+     * Customer is auto-synced if not already in QBO. $itemId is a single QBO income
+     * item to post the (lump-sum, un-itemized) credit line against.
+     */
+    public function pushCustomerCredit(CustomerCredit $credit, string $itemId): array
+    {
+        try {
+            $credit->load('customer');
+
+            $customer = $credit->customer;
+            if (! $customer) {
+                return ['success' => false, 'message' => 'Credit has no customer assigned.', 'qbo_id' => null];
+            }
+
+            if (! $customer->qbo_id) {
+                $customerResult = $this->pushCustomer($customer);
+                if (! $customerResult['success']) {
+                    return ['success' => false, 'message' => 'Failed to sync customer: ' . $customerResult['message'], 'qbo_id' => null];
+                }
+                $customer->refresh();
+            }
+
+            $payload = $this->buildCustomerCreditPayload($credit, $customer->qbo_id, $itemId);
+
+            if ($credit->qbo_id) {
+                $payload['Id']        = $credit->qbo_id;
+                $payload['SyncToken'] = $credit->qbo_sync_token ?? '0';
+                $response  = $this->qbo->post('creditmemo', $payload);
+                $qboCredit = $response['CreditMemo'];
+                $action    = 'updated';
+            } else {
+                $response  = $this->qbo->post('creditmemo', $payload);
+                $qboCredit = $response['CreditMemo'];
+                $action    = 'created';
+            }
+
+            $credit->update([
+                'qbo_id'         => $qboCredit['Id'],
+                'qbo_sync_token' => $qboCredit['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('customer_credit', $credit->id, 'push', 'success', $qboCredit['Id'],
+                ucfirst($action) . ' customer credit in QBO', $payload, $qboCredit);
+
+            return ['success' => true, 'message' => 'Customer credit ' . $action . ' in QuickBooks.', 'qbo_id' => $qboCredit['Id']];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('customer_credit', $credit->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
+    }
+
+    private function buildCustomerCreditPayload(CustomerCredit $credit, string $customerQboId, string $itemId): array
+    {
+        $payload = [
+            'CustomerRef' => ['value' => $customerQboId],
+            'TxnDate'     => $credit->created_at->toDateString(),
+            'DocNumber'   => $credit->credit_number,
+            'Line'        => [[
+                'Amount'      => (float) $credit->amount,
+                'DetailType'  => 'SalesItemLineDetail',
+                'Description' => $credit->notes ?: ('Store credit ' . $credit->credit_number),
+                'SalesItemLineDetail' => [
+                    'ItemRef'    => ['value' => $itemId],
+                    'Qty'        => 1,
+                    'UnitPrice'  => (float) $credit->amount,
+                    // 25 = Exempt — this is a dollar-for-dollar refund credit, not a taxed
+                    // product line, so tax on the original sale/invoice is left untouched.
+                    'TaxCodeRef' => ['value' => '25'],
+                ],
+            ]],
+        ];
+
+        if ($credit->notes) {
+            $payload['PrivateNote'] = $credit->notes;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Push a CustomerCreditApplication of type 'refund' to QBO as a RefundReceipt entity —
+     * mirrors pushQuickReturn()'s RefundReceipt push, just for a lump-sum credit payout
+     * rather than itemized returned product lines.
+     * $refundAccountId is the same qbo_refund_account_id setting QuickReturn refunds use
+     * (DepositToAccountRef — the bank/cash account the refund came out of).
+     */
+    public function pushCustomerCreditRefund(CustomerCreditApplication $application, string $itemId, string $refundAccountId): array
+    {
+        try {
+            $application->load('credit.customer');
+
+            $credit   = $application->credit;
+            $customer = $credit?->customer;
+
+            if (! $customer) {
+                return ['success' => false, 'message' => 'Credit has no customer assigned.', 'qbo_id' => null];
+            }
+
+            if (! $customer->qbo_id) {
+                $customerResult = $this->pushCustomer($customer);
+                if (! $customerResult['success']) {
+                    return ['success' => false, 'message' => 'Failed to sync customer: ' . $customerResult['message'], 'qbo_id' => null];
+                }
+                $customer->refresh();
+            }
+
+            $payload = $this->buildCustomerCreditRefundPayload($application, $customer->qbo_id, $itemId, $refundAccountId);
+
+            if ($application->qbo_id) {
+                $payload['Id']        = $application->qbo_id;
+                $payload['SyncToken'] = $application->qbo_sync_token ?? '0';
+                $response   = $this->qbo->post('refundreceipt', $payload);
+                $qboReceipt = $response['RefundReceipt'];
+                $action     = 'updated';
+            } else {
+                $response   = $this->qbo->post('refundreceipt', $payload);
+                $qboReceipt = $response['RefundReceipt'];
+                $action     = 'created';
+            }
+
+            $application->update([
+                'qbo_id'         => $qboReceipt['Id'],
+                'qbo_sync_token' => $qboReceipt['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('customer_credit_refund', $application->id, 'push', 'success', $qboReceipt['Id'],
+                ucfirst($action) . ' credit refund receipt in QBO', $payload, $qboReceipt);
+
+            return ['success' => true, 'message' => 'Refund ' . $action . ' in QuickBooks.', 'qbo_id' => $qboReceipt['Id']];
+
+        } catch (\Exception $e) {
+            $this->qbo->log('customer_credit_refund', $application->id, 'push', 'error', null, $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'qbo_id' => null];
+        }
+    }
+
+    private function buildCustomerCreditRefundPayload(CustomerCreditApplication $application, string $customerQboId, string $itemId, string $refundAccountId): array
+    {
+        $credit = $application->credit;
+
+        $payload = [
+            'CustomerRef'         => ['value' => $customerQboId],
+            'DepositToAccountRef' => ['value' => $refundAccountId],
+            'TxnDate'             => $application->applied_date->toDateString(),
+            'DocNumber'           => $credit->credit_number . '-R' . $application->id,
+            'Line'                => [[
+                'Amount'      => (float) $application->amount,
+                'DetailType'  => 'SalesItemLineDetail',
+                'Description' => $application->notes ?: ('Refund of store credit ' . $credit->credit_number),
+                'SalesItemLineDetail' => [
+                    'ItemRef'    => ['value' => $itemId],
+                    'Qty'        => 1,
+                    'UnitPrice'  => (float) $application->amount,
+                    'TaxCodeRef' => ['value' => '25'],
+                ],
+            ]],
+        ];
+
+        $methodId = $this->mapPaymentMethod($application->refund_method);
+        if ($methodId) {
+            $payload['PaymentMethodRef'] = ['value' => $methodId];
+        }
+
+        if ($application->reference_number) {
+            $payload['PaymentRefNum'] = $application->reference_number;
+        }
+
+        if ($application->notes) {
+            $payload['PrivateNote'] = $application->notes;
         }
 
         return $payload;

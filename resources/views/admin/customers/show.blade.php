@@ -560,6 +560,129 @@
             </div>
             @endif
 
+            {{-- Store Credit --}}
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-gray-700">
+                        Store Credit
+                        @if($customer->credit_balance > 0)
+                            <span class="ml-2 bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-0.5 rounded">
+                                ${{ number_format($customer->credit_balance, 2) }} available
+                            </span>
+                        @endif
+                    </h2>
+                    @can('issue customer credits')
+                        <button type="button" onclick="document.getElementById('issue-credit-modal').classList.remove('hidden')"
+                            class="text-sm font-medium text-blue-600 hover:underline">+ Issue Credit</button>
+                    @endcan
+                </div>
+
+                @if($customer->credits->isEmpty())
+                    <div class="px-6 py-6 text-sm text-gray-400">No credits issued yet.</div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3">Credit #</th>
+                                    <th class="px-6 py-3">Source</th>
+                                    <th class="px-6 py-3">Status</th>
+                                    <th class="px-6 py-3 text-right">Amount</th>
+                                    <th class="px-6 py-3 text-right">Remaining</th>
+                                    <th class="px-6 py-3">Notes</th>
+                                    <th class="px-6 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($customer->credits as $credit)
+                                    <tr class="bg-white border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-gray-900">{{ $credit->credit_number }}</td>
+                                        <td class="px-6 py-4">
+                                            @if($credit->sourceInvoice)
+                                                <a href="{{ route('pages.sales.invoices.show', [$credit->sourceInvoice->sale_id, $credit->sourceInvoice]) }}" class="text-blue-600 hover:underline">
+                                                    Invoice {{ $credit->sourceInvoice->invoice_number }}
+                                                </a>
+                                            @elseif($credit->sourceSale)
+                                                <a href="{{ route('pages.sales.show', $credit->sourceSale) }}" class="text-blue-600 hover:underline">
+                                                    Sale #{{ $credit->sourceSale->sale_number }}
+                                                </a>
+                                            @else
+                                                Manual
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-xs font-medium px-2 py-0.5 rounded bg-{{ $credit->status_color }}-100 text-{{ $credit->status_color }}-700">
+                                                {{ $credit->status_label }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-right">${{ number_format($credit->amount, 2) }}</td>
+                                        <td class="px-6 py-4 text-right font-semibold {{ $credit->remaining_balance > 0 ? 'text-emerald-700' : 'text-gray-400' }}">
+                                            ${{ number_format($credit->remaining_balance, 2) }}
+                                        </td>
+                                        <td class="px-6 py-4 text-gray-500">{{ $credit->notes ?: '—' }}</td>
+                                        <td class="px-6 py-4 text-right">
+                                            @can('issue customer credits')
+                                                <div class="flex items-center justify-end gap-3">
+                                                    @if($credit->status === 'open')
+                                                        @if(app(\App\Services\QuickBooksService::class)->isConnected())
+                                                            @if($credit->qbo_id)
+                                                                <span class="text-xs text-green-600" title="Synced to QBO {{ $credit->qbo_synced_at?->format('M j, Y') }}">QBO ✓</span>
+                                                            @else
+                                                                <form method="POST" action="{{ route('admin.customer-credits.push-to-qbo', $credit) }}">
+                                                                    @csrf
+                                                                    <button type="submit" class="text-xs text-gray-400 hover:text-gray-600 underline">Push to QBO</button>
+                                                                </form>
+                                                            @endif
+                                                        @endif
+                                                        @if($credit->remaining_balance > 0.005)
+                                                            <button type="button" onclick="document.getElementById('refund-credit-modal-{{ $credit->id }}').classList.remove('hidden')"
+                                                                class="text-xs text-emerald-600 hover:underline">Refund</button>
+                                                        @endif
+                                                        <form action="{{ route('admin.customer-credits.void', $credit) }}" method="POST"
+                                                            onsubmit="return confirm('Void this credit?')">
+                                                            @csrf
+                                                            <button type="submit" class="text-xs text-red-500 hover:underline">Void</button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            @endcan
+                                        </td>
+                                    </tr>
+                                    @php $refunds = $credit->applications->where('type', 'refund'); @endphp
+                                    @if($refunds->isNotEmpty())
+                                        <tr class="bg-emerald-50/50">
+                                            <td colspan="7" class="px-6 py-2 text-xs text-emerald-800">
+                                                @foreach($refunds as $refund)
+                                                    <div class="flex items-center justify-between py-0.5">
+                                                        <span>
+                                                            Refunded ${{ number_format($refund->amount, 2) }} via {{ $refund->method_label }}
+                                                            @if($refund->reference_number) (ref# {{ $refund->reference_number }}) @endif
+                                                            on {{ $refund->applied_date->format('M j, Y') }}
+                                                        </span>
+                                                        @can('issue customer credits')
+                                                            @if(app(\App\Services\QuickBooksService::class)->isConnected())
+                                                                @if($refund->qbo_id)
+                                                                    <span class="text-green-600" title="Synced to QBO {{ $refund->qbo_synced_at?->format('M j, Y') }}">QBO ✓</span>
+                                                                @else
+                                                                    <form method="POST" action="{{ route('admin.customer-credit-refunds.push-to-qbo', $refund) }}">
+                                                                        @csrf
+                                                                        <button type="submit" class="text-gray-400 hover:text-gray-600 underline">Push to QBO</button>
+                                                                    </form>
+                                                                @endif
+                                                            @endif
+                                                        @endcan
+                                                    </div>
+                                                @endforeach
+                                            </td>
+                                        </tr>
+                                    @endif
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+
             {{-- Invoices --}}
             @if($invoices->isNotEmpty())
             <div class="bg-white shadow-sm rounded-lg border border-gray-200">
@@ -796,4 +919,116 @@
     }
     </script>
     @endif
+
+    @can('issue customer credits')
+    {{-- Issue Credit Modal --}}
+    <div id="issue-credit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-base font-semibold text-gray-900">Issue Store Credit</h2>
+                <button type="button" onclick="document.getElementById('issue-credit-modal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form action="{{ route('admin.customers.credits.store', $customer) }}" method="POST">
+                @csrf
+                <div class="px-6 py-5 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Amount <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                            <input type="text" inputmode="decimal" name="amount" required
+                                class="w-full text-sm border border-gray-300 rounded-lg pl-7 pr-3 py-2"
+                                placeholder="0.00"
+                                onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Reason / Notes</label>
+                        <textarea name="notes" rows="2" maxlength="1000"
+                            class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2"
+                            placeholder="Why is this credit being issued?"></textarea>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-between">
+                    <button type="button" onclick="document.getElementById('issue-credit-modal').classList.add('hidden')"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
+                        Issue Credit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Refund Modals (one per open credit with a remaining balance) --}}
+    @foreach($customer->credits->where('status', 'open')->filter(fn ($c) => $c->remaining_balance > 0.005) as $credit)
+        <div id="refund-credit-modal-{{ $credit->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-gray-900">Refund {{ $credit->credit_number }}</h2>
+                    <button type="button" onclick="document.getElementById('refund-credit-modal-{{ $credit->id }}').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form action="{{ route('admin.customer-credits.refund', $credit) }}" method="POST">
+                    @csrf
+                    <div class="px-6 py-5 space-y-4">
+                        <p class="text-xs text-gray-500">
+                            Records that this amount was actually paid back to the customer. Reduces the credit's remaining balance (${{ number_format($credit->remaining_balance, 2) }} available).
+                        </p>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Amount <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                <input type="text" inputmode="decimal" name="amount" required
+                                    value="{{ number_format($credit->remaining_balance, 2) }}"
+                                    class="w-full text-sm border border-gray-300 rounded-lg pl-7 pr-3 py-2"
+                                    onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Refund Method <span class="text-red-500">*</span></label>
+                            <select name="refund_method" required class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2">
+                                @foreach(\App\Models\InvoicePayment::PAYMENT_METHODS as $key => $label)
+                                    <option value="{{ $key }}" {{ $key === 'cheque' ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Reference #</label>
+                            <input type="text" name="reference_number" maxlength="100"
+                                class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2"
+                                placeholder="Cheque #, transaction ID…">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <input type="text" name="notes" maxlength="500"
+                                class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2">
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 flex justify-between">
+                        <button type="button" onclick="document.getElementById('refund-credit-modal-{{ $credit->id }}').classList.add('hidden')"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
+                            Record Refund
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
+    @endcan
 </x-app-layout>

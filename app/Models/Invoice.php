@@ -59,6 +59,20 @@ class Invoice extends Model implements Auditable
         return $this->belongsTo(Sale::class);
     }
 
+    public function billToCustomer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'bill_to_customer_id');
+    }
+
+    /**
+     * Who this invoice actually bills: an explicit pick wins, otherwise falls back to
+     * the sale's automatic default (job site -> parent -> sale's free-text customer).
+     */
+    public function getResolvedBillToCustomerAttribute(): ?Customer
+    {
+        return $this->billToCustomer ?? $this->sale?->bill_to_customer;
+    }
+
     public function paymentTerm(): BelongsTo
     {
         return $this->belongsTo(PaymentTerm::class);
@@ -79,9 +93,17 @@ class Invoice extends Model implements Auditable
         return $this->hasMany(InvoicePayment::class)->orderBy('payment_date');
     }
 
+    public function creditApplications(): HasMany
+    {
+        return $this->hasMany(CustomerCreditApplication::class);
+    }
+
     public function getBalanceDueAttribute(): float
     {
-        return round((float) $this->grand_total - (float) $this->amount_paid, 2);
+        return round(
+            (float) $this->grand_total - (float) $this->amount_paid - (float) $this->creditApplications->sum('amount'),
+            2
+        );
     }
 
     public function getIsOverpaidAttribute(): bool
