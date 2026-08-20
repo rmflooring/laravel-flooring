@@ -289,6 +289,314 @@ class SampleController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // CHECKOUT FORM (desktop — one or many samples in a single batch)
+    // -----------------------------------------------------------------------
+
+    public function checkoutForm(Request $request)
+    {
+        // Optional pre-fill (e.g. the "Check Out" button on a sample's detail page, or
+        // checked boxes on the index) — the page itself always lets you search and add
+        // more, so this is just a convenience starting point, not a requirement.
+        $sampleIds = array_filter(array_map('intval', (array) $request->input('samples', [])));
+
+        $samples = $sampleIds
+            ? Sample::whereIn('id', $sampleIds)
+                ->with('productStyle.productLine')
+                ->orderBy('sample_id')
+                ->get()
+                ->filter(fn (Sample $sample) => $sample->available_qty > 0)
+                ->values()
+            : collect();
+
+        $customers  = Customer::orderBy('company_name')->get(['id', 'company_name', 'name', 'phone', 'email']);
+        $staffUsers = User::whereHas('roles', fn ($q) => $q->whereNotIn('name', ['installer']))
+            ->orderBy('name')->get(['id', 'name']);
+        $defaultDays = (int) Setting::get('sample_checkout_days', 5);
+
+        return view('pages.samples.checkout', compact('samples', 'customers', 'staffUsers', 'defaultDays'));
+    }
+
+    // -----------------------------------------------------------------------
+    // CHECKOUT SAMPLE SEARCH (AJAX — search-and-add on the checkout page)
+    // -----------------------------------------------------------------------
+
+    public function searchAvailable(Request $request)
+    {
+        $search = $request->input('q', '');
+
+        $samples = Sample::with('productStyle.productLine')
+            ->where('status', '<>', 'discontinued')
+            ->where(function ($q) use ($search) {
+                $q->where('sample_id', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
+                  ->orWhereHas('productStyle', fn ($s) =>
+                      $s->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('color', 'like', "%{$search}%"))
+                  ->orWhereHas('productStyle.productLine', fn ($pl) =>
+                      $pl->where('name', 'like', "%{$search}%")
+                         ->orWhere('manufacturer', 'like', "%{$search}%"));
+            })
+            ->orderBy('sample_id')
+            ->limit(40)
+            ->get()
+            ->filter(fn (Sample $sample) => $sample->available_qty > 0)
+            ->take(20)
+            ->values();
+
+        return response()->json($samples->map(fn (Sample $s) => [
+            'id'            => $s->id,
+            'sample_id'     => $s->sample_id,
+            'style_name'    => $s->productStyle?->name,
+            'manufacturer'  => $s->productStyle?->productLine?->manufacturer,
+            'location'      => $s->location,
+            'available_qty' => $s->available_qty,
+        ]));
+    }
+
+    // -----------------------------------------------------------------------
+    // CHECKOUT STORE
+    // -----------------------------------------------------------------------
+
+    public function storeCheckout(Request $request)
+    {
+        $validated = $request->validate([
+            'checkout_type'   => ['required', 'in:customer,staff'],
+            'sample_ids'      => ['required', 'array', 'min:1'],
+            'sample_ids.*'    => ['integer', 'exists:samples,id'],
+            'qty'             => ['required', 'array'],
+            'qty.*'           => ['integer', 'min:1'],
+            'due_back_at'     => ['nullable', 'date', 'after_or_equal:today'],
+            'destination'     => ['nullable', 'string', 'max:255'],
+
+            // Customer fields
+            'customer_id'     => ['nullable', 'exists:customers,id'],
+            'customer_name'   => ['nullable', 'string', 'max:255'],
+            'customer_phone'  => ['nullable', 'string', 'max:50'],
+            'customer_email'  => ['nullable', 'email', 'max:255'],
+
+            // Staff fields
+            'user_id'         => ['nullable', 'exists:users,id'],
+        ]);
+
+        if ($validated['checkout_type'] === 'customer'
+            && empty($validated['customer_id'])
+            && empty($validated['customer_name'])) {
+            return back()->withErrors(['customer_name' => 'Please select a customer or enter a name.'])->withInput();
+        }
+
+        if (! empty($validated['customer_id'])) {
+            $customer = Customer::find($validated['customer_id']);
+            $validated['customer_name']  = $validated['customer_name']  ?: ($customer->company_name ?: $customer->name);
+            $validated['customer_phone'] = $validated['customer_phone'] ?: $customer->phone;
+            $validated['customer_email'] = $validated['customer_email'] ?: $customer->email;
+        }
+
+        $samples = Sample::whereIn('id', $validated['sample_ids'])->get()->keyBy('id');
+
+        // Confirm every requested quantity is still available before committing anything —
+        // availability may have changed since the form was loaded.
+        foreach ($validated['sample_ids'] as $sampleId) {
+            $sample = $samples->get($sampleId);
+            $qty    = (int) ($validated['qty'][$sampleId] ?? 0);
+
+            if (! $sample || $qty < 1) {
+                return back()->withErrors(['qty' => 'Invalid quantity submitted.'])->withInput();
+            }
+
+            if ($qty > $sample->available_qty) {
+                return back()
+                    ->withErrors(['qty' => "Only {$sample->available_qty} of {$sample->sample_id} available — requested {$qty}."])
+                    ->withInput();
+            }
+        }
+
+        $batchId        = (string) \Illuminate\Support\Str::uuid();
+        $checkoutNumber = SampleCheckout::generateCheckoutNumber();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $samples, $batchId, $checkoutNumber) {
+            foreach ($validated['sample_ids'] as $sampleId) {
+                $sample = $samples->get($sampleId);
+                $qty    = (int) $validated['qty'][$sampleId];
+
+                SampleCheckout::create([
+                    'sample_id'         => $sample->id,
+                    'checkout_batch_id' => $batchId,
+                    'checkout_number'   => $checkoutNumber,
+                    'checkout_type'     => $validated['checkout_type'],
+                    'qty_checked_out'   => $qty,
+                    'due_back_at'       => $validated['due_back_at'] ?? null,
+                    'destination'       => $validated['destination'] ?? null,
+                    'customer_id'       => $validated['customer_id'] ?? null,
+                    'customer_name'     => $validated['customer_name'] ?? null,
+                    'customer_phone'    => $validated['customer_phone'] ?? null,
+                    'customer_email'    => $validated['customer_email'] ?? null,
+                    'user_id'           => $validated['user_id'] ?? null,
+                ]);
+
+                if ($sample->fresh()->available_qty <= 0) {
+                    $sample->update(['status' => 'checked_out']);
+                }
+            }
+        });
+
+        $count   = count($validated['sample_ids']);
+        $borrower = $validated['checkout_type'] === 'customer'
+            ? ($validated['customer_name'] ?? 'the customer')
+            : (User::find($validated['user_id'])?->name ?? 'staff');
+
+        return redirect()->route('pages.samples.checkouts.show', $checkoutNumber)
+            ->with('success', "{$count} sample" . ($count === 1 ? '' : 's') . " checked out to {$borrower}. Reference # {$checkoutNumber}.");
+    }
+
+    // -----------------------------------------------------------------------
+    // CHECKOUTS — consolidated list (one row per checkout event, not per sample)
+    // -----------------------------------------------------------------------
+
+    public function checkoutsIndex(Request $request)
+    {
+        $search = $request->input('q', '');
+
+        $base = SampleCheckout::whereNotNull('checkout_number')
+            ->when($search, fn ($q) => $q->where(function ($qq) use ($search) {
+                $qq->where('checkout_number', 'like', "%{$search}%")
+                   ->orWhere('customer_name', 'like', "%{$search}%");
+            }));
+
+        $numbers = (clone $base)
+            ->select('checkout_number')
+            ->selectRaw('MAX(checked_out_at) as latest')
+            ->groupBy('checkout_number')
+            ->orderByDesc('latest')
+            ->paginate(25)
+            ->withQueryString();
+
+        $rows = SampleCheckout::whereIn('checkout_number', $numbers->pluck('checkout_number'))
+            ->with(['sample.productStyle.productLine', 'customer', 'user'])
+            ->get()
+            ->groupBy('checkout_number');
+
+        $checkouts = $numbers->getCollection()->map(function ($row) use ($rows) {
+            $items         = $rows->get($row->checkout_number, collect());
+            $first         = $items->first();
+            $total         = $items->count();
+            $returnedCount = $items->filter(fn ($i) => $i->returned_at !== null)->count();
+            $anyOverdue    = $items->contains(fn ($i) => $i->is_overdue);
+
+            $status = $returnedCount === $total
+                ? 'returned'
+                : ($returnedCount > 0 ? 'partial' : ($anyOverdue ? 'overdue' : 'active'));
+
+            return (object) [
+                'checkout_number' => $row->checkout_number,
+                'borrower_name'   => $first?->borrower_name,
+                'checkout_type'   => $first?->checkout_type,
+                'checked_out_at'  => $first?->checked_out_at,
+                'due_back_at'     => $first?->due_back_at,
+                'item_count'      => $total,
+                'returned_count'  => $returnedCount,
+                'status'          => $status,
+            ];
+        });
+
+        $numbers->setCollection($checkouts);
+
+        return view('pages.samples.checkouts.index', ['checkouts' => $numbers, 'search' => $search]);
+    }
+
+    // -----------------------------------------------------------------------
+    // CHECKOUTS — detail page (every sample in one checkout event)
+    // -----------------------------------------------------------------------
+
+    public function checkoutShow(string $checkoutNumber)
+    {
+        $items = SampleCheckout::where('checkout_number', $checkoutNumber)
+            ->with(['sample.productStyle.productLine', 'customer', 'user'])
+            ->orderBy('id')
+            ->get();
+
+        if ($items->isEmpty()) {
+            abort(404);
+        }
+
+        return view('pages.samples.checkouts.show', [
+            'checkoutNumber' => $checkoutNumber,
+            'items'          => $items,
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // CHECKOUTS — return every still-open sample in one checkout event
+    // -----------------------------------------------------------------------
+
+    public function returnAllForCheckout(Request $request, string $checkoutNumber)
+    {
+        $items = SampleCheckout::where('checkout_number', $checkoutNumber)
+            ->whereNull('returned_at')
+            ->with('sample')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return back()->with('error', 'Nothing left to return on this checkout.');
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($items, $request) {
+            foreach ($items as $checkout) {
+                $checkout->update([
+                    'returned_at'  => now(),
+                    'return_notes' => $request->input('return_notes'),
+                ]);
+
+                $sample = $checkout->sample;
+                if ($sample && $sample->status === 'checked_out' && $sample->activeCheckouts()->doesntExist()) {
+                    $sample->update(['status' => 'active']);
+                }
+            }
+        });
+
+        return redirect()->route('pages.samples.checkouts.show', $checkoutNumber)
+            ->with('success', 'All samples in this checkout marked as returned.');
+    }
+
+    // -----------------------------------------------------------------------
+    // CHECKOUTS — printable PDF receipt
+    // -----------------------------------------------------------------------
+
+    public function checkoutReceipt(string $checkoutNumber)
+    {
+        $items = SampleCheckout::where('checkout_number', $checkoutNumber)
+            ->with('sample.productStyle.productLine')
+            ->orderBy('id')
+            ->get();
+
+        if ($items->isEmpty()) {
+            abort(404);
+        }
+
+        $first = $items->first();
+
+        $logoPath    = Setting::get('branding_logo_path');
+        $logoDataUri = null;
+        if ($logoPath && Storage::disk('public')->exists($logoPath)) {
+            $logoData    = Storage::disk('public')->get($logoPath);
+            $logoMime    = Storage::disk('public')->mimeType($logoPath);
+            $logoDataUri = 'data:' . $logoMime . ';base64,' . base64_encode($logoData);
+        }
+
+        $companyName = Setting::get('branding_company_name', 'RM Flooring');
+
+        $pdf = Pdf::loadView('pdf.sample-checkout-receipt', [
+            'checkoutNumber' => $checkoutNumber,
+            'items'          => $items,
+            'first'          => $first,
+            'logoDataUri'    => $logoDataUri,
+            'companyName'    => $companyName,
+        ])->setPaper('letter', 'portrait');
+
+        return $pdf->stream("checkout-{$checkoutNumber}.pdf");
+    }
+
+    // -----------------------------------------------------------------------
     // PRODUCT STYLE SEARCH (AJAX — for create/edit typeahead)
     // -----------------------------------------------------------------------
 

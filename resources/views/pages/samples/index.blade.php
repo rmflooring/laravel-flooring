@@ -25,6 +25,11 @@
             if (this.showPrice) p.append('show_price', '1');
             return '{{ route('pages.samples.batch-label.form') }}?' + p;
         },
+        buildCheckoutUrl() {
+            const p = new URLSearchParams();
+            this.selectedSamples.forEach(id => p.append('samples[]', id));
+            return '{{ route('pages.samples.checkout.form') }}?' + p;
+        },
         clearAll() { this.selectedSamples = []; this.selectedSets = []; }
     }">
         <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -36,6 +41,24 @@
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Showroom sample inventory and checkout tracking.</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
+                    @can('manage sample checkouts')
+                    <a href="{{ route('pages.samples.checkout.form') }}"
+                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-300">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Check Out Samples
+                    </a>
+                    @endcan
+                    @can('view samples')
+                    <a href="{{ route('pages.samples.checkouts.index') }}"
+                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 8.25h16.5"/>
+                        </svg>
+                        View Checkouts
+                    </a>
+                    @endcan
                     @can('view samples')
                     <a href="{{ route('pages.samples.product-line-labels.form') }}"
                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -107,8 +130,8 @@
                         <select name="status"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                             <option value="">All Statuses</option>
-                            @foreach ($statuses as $val)
-                                <option value="{{ $val }}" @selected(($filters['status'] ?? '') === $val)>{{ ucfirst(str_replace('_', ' ', $val)) }}</option>
+                            @foreach ($statuses as $key => $label)
+                                <option value="{{ $key }}" @selected(($filters['status'] ?? '') === $key)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -363,6 +386,17 @@
                         class="px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white rounded-lg hover:bg-gray-700 transition-colors">
                     Clear
                 </button>
+
+                {{-- Check Out (individual samples only — sets have their own checkout) --}}
+                @can('manage sample checkouts')
+                <a x-show="selectedSamples.length > 0" :href="buildCheckoutUrl()"
+                   class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Check Out Selected
+                </a>
+                @endcan
 
                 {{-- Print --}}
                 <a :href="buildUrl()"

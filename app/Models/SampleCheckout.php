@@ -4,10 +4,33 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class SampleCheckout extends Model
 {
     protected $guarded = ['id'];
+
+    /**
+     * Generate the next sequential checkout number (CO-0001). Call once per checkout
+     * event (not per row) and share it across every row created in that event —
+     * mirrors Sample::sample_id / Invoice::invoice_number generation.
+     */
+    public static function generateCheckoutNumber(): string
+    {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $max = DB::table('sample_checkouts')
+                ->selectRaw("MAX(CAST(SUBSTRING(checkout_number, 4) AS UNSIGNED)) as max_num")
+                ->value('max_num');
+
+            $candidate = 'CO-' . str_pad(((int) $max) + 1 + $attempt, 4, '0', STR_PAD_LEFT);
+
+            if (! DB::table('sample_checkouts')->where('checkout_number', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        throw new \RuntimeException('Could not generate a unique checkout number.');
+    }
 
     protected $casts = [
         'checked_out_at'  => 'datetime',

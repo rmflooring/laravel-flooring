@@ -1891,6 +1891,34 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         ->middleware('role_or_permission:admin|create samples')
         ->name('samples.add-from-styles');
 
+    Route::get('samples/checkout', [\App\Http\Controllers\Pages\SampleController::class, 'checkoutForm'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkout.form');
+
+    Route::post('samples/checkout', [\App\Http\Controllers\Pages\SampleController::class, 'storeCheckout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkout.store');
+
+    Route::get('samples/checkout/search', [\App\Http\Controllers\Pages\SampleController::class, 'searchAvailable'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkout.search');
+
+    Route::get('samples/checkouts', [\App\Http\Controllers\Pages\SampleController::class, 'checkoutsIndex'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.checkouts.index');
+
+    Route::get('samples/checkouts/{checkoutNumber}', [\App\Http\Controllers\Pages\SampleController::class, 'checkoutShow'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.checkouts.show');
+
+    Route::get('samples/checkouts/{checkoutNumber}/receipt', [\App\Http\Controllers\Pages\SampleController::class, 'checkoutReceipt'])
+        ->middleware('role_or_permission:admin|view samples')
+        ->name('samples.checkouts.receipt');
+
+    Route::post('samples/checkouts/{checkoutNumber}/return-all', [\App\Http\Controllers\Pages\SampleController::class, 'returnAllForCheckout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkouts.return-all');
+
     // Wildcard {sample} routes after all static routes
     Route::get('samples/{sample}', [\App\Http\Controllers\Pages\SampleController::class, 'show'])
         ->middleware('role_or_permission:admin|view samples')

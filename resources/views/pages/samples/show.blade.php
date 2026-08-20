@@ -217,7 +217,7 @@
 
                     {{-- Active Checkouts --}}
                     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                             <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                                 Active Checkouts
                                 @if ($sample->activeCheckouts->isNotEmpty())
@@ -226,6 +226,14 @@
                                     </span>
                                 @endif
                             </h2>
+                            @can('manage sample checkouts')
+                                @if ($sample->available_qty > 0)
+                                    <a href="{{ route('pages.samples.checkout.form', ['samples' => [$sample->id]]) }}"
+                                       class="text-sm font-medium text-emerald-600 hover:underline dark:text-emerald-400">
+                                        Check Out
+                                    </a>
+                                @endif
+                            @endcan
                         </div>
 
                         @if ($sample->activeCheckouts->isEmpty())
