@@ -31,7 +31,16 @@ class SmsSettingsController extends Controller
             'voipmsApiUsername'   => Setting::get('voipms_api_username', ''),
             'voipmsApiPassword'   => Setting::get('voipms_api_password', ''),
             'voipmsDid'           => Setting::get('voipms_did', ''),
-            'voipmsWebhookUrl'    => route('webhook.voipms.sms', $voipmsWebhookSecret),
+            // VoIP.ms doesn't POST named fields to a callback URL — it does a bare GET
+            // and textually substitutes {TO}/{FROM}/{MESSAGE}/{ID} placeholders into
+            // whatever query string you configure on their end (confirmed via VoIP.ms's
+            // own SMS-MMS wiki doc, 2026-08-21: a callback registered without these
+            // placeholders — as this one originally was — receives no data at all,
+            // which is why a real inbound test text logged an empty from/message).
+            // The query string here must exactly match what VoipMsSmsWebhookController
+            // reads (`to`, `from`, `message`, `id`).
+            'voipmsWebhookUrl'    => route('webhook.voipms.sms', $voipmsWebhookSecret)
+                . '?to={TO}&from={FROM}&message={MESSAGE}&id={ID}',
             // Per-notification toggles
             'notifyWoScheduled'   => Setting::get('sms_notify_wo_scheduled', '0'),
             'notifyWoReminder'    => Setting::get('sms_notify_wo_reminder', '0'),
