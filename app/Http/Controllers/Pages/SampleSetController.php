@@ -256,7 +256,6 @@ class SampleSetController extends Controller
             'customer_name' => ['nullable', 'string', 'max:255'],
             'user_id'       => ['nullable', 'required_if:checkout_type,staff', 'exists:users,id'],
             'due_back_at'   => ['nullable', 'date'],
-            'notes'         => ['nullable', 'string'],
         ]);
 
         SampleCheckout::create([
@@ -267,7 +266,6 @@ class SampleSetController extends Controller
             'customer_name' => $validated['customer_name'] ?? null,
             'user_id'       => $validated['user_id'] ?? null,
             'due_back_at'   => $validated['due_back_at'] ?? null,
-            'notes'         => $validated['notes'] ?? null,
         ]);
 
         $sampleSet->update(['status' => 'checked_out']);

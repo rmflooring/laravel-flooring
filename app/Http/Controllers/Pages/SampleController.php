@@ -294,26 +294,95 @@ class SampleController extends Controller
 
     public function checkoutForm(Request $request)
     {
-        // Optional pre-fill (e.g. the "Check Out" button on a sample's detail page, or
-        // checked boxes on the index) — the page itself always lets you search and add
-        // more, so this is just a convenience starting point, not a requirement.
+        // Optional pre-fill (e.g. the "Check Out" button on a sample's or sample set's
+        // detail page, or checked boxes on the index) — the page itself always lets you
+        // search and add more, so this is just a convenience starting point, not a requirement.
         $sampleIds = array_filter(array_map('intval', (array) $request->input('samples', [])));
+        $setIds    = array_filter(array_map('intval', (array) $request->input('sets', [])));
 
-        $samples = $sampleIds
-            ? Sample::whereIn('id', $sampleIds)
-                ->with('productStyle.productLine')
-                ->orderBy('sample_id')
-                ->get()
-                ->filter(fn (Sample $sample) => $sample->available_qty > 0)
-                ->values()
-            : collect();
+        $cartItems = collect();
 
-        $customers  = Customer::orderBy('company_name')->get(['id', 'company_name', 'name', 'phone', 'email']);
+        if ($sampleIds) {
+            $cartItems = $cartItems->concat(
+                Sample::whereIn('id', $sampleIds)
+                    ->with('productStyle.productLine')
+                    ->orderBy('sample_id')
+                    ->get()
+                    ->filter(fn (Sample $sample) => $sample->available_qty > 0)
+                    ->map(fn (Sample $s) => [
+                        'cart_key'      => 'sample-' . $s->id,
+                        'type'          => 'sample',
+                        'id'            => $s->id,
+                        'display_id'    => $s->sample_id,
+                        'style_name'    => $s->productStyle?->name,
+                        'manufacturer'  => $s->productStyle?->productLine?->manufacturer,
+                        'location'      => $s->location,
+                        'available_qty' => $s->available_qty,
+                    ])
+            );
+        }
+
+        if ($setIds) {
+            $cartItems = $cartItems->concat(
+                SampleSet::whereIn('id', $setIds)
+                    ->with('productLine')
+                    ->where('status', 'active')
+                    ->orderBy('set_id')
+                    ->get()
+                    ->map(fn (SampleSet $s) => [
+                        'cart_key'      => 'set-' . $s->id,
+                        'type'          => 'set',
+                        'id'            => $s->id,
+                        'display_id'    => $s->set_id,
+                        'style_name'    => $s->name,
+                        'manufacturer'  => $s->productLine?->manufacturer,
+                        'location'      => $s->location,
+                        'available_qty' => 1,
+                    ])
+            );
+        }
+
         $staffUsers = User::whereHas('roles', fn ($q) => $q->whereNotIn('name', ['installer']))
             ->orderBy('name')->get(['id', 'name']);
         $defaultDays = (int) Setting::get('sample_checkout_days', 5);
 
-        return view('pages.samples.checkout', compact('samples', 'customers', 'staffUsers', 'defaultDays'));
+        return view('pages.samples.checkout', [
+            'cartItems'   => $cartItems->values(),
+            'staffUsers'  => $staffUsers,
+            'defaultDays' => $defaultDays,
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // CHECKOUT CUSTOMER SEARCH (AJAX — typeahead on the checkout page)
+    // -----------------------------------------------------------------------
+
+    public function searchCheckoutCustomers(Request $request)
+    {
+        $q = $request->input('q', '');
+
+        $customers = Customer::where(function ($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                      ->orWhere('company_name', 'like', "%{$q}%")
+                      ->orWhere('phone', 'like', "%{$q}%")
+                      ->orWhere('mobile', 'like', "%{$q}%");
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'company_name', 'phone', 'mobile', 'email']);
+
+        return response()->json($customers->map(function (Customer $c) {
+            $label = $c->company_name && $c->name && $c->name !== $c->company_name
+                ? "{$c->company_name} ({$c->name})"
+                : ($c->company_name ?: $c->name);
+
+            return [
+                'id'    => $c->id,
+                'label' => $label,
+                'phone' => $c->mobile ?: $c->phone,
+                'email' => $c->email,
+            ];
+        }));
     }
 
     // -----------------------------------------------------------------------
@@ -344,14 +413,46 @@ class SampleController extends Controller
             ->take(20)
             ->values();
 
-        return response()->json($samples->map(fn (Sample $s) => [
+        // Sample sets are checked out as one indivisible unit (a curated template of
+        // styles, not physical inventory), so they show up alongside individual samples
+        // in the same search-and-add cart, tagged by `type` so the UI can treat them
+        // differently (fixed qty of 1, no per-unit availability count).
+        $sets = SampleSet::with('productLine')
+            ->where('status', 'active')
+            ->where(function ($q) use ($search) {
+                $q->where('set_id', 'like', "%{$search}%")
+                  ->orWhere('name', 'like', "%{$search}%")
+                  ->orWhereHas('productLine', fn ($pl) =>
+                      $pl->where('name', 'like', "%{$search}%")
+                         ->orWhere('manufacturer', 'like', "%{$search}%"));
+            })
+            ->orderBy('set_id')
+            ->limit(10)
+            ->get();
+
+        $sampleResults = $samples->map(fn (Sample $s) => [
+            'cart_key'      => 'sample-' . $s->id,
+            'type'          => 'sample',
             'id'            => $s->id,
-            'sample_id'     => $s->sample_id,
+            'display_id'    => $s->sample_id,
             'style_name'    => $s->productStyle?->name,
             'manufacturer'  => $s->productStyle?->productLine?->manufacturer,
             'location'      => $s->location,
             'available_qty' => $s->available_qty,
-        ]));
+        ]);
+
+        $setResults = $sets->map(fn (SampleSet $s) => [
+            'cart_key'      => 'set-' . $s->id,
+            'type'          => 'set',
+            'id'            => $s->id,
+            'display_id'    => $s->set_id,
+            'style_name'    => $s->name,
+            'manufacturer'  => $s->productLine?->manufacturer,
+            'location'      => $s->location,
+            'available_qty' => 1,
+        ]);
+
+        return response()->json($sampleResults->concat($setResults)->values());
     }
 
     // -----------------------------------------------------------------------
@@ -362,10 +463,12 @@ class SampleController extends Controller
     {
         $validated = $request->validate([
             'checkout_type'   => ['required', 'in:customer,staff'],
-            'sample_ids'      => ['required', 'array', 'min:1'],
+            'sample_ids'      => ['nullable', 'array'],
             'sample_ids.*'    => ['integer', 'exists:samples,id'],
-            'qty'             => ['required', 'array'],
+            'qty'             => ['nullable', 'array'],
             'qty.*'           => ['integer', 'min:1'],
+            'set_ids'         => ['nullable', 'array'],
+            'set_ids.*'       => ['integer', 'exists:sample_sets,id'],
             'due_back_at'     => ['nullable', 'date', 'after_or_equal:today'],
             'destination'     => ['nullable', 'string', 'max:255'],
 
@@ -379,6 +482,13 @@ class SampleController extends Controller
             'user_id'         => ['nullable', 'exists:users,id'],
         ]);
 
+        $sampleIds = $validated['sample_ids'] ?? [];
+        $setIds    = $validated['set_ids'] ?? [];
+
+        if (empty($sampleIds) && empty($setIds)) {
+            return back()->withErrors(['sample_ids' => 'Add at least one sample or set.'])->withInput();
+        }
+
         if ($validated['checkout_type'] === 'customer'
             && empty($validated['customer_id'])
             && empty($validated['customer_name'])) {
@@ -387,16 +497,17 @@ class SampleController extends Controller
 
         if (! empty($validated['customer_id'])) {
             $customer = Customer::find($validated['customer_id']);
-            $validated['customer_name']  = $validated['customer_name']  ?: ($customer->company_name ?: $customer->name);
-            $validated['customer_phone'] = $validated['customer_phone'] ?: $customer->phone;
-            $validated['customer_email'] = $validated['customer_email'] ?: $customer->email;
+            $validated['customer_name']  = ($validated['customer_name']  ?? null) ?: ($customer->company_name ?: $customer->name);
+            $validated['customer_phone'] = ($validated['customer_phone'] ?? null) ?: $customer->phone;
+            $validated['customer_email'] = ($validated['customer_email'] ?? null) ?: $customer->email;
         }
 
-        $samples = Sample::whereIn('id', $validated['sample_ids'])->get()->keyBy('id');
+        $samples = Sample::whereIn('id', $sampleIds)->get()->keyBy('id');
+        $sets    = SampleSet::whereIn('id', $setIds)->get()->keyBy('id');
 
-        // Confirm every requested quantity is still available before committing anything —
-        // availability may have changed since the form was loaded.
-        foreach ($validated['sample_ids'] as $sampleId) {
+        // Confirm every requested quantity/availability is still good before committing
+        // anything — it may have changed since the form was loaded.
+        foreach ($sampleIds as $sampleId) {
             $sample = $samples->get($sampleId);
             $qty    = (int) ($validated['qty'][$sampleId] ?? 0);
 
@@ -411,11 +522,21 @@ class SampleController extends Controller
             }
         }
 
+        foreach ($setIds as $setId) {
+            $set = $sets->get($setId);
+
+            if (! $set || $set->status !== 'active') {
+                return back()
+                    ->withErrors(['set_ids' => ($set ? $set->set_id : 'A selected set') . ' is no longer available.'])
+                    ->withInput();
+            }
+        }
+
         $batchId        = (string) \Illuminate\Support\Str::uuid();
         $checkoutNumber = SampleCheckout::generateCheckoutNumber();
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $samples, $batchId, $checkoutNumber) {
-            foreach ($validated['sample_ids'] as $sampleId) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $samples, $sets, $sampleIds, $setIds, $batchId, $checkoutNumber) {
+            foreach ($sampleIds as $sampleId) {
                 $sample = $samples->get($sampleId);
                 $qty    = (int) $validated['qty'][$sampleId];
 
@@ -438,15 +559,35 @@ class SampleController extends Controller
                     $sample->update(['status' => 'checked_out']);
                 }
             }
+
+            foreach ($setIds as $setId) {
+                $set = $sets->get($setId);
+
+                SampleCheckout::create([
+                    'sample_set_id'     => $set->id,
+                    'checkout_batch_id' => $batchId,
+                    'checkout_number'   => $checkoutNumber,
+                    'checkout_type'     => $validated['checkout_type'],
+                    'due_back_at'       => $validated['due_back_at'] ?? null,
+                    'destination'       => $validated['destination'] ?? null,
+                    'customer_id'       => $validated['customer_id'] ?? null,
+                    'customer_name'     => $validated['customer_name'] ?? null,
+                    'customer_phone'    => $validated['customer_phone'] ?? null,
+                    'customer_email'    => $validated['customer_email'] ?? null,
+                    'user_id'           => $validated['user_id'] ?? null,
+                ]);
+
+                $set->update(['status' => 'checked_out']);
+            }
         });
 
-        $count   = count($validated['sample_ids']);
+        $count   = count($sampleIds) + count($setIds);
         $borrower = $validated['checkout_type'] === 'customer'
             ? ($validated['customer_name'] ?? 'the customer')
             : (User::find($validated['user_id'])?->name ?? 'staff');
 
         return redirect()->route('pages.samples.checkouts.show', $checkoutNumber)
-            ->with('success', "{$count} sample" . ($count === 1 ? '' : 's') . " checked out to {$borrower}. Reference # {$checkoutNumber}.");
+            ->with('success', "{$count} item" . ($count === 1 ? '' : 's') . " checked out to {$borrower}. Reference # {$checkoutNumber}.");
     }
 
     // -----------------------------------------------------------------------
@@ -472,7 +613,7 @@ class SampleController extends Controller
             ->withQueryString();
 
         $rows = SampleCheckout::whereIn('checkout_number', $numbers->pluck('checkout_number'))
-            ->with(['sample.productStyle.productLine', 'customer', 'user'])
+            ->with(['sample.productStyle.productLine', 'sampleSet.productLine', 'customer', 'user'])
             ->get()
             ->groupBy('checkout_number');
 
@@ -511,7 +652,7 @@ class SampleController extends Controller
     public function checkoutShow(string $checkoutNumber)
     {
         $items = SampleCheckout::where('checkout_number', $checkoutNumber)
-            ->with(['sample.productStyle.productLine', 'customer', 'user'])
+            ->with(['sample.productStyle.productLine', 'sampleSet.productLine', 'customer', 'user'])
             ->orderBy('id')
             ->get();
 
@@ -533,7 +674,7 @@ class SampleController extends Controller
     {
         $items = SampleCheckout::where('checkout_number', $checkoutNumber)
             ->whereNull('returned_at')
-            ->with('sample')
+            ->with(['sample', 'sampleSet'])
             ->get();
 
         if ($items->isEmpty()) {
@@ -551,11 +692,16 @@ class SampleController extends Controller
                 if ($sample && $sample->status === 'checked_out' && $sample->activeCheckouts()->doesntExist()) {
                     $sample->update(['status' => 'active']);
                 }
+
+                $set = $checkout->sampleSet;
+                if ($set && $set->status === 'checked_out' && $set->activeCheckout()->doesntExist()) {
+                    $set->update(['status' => 'active']);
+                }
             }
         });
 
         return redirect()->route('pages.samples.checkouts.show', $checkoutNumber)
-            ->with('success', 'All samples in this checkout marked as returned.');
+            ->with('success', 'Everything in this checkout marked as returned.');
     }
 
     // -----------------------------------------------------------------------
@@ -565,7 +711,7 @@ class SampleController extends Controller
     public function checkoutReceipt(string $checkoutNumber)
     {
         $items = SampleCheckout::where('checkout_number', $checkoutNumber)
-            ->with('sample.productStyle.productLine')
+            ->with(['sample.productStyle.productLine', 'sampleSet.productLine'])
             ->orderBy('id')
             ->get();
 

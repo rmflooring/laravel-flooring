@@ -1910,6 +1910,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         ->middleware('role_or_permission:admin|manage sample checkouts')
         ->name('samples.checkout.search');
 
+    Route::get('samples/checkout/customers/search', [\App\Http\Controllers\Pages\SampleController::class, 'searchCheckoutCustomers'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkout.customers.search');
+
     Route::get('samples/checkouts', [\App\Http\Controllers\Pages\SampleController::class, 'checkoutsIndex'])
         ->middleware('role_or_permission:admin|view samples')
         ->name('samples.checkouts.index');

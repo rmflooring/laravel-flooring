@@ -78,7 +78,7 @@
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                        Samples
+                        Items
                         <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {{ $items->count() }}
                         </span>
@@ -108,19 +108,26 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach ($items as $item)
-                            @php $style = $item->sample?->productStyle; @endphp
+                            @php
+                                $style        = $item->sample?->productStyle;
+                                $manufacturer = $item->sampleSet ? $item->sampleSet->productLine?->manufacturer : $style?->productLine?->manufacturer;
+                                $styleName    = $item->sampleSet ? $item->sampleSet->name : $style?->name;
+                            @endphp
                             <tr class="{{ $item->is_overdue ? 'bg-red-50 dark:bg-red-900/10' : '' }}">
                                 <td class="px-6 py-3 font-medium text-gray-900 dark:text-white">
                                     @if ($item->sample)
                                         <a href="{{ route('pages.samples.show', $item->sample) }}" class="hover:underline">{{ $item->sample->sample_id }}</a>
+                                    @elseif ($item->sampleSet)
+                                        <a href="{{ route('pages.sample-sets.show', $item->sampleSet) }}" class="hover:underline">{{ $item->sampleSet->set_id }}</a>
+                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">SET</span>
                                     @else
                                         —
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 text-gray-600 dark:text-gray-400">
-                                    {{ $style?->productLine?->manufacturer }} {{ $style?->name }}
+                                    {{ $manufacturer }} {{ $styleName }}
                                 </td>
-                                <td class="px-6 py-3 text-right">{{ $item->qty_checked_out }}</td>
+                                <td class="px-6 py-3 text-right">{{ $item->sampleSet ? '—' : $item->qty_checked_out }}</td>
                                 <td class="px-6 py-3">
                                     @if ($item->returned_at)
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
@@ -141,6 +148,14 @@
                                         @if (! $item->returned_at && $item->sample)
                                             <form method="POST" action="{{ route('pages.samples.checkouts.return', [$item->sample, $item]) }}"
                                                   onsubmit="return confirm('Mark this sample as returned?')">
+                                                @csrf
+                                                <button type="submit" class="text-xs px-3 py-1.5 font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 border border-green-200">
+                                                    Mark Returned
+                                                </button>
+                                            </form>
+                                        @elseif (! $item->returned_at && $item->sampleSet)
+                                            <form method="POST" action="{{ route('pages.sample-sets.checkouts.return', [$item->sampleSet, $item]) }}"
+                                                  onsubmit="return confirm('Mark this set as returned?')">
                                                 @csrf
                                                 <button type="submit" class="text-xs px-3 py-1.5 font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 border border-green-200">
                                                     Mark Returned

@@ -118,6 +118,9 @@ class SampleController extends Controller
             'user_id'        => ['nullable', 'exists:users,id'],
             'notes'          => ['nullable', 'string', 'max:255'],
         ]);
+        // The form's "Destination / Notes" field posts as `notes`, but sample_checkouts
+        // has no `notes` column — it uses `destination` (same field the desktop checkout
+        // page writes to), so map it there instead of dropping it.
 
         if ($validated['checkout_type'] === 'customer'
             && empty($validated['customer_id'])
@@ -141,7 +144,7 @@ class SampleController extends Controller
             'customer_phone' => $validated['customer_phone'] ?? null,
             'customer_email' => $validated['customer_email'] ?? null,
             'user_id'        => $validated['user_id'] ?? null,
-            'notes'          => $validated['notes'] ?? null,
+            'destination'    => $validated['notes'] ?? null,
             'due_back_at'    => $validated['due_back_at'] ?? null,
         ]);
 

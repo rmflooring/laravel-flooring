@@ -87,11 +87,15 @@
         </thead>
         <tbody>
             @foreach ($items as $item)
-                @php $style = $item->sample?->productStyle; @endphp
+                @php
+                    $style        = $item->sample?->productStyle;
+                    $manufacturer = $item->sampleSet ? $item->sampleSet->productLine?->manufacturer : $style?->productLine?->manufacturer;
+                    $styleName    = $item->sampleSet ? $item->sampleSet->name : $style?->name;
+                @endphp
                 <tr>
-                    <td>{{ $item->sample?->sample_id ?? '—' }}</td>
-                    <td>{{ $style?->productLine?->manufacturer }} {{ $style?->name }}</td>
-                    <td class="right">{{ $item->qty_checked_out }}</td>
+                    <td>{{ $item->sample?->sample_id ?? $item->sampleSet?->set_id ?? '—' }}{{ $item->sampleSet ? ' (Set)' : '' }}</td>
+                    <td>{{ $manufacturer }} {{ $styleName }}</td>
+                    <td class="right">{{ $item->sampleSet ? '—' : $item->qty_checked_out }}</td>
                 </tr>
             @endforeach
         </tbody>
