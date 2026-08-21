@@ -9,6 +9,7 @@ use App\Models\OpportunityNote;
 use App\Models\SmsConversation;
 use App\Models\SmsMessage;
 use App\Services\SmsService;
+use App\Services\VoipMsSmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -57,7 +58,11 @@ class SmsPortalController extends Controller
             'body' => 'required|string|max:1600',
         ]);
 
-        $smsService = app(SmsService::class);
+        // Reply through whichever channel this conversation is on, so it goes out as
+        // the same number the customer texted in on.
+        $smsService = $conversation->channel === 'voipms'
+            ? app(VoipMsSmsService::class)
+            : app(SmsService::class);
 
         $sent = $smsService->send(
             $conversation->phone,
@@ -143,9 +148,14 @@ class SmsPortalController extends Controller
             'customer_id' => 'nullable|exists:customers,id',
         ]);
 
-        $smsService = app(SmsService::class);
         $customer   = $validated['customer_id'] ? Customer::find($validated['customer_id']) : null;
-        $normalized = $smsService->normalizePhone($validated['phone']);
+        $normalized = app(SmsService::class)->normalizePhone($validated['phone']);
+
+        // Keep an ongoing thread on whichever channel it's already using; a brand-new
+        // conversation defaults to the shop's main line (VoIP.ms).
+        $existing = SmsConversation::where('phone', $normalized)->first();
+        $channel  = $existing?->channel ?? 'voipms';
+        $smsService = $channel === 'voipms' ? app(VoipMsSmsService::class) : app(SmsService::class);
 
         $sent = $smsService->send($normalized, $validated['body'], 'portal_outbound', $customer);
 
@@ -155,7 +165,7 @@ class SmsPortalController extends Controller
 
         $conversation = SmsConversation::firstOrCreate(
             ['phone' => $normalized],
-            ['status' => 'active', 'customer_id' => $customer?->id]
+            ['status' => 'active', 'channel' => $channel, 'customer_id' => $customer?->id]
         );
 
         if ($customer && ! $conversation->customer_id) {

@@ -11,6 +11,7 @@ class SmsConversation extends Model
 {
     protected $fillable = [
         'phone',
+        'channel',
         'customer_id',
         'opportunity_id',
         'last_message_at',

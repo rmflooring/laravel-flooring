@@ -77,6 +77,11 @@ Route::post('/webhook/quickbooks', [\App\Http\Controllers\QuickBooksWebhookContr
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->name('webhook.quickbooks');
 
+// VoIP.ms inbound SMS webhook (shop's main line) — no auth; GET request, so no CSRF
+// exemption needed. Authenticity verified via the secret path segment instead.
+Route::get('/webhook/voipms/sms/{secret}', [\App\Http\Controllers\VoipMsSmsWebhookController::class, 'handle'])
+    ->name('webhook.voipms.sms');
+
 // Public legal pages (no auth required — needed for QBO integration approval)
 Route::get('/legal/eula', fn () => view('legal.eula'))->name('legal.eula');
 Route::get('/legal/privacy', fn () => view('legal.privacy'))->name('legal.privacy');
@@ -222,6 +227,8 @@ Route::prefix('admin')
                 ->name('settings.sms.update');
             Route::post('/settings/sms/test', [\App\Http\Controllers\Admin\SmsSettingsController::class, 'testSend'])
                 ->name('settings.sms.test');
+            Route::post('/settings/sms/test-voipms', [\App\Http\Controllers\Admin\SmsSettingsController::class, 'testSendVoipMs'])
+                ->name('settings.sms.test-voipms');
 
             Route::get('/settings/storage', [\App\Http\Controllers\Admin\StorageSettingsController::class, 'index'])
                 ->name('settings.storage');

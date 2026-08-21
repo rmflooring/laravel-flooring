@@ -109,6 +109,59 @@
                             </div>
                         </div>
 
+                        {{-- VoIP.ms (Shop Main Line — SMS Portal only) --}}
+                        <div class="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-5">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h2 class="text-base font-semibold text-gray-900 dark:text-white">VoIP.ms — Shop Main Line</h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Powers the two-way SMS Portal only, sent/received as your main line. Reminders above still use Twilio.
+                                    </p>
+                                </div>
+                                <label class="inline-flex items-center cursor-pointer gap-2">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Enabled</span>
+                                    <input type="hidden" name="voipms_enabled" value="0">
+                                    <input type="checkbox" name="voipms_enabled" value="1" class="sr-only peer"
+                                        {{ $voipmsEnabled ? 'checked' : '' }}>
+                                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:bg-gray-700 dark:peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">API Username</label>
+                                    <input type="text" name="voipms_api_username" value="{{ $voipmsApiUsername }}"
+                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        placeholder="you@example.com">
+                                    @error('voipms_api_username') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">API Password</label>
+                                    <input type="password" name="voipms_api_password" value="{{ $voipmsApiPassword }}"
+                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        placeholder="Your VoIP.ms API password"
+                                        autocomplete="new-password">
+                                    <p class="mt-1 text-xs text-gray-500">From VoIP.ms → Main Menu → API. Not your portal login password.</p>
+                                    @error('voipms_api_password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">DID (Main Line)</label>
+                                    <input type="text" name="voipms_did" value="{{ $voipmsDid }}"
+                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        placeholder="6042994447">
+                                    @error('voipms_did') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Inbound Webhook URL</label>
+                                    <input type="text" readonly value="{{ $voipmsWebhookUrl }}" onclick="this.select()"
+                                        class="bg-gray-100 border border-gray-300 text-gray-600 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 font-mono text-xs">
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        Paste into VoIP.ms → your DID → SMS/MMS &mdash; <strong>URL Callback (GET Request)</strong> field, not the "Webhook URL" JSON field.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- Notification Toggles --}}
                         <div class="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-6">
                             <h2 class="text-base font-semibold text-gray-900 dark:text-white">Notification Settings</h2>
@@ -261,6 +314,25 @@
                     <div class="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Send Test SMS</h2>
                         <form method="POST" action="{{ route('admin.settings.sms.test') }}" class="flex items-end gap-3">
+                            @csrf
+                            <div class="flex-1">
+                                <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Mobile Number</label>
+                                <input type="text" name="test_number"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    placeholder="+16135551234">
+                                @error('test_number') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            <button type="submit"
+                                class="px-5 py-2.5 text-sm font-medium text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 rounded-lg dark:bg-gray-600 dark:hover:bg-gray-700">
+                                Send Test
+                            </button>
+                        </form>
+                    </div>
+
+                    {{-- Test Send — VoIP.ms --}}
+                    <div class="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Send Test SMS via VoIP.ms</h2>
+                        <form method="POST" action="{{ route('admin.settings.sms.test-voipms') }}" class="flex items-end gap-3">
                             @csrf
                             <div class="flex-1">
                                 <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Mobile Number</label>

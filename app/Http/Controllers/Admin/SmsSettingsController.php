@@ -12,12 +12,26 @@ class SmsSettingsController extends Controller
 {
     public function index()
     {
+        // Auto-generate the webhook secret on first visit so there's always a ready
+        // callback URL to copy into VoIP.ms's dashboard.
+        $voipmsWebhookSecret = Setting::get('voipms_webhook_secret', '');
+        if (! $voipmsWebhookSecret) {
+            $voipmsWebhookSecret = bin2hex(random_bytes(20));
+            Setting::set('voipms_webhook_secret', $voipmsWebhookSecret);
+        }
+
         return view('admin.settings.sms', [
             'smsEnabled'          => Setting::get('sms_enabled', '0'),
             'smsAccountSid'       => Setting::get('sms_account_sid', ''),
             'smsAuthToken'        => Setting::get('sms_auth_token', ''),
             'smsFromNumber'       => Setting::get('sms_from_number', ''),
             'smsReminderTime'     => Setting::get('sms_reminder_time', '16:00'),
+            // VoIP.ms (shop main line, SMS portal only)
+            'voipmsEnabled'       => Setting::get('voipms_enabled', '0'),
+            'voipmsApiUsername'   => Setting::get('voipms_api_username', ''),
+            'voipmsApiPassword'   => Setting::get('voipms_api_password', ''),
+            'voipmsDid'           => Setting::get('voipms_did', ''),
+            'voipmsWebhookUrl'    => route('webhook.voipms.sms', $voipmsWebhookSecret),
             // Per-notification toggles
             'notifyWoScheduled'   => Setting::get('sms_notify_wo_scheduled', '0'),
             'notifyWoReminder'    => Setting::get('sms_notify_wo_reminder', '0'),
@@ -43,10 +57,13 @@ class SmsSettingsController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'sms_account_sid'   => 'nullable|string|max:100',
-            'sms_auth_token'    => 'nullable|string|max:100',
-            'sms_from_number'   => 'nullable|string|max:30',
-            'sms_reminder_time' => 'nullable|string|max:5',
+            'sms_account_sid'     => 'nullable|string|max:100',
+            'sms_auth_token'      => 'nullable|string|max:100',
+            'sms_from_number'     => 'nullable|string|max:30',
+            'sms_reminder_time'   => 'nullable|string|max:5',
+            'voipms_api_username' => 'nullable|string|max:150',
+            'voipms_api_password' => 'nullable|string|max:150',
+            'voipms_did'          => 'nullable|string|max:30',
         ]);
 
         Setting::set('sms_enabled',        $request->input('sms_enabled') === '1' ? '1' : '0');
@@ -54,6 +71,12 @@ class SmsSettingsController extends Controller
         Setting::set('sms_auth_token',     $request->input('sms_auth_token', ''));
         Setting::set('sms_from_number',    $request->input('sms_from_number', ''));
         Setting::set('sms_reminder_time',  $request->input('sms_reminder_time', '16:00'));
+
+        // VoIP.ms (shop main line, SMS portal only)
+        Setting::set('voipms_enabled',       $request->input('voipms_enabled') === '1' ? '1' : '0');
+        Setting::set('voipms_api_username',  $request->input('voipms_api_username', ''));
+        Setting::set('voipms_api_password',  $request->input('voipms_api_password', ''));
+        Setting::set('voipms_did',           preg_replace('/\D/', '', (string) $request->input('voipms_did', '')));
 
         // Per-notification toggles
         Setting::set('sms_notify_wo_scheduled', $request->input('sms_notify_wo_scheduled') === '1' ? '1' : '0');
@@ -94,5 +117,25 @@ class SmsSettingsController extends Controller
         }
 
         return back()->with('error', 'Test SMS failed — check your credentials and try again. See the send log for details.');
+    }
+
+    public function testSendVoipMs(Request $request)
+    {
+        $request->validate([
+            'test_number' => 'required|string|max:30',
+        ]);
+
+        $sms  = new \App\Services\VoipMsSmsService();
+        $sent = $sms->send(
+            $request->input('test_number'),
+            'This is a test SMS from Floor Manager (RM Flooring), sent via VoIP.ms.',
+            'test'
+        );
+
+        if ($sent) {
+            return back()->with('success', 'Test SMS sent successfully via VoIP.ms.');
+        }
+
+        return back()->with('error', 'Test SMS failed — check your VoIP.ms credentials and try again. See the send log for details.');
     }
 }
