@@ -15,9 +15,16 @@ class KnowledgeAgentSettingsController extends Controller
     // per-entry via knowledge_entries.visible_to_roles instead. Only the live-data
     // tools (which have no per-record entry to attach a role list to) go through
     // this matrix.
+    //
+    // view_catalog_cost isn't a tool of its own — it's a modifier checked by
+    // search_material_catalog/search_labour_catalog to decide whether cost_price and
+    // margin get added to results a role can already search. Grant it separately from
+    // the base search tools so cost/margin visibility stays an explicit, deliberate
+    // choice per role rather than a side effect of catalog search access.
     private const MATRIX_TOOLS = [
         'search_labour_catalog',
         'search_material_catalog',
+        'view_catalog_cost',
         'get_work_order_status',
         'check_inventory',
         'get_customer_estimate',

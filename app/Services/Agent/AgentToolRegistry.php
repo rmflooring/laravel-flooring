@@ -305,7 +305,10 @@ class AgentToolRegistry
                 'description' => 'Search the labour/installation rate catalog — use this for questions about what '
                     . 'we charge to install or service something (e.g. "what do we charge to install laminate", '
                     . '"hardwood install rate"). Distinct from search_knowledge_base: this is the live labour item '
-                    . 'catalog (per labour type, e.g. Laminate, Hardwood, Carpet, LVP/LVT), not written policy docs.',
+                    . 'catalog (per labour type, e.g. Laminate, Hardwood, Carpet, LVP/LVT), not written policy docs. '
+                    . 'Always includes the sell rate; for users whose role is granted cost visibility, results also '
+                    . 'include cost_price and margin_pct — only mention cost/margin if those fields are present in '
+                    . 'the result, never infer or estimate them.',
                 'input_schema' => [
                     'type' => 'object',
                     'properties' => [
@@ -323,8 +326,10 @@ class AgentToolRegistry
                 'name' => 'search_material_catalog',
                 'description' => 'Search the material/product catalog for sell prices — use this for questions about '
                     . 'what a specific product or product line costs the customer (e.g. "price on the Oak Ridge '
-                    . 'laminate", "how much is LVP X"). Sell price only, no cost/margin. Distinct from '
-                    . 'search_knowledge_base: this is the live product catalog, not written policy docs.',
+                    . 'laminate", "how much is LVP X"). Distinct from search_knowledge_base: this is the live '
+                    . 'product catalog, not written policy docs. Always includes the sell price; for users whose '
+                    . 'role is granted cost visibility, results also include cost_price and margin_pct — only '
+                    . 'mention cost/margin if those fields are present in the result, never infer or estimate them.',
                 'input_schema' => [
                     'type' => 'object',
                     'properties' => [

@@ -8,7 +8,9 @@ use App\Services\Agent\Concerns\TokenizesSearchQuery;
 
 /**
  * Executes the `search_labour_catalog` chat tool. Read-only — installation/labour
- * rates staff would otherwise have to look up manually under Labour Items.
+ * rates staff would otherwise have to look up manually under Labour Items. Always
+ * returns the sell rate; cost_price/margin_pct are added only when the user's role is
+ * separately granted the `view_catalog_cost` modifier (see KnowledgeAgentSettingsController).
  */
 class SearchLabourCatalogService
 {
@@ -50,14 +52,34 @@ class SearchLabourCatalogService
             ))
             ->take(self::LIMIT);
 
+        $includeCost = $this->gate->canUseTool($user, 'view_catalog_cost');
+
         return [
             'authorized' => true,
-            'results' => $ranked->map(fn (LabourItem $item) => [
-                'description' => $item->description,
-                'labour_type' => $item->labourType?->name,
-                'sell_price' => (float) $item->sell,
-                'unit' => $item->unitMeasure?->label,
-            ])->values()->all(),
+            'results' => $ranked->map(function (LabourItem $item) use ($includeCost) {
+                $row = [
+                    'description' => $item->description,
+                    'labour_type' => $item->labourType?->name,
+                    'sell_price' => (float) $item->sell,
+                    'unit' => $item->unitMeasure?->label,
+                ];
+
+                if ($includeCost) {
+                    $row['cost_price'] = (float) $item->cost;
+                    $row['margin_pct'] = $this->marginPct((float) $item->sell, (float) $item->cost);
+                }
+
+                return $row;
+            })->values()->all(),
         ];
+    }
+
+    private function marginPct(float $sellPrice, float $costPrice): ?float
+    {
+        if ($sellPrice <= 0) {
+            return null;
+        }
+
+        return round((($sellPrice - $costPrice) / $sellPrice) * 100, 1);
     }
 }

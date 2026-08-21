@@ -7,8 +7,9 @@ use App\Models\User;
 use App\Services\Agent\Concerns\TokenizesSearchQuery;
 
 /**
- * Executes the `search_material_catalog` chat tool. Read-only — sell price only, no
- * cost_price/margin (that stays out of scope for a chat answer regardless of role).
+ * Executes the `search_material_catalog` chat tool. Read-only — always returns sell
+ * price; cost_price/margin_pct are added only when the user's role is separately
+ * granted the `view_catalog_cost` modifier (see KnowledgeAgentSettingsController).
  */
 class SearchMaterialCatalogService
 {
@@ -61,15 +62,35 @@ class SearchMaterialCatalogService
             ])))
             ->take(self::LIMIT);
 
+        $includeCost = $this->gate->canUseTool($user, 'view_catalog_cost');
+
         return [
             'authorized' => true,
-            'results' => $ranked->map(fn (ProductStyle $style) => [
-                'name' => $style->name,
-                'sku' => $style->sku,
-                'product_type' => $style->productLine?->productType?->name,
-                'manufacturer' => $style->productLine?->manufacturer,
-                'sell_price' => (float) $style->sell_price,
-            ])->values()->all(),
+            'results' => $ranked->map(function (ProductStyle $style) use ($includeCost) {
+                $row = [
+                    'name' => $style->name,
+                    'sku' => $style->sku,
+                    'product_type' => $style->productLine?->productType?->name,
+                    'manufacturer' => $style->productLine?->manufacturer,
+                    'sell_price' => (float) $style->sell_price,
+                ];
+
+                if ($includeCost) {
+                    $row['cost_price'] = (float) $style->cost_price;
+                    $row['margin_pct'] = $this->marginPct((float) $style->sell_price, (float) $style->cost_price);
+                }
+
+                return $row;
+            })->values()->all(),
         ];
+    }
+
+    private function marginPct(float $sellPrice, float $costPrice): ?float
+    {
+        if ($sellPrice <= 0) {
+            return null;
+        }
+
+        return round((($sellPrice - $costPrice) / $sellPrice) * 100, 1);
     }
 }
