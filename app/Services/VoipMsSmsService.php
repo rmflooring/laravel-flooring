@@ -48,7 +48,11 @@ class VoipMsSmsService
         $normalized = $this->normalizePhone($to);
 
         try {
-            $response = Http::timeout(15)->get(self::API_URL, [
+            // VoIP.ms's REST API is inherently slow — confirmed real sendSMS/getDIDsInfo
+            // calls routinely take 10-11s to respond (2026-08-21), so 15s left almost no
+            // margin and caused intermittent cURL error 28 timeouts that looked like a
+            // credentials problem but weren't. 30s gives real headroom.
+            $response = Http::timeout(30)->get(self::API_URL, [
                 'api_username' => $username,
                 'api_password' => $password,
                 'method'       => 'sendSMS',
