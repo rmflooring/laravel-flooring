@@ -14,6 +14,7 @@ class OpportunityMediaController extends Controller
     {
         $showArchived = $request->boolean('show_archived');
         $uploadedBy   = $request->input('uploaded_by');
+        $tagId        = $request->input('tag_id');
 
         $mediaQuery = $opportunity->documents()
             ->withTrashed()
@@ -27,6 +28,10 @@ class OpportunityMediaController extends Controller
 
         if ($uploadedBy) {
             $mediaQuery->where('created_by', $uploadedBy);
+        }
+
+        if ($tagId) {
+            $mediaQuery->whereHas('tags', fn ($q) => $q->where('opportunity_document_tags.id', $tagId));
         }
 
         $media = $mediaQuery->paginate(30)->withQueryString();
@@ -59,6 +64,7 @@ class OpportunityMediaController extends Controller
             'uploadedBy'   => $uploadedBy,
             'shares'       => $shares,
             'tags'         => $tags,
+            'tagId'        => $tagId,
         ]);
     }
 }

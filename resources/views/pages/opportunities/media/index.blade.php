@@ -58,6 +58,19 @@
             </select>
             @endif
 
+            @if($tags->isNotEmpty())
+            <select name="tag_id"
+                    onchange="this.form.submit()"
+                    class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All tags</option>
+                @foreach($tags as $tag)
+                    <option value="{{ $tag->id }}" {{ (string)$tagId === (string)$tag->id ? 'selected' : '' }}>
+                        {{ $tag->name }}
+                    </option>
+                @endforeach
+            </select>
+            @endif
+
             <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                 <input type="checkbox"
                        name="show_archived"
