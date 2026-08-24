@@ -137,3 +137,11 @@ Schedule::command('opportunities:advance-overdue-rfm')
     ->timezone('America/Vancouver')
     ->name('opportunities-advance-overdue-rfm')
     ->withoutOverlapping();
+
+// Opportunities: safety net — clear "Requires RFM" on any opportunity that already has one booked
+// (normally cleared the moment the RFM is created; this catches edge cases/legacy data)
+Schedule::command('opportunities:sync-requires-rfm')
+    ->dailyAt('06:05')
+    ->timezone('America/Vancouver')
+    ->name('opportunities-sync-requires-rfm')
+    ->withoutOverlapping();
