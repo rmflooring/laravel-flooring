@@ -402,6 +402,12 @@
                                 </div>
                             </div>
 
+                            {{-- Early payment credits are zero-rated: applied after tax, not folded into the taxable subtotal --}}
+                            <div class="flex justify-between w-72 text-green-700 dark:text-green-400" x-show="grossEarlyPaymentTotal > 0">
+                                <span>Early Payment Credit</span>
+                                <span class="font-medium">−$<span x-text="grossEarlyPaymentTotal.toFixed(2)">0.00</span></span>
+                            </div>
+
                             <div class="flex justify-between w-72 font-bold text-base text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
                                 <span>Total</span>
                                 <span>$<span x-text="grandTotal.toFixed(2)">0.00</span></span>
@@ -604,6 +610,7 @@ function billForm() {
         chargeTotal: 0,
         grossChargesTotal: 0,
         grossCreditsTotal: 0,
+        grossEarlyPaymentTotal: 0,
         gstAmount: 0,
         pstAmount: 0,
         grandTotal: 0,
@@ -684,8 +691,13 @@ function billForm() {
             this.grossChargesTotal = this.chargeRows
                 .filter(c => !creditTypes.has(c.charge_type))
                 .reduce((s, c) => s + (parseFloat(c.unit_cost) || 0), 0);
+            // "Credits" here excludes early payment credits, which are zero-rated
+            // and applied after tax below instead of reducing the taxable base.
             this.grossCreditsTotal = this.chargeRows
-                .filter(c => creditTypes.has(c.charge_type))
+                .filter(c => c.charge_type === 'other_credit')
+                .reduce((s, c) => s + (parseFloat(c.unit_cost) || 0), 0);
+            this.grossEarlyPaymentTotal = this.chargeRows
+                .filter(c => c.charge_type === 'early_payment')
                 .reduce((s, c) => s + (parseFloat(c.unit_cost) || 0), 0);
             this.chargeTotal = this.grossChargesTotal - this.grossCreditsTotal;
             const taxBase = this.subtotal + this.chargeTotal;
@@ -696,7 +708,7 @@ function billForm() {
                 this.gstAmount = Math.round(taxBase * (this.gstRate / 100) * 100) / 100;
                 this.pstAmount = Math.round(taxBase * (this.pstRate / 100) * 100) / 100;
             }
-            this.grandTotal = taxBase + this.gstAmount + this.pstAmount;
+            this.grandTotal = taxBase + this.gstAmount + this.pstAmount - this.grossEarlyPaymentTotal;
         },
 
         updateDueDateFromTerm() {

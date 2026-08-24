@@ -160,7 +160,15 @@ class Bill extends Model
 
     public function recalculateTotals(): void
     {
-        $subtotal = $this->items->sum('line_total');
+        // Early payment credits are zero-rated: they don't reduce the taxable
+        // subtotal, and they're applied to the total after tax, not before.
+        $earlyPaymentCredit = (float) $this->items
+            ->where('charge_type', 'early_payment')
+            ->sum('line_total');
+
+        $subtotal = (float) $this->items
+            ->where('charge_type', '!=', 'early_payment')
+            ->sum('line_total');
 
         if ($this->tax_manual) {
             // Use the already-stored manual amounts (don't recalculate from rates)
@@ -175,7 +183,7 @@ class Bill extends Model
         $this->gst_amount  = $gst;
         $this->pst_amount  = $pst;
         $this->tax_amount  = $gst + $pst;
-        $this->grand_total = $subtotal + $gst + $pst;
+        $this->grand_total = $subtotal + $gst + $pst + $earlyPaymentCredit;
         $this->saveQuietly();
     }
 }

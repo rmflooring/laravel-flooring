@@ -213,6 +213,15 @@
                             <span class="font-medium">${{ number_format($bill->pst_amount, 2) }}</span>
                         </div>
                         @endif
+                        @php
+                            $earlyPaymentCredit = $bill->items->where('charge_type', 'early_payment')->sum('line_total');
+                        @endphp
+                        @if ($earlyPaymentCredit != 0)
+                        <div class="flex justify-between w-56 text-green-700 dark:text-green-400">
+                            <span>Early Payment Credit</span>
+                            <span class="font-medium">−${{ number_format(abs($earlyPaymentCredit), 2) }}</span>
+                        </div>
+                        @endif
                         <div class="flex justify-between w-56 font-bold text-base text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
                             <span>Total</span>
                             <span>${{ number_format($bill->grand_total, 2) }}</span>
