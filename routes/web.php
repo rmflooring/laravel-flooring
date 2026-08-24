@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\Admin\VendorRepController;
 use App\Http\Controllers\Admin\InstallerController;
 use App\Http\Controllers\Admin\OpportunityDocumentLabelController;
+use App\Http\Controllers\Admin\OpportunityDocumentTagController;
 use App\Http\Controllers\Admin\ProjectManagerController;
 use App\Http\Controllers\Admin\LabourTypeController;
 use App\Http\Controllers\Admin\LabourItemController;
@@ -593,6 +594,18 @@ Route::prefix('admin')
                 'edit'    => 'opportunity_document_labels.edit',
                 'update'  => 'opportunity_document_labels.update',
                 'destroy' => 'opportunity_document_labels.destroy',
+            ])
+            ->only(['index', 'store', 'edit', 'update', 'destroy']);
+
+        // Opportunity Document Tags
+        Route::resource('opportunity-document-tags', OpportunityDocumentTagController::class)
+            ->middleware('role_or_permission:admin|manage document tags')
+            ->names([
+                'index'   => 'opportunity_document_tags.index',
+                'store'   => 'opportunity_document_tags.store',
+                'edit'    => 'opportunity_document_tags.edit',
+                'update'  => 'opportunity_document_tags.update',
+                'destroy' => 'opportunity_document_tags.destroy',
             ])
             ->only(['index', 'store', 'edit', 'update', 'destroy']);
 
@@ -1744,6 +1757,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
 			Route::delete('documents/bulk-force', [OpportunityDocumentController::class, 'bulkForceDestroy'])
 				->name('opportunities.documents.bulkForceDestroy')
 				->middleware('role_or_permission:admin');
+
+			Route::post('documents/bulk-tag', [OpportunityDocumentController::class, 'bulkTag'])
+				->name('opportunities.documents.bulkTag')
+				->middleware('role_or_permission:admin|edit documents');
 
 			Route::post('documents/{document}/restore', [OpportunityDocumentController::class, 'restore'])
 				->name('opportunities.documents.restore')

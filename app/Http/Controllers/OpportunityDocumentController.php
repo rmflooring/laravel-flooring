@@ -8,6 +8,7 @@ use App\Models\FlooringSignOff;
 use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Models\OpportunityDocumentLabel;
+use App\Models\OpportunityDocumentTag;
 use App\Models\Sale;
 use App\Services\DocumentStorageService;
 use App\Services\DocumentTemplateService;
@@ -28,11 +29,12 @@ public function index(Opportunity $opportunity, Request $request)
     $type         = $request->get('type', 'documents'); // all | documents | media — defaults to documents
     $labelId      = $request->get('label_id');
     $labelText    = $request->get('label_text');
+    $tagId        = $request->get('tag_id');
     $search       = trim($request->get('search', ''));
     $showArchived = $request->boolean('show_archived');
 
     // Shared base constraints (everything except type filter)
-    $base = function ($q) use ($showArchived, $labelId, $labelText, $search) {
+    $base = function ($q) use ($showArchived, $labelId, $labelText, $tagId, $search) {
         if (!$showArchived) {
             $q->whereNull('deleted_at');
         }
@@ -41,6 +43,9 @@ public function index(Opportunity $opportunity, Request $request)
         }
         if ($labelText) {
             $q->where('label_text', $labelText);
+        }
+        if ($tagId) {
+            $q->whereHas('tags', fn ($q) => $q->where('opportunity_document_tags.id', $tagId));
         }
         if ($search !== '') {
             $q->where(function ($q) use ($search) {
@@ -67,7 +72,7 @@ public function index(Opportunity $opportunity, Request $request)
     // Main query (applies type filter on top of base)
     $documentsQuery = $opportunity->documents()
         ->withTrashed()
-        ->with('label')
+        ->with(['label', 'tags'])
         ->tap($base)
         ->orderByDesc('created_at');
 
@@ -81,6 +86,10 @@ public function index(Opportunity $opportunity, Request $request)
     $documents = $documentsQuery->paginate(25)->withQueryString();
 
     $labels = OpportunityDocumentLabel::where('is_active', true)
+        ->orderBy('name')
+        ->get(['id', 'name']);
+
+    $tags = OpportunityDocumentTag::where('is_active', true)
         ->orderBy('name')
         ->get(['id', 'name']);
 
@@ -103,9 +112,11 @@ public function index(Opportunity $opportunity, Request $request)
         'opportunity'      => $opportunity,
         'documents'        => $documents,
         'labels'           => $labels,
+        'tags'             => $tags,
         'type'             => $type,
         'labelId'          => $labelId,
         'labelText'        => $labelText,
+        'tagId'            => $tagId,
         'search'           => $search,
         'showArchived'     => $showArchived,
         'counts'           => $counts,
@@ -127,6 +138,11 @@ public function index(Opportunity $opportunity, Request $request)
             'descriptions.*' => ['nullable', 'string'],
             'label_id'       => ['nullable', 'integer'],   // existence checked in code below
             'description'    => ['nullable', 'string'],
+            'file_tag_ids'   => ['nullable', 'array'],
+            'file_tag_ids.*' => ['nullable', 'array'],
+            'file_tag_ids.*.*' => ['nullable', 'integer'],
+            'tag_ids'        => ['nullable', 'array'],      // applied to every uploaded file
+            'tag_ids.*'      => ['nullable', 'integer'],
         ]);
 
         try {
@@ -136,6 +152,8 @@ public function index(Opportunity $opportunity, Request $request)
             $descriptions = $request->input('descriptions', []);
             $globalLabel = $request->input('label_id');
             $globalDesc  = $request->input('description');
+            $fileTagIds  = $request->input('file_tag_ids', []);
+            $globalTagIds = array_filter((array) $request->input('tag_ids', []));
 
             $photosLabelId = OpportunityDocumentLabel::where('name', 'Photos')
                 ->where('is_active', true)
@@ -209,7 +227,7 @@ public function index(Opportunity $opportunity, Request $request)
                     }
                 }
 
-                OpportunityDocument::create([
+                $doc = OpportunityDocument::create([
                     'opportunity_id' => $opportunity->id,
                     'disk'           => $disk,
                     'path'           => $path,
@@ -225,6 +243,17 @@ public function index(Opportunity $opportunity, Request $request)
                     'created_by'     => $userId,
                     'updated_by'     => $userId,
                 ]);
+
+                $tagIdsForFile = array_unique(array_merge(
+                    array_map('intval', $fileTagIds[$i] ?? []),
+                    array_map('intval', $globalTagIds)
+                ));
+                if ($tagIdsForFile) {
+                    $validTagIds = OpportunityDocumentTag::whereIn('id', $tagIdsForFile)->pluck('id');
+                    if ($validTagIds->isNotEmpty()) {
+                        $doc->tags()->sync($validTagIds);
+                    }
+                }
             }
 
             $count = count($request->file('files', []));
@@ -262,11 +291,24 @@ public function index(Opportunity $opportunity, Request $request)
             'label_id'          => ['nullable', 'integer', 'exists:opportunity_document_labels,id'],
             'label_text'        => ['nullable', 'string', 'max:255'],
             'category_override' => ['nullable', 'string', 'max:50'],
+            'sync_tags'         => ['nullable', 'boolean'],
+            'tag_ids'           => ['nullable', 'array'],
+            'tag_ids.*'         => ['integer', 'exists:opportunity_document_tags,id'],
         ]);
+
+        $syncTags = (bool) ($data['sync_tags'] ?? false);
+        $tagIds   = $data['tag_ids'] ?? [];
+        unset($data['sync_tags'], $data['tag_ids']);
 
         $data['updated_by'] = Auth::id();
 
         $document->update($data);
+
+        // "sync_tags" is only present on the dedicated tag-picker form, so a plain
+        // description/label update never accidentally wipes an item's tags.
+        if ($syncTags) {
+            $document->tags()->sync($tagIds);
+        }
 
         return back()->with('success', 'Document updated.');
     }
@@ -384,7 +426,41 @@ public function index(Opportunity $opportunity, Request $request)
 		return $this->redirectAfterBulk($opportunity, $request)
 			->with('success', "{$docs->count()} archived file(s) permanently deleted.");
 	}
-	
+
+	public function bulkTag(Opportunity $opportunity, Request $request)
+	{
+		$ids = $request->input('ids', []);
+		$tagIds = array_values(array_filter((array) $request->input('tag_ids', [])));
+
+		if (!is_array($ids) || count($ids) < 1) {
+			return $this->redirectAfterBulk($opportunity, $request)
+				->with('error', 'No files selected.');
+		}
+
+		if (empty($tagIds)) {
+			return $this->redirectAfterBulk($opportunity, $request)
+				->with('error', 'No tag selected.');
+		}
+
+		$validTagIds = OpportunityDocumentTag::whereIn('id', $tagIds)->pluck('id');
+
+		if ($validTagIds->isEmpty()) {
+			return $this->redirectAfterBulk($opportunity, $request)
+				->with('error', 'No valid tag selected.');
+		}
+
+		$docs = OpportunityDocument::where('opportunity_id', $opportunity->id)
+			->whereIn('id', $ids)
+			->get();
+
+		foreach ($docs as $doc) {
+			$doc->tags()->syncWithoutDetaching($validTagIds);
+		}
+
+		return $this->redirectAfterBulk($opportunity, $request)
+			->with('success', "Tag applied to {$docs->count()} file(s).");
+	}
+
     public function restore(Opportunity $opportunity, $document)
 	{
 		$doc = OpportunityDocument::withTrashed()

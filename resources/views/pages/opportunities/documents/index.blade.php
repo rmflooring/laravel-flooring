@@ -175,7 +175,7 @@
                 {{-- Apply-to-all defaults (shown when 2+ files queued) --}}
                 <div id="queue-defaults" class="hidden mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-900/20">
                     <p class="mb-2 text-xs font-semibold text-blue-700 dark:text-blue-300">Apply to all files:</p>
-                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-4">
                         <div>
                             <select id="global-label-id"
                                     class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
@@ -185,6 +185,17 @@
                                 @endforeach
                             </select>
                         </div>
+                        @if ($tags->isNotEmpty())
+                        <div>
+                            <select id="global-tag-ids" multiple size="3"
+                                    class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                @foreach ($tags as $tag)
+                                    <option value="{{ $tag->id }}">{{ $tag->name }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-0.5 text-[10px] text-gray-400">Ctrl/Cmd-click to apply multiple tags</p>
+                        </div>
+                        @endif
                         <div class="lg:col-span-2">
                             <input type="text"
                                    id="global-description"
@@ -296,6 +307,21 @@
                         </select>
                     </div>
 
+                    @if ($tags->isNotEmpty())
+                    <div class="w-full sm:max-w-xs">
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Filter by Tag</label>
+                        <select name="tag_id"
+                                class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500">
+                            <option value="">All Tags</option>
+                            @foreach ($tags as $tag)
+                                <option value="{{ $tag->id }}" {{ (string)$tagId === (string)$tag->id ? 'selected' : '' }}>
+                                    {{ $tag->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
                     <div class="flex items-center gap-2 sm:pb-2">
                         <input id="show_archived"
                                type="checkbox"
@@ -324,6 +350,14 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
+                @if ($tags->isNotEmpty())
+                <button type="button"
+                        id="bulk-tag-btn"
+                        class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800">
+                    Tag Selected
+                </button>
+                @endif
+
                 <button type="button"
                         id="bulk-restore-btn"
                         class="hidden inline-flex items-center justify-center rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 dark:focus:ring-green-800">
@@ -371,6 +405,49 @@
             <div id="bulk-force-delete-ids-container"></div>
         </form>
 
+        {{-- Bulk Tag Modal --}}
+        @if ($tags->isNotEmpty())
+        <div id="bulkTagModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md" onclick="event.stopPropagation()">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">Tag Selected Files</h3>
+                    <button type="button" onclick="closeBulkTagModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="bulk-tag-form" method="POST" action="{{ route('pages.opportunities.documents.bulkTag', $opportunity->id) }}">
+                    @csrf
+                    <div id="bulk-tag-ids-container"></div>
+                    <div class="px-6 py-4 space-y-3">
+                        <p class="text-sm text-gray-500 dark:text-gray-400" id="bulkTagSelectedCount"></p>
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            @foreach ($tags as $tag)
+                                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                    <input type="checkbox" name="tag_ids[]" value="{{ $tag->id }}"
+                                           class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+                                    {{ $tag->name }}
+                                </label>
+                            @endforeach
+                        </div>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">Tags are added to the selected files — existing tags aren't removed.</p>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                        <button type="button" onclick="closeBulkTagModal()"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+                            Apply Tag(s)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        @endif
+
         {{-- Table (Flowbite table wrapper) --}}
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div class="relative overflow-x-auto">
@@ -389,6 +466,9 @@
                             <th scope="col" class="px-4 py-3">File Name</th>
                             <th scope="col" class="px-4 py-3">Description</th>
                             <th scope="col" class="px-4 py-3">Label</th>
+                            @if ($tags->isNotEmpty())
+                            <th scope="col" class="px-4 py-3">Tags</th>
+                            @endif
                             <th scope="col" class="px-4 py-3">Category</th>
                             <th scope="col" class="px-4 py-3">Uploaded At</th>
                             <th scope="col" class="px-4 py-3 text-right">Action</th>
@@ -496,6 +576,26 @@
                                         <div class="italic text-gray-500 dark:text-gray-400">Archived</div>
                                     @endif
                                 </td>
+
+                                @if ($tags->isNotEmpty())
+                                <td class="px-4 py-3">
+                                    @if(!$doc->trashed())
+                                        @php $docTagIds = $doc->tags->pluck('id'); @endphp
+                                        <select multiple size="3"
+                                                class="doc-tags block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-xs text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                data-url="{{ route('pages.opportunities.documents.update', [$opportunity->id, $doc->id]) }}"
+                                                data-token="{{ csrf_token() }}">
+                                            @foreach ($tags as $tag)
+                                                <option value="{{ $tag->id }}" {{ $docTagIds->contains($tag->id) ? 'selected' : '' }}>
+                                                    {{ $tag->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        <div class="italic text-gray-500 dark:text-gray-400">Archived</div>
+                                    @endif
+                                </td>
+                                @endif
 
                                 <td class="px-4 py-3">
                                     @if ($doc->category === 'generated_document')
@@ -606,8 +706,7 @@
                             </tr>
                         @empty
                             <tr class="border-t border-gray-200 dark:border-gray-700">
-                                {{-- FIX: colspan must match 7 columns --}}
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                <td colspan="{{ $tags->isNotEmpty() ? 8 : 7 }}" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                     No documents found.
                                 </td>
                             </tr>
@@ -833,8 +932,12 @@
             document.getElementById('docImageViewerImg').src = '';
         }
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') closeDocImageViewer();
+            if (e.key === 'Escape') { closeDocImageViewer(); closeBulkTagModal(); }
         });
+
+        function closeBulkTagModal() {
+            document.getElementById('bulkTagModal')?.classList.add('hidden');
+        }
 
         // Set PDF.js worker before any document interactions
         if (typeof pdfjsLib !== 'undefined') {
@@ -863,6 +966,9 @@
             const bulkForceDeleteBtn = document.getElementById('bulk-force-delete-btn');
             const bulkForceDeleteForm = document.getElementById('bulk-force-delete-form');
             const bulkForceDeleteIdsContainer = document.getElementById('bulk-force-delete-ids-container');
+
+            const bulkTagBtn = document.getElementById('bulk-tag-btn');
+            const bulkTagIdsContainer = document.getElementById('bulk-tag-ids-container');
 
             const checkboxes = Array.from(document.querySelectorAll('.doc-checkbox'));
 
@@ -1006,6 +1112,36 @@
                 });
             }
 
+            // bulk tag — opens a modal to pick tag(s), then submits
+            if (bulkTagBtn && bulkTagIdsContainer) {
+                bulkTagBtn.addEventListener('click', () => {
+                    const selectedIds = Array.from(document.querySelectorAll('.doc-checkbox:checked'))
+                        .map(cb => cb.value)
+                        .filter(Boolean);
+
+                    if (selectedIds.length === 0) {
+                        alert('No files selected.');
+                        return;
+                    }
+
+                    bulkTagIdsContainer.innerHTML = '';
+                    selectedIds.forEach(id => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'ids[]';
+                        input.value = id;
+                        bulkTagIdsContainer.appendChild(input);
+                    });
+
+                    document.querySelectorAll('#bulk-tag-form input[name="tag_ids[]"]').forEach(cb => { cb.checked = false; });
+
+                    const countEl = document.getElementById('bulkTagSelectedCount');
+                    if (countEl) countEl.textContent = `${selectedIds.length} file${selectedIds.length !== 1 ? 's' : ''} selected.`;
+
+                    document.getElementById('bulkTagModal')?.classList.remove('hidden');
+                });
+            }
+
             updateBulkUI();
 
             // =========================================================
@@ -1025,6 +1161,7 @@
             const progressLabel = document.getElementById('upload-progress-label');
             const globalLabelEl = document.getElementById('global-label-id');
             const globalDescEl  = document.getElementById('global-description');
+            const globalTagIdsEl = document.getElementById('global-tag-ids');
 
             const labelsData = @json($labels->map(fn($l) => ['id' => $l->id, 'name' => $l->name])->values());
             const uploadUrl  = '{{ route('pages.opportunities.documents.store', $opportunity->id) }}';
@@ -1137,6 +1274,7 @@
                 if (progressBar) { progressBar.style.width = '0%'; progressBar.style.backgroundColor = ''; }
                 if (globalLabelEl) globalLabelEl.value = '';
                 if (globalDescEl) globalDescEl.value = '';
+                if (globalTagIdsEl) Array.from(globalTagIdsEl.options).forEach(opt => { opt.selected = false; });
                 uploadInput.value = '';
             }
 
@@ -1194,6 +1332,9 @@
                         fd.append('label_ids[]', item.labelId);
                         fd.append('descriptions[]', item.description);
                     });
+                    if (globalTagIdsEl) {
+                        Array.from(globalTagIdsEl.selectedOptions).forEach(opt => fd.append('tag_ids[]', opt.value));
+                    }
 
                     if (progressWrap) progressWrap.classList.remove('hidden');
                     submitBtn.disabled = true;
@@ -1270,6 +1411,42 @@
                         input.classList.remove('border-red-400');
                     } catch (e) {
                         input.classList.add('border-red-400');
+                    }
+                });
+            });
+
+            // -------------------------
+            // Inline tags AJAX save (fires on blur so ctrl/cmd-clicking
+            // several options doesn't submit after the first click)
+            // -------------------------
+            document.querySelectorAll('select.doc-tags').forEach((select) => {
+                let lastValue = Array.from(select.selectedOptions).map(o => o.value).sort().join(',');
+
+                select.addEventListener('blur', async () => {
+                    const selected = Array.from(select.selectedOptions).map(o => o.value);
+                    const newValue = selected.slice().sort().join(',');
+                    if (newValue === lastValue) return;
+
+                    const url = select.dataset.url;
+                    const token = select.dataset.token;
+
+                    try {
+                        const res = await fetch(url, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ sync_tags: true, tag_ids: selected }),
+                        });
+
+                        if (!res.ok) throw new Error('Save failed');
+
+                        lastValue = newValue;
+                        select.classList.remove('border-red-400');
+                    } catch (e) {
+                        select.classList.add('border-red-400');
                     }
                 });
             });

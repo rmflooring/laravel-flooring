@@ -687,6 +687,17 @@
                         </a>
                     </li>
 
+                    {{-- Document Tags --}}
+                    <li>
+                        <a href="{{ route('admin.opportunity_document_tags.index') }}"
+                           class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                            <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.807 2.607.267a18.106 18.106 0 005.407-5.407c.54-.827.432-1.908-.267-2.607L11.16 3.66A2.25 2.25 0 009.568 3z M6.75 6.75h.008v.008H6.75V6.75z"/>
+                            </svg>
+                            <span class="sidebar-label">Document Tags</span>
+                        </a>
+                    </li>
+
                     {{-- Storage Settings --}}
                     <li>
                         <a href="{{ route('admin.settings.storage') }}"

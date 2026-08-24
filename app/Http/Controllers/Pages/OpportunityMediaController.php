@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
 use App\Models\Opportunity;
+use App\Models\OpportunityDocumentTag;
 use App\Models\OpportunityShare;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,7 @@ class OpportunityMediaController extends Controller
 
         $mediaQuery = $opportunity->documents()
             ->withTrashed()
-            ->with(['creator'])
+            ->with(['creator', 'tags'])
             ->where('category', 'media')
             ->orderByDesc('created_at');
 
@@ -46,6 +47,10 @@ class OpportunityMediaController extends Controller
             ->latest()
             ->get();
 
+        $tags = OpportunityDocumentTag::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return view('pages.opportunities.media.index', [
             'opportunity'  => $opportunity,
             'media'        => $media,
@@ -53,6 +58,7 @@ class OpportunityMediaController extends Controller
             'uploaders'    => $uploaders,
             'uploadedBy'   => $uploadedBy,
             'shares'       => $shares,
+            'tags'         => $tags,
         ]);
     }
 }

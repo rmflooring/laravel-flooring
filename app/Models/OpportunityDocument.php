@@ -79,6 +79,11 @@ class OpportunityDocument extends Model
         return $this->belongsTo(OpportunityDocumentLabel::class, 'label_id');
     }
 
+    public function tags()
+    {
+        return $this->belongsToMany(OpportunityDocumentTag::class, 'opportunity_document_tag_assignments', 'document_id', 'tag_id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(\App\Models\User::class, 'created_by');

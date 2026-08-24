@@ -112,6 +112,20 @@
     {{-- Per-file queue --}}
     <div id="gallery-file-queue" class="hidden mt-3 space-y-2"></div>
 
+    {{-- Apply tags to all queued files --}}
+    @if ($tags->isNotEmpty())
+    <div id="gallery-queue-tags" class="hidden mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-900/20">
+        <label for="gallery-global-tag-ids" class="mb-1 block text-xs font-semibold text-blue-700 dark:text-blue-300">Apply tags to all files</label>
+        <select id="gallery-global-tag-ids" multiple size="{{ min(4, max(2, $tags->count())) }}"
+                class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            @foreach ($tags as $tag)
+                <option value="{{ $tag->id }}">{{ $tag->name }}</option>
+            @endforeach
+        </select>
+        <p class="mt-1 text-[11px] text-gray-400">Ctrl/Cmd-click to select multiple.</p>
+    </div>
+    @endif
+
     {{-- Progress bar --}}
     <div id="gallery-progress-wrap" class="hidden mt-3">
         <div class="mb-1 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
@@ -169,6 +183,18 @@
             Share
         </button>
 
+        {{-- Tag selected --}}
+        @if ($tags->isNotEmpty())
+        <button type="button"
+                @click="openTagModal()"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-purple-300 bg-white px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.807 2.607.267a18.106 18.106 0 005.407-5.407c.54-.827.432-1.908-.267-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/>
+            </svg>
+            Tag
+        </button>
+        @endif
+
         {{-- Soft delete (archive) --}}
         <form method="POST"
               action="{{ route('pages.opportunities.documents.bulkDestroy', $opportunity) }}"
@@ -224,6 +250,7 @@
                     $isVideo      = str_starts_with($doc->mime_type ?? '', 'video/');
                     $uploaderName = $doc->creator?->name ?? 'Unknown';
                     $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
+                    $tagNames     = $doc->tags->pluck('name');
                 @endphp
                 <div class="relative group aspect-square">
                     {{-- Selection checkbox (shown in select mode via CSS) --}}
@@ -244,7 +271,8 @@
                             data-uploader="{{ $uploaderName }}"
                             data-uploaded-at="{{ $uploadedAt }}"
                             data-filename="{{ $doc->original_name }}"
-                            data-doc-id="{{ $doc->id }}">
+                            data-doc-id="{{ $doc->id }}"
+                            data-tags="{{ $tagNames->implode(', ') }}">
                         @if ($isVideo)
                             <video class="h-full w-full object-cover" muted playsinline preload="metadata">
                                 <source src="{{ $url }}">
@@ -258,6 +286,17 @@
                                  loading="lazy"
                                  decoding="async"
                                  class="h-full w-full object-cover">
+                        @endif
+
+                        @if ($tagNames->isNotEmpty())
+                            <div class="absolute top-1.5 right-1.5 z-10 max-w-[85%] flex flex-wrap justify-end gap-1">
+                                @foreach ($tagNames->take(2) as $tagName)
+                                    <span class="inline-flex items-center rounded bg-purple-600/90 px-1.5 py-0.5 text-[9px] font-medium text-white truncate max-w-full">{{ $tagName }}</span>
+                                @endforeach
+                                @if ($tagNames->count() > 2)
+                                    <span class="inline-flex items-center rounded bg-purple-600/90 px-1.5 py-0.5 text-[9px] font-medium text-white">+{{ $tagNames->count() - 2 }}</span>
+                                @endif
+                            </div>
                         @endif
 
                         <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1">
@@ -325,6 +364,50 @@
         </form>
     </div>
 </div>
+
+{{-- Tag Modal --}}
+@if ($tags->isNotEmpty())
+<div id="tagModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md" onclick="event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Tag Selected Photos</h3>
+            <button onclick="closeTagModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form id="tagForm" method="POST" action="{{ route('pages.opportunities.documents.bulkTag', $opportunity) }}">
+            @csrf
+            <input type="hidden" name="redirect_to" value="media">
+            <div id="tagHiddenIds"></div>
+            <div class="px-6 py-4 space-y-3">
+                <p class="text-sm text-gray-500 dark:text-gray-400" id="tagSelectedCount"></p>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    @foreach ($tags as $tag)
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <input type="checkbox" name="tag_ids[]" value="{{ $tag->id }}"
+                                   class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500">
+                            {{ $tag->name }}
+                        </label>
+                    @endforeach
+                </div>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Tags are added to the selected photos — existing tags aren't removed.</p>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                <button type="button" onclick="closeTagModal()"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+                    Apply Tag(s)
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 @if ($shares->isNotEmpty() || session('share_created'))
     {{-- Shared Links section --}}
@@ -510,9 +593,12 @@
 
         {{-- Caption bar --}}
         <div id="lightboxCaption"
-             class="hidden sm:flex absolute bottom-0 inset-x-0 z-10 items-center justify-between gap-4 px-4 py-2 bg-black/60 text-white text-xs">
-            <span id="lightboxCaptionFilename" class="truncate font-medium"></span>
-            <span id="lightboxCaptionMeta" class="shrink-0 opacity-75 text-right"></span>
+             class="hidden sm:flex absolute bottom-0 inset-x-0 z-10 flex-col gap-1 px-4 py-2 bg-black/60 text-white text-xs">
+            <div class="flex items-center justify-between gap-4">
+                <span id="lightboxCaptionFilename" class="truncate font-medium"></span>
+                <span id="lightboxCaptionMeta" class="shrink-0 opacity-75 text-right"></span>
+            </div>
+            <div id="lightboxCaptionTags" class="hidden flex-wrap gap-1"></div>
         </div>
     </div>
 </div>
@@ -542,6 +628,35 @@ function closeShareModal() {
     document.getElementById('shareModal').classList.add('hidden');
 }
 
+function openTagModal() {
+    const ids = window._gallery ? Object.keys(window._gallery.selectedMap) : [];
+    if (ids.length === 0) return;
+
+    const modal = document.getElementById('tagModal');
+    if (!modal) return;
+
+    const container = document.getElementById('tagHiddenIds');
+    container.innerHTML = '';
+    ids.forEach(id => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'ids[]';
+        inp.value = id;
+        container.appendChild(inp);
+    });
+
+    document.getElementById('tagForm')?.querySelectorAll('input[name="tag_ids[]"]').forEach(cb => { cb.checked = false; });
+
+    const countEl = document.getElementById('tagSelectedCount');
+    if (countEl) countEl.textContent = `${ids.length} photo${ids.length !== 1 ? 's' : ''} selected.`;
+
+    modal.classList.remove('hidden');
+}
+
+function closeTagModal() {
+    document.getElementById('tagModal')?.classList.add('hidden');
+}
+
 function copyUrl(inputId, btn) {
     const input = document.getElementById(inputId);
     if (!input) return;
@@ -555,7 +670,7 @@ function copyUrl(inputId, btn) {
     });
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeShareModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeShareModal(); closeTagModal(); } });
 
 function mediaGallery() {
     return {
@@ -651,6 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const captionEl  = document.getElementById('lightboxCaption');
     const capFile    = document.getElementById('lightboxCaptionFilename');
     const capMeta    = document.getElementById('lightboxCaptionMeta');
+    const capTags    = document.getElementById('lightboxCaptionTags');
 
     let currentIndex = -1;
 
@@ -689,10 +805,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const uploader = tile.dataset.uploader || '';
         const uploadedAt = tile.dataset.uploadedAt || '';
         const filename = tile.dataset.filename || '';
+        const tagsCsv  = tile.dataset.tags || '';
 
         if (captionEl) captionEl.classList.remove('hidden');
         if (capFile)   capFile.textContent = filename;
         if (capMeta)   capMeta.textContent  = uploader + (uploadedAt ? '  ·  ' + uploadedAt : '');
+        if (capTags) {
+            const tagList = tagsCsv ? tagsCsv.split(',').map(t => t.trim()).filter(Boolean) : [];
+            capTags.innerHTML = '';
+            if (tagList.length) {
+                tagList.forEach(t => {
+                    const span = document.createElement('span');
+                    span.className = 'inline-flex items-center rounded bg-purple-600/90 px-1.5 py-0.5 text-[10px] font-medium text-white';
+                    span.textContent = t;
+                    capTags.appendChild(span);
+                });
+                capTags.classList.remove('hidden');
+                capTags.classList.add('flex');
+            } else {
+                capTags.classList.add('hidden');
+                capTags.classList.remove('flex');
+            }
+        }
 
         // stop any previous video
         try { vidEl.pause(); } catch (e) {}
@@ -920,6 +1054,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const gProgressLabel = document.getElementById('gallery-progress-label');
     const gSubmitBtn     = document.getElementById('gallery-upload-submit');
     const gCancelBtn     = document.getElementById('gallery-upload-cancel');
+    const gQueueTagsWrap = document.getElementById('gallery-queue-tags');
+    const gGlobalTagIds  = document.getElementById('gallery-global-tag-ids');
 
     const gUploadUrl  = '{{ route('pages.opportunities.documents.store', $opportunity->id) }}';
     const gCsrfToken  = '{{ csrf_token() }}';
@@ -938,6 +1074,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const count = gQueue.length;
         gFileQueue.classList.toggle('hidden', count === 0);
+        if (gQueueTagsWrap) gQueueTagsWrap.classList.toggle('hidden', count === 0);
         if (gSubmitBtn) {
             gSubmitBtn.classList.toggle('hidden', count === 0);
             gSubmitBtn.innerHTML = count === 0 ? 'Upload'
@@ -1020,6 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gRenderQueue();
         if (gProgressWrap) gProgressWrap.classList.add('hidden');
         if (gProgressBar) { gProgressBar.style.width = '0%'; gProgressBar.style.backgroundColor = ''; }
+        if (gGlobalTagIds) Array.from(gGlobalTagIds.options).forEach(opt => { opt.selected = false; });
         gUploadInput.value = '';
     }
 
@@ -1055,6 +1193,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.description) fd.append('descriptions[]', item.description);
             else fd.append('descriptions[]', '');
         });
+        if (gGlobalTagIds) {
+            Array.from(gGlobalTagIds.selectedOptions).forEach(opt => fd.append('tag_ids[]', opt.value));
+        }
 
         if (gProgressWrap) gProgressWrap.classList.remove('hidden');
         gSubmitBtn.disabled = true;
