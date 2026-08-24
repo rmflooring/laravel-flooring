@@ -125,19 +125,29 @@
     {{-- Per-file queue --}}
     <div id="gallery-file-queue" class="hidden mt-3 space-y-2"></div>
 
-    {{-- Apply tags to all queued files --}}
-    @if ($tags->isNotEmpty())
-    <div id="gallery-queue-tags" class="hidden mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-900/20">
-        <label for="gallery-global-tag-ids" class="mb-1 block text-xs font-semibold text-blue-700 dark:text-blue-300">Apply tags to all files</label>
-        <select id="gallery-global-tag-ids" multiple size="{{ min(4, max(2, $tags->count())) }}"
-                class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-            @foreach ($tags as $tag)
-                <option value="{{ $tag->id }}">{{ $tag->name }}</option>
-            @endforeach
-        </select>
-        <p class="mt-1 text-[11px] text-gray-400">Ctrl/Cmd-click to select multiple.</p>
+    {{-- Apply to all queued files --}}
+    <div id="gallery-queue-defaults" class="hidden mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-900/20">
+        <p class="mb-2 text-xs font-semibold text-blue-700 dark:text-blue-300">Apply to all files:</p>
+        <div class="grid grid-cols-1 gap-3 {{ $tags->isNotEmpty() ? 'lg:grid-cols-3' : '' }}">
+            @if ($tags->isNotEmpty())
+            <div>
+                <select id="gallery-global-tag-ids" multiple size="{{ min(4, max(2, $tags->count())) }}"
+                        class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                    @foreach ($tags as $tag)
+                        <option value="{{ $tag->id }}">{{ $tag->name }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-0.5 text-[10px] text-gray-400">Ctrl/Cmd-click to apply multiple tags</p>
+            </div>
+            @endif
+            <div class="{{ $tags->isNotEmpty() ? 'lg:col-span-2' : '' }}">
+                <input type="text"
+                       id="gallery-global-description"
+                       class="block w-full rounded-lg border border-gray-300 bg-white p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                       placeholder="Apply description to all files">
+            </div>
+        </div>
     </div>
-    @endif
 
     {{-- Progress bar --}}
     <div id="gallery-progress-wrap" class="hidden mt-3">
@@ -1067,8 +1077,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const gProgressLabel = document.getElementById('gallery-progress-label');
     const gSubmitBtn     = document.getElementById('gallery-upload-submit');
     const gCancelBtn     = document.getElementById('gallery-upload-cancel');
-    const gQueueTagsWrap = document.getElementById('gallery-queue-tags');
+    const gQueueDefaults = document.getElementById('gallery-queue-defaults');
     const gGlobalTagIds  = document.getElementById('gallery-global-tag-ids');
+    const gGlobalDescEl  = document.getElementById('gallery-global-description');
 
     const gUploadUrl  = '{{ route('pages.opportunities.documents.store', $opportunity->id) }}';
     const gCsrfToken  = '{{ csrf_token() }}';
@@ -1087,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const count = gQueue.length;
         gFileQueue.classList.toggle('hidden', count === 0);
-        if (gQueueTagsWrap) gQueueTagsWrap.classList.toggle('hidden', count === 0);
+        if (gQueueDefaults) gQueueDefaults.classList.toggle('hidden', count === 0);
         if (gSubmitBtn) {
             gSubmitBtn.classList.toggle('hidden', count === 0);
             gSubmitBtn.innerHTML = count === 0 ? 'Upload'
@@ -1171,7 +1182,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gProgressWrap) gProgressWrap.classList.add('hidden');
         if (gProgressBar) { gProgressBar.style.width = '0%'; gProgressBar.style.backgroundColor = ''; }
         if (gGlobalTagIds) Array.from(gGlobalTagIds.options).forEach(opt => { opt.selected = false; });
+        if (gGlobalDescEl) gGlobalDescEl.value = '';
         gUploadInput.value = '';
+    }
+
+    // Apply-to-all description
+    if (gGlobalDescEl) {
+        gGlobalDescEl.addEventListener('input', () => {
+            const val = gGlobalDescEl.value;
+            gQueue.forEach(item => { item.description = val; });
+            gFileQueue?.querySelectorAll('.g-desc').forEach(inp => { inp.value = val; });
+        });
     }
 
     // Toggle
