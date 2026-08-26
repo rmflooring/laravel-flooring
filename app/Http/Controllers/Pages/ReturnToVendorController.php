@@ -57,7 +57,13 @@ class ReturnToVendorController extends Controller
             ])
             ->orderByDesc('received_date')
             ->get()
-            ->filter(fn ($r) => $r->available_qty > 0);
+            ->filter(fn ($r) => $r->available_qty > 0)
+            // A PO-linked receipt whose PO was later soft-deleted resolves
+            // purchaseOrder to null (PurchaseOrder uses SoftDeletes) — the create
+            // view reads $r->purchaseOrder->items unconditionally for any PO-linked
+            // receipt, so this must be filtered out here rather than left to crash
+            // the view. RFC-sourced receipts (no purchase_order_id) are unaffected.
+            ->filter(fn ($r) => ! $r->purchase_order_id || $r->purchaseOrder);
 
         // Batch-infer vendor for RFC receipts via: sale_item → PO item → PO → vendor
         $rfcSaleItemIds = $receipts
