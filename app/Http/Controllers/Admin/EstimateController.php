@@ -369,6 +369,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'revisions' => fn($q) => $q->orderBy('revision_no'),
 			'opportunity.projectManager',
 			'opportunity.parentCustomer.contacts',
+			'opportunity.jobSiteCustomer',
 			'parentEstimate',
 		]);
 
@@ -396,9 +397,19 @@ $data['tax_rate_percent'] = $groupPercent;
 		$emailBody    = $templateService->render($template['body'], $templateVars);
 
 		$pmEmail          = $estimate->opportunity?->projectManager?->email;
-		$customerContacts = $estimate->opportunity?->parentCustomer?->contacts ?? collect();
+		$pmName           = $estimate->opportunity?->projectManager?->name;
+		$jobSiteCustomer  = $estimate->opportunity?->jobSiteCustomer;
+		$jobSiteEmail     = $jobSiteCustomer?->email;
+		$jobSiteName      = $jobSiteCustomer?->name ?: $jobSiteCustomer?->company_name;
+		$parentCustomer      = $estimate->opportunity?->parentCustomer;
+		$parentCustomerEmail = $parentCustomer?->email;
+		$parentCustomerName  = $parentCustomer?->name ?: $parentCustomer?->company_name;
+		$customerContacts = $parentCustomer?->contacts ?? collect();
 
-		return view('pages.estimates.show', compact('estimate', 'emailSubject', 'emailBody', 'pmEmail', 'customerContacts'));
+		return view('pages.estimates.show', compact(
+			'estimate', 'emailSubject', 'emailBody', 'customerContacts',
+			'pmEmail', 'pmName', 'jobSiteEmail', 'jobSiteName', 'parentCustomerEmail', 'parentCustomerName',
+		));
 	}
 
 	public function edit(Estimate $estimate)
@@ -411,6 +422,7 @@ $data['tax_rate_percent'] = $groupPercent;
 			'salesperson2Employee',
 			'opportunity.projectManager',
 			'opportunity.parentCustomer.contacts',
+			'opportunity.jobSiteCustomer',
 			'sale',
 			'parentEstimate',
 		]);
@@ -450,14 +462,22 @@ $data['tax_rate_percent'] = $groupPercent;
 		$emailBody    = $templateService->render($template['body'], $templateVars);
 
 		$pmEmail          = $estimate->opportunity?->projectManager?->email;
-		$customerContacts = $estimate->opportunity?->parentCustomer?->contacts ?? collect();
+		$pmName           = $estimate->opportunity?->projectManager?->name;
+		$jobSiteCustomer  = $estimate->opportunity?->jobSiteCustomer;
+		$jobSiteEmail     = $jobSiteCustomer?->email;
+		$jobSiteName      = $jobSiteCustomer?->name ?: $jobSiteCustomer?->company_name;
+		$parentCustomer      = $estimate->opportunity?->parentCustomer;
+		$parentCustomerEmail = $parentCustomer?->email;
+		$parentCustomerName  = $parentCustomer?->name ?: $parentCustomer?->company_name;
+		$customerContacts = $parentCustomer?->contacts ?? collect();
 
 		$conditions         = \App\Models\Condition::where('is_active', true)->orderBy('sort_order')->orderBy('title')->get();
 		$defaultConditionId = (int) \App\Models\Setting::get('default_estimate_condition_id', 0) ?: null;
 
 		return view('admin.estimates.edit', compact(
 			'estimate', 'taxGroups', 'defaultTaxGroupId', 'employees',
-			'emailSubject', 'emailBody', 'pmEmail', 'customerContacts',
+			'emailSubject', 'emailBody', 'customerContacts',
+			'pmEmail', 'pmName', 'jobSiteEmail', 'jobSiteName', 'parentCustomerEmail', 'parentCustomerName',
 			'conditions', 'defaultConditionId',
 		));
 	}
