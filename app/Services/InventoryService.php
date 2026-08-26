@@ -39,6 +39,7 @@ class InventoryService
             'item_name'              => $poItem->item_name,
             'unit'                   => $poItem->unit,
             'quantity_received'      => $quantity,
+            'cost_price'             => $poItem->cost_price,
             'received_date'          => $receivedDate,
             'notes'                  => $notes,
         ]);
