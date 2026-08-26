@@ -96,4 +96,29 @@ class InventoryReceipt extends Model
 
         return max(0, (float) $this->quantity_received - (float) $allocated - (float) $outbound + (float) $adjustments);
     }
+
+    /**
+     * Quantity eligible for a new Return to Vendor: unlike available_qty (which treats
+     * any allocation as unavailable, correctly gating new allocations against
+     * double-claiming stock), an allocation whose released_at is still null means the
+     * stock hasn't been picked/delivered out of the warehouse yet (see
+     * PickTicketService::deliver()) — it's physically still sitting there and
+     * genuinely returnable. ReturnToVendorService::ship() already reduces/deletes
+     * exactly these unreleased allocations when a return ships; this accessor just
+     * makes that same stock selectable on the RTV create page in the first place
+     * (2026-08-26 — a fully-allocated-but-undelivered receipt was invisible there).
+     * Released allocations (physically gone) still count against this like before.
+     */
+    public function getReturnableQtyAttribute(): float
+    {
+        $releasedAllocated = $this->allocations->whereNotNull('released_at')->sum('quantity');
+        $outbound  = $this->transactions
+            ->whereIn('type', ['return_to_vendor', 'fulfilled'])
+            ->sum(fn ($t) => abs((float) $t->quantity));
+        $adjustments = $this->transactions
+            ->where('type', 'adjustment')
+            ->sum(fn ($t) => (float) $t->quantity);
+
+        return max(0, (float) $this->quantity_received - (float) $releasedAllocated - (float) $outbound + (float) $adjustments);
+    }
 }

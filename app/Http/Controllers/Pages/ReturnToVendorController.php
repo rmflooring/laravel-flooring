@@ -57,7 +57,10 @@ class ReturnToVendorController extends Controller
             ])
             ->orderByDesc('received_date')
             ->get()
-            ->filter(fn ($r) => $r->available_qty > 0)
+            // returnable_qty (not available_qty) — a receipt fully allocated to a sale
+            // but not yet picked/delivered out of the warehouse is still returnable;
+            // ship() already handles shrinking that allocation when the RTV ships.
+            ->filter(fn ($r) => $r->returnable_qty > 0)
             // A PO-linked receipt whose PO was later soft-deleted resolves
             // purchaseOrder to null (PurchaseOrder uses SoftDeletes) — the create
             // view reads $r->purchaseOrder->items unconditionally for any PO-linked

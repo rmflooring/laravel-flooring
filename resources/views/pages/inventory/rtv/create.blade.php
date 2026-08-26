@@ -28,7 +28,7 @@
                             @foreach ($receipts as $r)
                                 @php
                                     $isPo       = (bool) $r->purchase_order_id;
-                                    $availQty   = (float) $r->available_qty;
+                                    $availQty   = (float) $r->returnable_qty;
 
                                     if ($isPo) {
                                         $items = $r->purchaseOrder->items->map(fn($i) => [
