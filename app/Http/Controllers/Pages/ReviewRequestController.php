@@ -38,7 +38,7 @@ class ReviewRequestController extends Controller
         if ($validated['sent_via'] === 'sms' && ! empty($validated['customer_phone'])) {
             app(SmsService::class)->send($validated['customer_phone'], $message, 'review_request', $opportunity);
         } elseif ($validated['sent_via'] === 'email' && ! empty($validated['customer_email'])) {
-            $this->sendEmail($validated['customer_email'], $name, $url, $message);
+            $this->sendEmail($validated['customer_email'], $url, $message);
         }
 
         Log::info('[ReviewRequest] Sent', [
@@ -60,11 +60,10 @@ class ReviewRequestController extends Controller
         return view('pages.opportunities.reviews.index', compact('opportunity', 'reviews'));
     }
 
-    private function sendEmail(string $email, string $name, string $url, string $message): void
+    private function sendEmail(string $email, string $url, string $message): void
     {
         try {
             $html = "
-                <p>Hi {$name},</p>
                 <p>" . nl2br(e($message)) . "</p>
                 <p style='margin-top:24px;'>
                     <a href='{$url}' style='background:#1a56db;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;'>
@@ -78,6 +77,7 @@ class ReviewRequestController extends Controller
                 to: $email,
                 subject: 'How was your experience with RM Flooring?',
                 body: $html,
+                isHtml: true,
             );
         } catch (\Throwable $e) {
             Log::error('[ReviewRequest] Email failed', ['error' => $e->getMessage()]);
