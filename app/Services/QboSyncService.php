@@ -313,7 +313,18 @@ class QboSyncService
      *     owes/is owed money on a job billed to the individual site contact, so that
      *     invoice's customer must not be shown as belonging to the referral company).
      */
-    public function pushCustomer(Customer $customer, bool $standalone = false): array
+    /**
+     * @param  bool  $billWithParent  Set true to mark this customer's QBO record
+     *     "Bill With Parent" — QBO consolidates its charges onto the parent's own
+     *     statement/AR while the transaction itself still references this customer
+     *     directly (see resolveTransactionCustomer()'s case 2). Only meaningful when
+     *     $standalone is false and the customer has a parent; ignored otherwise.
+     *     Always re-sent on every push (not just when first becoming true) so a
+     *     customer that already had a qbo_id before this flag existed still gets it
+     *     set — confirmed with Richard (2026-09-04) this must be guaranteed, not
+     *     opportunistic.
+     */
+    public function pushCustomer(Customer $customer, bool $standalone = false, bool $billWithParent = false): array
     {
         try {
             // If this is a job site (has a parent), ensure parent is synced first —
@@ -332,7 +343,7 @@ class QboSyncService
                 $parentQboId = $parent->qbo_id;
             }
 
-            $payload = $this->buildCustomerPayload($customer, $parentQboId, $standalone);
+            $payload = $this->buildCustomerPayload($customer, $parentQboId, $standalone, $billWithParent);
 
             if ($customer->qbo_id) {
                 $payload['Id']        = $customer->qbo_id;
@@ -370,7 +381,7 @@ class QboSyncService
         }
     }
 
-    private function buildCustomerPayload(Customer $customer, ?string $parentQboId, bool $standalone = false): array
+    private function buildCustomerPayload(Customer $customer, ?string $parentQboId, bool $standalone = false, bool $billWithParent = false): array
     {
         $payload = [
             'DisplayName' => $this->customerDisplayName($customer, $standalone),
@@ -414,6 +425,10 @@ class QboSyncService
         if ($parentQboId) {
             $payload['Job']       = true;
             $payload['ParentRef'] = ['value' => $parentQboId];
+
+            if ($billWithParent) {
+                $payload['BillWithParent'] = true;
+            }
         }
 
         return $payload;
@@ -807,6 +822,75 @@ class QboSyncService
     }
 
     /**
+     * Resolves which Customer's QBO id a transaction (invoice/payment) should
+     * actually reference, syncing whatever's needed along the way. Three cases:
+     *
+     *  1. $billTo has a parent in FM (a job-site customer being billed directly) —
+     *     pushed standalone in QBO (see pushCustomer()'s $standalone doc), no
+     *     ParentRef at all. The invoice genuinely belongs to this customer, not its
+     *     parent, so QBO shouldn't imply otherwise.
+     *  2. $billTo is the parent itself, and a distinct job-site customer also exists
+     *     on the same opportunity — track the transaction at the job-site level but
+     *     consolidate billing/statements to the parent: sync the job site as a nested
+     *     QBO sub-customer with BillWithParent=true and reference IT, not the parent.
+     *     Per QBO's own docs, BillWithParent only does anything if the transaction's
+     *     CustomerRef points at the sub-customer itself — setting the flag without
+     *     redirecting CustomerRef here would silently do nothing. This is the
+     *     standard behavior whenever a job site exists on the opportunity (confirmed
+     *     with Richard, 2026-09-04) — not a one-off special case. Always re-pushes
+     *     the job site (even if it already has a qbo_id) so BillWithParent is
+     *     guaranteed true, since a job site synced before this rule existed may
+     *     already have a qbo_id with BillWithParent still false.
+     *  3. Anything else — $billTo itself, synced normally. Covers RFC-only
+     *     customers, sale-resolved free-text customers, and a $billTo that has no
+     *     distinct job site to redirect to.
+     *
+     * @return array{success: bool, message: ?string, customer: ?Customer}
+     */
+    private function resolveTransactionCustomer(Customer $billTo, ?Customer $jobSite, ?Customer $parent): array
+    {
+        if ($billTo->parent_id) {
+            if (! $billTo->qbo_id) {
+                $result = $this->pushCustomer($billTo, standalone: true);
+                if (! $result['success']) {
+                    return ['success' => false, 'message' => $result['message'], 'customer' => null];
+                }
+                $billTo->refresh();
+            }
+
+            return ['success' => true, 'message' => null, 'customer' => $billTo];
+        }
+
+        if ($jobSite && $parent && $billTo->is($parent) && $jobSite->id !== $parent->id) {
+            if (! $parent->qbo_id) {
+                $parentResult = $this->pushCustomer($parent);
+                if (! $parentResult['success']) {
+                    return ['success' => false, 'message' => 'Failed to sync parent customer: ' . $parentResult['message'], 'customer' => null];
+                }
+                $parent->refresh();
+            }
+
+            $jobSiteResult = $this->pushCustomer($jobSite, standalone: false, billWithParent: true);
+            if (! $jobSiteResult['success']) {
+                return ['success' => false, 'message' => 'Failed to sync job-site customer: ' . $jobSiteResult['message'], 'customer' => null];
+            }
+            $jobSite->refresh();
+
+            return ['success' => true, 'message' => null, 'customer' => $jobSite];
+        }
+
+        if (! $billTo->qbo_id) {
+            $result = $this->pushCustomer($billTo);
+            if (! $result['success']) {
+                return ['success' => false, 'message' => $result['message'], 'customer' => null];
+            }
+            $billTo->refresh();
+        }
+
+        return ['success' => true, 'message' => null, 'customer' => $billTo];
+    }
+
+    /**
      * Push an invoice to QBO as an Invoice entity.
      * Customer (job site) is auto-synced if not already in QBO.
      * $itemIds = ['material' => QBO ID, 'freight' => QBO ID, 'labour' => QBO ID]
@@ -834,30 +918,13 @@ class QboSyncService
                 return ['success' => false, 'message' => 'Invoice has no customer linked.', 'qbo_id' => null];
             }
 
-            // Billing a job-site customer directly (has a parent in FM) is pushed
-            // standalone in QBO — see pushCustomer()'s $standalone doc. Only a
-            // sub-customer that's genuinely being nested (not this invoice's actual
-            // bill-to) needs its parent synced first.
-            $standaloneBillTo = (bool) $billTo->parent_id;
-
-            if (! $standaloneBillTo && $jobSite && $parent && ! $parent->qbo_id) {
-                $parentResult = $this->pushCustomer($parent);
-                if (! $parentResult['success']) {
-                    return ['success' => false, 'message' => 'Failed to sync parent customer: ' . $parentResult['message'], 'qbo_id' => null];
-                }
-                $parent->refresh();
+            $resolved = $this->resolveTransactionCustomer($billTo, $jobSite, $parent);
+            if (! $resolved['success']) {
+                return ['success' => false, 'message' => $resolved['message'], 'qbo_id' => null];
             }
+            $qboCustomer = $resolved['customer'];
 
-            // Ensure bill-to customer is synced
-            if (! $billTo->qbo_id) {
-                $customerResult = $this->pushCustomer($billTo, $standaloneBillTo);
-                if (! $customerResult['success']) {
-                    return ['success' => false, 'message' => 'Failed to sync customer: ' . $customerResult['message'], 'qbo_id' => null];
-                }
-                $billTo->refresh();
-            }
-
-            $payload = $this->buildInvoicePayload($invoice, $billTo->qbo_id, $itemIds);
+            $payload = $this->buildInvoicePayload($invoice, $qboCustomer->qbo_id, $itemIds);
 
             if ($invoice->qbo_id) {
                 $payload['Id']        = $invoice->qbo_id;
@@ -922,12 +989,23 @@ class QboSyncService
                 return ['success' => false, 'message' => 'Invoice must be synced to QBO before pushing a payment.'];
             }
 
-            if (! $billTo?->qbo_id) {
+            if (! $billTo) {
                 return ['success' => false, 'message' => 'Customer must be synced to QBO before pushing a payment.'];
             }
 
+            // Same resolution as pushInvoice() — a payment must reference exactly the
+            // customer the invoice itself was billed to in QBO (which may be a
+            // job-site sub-customer even when $billTo here is the parent — see
+            // resolveTransactionCustomer()'s case 2), or it posts against the wrong
+            // QBO customer's balance.
+            $resolved = $this->resolveTransactionCustomer($billTo, $jobSite, $parent);
+            if (! $resolved['success']) {
+                return ['success' => false, 'message' => $resolved['message']];
+            }
+            $qboCustomer = $resolved['customer'];
+
             $payload = [
-                'CustomerRef' => ['value' => $billTo->qbo_id],
+                'CustomerRef' => ['value' => $qboCustomer->qbo_id],
                 'TotalAmt'    => (float) $payment->amount,
                 'TxnDate'     => $payment->payment_date->toDateString(),
                 'Line'        => [[
