@@ -1032,7 +1032,7 @@ class QboSyncService
 
             if ($payment->qbo_id) {
                 $payload['Id']        = $payment->qbo_id;
-                $payload['SyncToken'] = '0';
+                $payload['SyncToken'] = $payment->qbo_sync_token ?? '0';
                 $response   = $this->qbo->post('payment', $payload);
                 $qboPayment = $response['Payment'];
                 $action     = 'updated';
@@ -1043,8 +1043,9 @@ class QboSyncService
             }
 
             $payment->update([
-                'qbo_id'        => $qboPayment['Id'],
-                'qbo_synced_at' => now(),
+                'qbo_id'         => $qboPayment['Id'],
+                'qbo_sync_token' => $qboPayment['SyncToken'],
+                'qbo_synced_at'  => now(),
             ]);
 
             $this->qbo->log('payment', $payment->id, 'push', 'success', $qboPayment['Id'],
