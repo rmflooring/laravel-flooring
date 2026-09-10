@@ -1357,6 +1357,109 @@ class QboSyncService
     }
 
     /**
+     * Called when QBO notifies us that a (standalone AR) Payment entity was updated
+     * or deleted. On Delete, clears our local qbo_id so a future push recreates the
+     * payment instead of failing with QBO's "Object Not Found" error — exactly what
+     * happened manually for two payments on 2026-09-04, before this handler existed.
+     * On Update, re-syncs the token and flags an amount mismatch for manual review —
+     * payment amounts are real financial figures, so this never silently rewrites
+     * FM's own amount.
+     */
+    public function handlePaymentUpdate(string $qboId, string $operation): void
+    {
+        $payment = \App\Models\InvoicePayment::where('qbo_id', $qboId)->first();
+
+        if (! $payment) {
+            Log::info("[QBO Webhook] Payment qbo_id={$qboId} not found in FM — skipping.");
+            return;
+        }
+
+        if ($operation === 'Delete') {
+            $payment->update(['qbo_id' => null, 'qbo_sync_token' => null, 'qbo_synced_at' => null]);
+            $this->qbo->log('payment', $payment->id, 'pull', 'success', $qboId,
+                'Payment deleted in QBO — sync link cleared, will recreate on next push');
+            return;
+        }
+
+        try {
+            $response   = $this->qbo->get("payment/{$qboId}");
+            $qboPayment = $response['Payment'] ?? null;
+
+            if (! $qboPayment) {
+                Log::warning("[QBO Webhook] Payment #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            $qboAmount = (float) ($qboPayment['TotalAmt'] ?? 0);
+            $fmAmount  = (float) $payment->amount;
+            $message   = 'Payment updated in QBO';
+
+            if (abs($qboAmount - $fmAmount) > 0.005) {
+                $message = "Payment amount in QBO (\${$qboAmount}) no longer matches FM (\${$fmAmount}) — review manually, not auto-corrected.";
+            }
+
+            $payment->update([
+                'qbo_sync_token' => $qboPayment['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('payment', $payment->id, 'pull', 'success', $qboId, $message);
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch Payment #{$qboId}: " . $e->getMessage());
+            $this->qbo->log('payment', $payment->id, 'pull', 'error', $qboId, $e->getMessage());
+        }
+    }
+
+    /**
+     * Called when QBO notifies us that a RefundReceipt entity was updated or
+     * deleted. FM pushes RefundReceipts from two sources — QuickReturn (product
+     * returns) and CustomerCreditApplication (store-credit refunds) — so both are
+     * checked here. Same clear-on-delete pattern as handlePaymentUpdate()/
+     * handleVendorCreditUpdate().
+     */
+    public function handleRefundReceiptUpdate(string $qboId, string $operation): void
+    {
+        $record = QuickReturn::where('qbo_id', $qboId)->first()
+            ?? CustomerCreditApplication::where('qbo_id', $qboId)->first();
+
+        if (! $record) {
+            Log::info("[QBO Webhook] RefundReceipt qbo_id={$qboId} not found in FM — skipping.");
+            return;
+        }
+
+        $entityType = $record instanceof QuickReturn ? 'quick_return' : 'customer_credit_application';
+
+        if ($operation === 'Delete') {
+            $record->update(['qbo_id' => null, 'qbo_sync_token' => null, 'qbo_synced_at' => null]);
+            $this->qbo->log($entityType, $record->id, 'pull', 'success', $qboId,
+                'RefundReceipt deleted in QBO — sync link cleared, will recreate on next push');
+            return;
+        }
+
+        try {
+            $response  = $this->qbo->get("refundreceipt/{$qboId}");
+            $qboRefund = $response['RefundReceipt'] ?? null;
+
+            if (! $qboRefund) {
+                Log::warning("[QBO Webhook] RefundReceipt #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            $record->update([
+                'qbo_sync_token' => $qboRefund['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log($entityType, $record->id, 'pull', 'success', $qboId, 'RefundReceipt updated in QBO');
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch RefundReceipt #{$qboId}: " . $e->getMessage());
+            $this->qbo->log($entityType, $record->id, 'pull', 'error', $qboId, $e->getMessage());
+        }
+    }
+
+    /**
      * Called when QBO notifies us that an Invoice entity was updated or deleted.
      * Fetches the current Invoice from QBO and syncs payment status back to FM.
      */
