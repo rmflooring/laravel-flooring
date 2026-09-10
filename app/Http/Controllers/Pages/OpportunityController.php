@@ -59,11 +59,19 @@ class OpportunityController extends Controller
                     ->orWhere('sales_person_2', 'like', "%{$q}%")
                     ->orWhereHas('parentCustomer', function ($c) use ($q) {
                         $c->where('company_name', 'like', "%{$q}%")
-                          ->orWhere('name', 'like', "%{$q}%");
+                          ->orWhere('name', 'like', "%{$q}%")
+                          ->orWhere('address', 'like', "%{$q}%")
+                          ->orWhere('address2', 'like', "%{$q}%")
+                          ->orWhere('city', 'like', "%{$q}%")
+                          ->orWhere('postal_code', 'like', "%{$q}%");
                     })
                     ->orWhereHas('jobSiteCustomer', function ($c) use ($q) {
                         $c->where('company_name', 'like', "%{$q}%")
-                          ->orWhere('name', 'like', "%{$q}%");
+                          ->orWhere('name', 'like', "%{$q}%")
+                          ->orWhere('address', 'like', "%{$q}%")
+                          ->orWhere('address2', 'like', "%{$q}%")
+                          ->orWhere('city', 'like', "%{$q}%")
+                          ->orWhere('postal_code', 'like', "%{$q}%");
                     })
                     ->orWhereHas('projectManager', function ($pm) use ($q) {
                         $pm->where('name', 'like', "%{$q}%");

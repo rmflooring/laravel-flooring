@@ -40,7 +40,7 @@
                             <input type="text"
                                    name="q"
                                    value="{{ request('q') }}"
-                                   placeholder="Job #, parent, job site, PM, sales person…"
+                                   placeholder="Job #, parent, job site, address, PM, sales person…"
                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
                         </div>
 
