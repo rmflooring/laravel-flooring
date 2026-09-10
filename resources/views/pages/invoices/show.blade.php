@@ -517,7 +517,7 @@
                 <div>
                     <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Amount <span class="text-red-500">*</span></label>
                     <input type="text" inputmode="decimal" name="amount"
-                        value="{{ number_format($invoice->balance_due, 2) }}"
+                        value="{{ number_format($invoice->balance_due, 2, '.', '') }}"
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                         required>
@@ -590,7 +590,7 @@
             <div>
                 <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Amount to apply <span class="text-red-500">*</span></label>
                 <input type="text" inputmode="decimal" name="amount"
-                    value="{{ number_format(max(0, (float)$invoice->balance_due), 2) }}"
+                    value="{{ number_format(max(0, (float)$invoice->balance_due), 2, '.', '') }}"
                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)"
                     required>

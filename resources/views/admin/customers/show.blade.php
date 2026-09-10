@@ -991,7 +991,7 @@
                             <div class="relative">
                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                                 <input type="text" inputmode="decimal" name="amount" required
-                                    value="{{ number_format($credit->remaining_balance, 2) }}"
+                                    value="{{ number_format($credit->remaining_balance, 2, '.', '') }}"
                                     class="w-full text-sm border border-gray-300 rounded-lg pl-7 pr-3 py-2"
                                     onblur="if(this.value!==''&&!isNaN(parseFloat(this.value)))this.value=parseFloat(this.value).toFixed(2)">
                             </div>
