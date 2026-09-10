@@ -1358,19 +1358,29 @@ class QboSyncService
 
     /**
      * Called when QBO notifies us that a (standalone AR) Payment entity was updated
-     * or deleted. On Delete, clears our local qbo_id so a future push recreates the
-     * payment instead of failing with QBO's "Object Not Found" error — exactly what
-     * happened manually for two payments on 2026-09-04, before this handler existed.
-     * On Update, re-syncs the token and flags an amount mismatch for manual review —
-     * payment amounts are real financial figures, so this never silently rewrites
-     * FM's own amount.
+     * or deleted.
+     *
+     *  - Known to FM (has a matching InvoicePayment.qbo_id) + Delete: clears the
+     *    local qbo_id so a future push recreates the payment instead of failing with
+     *    QBO's "Object Not Found" error — exactly what happened manually for two
+     *    payments on 2026-09-04, before this handler existed.
+     *  - Known to FM + Create/Update: re-syncs the token and flags an amount
+     *    mismatch for manual review — payment amounts are real financial figures,
+     *    so this never silently rewrites FM's own amount.
+     *  - Not known to FM (payment entered directly in QBO, e.g. staff used QBO's
+     *    own "Receive Payment" instead of FM) + Create/Update: creates a matching
+     *    InvoicePayment via createInvoicePaymentsFromQboPayment() — closes the gap
+     *    where only the invoice's aggregate amount_paid (via handleInvoiceUpdate())
+     *    reflected it, with no actual payment-history entry in FM (2026-09-10).
      */
     public function handlePaymentUpdate(string $qboId, string $operation): void
     {
         $payment = \App\Models\InvoicePayment::where('qbo_id', $qboId)->first();
 
         if (! $payment) {
-            Log::info("[QBO Webhook] Payment qbo_id={$qboId} not found in FM — skipping.");
+            if ($operation !== 'Delete') {
+                $this->createInvoicePaymentsFromQboPayment($qboId);
+            }
             return;
         }
 
@@ -1409,6 +1419,90 @@ class QboSyncService
             Log::error("[QBO Webhook] Failed to fetch Payment #{$qboId}: " . $e->getMessage());
             $this->qbo->log('payment', $payment->id, 'pull', 'error', $qboId, $e->getMessage());
         }
+    }
+
+    /**
+     * Creates an FM InvoicePayment for every FM-known invoice a QBO-originated
+     * Payment is applied to (a payment with no matching InvoicePayment.qbo_id at
+     * all — see handlePaymentUpdate()). One QBO payment can fund multiple invoices
+     * (multiple Line/LinkedTxn entries), so this can create more than one row, each
+     * for its own line's Amount rather than assuming the whole TotalAmt goes to one
+     * invoice. Idempotent per (qbo_id, invoice_id) pair — safe to call again for the
+     * same payment (a later Update webhook, or the historical backfill) without
+     * duplicating rows. Also used directly for the one-time backfill of invoices
+     * paid in QBO before this handler existed (see Invoice.LinkedTxn).
+     */
+    private function createInvoicePaymentsFromQboPayment(string $qboId): void
+    {
+        try {
+            $response   = $this->qbo->get("payment/{$qboId}");
+            $qboPayment = $response['Payment'] ?? null;
+
+            if (! $qboPayment) {
+                Log::warning("[QBO Webhook] Payment #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            $method  = $this->reverseMapPaymentMethod($qboPayment['PaymentMethodRef']['value'] ?? null);
+            $refNum  = $qboPayment['PaymentRefNum'] ?? null;
+            $txnDate = $qboPayment['TxnDate'] ?? now()->toDateString();
+
+            $created = 0;
+            foreach ($qboPayment['Line'] ?? [] as $line) {
+                foreach ($line['LinkedTxn'] ?? [] as $linkedTxn) {
+                    if (($linkedTxn['TxnType'] ?? '') !== 'Invoice' || empty($linkedTxn['TxnId'])) {
+                        continue;
+                    }
+
+                    $invoice = Invoice::where('qbo_id', $linkedTxn['TxnId'])->first();
+                    if (! $invoice) {
+                        continue;
+                    }
+
+                    $alreadyExists = \App\Models\InvoicePayment::where('qbo_id', $qboId)
+                        ->where('invoice_id', $invoice->id)
+                        ->exists();
+                    if ($alreadyExists) {
+                        continue;
+                    }
+
+                    \App\Models\InvoicePayment::create([
+                        'invoice_id'       => $invoice->id,
+                        'amount'           => (float) ($line['Amount'] ?? $qboPayment['TotalAmt'] ?? 0),
+                        'payment_date'     => $txnDate,
+                        'payment_method'   => $method,
+                        'reference_number' => $refNum,
+                        'notes'            => 'Recorded directly in QuickBooks.',
+                        'qbo_id'           => $qboId,
+                        'qbo_sync_token'   => $qboPayment['SyncToken'],
+                        'qbo_synced_at'    => now(),
+                    ]);
+                    $created++;
+
+                    $this->qbo->log('payment', $invoice->id, 'pull', 'success', $qboId,
+                        "Payment created in FM from QBO — invoice #{$invoice->invoice_number}, amount \${$line['Amount']}");
+                }
+            }
+
+            if ($created === 0) {
+                Log::info("[QBO Webhook] Payment #{$qboId} has no linked invoices known to FM — nothing created.");
+            }
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch Payment #{$qboId} for auto-create: " . $e->getMessage());
+        }
+    }
+
+    private function reverseMapPaymentMethod(?string $qboMethodId): string
+    {
+        return match ($qboMethodId) {
+            '16'         => 'cash',
+            '17'         => 'cheque',
+            '1000000001' => 'e-transfer',
+            '20'         => 'visa',
+            '19'         => 'mastercard',
+            default      => 'other',
+        };
     }
 
     /**
