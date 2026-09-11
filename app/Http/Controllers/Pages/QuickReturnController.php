@@ -225,7 +225,10 @@ class QuickReturnController extends Controller
         if ($missingItemIds->isNotEmpty()) {
             return back()->with('error', 'Missing QBO income item ID for: ' . $missingItemIds->implode(', ') . '. Visit Settings → QuickBooks Online.');
         }
-        if (! $cashCustomerId) {
+        // Only actually needed as a fallback when this return has no linked customer
+        // (see QboSyncService::pushQuickReturn()) — a return with a real customer
+        // shouldn't be blocked by a setting it doesn't use.
+        if (! $quickReturn->customer_id && ! $cashCustomerId) {
             return back()->with('error', 'Missing Cash Customer QBO ID. Visit Settings → QuickBooks Online.');
         }
         if (! $refundAccountId) {
@@ -235,7 +238,7 @@ class QuickReturnController extends Controller
         $result = $sync->pushQuickReturn(
             $quickReturn,
             $itemIds,
-            $cashCustomerId,
+            $cashCustomerId ?? '',
             $refundAccountId
         );
 
