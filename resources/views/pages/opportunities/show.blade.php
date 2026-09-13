@@ -195,7 +195,7 @@
                         <div class="lg:col-span-12">
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-12">
 
-                                <div class="md:col-span-4">
+                                <div class="md:col-span-3">
                                     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                                         <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">Project Manager</div>
                                         <div class="text-sm font-semibold text-gray-900 dark:text-white">
@@ -204,7 +204,7 @@
                                     </div>
                                 </div>
 
-                                <div class="md:col-span-4">
+                                <div class="md:col-span-3">
                                     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                                         <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">Sales Person 1</div>
                                         <div class="text-sm font-semibold text-gray-900 dark:text-white">
@@ -213,11 +213,20 @@
                                     </div>
                                 </div>
 
-                                <div class="md:col-span-4">
+                                <div class="md:col-span-3">
                                     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                                         <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">Sales Person 2</div>
                                         <div class="text-sm font-semibold text-gray-900 dark:text-white">
                                             {{ $salesPeople[$opportunity->sales_person_2]->first_name ?? '' }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="md:col-span-3">
+                                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                                        <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">Source</div>
+                                        <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {{ $opportunity->source->name ?? '—' }}
                                         </div>
                                     </div>
                                 </div>

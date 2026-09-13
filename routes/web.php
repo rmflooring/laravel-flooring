@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\VendorRepController;
 use App\Http\Controllers\Admin\InstallerController;
 use App\Http\Controllers\Admin\OpportunityDocumentLabelController;
 use App\Http\Controllers\Admin\OpportunityDocumentTagController;
+use App\Http\Controllers\Admin\OpportunitySourceController;
 use App\Http\Controllers\Admin\ProjectManagerController;
 use App\Http\Controllers\Admin\LabourTypeController;
 use App\Http\Controllers\Admin\LabourItemController;
@@ -606,6 +607,18 @@ Route::prefix('admin')
                 'edit'    => 'opportunity_document_tags.edit',
                 'update'  => 'opportunity_document_tags.update',
                 'destroy' => 'opportunity_document_tags.destroy',
+            ])
+            ->only(['index', 'store', 'edit', 'update', 'destroy']);
+
+        // Opportunity Sources (job/marketing source tracking)
+        Route::resource('opportunity-sources', OpportunitySourceController::class)
+            ->middleware('role_or_permission:admin|manage opportunity sources')
+            ->names([
+                'index'   => 'opportunity_sources.index',
+                'store'   => 'opportunity_sources.store',
+                'edit'    => 'opportunity_sources.edit',
+                'update'  => 'opportunity_sources.update',
+                'destroy' => 'opportunity_sources.destroy',
             ])
             ->only(['index', 'store', 'edit', 'update', 'destroy']);
 

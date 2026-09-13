@@ -111,6 +111,20 @@
 						</select>
                         </div>
 
+                        <div class="md:col-span-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                            <select name="opportunity_source_id" form="opportunity-form"
+                                    class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+                                <option value="">— Select —</option>
+                                @foreach ($sources as $src)
+                                    <option value="{{ $src->id }}" {{ (string) old('opportunity_source_id', $opportunity->opportunity_source_id) === (string) $src->id ? 'selected' : '' }}>
+                                        {{ $src->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <span class="block mt-1 text-xs font-normal text-gray-500">Where did this job come from? (for marketing tracking)</span>
+                        </div>
+
                         <div class="md:col-span-3 flex items-center gap-3 pt-6">
                             <input type="checkbox" name="requires_rfm" id="requires_rfm" form="opportunity-form" value="1"
                                    {{ old('requires_rfm', $opportunity->requires_rfm) ? 'checked' : '' }}

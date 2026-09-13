@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\ProjectManager;
 use App\Models\Opportunity;
+use App\Models\OpportunitySource;
 use App\Models\Sale;
 use App\Services\OpportunityFolderService;
 use Illuminate\Http\Request;
@@ -49,6 +50,10 @@ class OpportunityController extends Controller
 
         if ($request->filled('project_manager_id')) {
             $query->where('project_manager_id', $request->input('project_manager_id'));
+        }
+
+        if ($request->filled('opportunity_source_id')) {
+            $query->where('opportunity_source_id', $request->input('opportunity_source_id'));
         }
 
         if ($request->filled('q')) {
@@ -111,7 +116,7 @@ class OpportunityController extends Controller
     $showInactive = $request->boolean('show_inactive', false);
 
     $query = Opportunity::query()
-        ->with(['parentCustomer', 'jobSiteCustomer', 'projectManager'])
+        ->with(['parentCustomer', 'jobSiteCustomer', 'projectManager', 'source'])
         ->withCount(['rfms', 'estimates', 'sales', 'purchaseOrders']);
 
     if (! $showInactive) {
@@ -133,7 +138,11 @@ class OpportunityController extends Controller
         ->orderBy('name')
         ->get(['id', 'company_name', 'name']);
 
-    return view('pages.opportunities.index', compact('opportunities', 'statuses', 'parentCustomers', 'projectManagers', 'showInactive'));
+    $sources = OpportunitySource::where('is_active', true)
+        ->orderBy('name')
+        ->get(['id', 'name']);
+
+    return view('pages.opportunities.index', compact('opportunities', 'statuses', 'parentCustomers', 'projectManagers', 'sources', 'showInactive'));
 }
 
 
@@ -169,12 +178,17 @@ $employees = Employee::query()
     ->orderBy('first_name')
     ->get(['id', 'first_name']);
 
+    $sources = OpportunitySource::where('is_active', true)
+        ->orderBy('name')
+        ->get(['id', 'name']);
+
     return view('pages.opportunities.create', compact(
         'parentCustomers',
         'jobSiteCustomers',
         'projectManagers',
         'statuses',
-		'employees'
+		'employees',
+        'sources'
     ));
 }
 
@@ -247,6 +261,7 @@ $employees = Employee::query()
             'parent_customer_id'   => ['required', 'exists:customers,id'],
             'job_site_customer_id' => ['nullable', 'exists:customers,id'],
             'project_manager_id'   => ['nullable', 'exists:project_managers,id'],
+            'opportunity_source_id' => ['nullable', 'exists:opportunity_sources,id'],
             'job_no'               => ['nullable', 'string', 'max:255'],
             'status'               => ['required', 'string', 'max:50'],
             'status_reason'        => ['nullable', 'string', 'max:1000'],
@@ -273,6 +288,7 @@ $employees = Employee::query()
 				'parentCustomer',
 				'jobSiteCustomer',
 				'projectManager',
+				'source',
 				'estimates',
 				'rfms.estimator',
 				'notes.user',
@@ -299,7 +315,7 @@ $employees = Employee::query()
 				->get();
 
 			// Prev / next navigation within the current filter context
-			$filterParams = $request->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'sort']);
+			$filterParams = $request->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'opportunity_source_id', 'sort']);
 			$navQuery = Opportunity::query()->select('id');
 			$this->applyOpportunityFilters($navQuery, $request);
 			$ids = $navQuery->pluck('id')->toArray();
@@ -367,6 +383,11 @@ $employees = Employee::query()
         ->where('status', '<>', 'cancelled')
         ->count();
 
+    $sources = OpportunitySource::where('is_active', true)
+        ->orWhere('id', $opportunity->opportunity_source_id)
+        ->orderBy('name')
+        ->get(['id', 'name']);
+
     return view('pages.opportunities.edit', compact(
         'opportunity',
         'parentCustomers',
@@ -374,7 +395,8 @@ $employees = Employee::query()
         'projectManagers',
          'statuses',
 		 'employees',
-        'activeSaleCount'
+        'activeSaleCount',
+        'sources'
     ));
 }
 
@@ -386,6 +408,7 @@ public function update(Request $request, string $id)
         'parent_customer_id'   => ['required', 'exists:customers,id'],
         'job_site_customer_id' => ['nullable', 'exists:customers,id'],
         'project_manager_id'   => ['nullable', 'exists:project_managers,id'],
+        'opportunity_source_id' => ['nullable', 'exists:opportunity_sources,id'],
         'job_no'               => ['nullable', 'string', 'max:255'],
         'status'               => ['required', 'string', 'max:50'],
         'status_reason'        => ['nullable', 'string', 'max:1000'],

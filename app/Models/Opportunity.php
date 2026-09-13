@@ -10,6 +10,7 @@ class Opportunity extends Model
         'parent_customer_id',
         'job_site_customer_id',
         'project_manager_id',
+        'opportunity_source_id',
         'job_no',
         'status',
         'status_reason',
@@ -70,6 +71,11 @@ class Opportunity extends Model
     public function projectManager()
     {
         return $this->belongsTo(ProjectManager::class, 'project_manager_id');
+    }
+
+    public function source()
+    {
+        return $this->belongsTo(OpportunitySource::class, 'opportunity_source_id');
     }
 
     public function initiatedBy()

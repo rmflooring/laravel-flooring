@@ -107,6 +107,21 @@
     </select>
 </div>
 
+						{{-- Source --}}
+<div class="md:col-span-2">
+    <label class="block text-sm font-medium text-gray-700 mb-1">Source</label>
+    <select name="opportunity_source_id"
+        onchange="this.form.submit()"
+        class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm">
+        <option value="">All Sources</option>
+        @foreach ($sources as $src)
+            <option value="{{ $src->id }}" {{ (string)request('opportunity_source_id') === (string)$src->id ? 'selected' : '' }}>
+                {{ $src->name }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
                         {{-- Show Inactive toggle --}}
                         <div class="md:col-span-2 flex items-center gap-2">
                             <input type="checkbox" id="show_inactive" name="show_inactive" value="1"
@@ -144,10 +159,10 @@
                 </div>
 
                 @php
-                    $qs = http_build_query(request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'sort', 'show_inactive']));
+                    $qs = http_build_query(request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'opportunity_source_id', 'sort', 'show_inactive']));
 
                     $currentSort   = request('sort', 'updated_desc');
-                    $filterParams  = request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'show_inactive']);
+                    $filterParams  = request()->only(['q', 'status', 'parent_customer_id', 'project_manager_id', 'opportunity_source_id', 'show_inactive']);
 
                     $colSorts = [
                         'job_no'   => ['asc' => 'job_no_asc',    'desc' => 'job_no_desc'],
@@ -187,6 +202,7 @@
                                 <th class="text-left font-semibold px-4 md:px-6 py-3">
                                     <a href="{{ $sortLink('pm') }}" class="hover:text-blue-600 whitespace-nowrap">PM{{ $sortArrow('pm') }}</a>
                                 </th>
+                                <th class="text-left font-semibold px-4 md:px-6 py-3 whitespace-nowrap">Source</th>
                                 <th class="text-left font-semibold px-4 md:px-6 py-3">
                                     <a href="{{ $sortLink('status') }}" class="hover:text-blue-600 whitespace-nowrap">Status{{ $sortArrow('status') }}</a>
                                 </th>
@@ -219,6 +235,10 @@
 
                                     <td class="px-4 md:px-6 py-3">
                                         {{ $opp->projectManager?->name ?: '—' }}
+                                    </td>
+
+                                    <td class="px-4 md:px-6 py-3">
+                                        {{ $opp->source?->name ?: '—' }}
                                     </td>
 
                                     <td class="px-4 md:px-6 py-3 whitespace-nowrap">
@@ -292,7 +312,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-4 md:px-6 py-10 text-center text-gray-600">
+                                    <td colspan="8" class="px-4 md:px-6 py-10 text-center text-gray-600">
                                         No opportunities found. Try adjusting your search or filters.
                                     </td>
                                 </tr>

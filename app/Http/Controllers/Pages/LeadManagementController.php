@@ -8,6 +8,7 @@ use App\Models\IncomingLead;
 use App\Models\MailLog;
 use App\Models\Opportunity;
 use App\Models\OpportunityNote;
+use App\Models\OpportunitySource;
 use App\Models\SmsConversation;
 use App\Models\SmsMessage;
 use App\Models\User;
@@ -80,10 +81,11 @@ class LeadManagementController extends Controller
             ]);
 
             $opportunity = Opportunity::create([
-                'parent_customer_id'   => $customer->id,
-                'job_site_customer_id' => $customer->id,
-                'job_no'               => $validated['opportunity_name'],
-                'status'               => 'New',
+                'parent_customer_id'    => $customer->id,
+                'job_site_customer_id'  => $customer->id,
+                'job_no'                => $validated['opportunity_name'],
+                'status'                => 'New',
+                'opportunity_source_id' => $this->matchOpportunitySource($lead),
             ]);
 
             $noteLines = array_filter([
@@ -120,6 +122,28 @@ class LeadManagementController extends Controller
         return redirect()
             ->route('pages.opportunities.show', $opportunity)
             ->with('success', 'Lead approved — Opportunity created.');
+    }
+
+    /**
+     * Match the lead's free-text referral_source/source against the
+     * admin-managed Opportunity Source list (case-insensitive exact match on
+     * name). referral_source ("how did you hear about us") is the more
+     * meaningful marketing signal, so it's tried before the site-identifying
+     * source field. Returns null if nothing matches — never guesses.
+     */
+    private function matchOpportunitySource(IncomingLead $lead): ?int
+    {
+        foreach (array_filter([$lead->referral_source, $lead->source]) as $candidate) {
+            $match = OpportunitySource::where('is_active', true)
+                ->whereRaw('LOWER(name) = ?', [strtolower(trim($candidate))])
+                ->value('id');
+
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return null;
     }
 
     public function deny(Request $request, IncomingLead $lead)
