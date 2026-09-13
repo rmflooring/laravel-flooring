@@ -97,6 +97,9 @@
                         <a href="{{ route('admin.payment-terms.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Payment Terms
                         </a>
+                        <a href="{{ route('admin.opportunity_sources.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Job Sources
+                        </a>
                         <a href="{{ url('/') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Back to Home
                         </a>
