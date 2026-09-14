@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Opportunity;
 use App\Models\ReviewRequest;
 use App\Services\SmsService;
+use App\Services\SmsTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -33,7 +34,10 @@ class ReviewRequestController extends Controller
         $url     = $review->publicUrl();
         $name    = $validated['customer_name'];
         $message = $validated['message']
-            ?? "Hi {$name}, thank you for choosing RM Flooring! We'd love to hear about your experience. Please take a moment to leave us a review: {$url}";
+            ?? app(SmsTemplateService::class)->renderTemplate('review_request', [
+                'customer_name' => $name,
+                'review_link'   => $url,
+            ]);
 
         if ($validated['sent_via'] === 'sms' && ! empty($validated['customer_phone'])) {
             app(SmsService::class)->send($validated['customer_phone'], $message, 'review_request', $opportunity);

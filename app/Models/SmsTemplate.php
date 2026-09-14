@@ -22,6 +22,7 @@ class SmsTemplate extends Model
         'estimate_follow_up_1'     => 'Estimate Follow-up — Stage 1 (7 days)',
         'estimate_follow_up_2'     => 'Estimate Follow-up — Stage 2 (14 days)',
         'estimate_follow_up_3'     => 'Estimate Follow-up — Stage 3 (30 days)',
+        'review_request'           => 'Google Review Request',
     ];
 
     public const TAGS = [
@@ -94,6 +95,9 @@ class SmsTemplate extends Model
             '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
             '{{job_name}}', '{{sender_name}}',
         ],
+        'review_request' => [
+            '{{customer_name}}', '{{review_link}}',
+        ],
     ];
 
     public const DEFAULTS = [
@@ -110,5 +114,6 @@ class SmsTemplate extends Model
         'estimate_follow_up_1'   => "Hi {{customer_name}}, just following up on estimate {{estimate_number}} for {{job_name}}. Any questions? We're happy to help. — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
         'estimate_follow_up_2'   => "Hi {{customer_name}}, checking in on estimate {{estimate_number}} for {{job_name}}. Happy to adjust anything or answer questions. — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
         'estimate_follow_up_3'   => "Hi {{customer_name}}, one last follow-up on estimate {{estimate_number}} for {{job_name}}. Let us know either way — no pressure! — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
+        'review_request'         => "Hi {{customer_name}}, thank you for choosing RM Flooring! We'd love a quick Google review — it only takes about 30 seconds: {{review_link}} Reply STOP to unsubscribe.",
     ];
 }
