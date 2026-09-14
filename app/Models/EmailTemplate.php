@@ -36,6 +36,7 @@ class EmailTemplate extends Model
         'signature_request_flooring'   => 'Signature Request — Flooring Selection',
         'signature_request_work_auth'  => 'Signature Request — Work Authorization',
         'signature_request_document'   => 'Signature Request — Generated Document',
+        'review_request'               => 'Google Review Request',
     ];
 
     // Merge tags available per type
@@ -106,6 +107,9 @@ class EmailTemplate extends Model
         ],
         'signature_request_document' => [
             '{{client_name}}', '{{document_label}}', '{{signing_link}}', '{{signing_link_button}}', '{{expires_date}}',
+        ],
+        'review_request' => [
+            '{{customer_name}}', '{{review_link}}', '{{review_link_button}}',
         ],
         'estimate_follow_up_1' => [
             '{{customer_name}}', '{{estimate_number}}', '{{grand_total}}',
@@ -189,6 +193,10 @@ class EmailTemplate extends Model
         'estimate_follow_up_3' => [
             'subject' => 'Last check-in — Estimate {{estimate_number}}',
             'body'    => "Hi {{customer_name}},\n\nI wanted to reach out one more time regarding the estimate for {{job_name}}.\n\nEstimate #: {{estimate_number}}\nTotal: {{grand_total}}\n\nIf the timing isn't right or you've decided to go in a different direction, no worries at all — just let us know and we'll update our records. Otherwise, we'd love the opportunity to work with you.\n\n{{sender_name}}\n{{sender_email}}",
+        ],
+        'review_request' => [
+            'subject' => 'How was your experience with RM Flooring?',
+            'body'    => "Hi {{customer_name}},\n\nThank you for choosing RM Flooring! If you have a minute, we'd really appreciate a quick Google review — it only takes about 30 seconds and helps other homeowners find us.\n\n{{review_link_button}}\n\nIf the button above doesn't work, copy and paste this link into your browser:\n{{review_link}}\n\nThank you for your business!\nRM Flooring",
         ],
     ];
 }
