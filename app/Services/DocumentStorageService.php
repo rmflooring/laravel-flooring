@@ -23,6 +23,43 @@ class DocumentStorageService
     }
 
     /**
+     * Force a just-written file (and its containing folder) to be fully
+     * read/write/execute for owner+group+other, on the local NAS-backed disk only.
+     *
+     * Needed because this disk (storage/app/public) is a symlink onto an NFS mount
+     * (see Context/context_storage.md — NFS root_squash means writes from this app
+     * land on the NAS under a fixed identity, not the real uploading user), and the
+     * app's own configured 0777/0664 permissions (config/filesystems.php) don't
+     * reliably survive the write — observed live 2026-09-18: newly-created folders
+     * landing at 0755 (exactly 0777 masked by a 022 umask) instead of 0777, which
+     * then blocks editing/overwriting those files over SMB from a Windows PC even
+     * though the app itself can still read/write them fine over NFS. Rather than
+     * chase the exact umask/Flysystem interaction, this explicitly re-asserts 0777
+     * right after every write so the end state is guaranteed regardless of cause.
+     *
+     * No-ops for S3/SFTP disks, which have no POSIX permission model to set.
+     */
+    public static function forceOpenPermissions(string $disk, string $path): void
+    {
+        if ($disk !== 'public') {
+            return;
+        }
+
+        try {
+            $absolute = Storage::disk($disk)->path($path);
+            @chmod($absolute, 0777);
+
+            $dir = dirname($absolute);
+            if ($dir !== '.' && is_dir($dir)) {
+                @chmod($dir, 0777);
+            }
+        } catch (\Throwable) {
+            // Best-effort — a permission fixup failing should never break the
+            // actual upload that already succeeded.
+        }
+    }
+
+    /**
      * Generate a public URL for a stored file.
      * Falls back to a configured base URL for SFTP disks where Storage::url() is unavailable.
      */

@@ -73,6 +73,7 @@ class WorkOrderController extends Controller
             $mime = $file->getMimeType() ?? '';
             $disk = DocumentStorageService::disk();
             $path = $file->store("opportunities/{$opportunity->storageFolderName()}", $disk);
+            DocumentStorageService::forceOpenPermissions($disk, $path);
 
             OpportunityDocument::create([
                 'opportunity_id' => $opportunity->id,

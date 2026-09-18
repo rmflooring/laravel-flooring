@@ -6,6 +6,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Services\DocumentStorageService;
 
 class OpportunityFolderService
 {
@@ -58,6 +59,7 @@ class OpportunityFolderService
                     $disk    = Storage::disk($doc->disk);
                     if ($disk->exists($doc->path)) {
                         $disk->move($doc->path, $newPath);
+                        DocumentStorageService::forceOpenPermissions($doc->disk, $newPath);
                     } else {
                         Log::warning("OpportunityFolderService: main file not found on disk, updating DB only: {$doc->path}");
                     }
@@ -72,6 +74,7 @@ class OpportunityFolderService
                     $disk     = Storage::disk($doc->disk);
                     if ($disk->exists($doc->thumbnail_path)) {
                         $disk->move($doc->thumbnail_path, $newThumb);
+                        DocumentStorageService::forceOpenPermissions($doc->disk, $newThumb);
                     }
                     $changed = true;
                 }

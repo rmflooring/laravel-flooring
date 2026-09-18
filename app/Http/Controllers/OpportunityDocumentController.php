@@ -199,6 +199,7 @@ public function index(Opportunity $opportunity, Request $request)
                 }
 
                 $path = $file->storeAs($folder, $filename, $disk);
+                DocumentStorageService::forceOpenPermissions($disk, $path);
 
                 \Log::info('[docs] stored file', [
                     'opportunity_id' => $opportunity->id,
@@ -218,6 +219,7 @@ public function index(Opportunity $opportunity, Request $request)
                         $thumbContents = (string) $image->encodeUsingMediaType('image/jpeg', quality: 80);
                         $thumbnailPath = "{$folder}/thumb_" . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
                         Storage::disk($disk)->put($thumbnailPath, $thumbContents);
+                        DocumentStorageService::forceOpenPermissions($disk, $thumbnailPath);
                     } catch (\Throwable $e) {
                         \Log::warning('[docs] thumbnail generation failed', [
                             'path'    => $path,
