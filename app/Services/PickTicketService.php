@@ -272,16 +272,34 @@ class PickTicketService
                     // never again silently drift from what was actually delivered.
                     if ($item->inventory_allocation_id) {
                         $allocation = InventoryAllocation::with('inventoryReceipt')->find($item->inventory_allocation_id);
-                        $receiptAvailable = $allocation->inventoryReceipt->available_qty;
 
-                        if ($thisDelivery > $receiptAvailable + 0.001) {
-                            throw new \InvalidArgumentException(
-                                "\"{$item->item_name}\" — cannot deliver an additional {$thisDelivery} {$item->unit}: "
-                                . "only {$receiptAvailable} {$item->unit} left in the linked receipt (#{$allocation->inventory_receipt_id})."
-                            );
+                        // The allocation already reserves up to $allocation->quantity —
+                        // that's normal (e.g. it was set up earlier via "Assign from
+                        // stock"), and delivering up to that reserved amount needs no
+                        // extra receipt capacity at all. Only delivering BEYOND what's
+                        // already reserved (a genuine top-up) needs to draw more from
+                        // the receipt. A bare `$thisDelivery > available_qty` check here
+                        // is wrong — available_qty already nets out this allocation's
+                        // own reservation, so it would reject the completely normal case
+                        // of delivering an already-fully-reserved allocation (confirmed
+                        // live 2026-09-18: a 1600 SF allocation created up front couldn't
+                        // be delivered at all, since available_qty on its receipt was
+                        // already 0 — entirely expected, not a shortage).
+                        $extraNeeded = max(0, ($alreadyDelivered + $thisDelivery) - (float) $allocation->quantity);
+
+                        if ($extraNeeded > 0) {
+                            $receiptAvailable = $allocation->inventoryReceipt->available_qty;
+
+                            if ($extraNeeded > $receiptAvailable + 0.001) {
+                                throw new \InvalidArgumentException(
+                                    "\"{$item->item_name}\" — cannot deliver {$thisDelivery} {$item->unit}: "
+                                    . "only {$receiptAvailable} {$item->unit} left in the linked receipt (#{$allocation->inventory_receipt_id}) "
+                                    . "beyond what's already reserved for this item."
+                                );
+                            }
+
+                            $allocation->increment('quantity', $extraNeeded);
                         }
-
-                        $allocation->increment('quantity', $thisDelivery);
                     } else {
                         $receiptId = $receiptSelections[$item->id] ?? null;
 
