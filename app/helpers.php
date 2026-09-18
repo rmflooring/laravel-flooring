@@ -19,3 +19,22 @@ if (!function_exists('fmt_price')) {
         return $parts[0] . '.' . $decimals;
     }
 }
+
+if (!function_exists('linkify')) {
+    /**
+     * Escape plain text and turn any bare http(s) URLs into clickable links.
+     * Safe to echo raw ({!! !!}) — the input is HTML-escaped first, same
+     * pattern used in App\Mail\SignatureRequestMail. Does not add <br> —
+     * pair with a whitespace-pre-wrap wrapper to preserve line breaks.
+     */
+    function linkify(?string $text): string
+    {
+        $escaped = htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
+
+        return preg_replace(
+            '/(https?:\/\/[^\s<]+)/',
+            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400" style="word-break:break-all;">$1</a>',
+            $escaped
+        );
+    }
+}

@@ -894,7 +894,7 @@
 
                                     {{-- Read view --}}
                                     <p class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200"
-                                       x-show="!editing">{{ $note->body }}</p>
+                                       x-show="!editing">{!! linkify($note->body) !!}</p>
 
                                     {{-- Edit form --}}
                                     <form method="POST"
