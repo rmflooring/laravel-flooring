@@ -40,64 +40,61 @@
                         <a href="{{ route('admin.users.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Manage Users
                         </a>
-                        <a href="{{ route('admin.roles.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
-    			Manage Roles & Permissions
-			</a>
-						 <a href="{{ route('admin.users.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
-                            Manage Users
+                        <a href="{{ route('admin.roles.index') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Manage Roles &amp; Permissions
                         </a>
-                        <a href="{{ route('pages.settings.integrations.microsoft.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('pages.settings.integrations.microsoft.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Manage Calendar Settings
                         </a>
-                        <a href="{{ route('admin.settings.branding') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.branding') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Branding
                         </a>
-                        <a href="{{ route('admin.settings.mail') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.mail') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Mail Settings
                         </a>
-                        <a href="{{ route('admin.settings.email-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.email-templates.index') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             System Email Templates
                         </a>
-                        <a href="{{ route('admin.settings.calendar-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.calendar-templates.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Calendar Entry Templates
                         </a>
-                        <a href="{{ route('admin.settings.installer-colors') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.installer-colors') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Installer Calendar Colors
                         </a>
-                        <a href="{{ route('admin.settings.sms') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.sms') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             SMS Notifications
                         </a>
-                        <a href="{{ route('admin.settings.sms-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.sms-templates.index') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             SMS Templates
                         </a>
-                        <a href="{{ route('admin.settings.quickbooks') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.quickbooks') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             QuickBooks Online
                         </a>
-                        <a href="{{ route('admin.settings.agent') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.agent') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             AI Agent Settings
                         </a>
-                        <a href="{{ route('admin.knowledge.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.knowledge.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Knowledge Base
                         </a>
-                        <a href="{{ route('admin.settings.knowledge-agent') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.knowledge-agent') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Knowledge Agent Settings
                         </a>
-                        <a href="{{ route('admin.document-templates.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.document-templates.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Document Templates
                         </a>
-                        <a href="{{ route('admin.conditions.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.conditions.index') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Conditions
                         </a>
-                        <a href="{{ route('admin.settings.storage') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.storage') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Storage Settings
                         </a>
-                        <a href="{{ route('admin.settings.shop') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.settings.shop') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Shop Settings
                         </a>
-                        <a href="{{ route('admin.payment-terms.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.payment-terms.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Payment Terms
                         </a>
-                        <a href="{{ route('admin.opportunity_sources.index') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                        <a href="{{ route('admin.opportunity_sources.index') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Job Sources
                         </a>
                         <a href="{{ url('/') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
