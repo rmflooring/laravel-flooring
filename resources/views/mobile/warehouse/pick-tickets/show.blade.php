@@ -22,6 +22,12 @@
             <button onclick="this.closest('div').remove()" class="text-green-600 dark:text-green-400">&times;</button>
         </div>
     @endif
+    @if (session('error'))
+        <div class="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 flex items-center justify-between gap-3">
+            <span class="text-sm font-medium text-red-800 dark:text-red-200">{{ session('error') }}</span>
+            <button onclick="this.closest('div').remove()" class="text-red-600 dark:text-red-400">&times;</button>
+        </div>
+    @endif
 
     <a href="{{ route('mobile.warehouse.pick-tickets.index') }}"
        class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400">
@@ -142,17 +148,33 @@
                 @foreach ($pickTicket->items as $item)
                     @php
                         $remaining = max(0, (float)$item->quantity - (float)$item->delivered_qty);
+                        $needsReceipt = $remaining > 0 && ! $item->inventory_allocation_id;
+                        $receiptOptions = $availableReceiptsByItemId[$item->id] ?? [];
                     @endphp
                     <div>
                         <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
                             {{ $item->item_name }}
                             <span class="text-gray-400">(ordered: {{ rtrim(rtrim(number_format((float)$item->quantity, 2), '0'), '.') }} {{ $item->unit }})</span>
                         </label>
+
+                        @if ($needsReceipt && count($receiptOptions) > 0)
+                            <select name="receipts[{{ $item->id }}]" required
+                                    class="w-full mb-1.5 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20 px-3 py-2 text-xs text-gray-900 dark:text-white">
+                                <option value="">Select stock to deliver from…</option>
+                                @foreach ($receiptOptions as $opt)
+                                    <option value="{{ $opt['id'] }}">{{ $opt['label'] }}</option>
+                                @endforeach
+                            </select>
+                        @elseif ($needsReceipt)
+                            <p class="text-xs text-red-600 dark:text-red-400 font-medium mb-1.5">No stock found to link — receive inventory first.</p>
+                        @endif
+
                         <input type="number" name="items[{{ $item->id }}]"
-                               value="{{ $remaining > 0 ? rtrim(rtrim(number_format($remaining, 2), '0'), '.') : '' }}"
+                               value="{{ $remaining > 0 && !($needsReceipt && count($receiptOptions) === 0) ? rtrim(rtrim(number_format($remaining, 2), '0'), '.') : '' }}"
                                step="any" min="0" max="{{ $item->quantity }}"
+                               {{ ($needsReceipt && count($receiptOptions) === 0) ? 'disabled' : '' }}
                                placeholder="Qty delivered"
-                               class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                               class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50">
                     </div>
                 @endforeach
 

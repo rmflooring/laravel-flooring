@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\InventoryAllocation;
+use App\Models\InventoryReceipt;
 use App\Models\PickTicket;
 use App\Models\PickTicketItem;
 use App\Models\PurchaseOrder;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 class PickTicketService
 {
+    public function __construct(private InventoryService $inventory) {}
+
     /**
      * Create a pick ticket from a single inventory allocation.
      * Optionally associates it with a work order.
@@ -198,19 +201,36 @@ class PickTicketService
      * $itemQtys is a map of [pick_ticket_item_id => qty_delivered_this_time].
      * Items omitted from the map (or with qty 0) are untouched.
      *
+     * $receiptSelections is a map of [pick_ticket_item_id => inventory_receipt_id],
+     * required for any item being delivered that has no inventory_allocation_id yet
+     * (see the "must link a receipt to deliver" guardrail below).
+     *
      * If every item reaches its full quantity the ticket moves to `delivered`
      * and inventory allocations are released. Otherwise it becomes
      * `partially_delivered` and can be delivered again later.
+     *
+     * @throws \InvalidArgumentException if a sale item has already been fully
+     *     delivered on a different (non-cancelled) pick ticket — added
+     *     2026-09-17 after a real incident where the same 555 SF underlayment
+     *     line got "delivered" twice across two separate pick tickets, since
+     *     nothing previously checked across tickets for the same sale item.
+     * @throws \InvalidArgumentException if an item has no inventory_allocation_id
+     *     and no matching entry in $receiptSelections — added the same day,
+     *     closing the gap where createFromSale()/createFromWorkOrder() stage
+     *     items with no inventory link at all (deliberately, for warehouse
+     *     staging flexibility), which meant "delivered" material could sit
+     *     with zero effect on stock and be invisible to Sale Status coverage.
      */
     public function deliver(
         PickTicket $pickTicket,
         array $itemQtys,
         ?string $receivedBy = null,
-        ?string $deliveryNotes = null
+        ?string $deliveryNotes = null,
+        array $receiptSelections = [],
     ): void {
-        $pickTicket->loadMissing('items');
+        $pickTicket->loadMissing('items.saleItem');
 
-        DB::transaction(function () use ($pickTicket, $itemQtys, $receivedBy, $deliveryNotes) {
+        DB::transaction(function () use ($pickTicket, $itemQtys, $receivedBy, $deliveryNotes, $receiptSelections) {
             $now              = now();
             $allFullyDelivered = true;
 
@@ -218,6 +238,78 @@ class PickTicketService
                 $thisDelivery    = max(0, (float) ($itemQtys[$item->id] ?? 0));
                 $alreadyDelivered = (float) $item->delivered_qty;
                 $ordered          = (float) $item->quantity;
+
+                if ($thisDelivery > 0 && $item->sale_item_id) {
+                    $saleItem = $item->saleItem;
+                    $needed   = $saleItem && $saleItem->order_qty !== null
+                        ? (float) $saleItem->order_qty
+                        : (float) ($saleItem->quantity ?? $ordered);
+
+                    // Guardrail 1: block delivering more than this sale item actually
+                    // needs once every non-cancelled pick ticket is accounted for —
+                    // catches a duplicate/second pick ticket for material already
+                    // fully delivered elsewhere.
+                    $deliveredElsewhere = PickTicketItem::where('sale_item_id', $item->sale_item_id)
+                        ->where('id', '<>', $item->id)
+                        ->whereHas('pickTicket', fn ($q) => $q->where('status', '<>', 'cancelled'))
+                        ->sum('delivered_qty');
+
+                    $projectedTotal = (float) $deliveredElsewhere + $alreadyDelivered + $thisDelivery;
+
+                    if ($projectedTotal > $needed + 0.01) {
+                        $stillNeeded = max(0, $needed - $deliveredElsewhere - $alreadyDelivered);
+                        throw new \InvalidArgumentException(
+                            "\"{$item->item_name}\" — cannot deliver {$thisDelivery} {$item->unit}: "
+                            . "{$deliveredElsewhere} {$item->unit} already delivered on another pick ticket "
+                            . "for this line, only {$stillNeeded} {$item->unit} still needed. If this is a "
+                            . "genuine second batch, increase the sale item's ordered quantity first."
+                        );
+                    }
+
+                    // Guardrail 2: require this delivery to be backed by a real
+                    // inventory allocation — either the one already on the item, or
+                    // one selected right now — so stock and Sale Status coverage
+                    // never again silently drift from what was actually delivered.
+                    if ($item->inventory_allocation_id) {
+                        $allocation = InventoryAllocation::with('inventoryReceipt')->find($item->inventory_allocation_id);
+                        $receiptAvailable = $allocation->inventoryReceipt->available_qty;
+
+                        if ($thisDelivery > $receiptAvailable + 0.001) {
+                            throw new \InvalidArgumentException(
+                                "\"{$item->item_name}\" — cannot deliver an additional {$thisDelivery} {$item->unit}: "
+                                . "only {$receiptAvailable} {$item->unit} left in the linked receipt (#{$allocation->inventory_receipt_id})."
+                            );
+                        }
+
+                        $allocation->increment('quantity', $thisDelivery);
+                    } else {
+                        $receiptId = $receiptSelections[$item->id] ?? null;
+
+                        if (! $receiptId) {
+                            throw new \InvalidArgumentException(
+                                "\"{$item->item_name}\" has no linked inventory — select which receipt this is "
+                                . "coming from before it can be delivered."
+                            );
+                        }
+
+                        if (! $saleItem) {
+                            throw new \InvalidArgumentException(
+                                "\"{$item->item_name}\" has no linked sale item — cannot allocate inventory to it."
+                            );
+                        }
+
+                        $receipt = InventoryReceipt::with('allocations')->findOrFail($receiptId);
+
+                        $newAllocation = $this->inventory->allocate(
+                            $receipt,
+                            $saleItem,
+                            $thisDelivery,
+                            "Linked at delivery time (Pick Ticket {$pickTicket->pt_number})",
+                        );
+
+                        $item->inventory_allocation_id = $newAllocation->id;
+                    }
+                }
 
                 if ($thisDelivery > 0) {
                     // Cap so we never exceed the ordered qty

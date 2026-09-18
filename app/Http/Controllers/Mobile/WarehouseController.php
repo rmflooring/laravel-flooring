@@ -57,11 +57,37 @@ class WarehouseController extends Controller
         return view('mobile.warehouse.pick-tickets.index', compact('pickTickets', 'search', 'status'));
     }
 
-    public function showPickTicket(PickTicket $pickTicket)
+    public function showPickTicket(PickTicket $pickTicket, \App\Services\InventoryService $inventory)
     {
         $pickTicket->load(['sale', 'workOrder.installer', 'items.saleItem.room', 'creator']);
 
-        return view('mobile.warehouse.pick-tickets.show', compact('pickTicket'));
+        // For items not yet linked to inventory, find receipts they could be delivered
+        // from — required at delivery time now (see PickTicketService::deliver()).
+        $availableReceiptsByItemId = [];
+        foreach ($pickTicket->items as $item) {
+            if ($item->inventory_allocation_id || ! $item->saleItem) {
+                continue;
+            }
+
+            $styleId = $inventory->resolveStyleId($item->saleItem);
+            if (! $styleId) {
+                continue;
+            }
+
+            $availableReceiptsByItemId[$item->id] = \App\Models\InventoryReceipt::with('allocations')
+                ->where('product_style_id', $styleId)
+                ->orderBy('received_date')
+                ->get()
+                ->map(fn ($receipt) => [
+                    'id'        => $receipt->id,
+                    'label'     => $receipt->item_name . ' — ' . rtrim(rtrim(number_format($receipt->available_qty, 2), '0'), '.') . ' ' . $receipt->unit . ' available',
+                    'available' => $receipt->available_qty,
+                ])
+                ->filter(fn ($r) => $r['available'] > 0)
+                ->values();
+        }
+
+        return view('mobile.warehouse.pick-tickets.show', compact('pickTicket', 'availableReceiptsByItemId'));
     }
 
     public function updatePickTicketStatus(Request $request, PickTicket $pickTicket, PickTicketService $service)
@@ -72,20 +98,28 @@ class WarehouseController extends Controller
             'delivery_notes' => ['nullable', 'string', 'max:2000'],
             'items'          => ['nullable', 'array'],
             'items.*'        => ['nullable', 'numeric', 'min:0'],
+            'receipts'       => ['nullable', 'array'],
+            'receipts.*'     => ['nullable', 'integer', 'exists:inventory_receipts,id'],
         ]);
 
-        match ($request->action) {
-            'mark_ready'    => $service->markReady($pickTicket),
-            'mark_picked'   => $service->markPicked($pickTicket),
-            'deliver'       => $service->deliver(
-                                   $pickTicket,
-                                   $request->input('items', []),
-                                   $request->input('received_by'),
-                                   $request->input('delivery_notes')
-                               ),
-            'cancel'        => $service->cancel($pickTicket),
-            'revert_status' => $service->revertStatus($pickTicket),
-        };
+        try {
+            match ($request->action) {
+                'mark_ready'    => $service->markReady($pickTicket),
+                'mark_picked'   => $service->markPicked($pickTicket),
+                'deliver'       => $service->deliver(
+                                       $pickTicket,
+                                       $request->input('items', []),
+                                       $request->input('received_by'),
+                                       $request->input('delivery_notes'),
+                                       $request->input('receipts', []),
+                                   ),
+                'cancel'        => $service->cancel($pickTicket),
+                'revert_status' => $service->revertStatus($pickTicket),
+            };
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('mobile.warehouse.pick-tickets.show', $pickTicket)
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()->route('mobile.warehouse.pick-tickets.show', $pickTicket)
             ->with('success', 'Pick ticket updated.');

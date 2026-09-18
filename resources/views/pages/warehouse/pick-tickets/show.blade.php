@@ -516,6 +516,7 @@
                                 <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ordered</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Delivered</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Remaining</th>
+                                <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-48">Source (stock)</th>
                                 <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-32">Delivering Now</th>
                             </tr>
                         </thead>
@@ -525,6 +526,8 @@
                                     $ordered   = (float) $ptItem->quantity;
                                     $delivered = (float) $ptItem->delivered_qty;
                                     $remaining = max(0, $ordered - $delivered);
+                                    $needsReceipt = $remaining > 0 && ! $ptItem->inventory_allocation_id;
+                                    $receiptOptions = $availableReceiptsByItemId[$ptItem->id] ?? [];
                                 @endphp
                                 <tr class="{{ $remaining <= 0 ? 'opacity-50' : '' }}">
                                     <td class="px-4 py-2.5 text-gray-900 dark:text-white font-medium max-w-[200px]">
@@ -547,8 +550,28 @@
                                     <td class="px-4 py-2.5 text-right {{ $remaining > 0 ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-green-600 dark:text-green-400' }}">
                                         {{ $remaining > 0 ? rtrim(rtrim(number_format($remaining, 2), '0'), '.') : '✓' }}
                                     </td>
+                                    <td class="px-4 py-2.5">
+                                        @if (! $needsReceipt)
+                                            <span class="text-xs text-teal-600 dark:text-teal-400">
+                                                {{ $ptItem->inventory_allocation_id ? 'Linked to stock ✓' : '—' }}
+                                            </span>
+                                        @elseif (count($receiptOptions) > 0)
+                                            <select name="receipts[{{ $ptItem->id }}]" required
+                                                    class="w-full rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs focus:border-green-500 focus:ring-green-500 dark:border-amber-700 dark:bg-amber-900/20 dark:text-white">
+                                                <option value="">Select stock to deliver from…</option>
+                                                @foreach ($receiptOptions as $opt)
+                                                    <option value="{{ $opt['id'] }}">{{ $opt['label'] }}</option>
+                                                @endforeach
+                                            </select>
+                                        @else
+                                            <span class="text-xs text-red-600 dark:text-red-400 font-medium">No stock found to link — receive inventory first.</span>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-2.5 text-right">
-                                        @if ($remaining > 0)
+                                        @if ($remaining > 0 && ($needsReceipt && count($receiptOptions) === 0))
+                                            <span class="text-xs text-gray-400">Blocked</span>
+                                            <input type="hidden" name="items[{{ $ptItem->id }}]" value="0">
+                                        @elseif ($remaining > 0)
                                             <input type="number"
                                                    name="items[{{ $ptItem->id }}]"
                                                    value="{{ rtrim(rtrim(number_format($remaining, 2, '.', ''), '0'), '.') }}"
