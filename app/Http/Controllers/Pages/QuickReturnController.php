@@ -104,7 +104,7 @@ class QuickReturnController extends Controller
             $subtotal = 0;
             foreach ($request->items as $itemData) {
                 $saleItem  = SaleItem::find($itemData['sale_item_id']);
-                $subtotal += round((float) $itemData['quantity'] * (float) $saleItem->sell_price, 2);
+                $subtotal += $this->proportionalLineTotal($saleItem, (float) $itemData['quantity']);
             }
             $taxAmount  = round($subtotal * $taxDecimal, 2);
             $grandTotal = $subtotal + $taxAmount;
@@ -133,7 +133,7 @@ class QuickReturnController extends Controller
 
             foreach ($request->items as $idx => $itemData) {
                 $saleItem  = SaleItem::with('productStyle.productLine')->find($itemData['sale_item_id']);
-                $lineTotal = round((float) $itemData['quantity'] * (float) $saleItem->sell_price, 2);
+                $lineTotal = $this->proportionalLineTotal($saleItem, (float) $itemData['quantity']);
 
                 $label = $this->resolveItemLabel($saleItem);
 
@@ -306,6 +306,22 @@ class QuickReturnController extends Controller
                 'product_style_id' => $item->product_style_id,
             ];
         }));
+    }
+
+    /**
+     * Scale the sale item's own exact line_total by the fraction of its
+     * quantity being returned, rather than recomputing qty * sell_price.
+     * sell_price is stored rounded to 4 decimals and doesn't always multiply
+     * back out to the real total when the line was priced via "reverse
+     * total-to-price" auto-calc (same drift as InvoiceService::createFromSale).
+     */
+    private function proportionalLineTotal(SaleItem $saleItem, float $qty): float
+    {
+        $saleItemQty = (float) $saleItem->quantity;
+
+        return $saleItemQty > 0
+            ? round((float) $saleItem->line_total * ($qty / $saleItemQty), 2)
+            : round($qty * (float) $saleItem->sell_price, 2);
     }
 
     /**
