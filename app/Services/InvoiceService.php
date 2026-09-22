@@ -69,8 +69,23 @@ class InvoiceService
 
             $itemSort = 0;
             foreach ($roomItems as $saleItem) {
-                $invoiceQty = (float) $selectedItems[$saleItem->id];
-                $lineTotal  = round($invoiceQty * (float) $saleItem->sell_price, 2);
+                $invoiceQty  = (float) $selectedItems[$saleItem->id];
+                $saleItemQty = (float) $saleItem->quantity;
+
+                // Scale the sale item's own exact line_total by the fraction of its
+                // quantity being invoiced now, rather than recomputing qty * sell_price.
+                // sell_price is stored rounded to 4 decimals and doesn't always multiply
+                // back out to the real total when the line was priced via "reverse
+                // total-to-price" auto-calc (a typed total that doesn't divide evenly
+                // into a clean per-unit rate) — confirmed live 2026-09-22, Sale #60: a
+                // $1290.01 typed total stored as sell_price=$3.07/unit recomputed as
+                // 420 * 3.07 = $1289.40 here, 61 cents short. For a full-quantity
+                // invoice (the common case) this fraction is exactly 1.0, reproducing
+                // the sale item's real total exactly.
+                $lineTotal = $saleItemQty > 0
+                    ? round((float) $saleItem->line_total * ($invoiceQty / $saleItemQty), 2)
+                    : round($invoiceQty * (float) $saleItem->sell_price, 2);
+
                 $taxAmount  = round($lineTotal * $taxRate, 2);
 
                 $label = $this->buildLabel($saleItem);
