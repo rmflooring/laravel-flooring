@@ -322,8 +322,19 @@
                                             @endif
                                         </td>
 
+                                        @php
+                                            // Show the price's real stored precision (up to 4 decimals — the
+                                            // column's actual scale) rather than always rounding the display
+                                            // to 2dp, per Richard's request 2026-09-22. Only trims the last two
+                                            // characters when they're "00", so currency always keeps at least
+                                            // 2 decimals (e.g. "13.0000" -> "13.00", not "13").
+                                            $priceStr = number_format((float) $item->sell_price, 4);
+                                            if (substr($priceStr, -2) === '00') {
+                                                $priceStr = substr($priceStr, 0, -2);
+                                            }
+                                        @endphp
                                         <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-                                            ${{ number_format((float)$item->sell_price, 2) }}
+                                            ${{ $priceStr }}
                                         </td>
 
                                         <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white item-line-total" data-item-id="{{ $item->id }}">
