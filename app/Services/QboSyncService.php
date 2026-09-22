@@ -1162,7 +1162,7 @@ class QboSyncService
                 'SalesItemLineDetail' => [
                     'ItemRef'    => ['value' => $itemId],
                     'Qty'        => (float) $item->quantity,
-                    'UnitPrice'  => (float) $item->unit_price,
+                    'UnitPrice'  => $this->qboUnitPrice((float) $item->line_total, (float) $item->quantity, (float) $item->unit_price),
                     'TaxCodeRef' => ['value' => $taxCodeId],
                 ],
             ];
@@ -1611,6 +1611,23 @@ class QboSyncService
         }
     }
 
+    /**
+     * QBO rejects a SalesItemLineDetail line (error 6070) unless
+     * Amount === UnitPrice * Qty exactly. Our stored per-unit rate is
+     * rounded (to 4dp) for display and can drift from the line's real,
+     * exactly-preserved Amount when the line was priced via "reverse
+     * total-to-price" auto-calc (a typed total that doesn't divide evenly
+     * into a clean per-unit rate) — e.g. Invoice 2026-068, qty=420,
+     * Amount=$1290.01: stored rate $3.07 * 420 = $1289.40, 61 cents short.
+     * Recomputing the rate as Amount / Qty at full float precision keeps
+     * UnitPrice * Qty equal to Amount (within float noise QBO tolerates)
+     * for every line, drifted or not, without touching the stored rate.
+     */
+    private function qboUnitPrice(float $amount, float $qty, float $fallback): float
+    {
+        return $qty > 0 ? $amount / $qty : $fallback;
+    }
+
     private function buildInvoicePayload(Invoice $invoice, string $customerQboId, array $itemIds): array
     {
         $lines = [];
@@ -1645,7 +1662,7 @@ class QboSyncService
                     'SalesItemLineDetail' => [
                         'ItemRef'    => ['value' => $itemId],
                         'Qty'        => (float) $item->quantity,
-                        'UnitPrice'  => (float) $item->sell_price,
+                        'UnitPrice'  => $this->qboUnitPrice((float) $item->line_total, (float) $item->quantity, (float) $item->sell_price),
                         'TaxCodeRef' => ['value' => $taxCodeId],
                     ],
                 ];
