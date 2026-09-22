@@ -269,6 +269,8 @@
                                     <tr class="{{ $fullyInvoiced ? 'opacity-40 bg-gray-50 dark:bg-gray-900' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}"
                                         data-item-id="{{ $item->id }}"
                                         data-sell-price="{{ (float)$item->sell_price }}"
+                                        data-line-total="{{ (float)$item->line_total }}"
+                                        data-full-qty="{{ (float)$item->quantity }}"
                                         data-tax-rate="{{ (float)($sale->tax_rate_percent ?? 0) / 100 }}">
 
                                         <td class="px-4 py-3 text-center">
@@ -354,9 +356,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.querySelectorAll('.invoice-qty-input').forEach(function (input) {
             const row      = input.closest('tr');
-            const price    = parseFloat(row.dataset.sellPrice) || 0;
             const qty      = parseFloat(input.value) || 0;
-            const total    = Math.round(qty * price * 100) / 100;
+            const fullQty  = parseFloat(row.dataset.fullQty) || 0;
+            const fullLineTotal = parseFloat(row.dataset.lineTotal) || 0;
+            // Scale the sale item's own exact line total by the fraction of its
+            // quantity being invoiced, matching InvoiceService::createFromSale() —
+            // sell_price alone is rounded to 4 decimals and doesn't always multiply
+            // back out to the real total (e.g. a line priced via "reverse
+            // total-to-price" auto-calc), so recomputing qty * price here would show
+            // a preview total that doesn't match what actually gets saved.
+            const total    = fullQty > 0
+                ? Math.round(fullLineTotal * (qty / fullQty) * 100) / 100
+                : Math.round(qty * (parseFloat(row.dataset.sellPrice) || 0) * 100) / 100;
             const itemId   = input.dataset.itemId;
             const lineCell = document.querySelector('.item-line-total[data-item-id="' + itemId + '"]');
             if (lineCell) lineCell.textContent = formatMoney(total);
