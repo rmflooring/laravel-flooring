@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class CustomerReturnService
 {
+    public function __construct(private InventoryService $inventory)
+    {
+    }
+
     /**
      * Mark an RFC as received.
      *
@@ -36,11 +40,20 @@ class CustomerReturnService
             $date = $receivedDate ? \Carbon\Carbon::parse($receivedDate)->toDateString() : now()->toDateString();
 
             foreach ($rfc->items as $rfcItem) {
+                // Resolve the product style the same way the sale status page's
+                // coverage lookup does — falling back to an exact catalog name
+                // match on color_item_number when the original sale item was
+                // saved without a linked style (retyped instead of picked from
+                // the dropdown). Without this fallback the receipt is created
+                // with product_style_id = NULL and, having no PO item link
+                // either (RFC-sourced, not ordered), becomes permanently
+                // invisible to every sale's "available stock" check.
+                $originSaleItem = $rfcItem->saleItem ?? $rfcItem->pickTicketItem?->saleItem;
+
                 // 1. Create a new InventoryReceipt — inventory goes UP
                 $receipt = InventoryReceipt::create([
                     'customer_return_item_id' => $rfcItem->id,
-                    'product_style_id'        => $rfcItem->saleItem?->product_style_id
-                        ?? $rfcItem->pickTicketItem?->saleItem?->product_style_id,
+                    'product_style_id'        => $originSaleItem ? $this->inventory->resolveStyleId($originSaleItem) : null,
                     'item_name'               => $rfcItem->item_name,
                     'unit'                    => $rfcItem->unit,
                     'quantity_received'       => $rfcItem->quantity_returned,
