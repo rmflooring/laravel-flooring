@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar Sync Bug Report — Floor Manager</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f5f7; color: #1a1a2e; line-height: 1.6; }
+  .page { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+  header { background: #1a1a2e; color: #fff; padding: 36px 40px; border-radius: 12px; margin-bottom: 32px; }
+  header h1 { font-size: 1.7rem; font-weight: 700; margin-bottom: 6px; }
+  header .meta { font-size: 0.85rem; opacity: 0.65; }
+  header .meta span { margin-right: 24px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em; }
+  .badge-red { background: #fde8e8; color: #c0392b; }
+  .badge-orange { background: #fef3e2; color: #d35400; }
+  .badge-green { background: #e8f5e9; color: #27ae60; }
+  .badge-blue { background: #e8f0fe; color: #1a56db; }
+  section { background: #fff; border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  section h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
+  section h3 { font-size: 0.95rem; font-weight: 700; margin: 20px 0 10px; color: #333; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 0; }
+  .stat { background: #f8f9fb; border-radius: 8px; padding: 16px 20px; }
+  .stat .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
+  .stat .value { font-size: 1.5rem; font-weight: 700; color: #c0392b; }
+  .stat .value.neutral { color: #1a1a2e; }
+  .stat .value.ok { color: #27ae60; }
+  pre { background: #1e1e2e; color: #cdd6f4; border-radius: 8px; padding: 18px 20px; font-size: 0.82rem; line-height: 1.6; overflow-x: auto; margin: 12px 0; }
+  code { font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; }
+  pre code { font-family: inherit; }
+  .inline-code { background: #f0f0f5; color: #c0392b; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 0.88em; }
+  .file-ref { background: #f8f9fb; border-left: 3px solid #1a56db; padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 10px 0; font-size: 0.85rem; font-family: monospace; color: #1a56db; }
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 6px; bottom: 6px; width: 2px; background: #e0e0e0; }
+  .timeline-item { position: relative; margin-bottom: 20px; }
+  .timeline-item::before { content: ''; position: absolute; left: -24px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; box-shadow: 0 0 0 2px #c0392b; }
+  .timeline-item p { font-size: 0.9rem; }
+  .timeline-item strong { display: block; margin-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 12px 0; }
+  th { background: #f4f5f7; text-align: left; padding: 10px 14px; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #666; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .option-card { border: 1px solid #e8e8e8; border-radius: 8px; padding: 18px 20px; margin: 12px 0; }
+  .option-card.recommended { border-color: #1a56db; background: #f8fbff; }
+  .option-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .option-card p { font-size: 0.88rem; color: #444; margin-bottom: 8px; }
+  .step-list { counter-reset: steps; list-style: none; }
+  .step-list li { counter-increment: steps; padding: 12px 14px 12px 44px; position: relative; border-bottom: 1px solid #f4f5f7; font-size: 0.9rem; }
+  .step-list li:last-child { border-bottom: none; }
+  .step-list li::before { content: counter(steps); position: absolute; left: 12px; top: 12px; width: 22px; height: 22px; background: #1a1a2e; color: #fff; border-radius: 50%; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .warning-box { background: #fff8e1; border: 1px solid #f9a825; border-radius: 8px; padding: 14px 18px; font-size: 0.88rem; margin: 14px 0; }
+  .warning-box strong { color: #e65100; }
+  .comment { color: #6c7a89; }
+  .kw { color: #cba6f7; }
+  .fn { color: #89dceb; }
+  .str { color: #a6e3a1; }
+  .num { color: #fab387; }
+  .err-line { background: rgba(192,57,43,0.15); display: block; margin: 0 -20px; padding: 0 20px; }
+  .fix-line { background: rgba(39,174,96,0.15); display: block; margin: 0 -20px; padding: 0 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Calendar Sync Bug Report</h1>
+  <div class="meta">
+    <span>Floor Manager — Internal CRM</span>
+    <span>Generated: 2026-06-29</span>
+    <span>Severity: <span class="badge badge-red">Critical</span></span>
+  </div>
+</header>
+
+<!-- Scale of Damage -->
+<section>
+  <h2><span class="badge badge-red">!</span> Scale of Damage</h2>
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="label">Total rows (should be ~thousands)</div>
+      <div class="value">16,705,908</div>
+    </div>
+    <div class="stat">
+      <div class="label">Orphaned rows (no link)</div>
+      <div class="value">16,705,482</div>
+    </div>
+    <div class="stat">
+      <div class="label">Valid / active rows</div>
+      <div class="value ok">1,851</div>
+    </div>
+    <div class="stat">
+      <div class="label">Table size on disk</div>
+      <div class="value">~5.46 GB</div>
+    </div>
+    <div class="stat">
+      <div class="label">Running since</div>
+      <div class="value neutral" style="font-size:1.1rem">2026-03-17</div>
+    </div>
+    <div class="stat">
+      <div class="label">Avg insert batch interval</div>
+      <div class="value neutral" style="font-size:1.1rem">~23 sec</div>
+    </div>
+  </div>
+</section>
+
+<!-- Root Cause -->
+<section>
+  <h2><span class="badge badge-red">Bug</span> Root Cause</h2>
+  <p style="margin-bottom:16px">The sync method <code class="inline-code">syncNow()</code> uses a <strong>4-column lookup</strong> to find an existing link, but a <strong>2-column key</strong> to upsert it. These two queries are logically inconsistent — the lookup almost always misses, causing an unconditional new <code class="inline-code">CalendarEvent</code> insert on every sync run for every user.</p>
+
+  <div class="file-ref">app/Http/Controllers/MicrosoftCalendarConnectController.php &mdash; lines 401–456</div>
+
+  <h3>The lookup (lines 401–405) — user-scoped, 4 conditions</h3>
+  <pre><code><span class="kw">$link</span> = ExternalEventLink::<span class="fn">where</span>(<span class="str">'provider'</span>, <span class="str">'microsoft'</span>)
+    -><span class="fn">where</span>(<span class="str">'microsoft_account_id'</span>, <span class="kw">$account</span>->id)   <span class="comment">// ← scoped to THIS user</span>
+    -><span class="fn">where</span>(<span class="str">'external_calendar_id'</span>, <span class="kw">$cal</span>->calendar_id)
+    -><span class="fn">where</span>(<span class="str">'external_event_id'</span>, <span class="kw">$externalEventId</span>)
+    -><span class="fn">first</span>();</code></pre>
+
+  <h3>The upsert (lines 445–448) — global, only 2 conditions</h3>
+  <pre><code>ExternalEventLink::<span class="fn">updateOrCreate</span>(
+    [
+        <span class="str">'provider'</span>           => <span class="str">'microsoft'</span>,
+        <span class="str">'external_event_id'</span>  => <span class="kw">$externalEventId</span>,  <span class="comment">// ← no user scope!</span>
+    ],
+    [
+        <span class="str">'microsoft_account_id'</span> => <span class="kw">$account</span>->id,      <span class="comment">// ← overwrites previous user's ID</span>
+        <span class="str">'calendar_event_id'</span>    => <span class="kw">$calendarEvent</span>->id,
+        ...
+    ]
+);</code></pre>
+
+  <h3>The DB unique constraint matches the upsert keys, not the lookup keys</h3>
+  <div class="file-ref">database/migrations/2026_01_13_010253_create_external_event_links_table.php</div>
+  <pre><code><span class="comment">// Only 2 columns — one link globally per Graph event ID, across ALL users</span>
+<span class="kw">$table</span>-><span class="fn">unique</span>([<span class="str">'provider'</span>, <span class="str">'external_event_id'</span>]);</code></pre>
+
+  <p style="margin-top:12px">There is <strong>no unique constraint</strong> on <code class="inline-code">calendar_events</code> and no <code class="inline-code">graph_event_id</code> column — nothing at the DB level prevents the same MS Graph event being inserted millions of times.</p>
+</section>
+
+<!-- Failure cascade -->
+<section>
+  <h2><span class="badge badge-orange">Flow</span> What Happens Each Sync Cycle</h2>
+  <p style="margin-bottom:20px">For any calendar event shared between multiple users (e.g. a team meeting):</p>
+  <div class="timeline">
+    <div class="timeline-item">
+      <strong>User A syncs (10:00)</strong>
+      <p>Lookup with <code class="inline-code">microsoft_account_id = A</code> → no row found → <code class="inline-code">new CalendarEvent()</code> + <code class="inline-code">save()</code> creates row <strong>#1</strong> → <code class="inline-code">updateOrCreate</code> creates an <code class="inline-code">ExternalEventLink</code> pointing to #1, owned by A.</p>
+    </div>
+    <div class="timeline-item">
+      <strong>User B syncs (10:02)</strong>
+      <p>Lookup with <code class="inline-code">microsoft_account_id = B</code> → finds nothing (the link has A's account_id) → creates row <strong>#2</strong> → <code class="inline-code">updateOrCreate</code> updates the existing link: now owned by B, pointing to #2. <strong>Row #1 is now orphaned.</strong></p>
+    </div>
+    <div class="timeline-item">
+      <strong>User A syncs again (10:10)</strong>
+      <p>Lookup finds nothing again → creates row <strong>#3</strong> → link updates back to A. Row #2 orphaned.</p>
+    </div>
+    <div class="timeline-item">
+      <strong>Repeats every 10 minutes, forever</strong>
+      <p>With 5 connected users and hundreds of shared events, ~43 orphaned <code class="inline-code">CalendarEvent</code> rows are created per timestamp. The <code class="inline-code">ExternalEventLink</code> table just bounces between users, always pointing to the most recently created row. Every previous row is abandoned.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Scheduling -->
+<section>
+  <h2><span class="badge badge-blue">Schedule</span> Why It Runs ~Every 23 Seconds</h2>
+  <div class="file-ref">routes/console.php &mdash; lines 54–101</div>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Intended frequency</td><td><code class="inline-code">everyTenMinutes()</code> — once per 10 min</td></tr>
+      <tr><td><code class="inline-code">withoutOverlapping()</code></td><td>Yes — present, so the job does not stack</td></tr>
+      <tr><td>Connected users synced per run</td><td>5 users, processed sequentially in a loop</td></tr>
+      <tr><td>Effective insert cadence</td><td>10 min ÷ 5 users × overlapping timing ≈ <strong>~23 seconds</strong> between batches</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:12px;font-size:0.9rem">The scheduling is not itself the bug — <code class="inline-code">withoutOverlapping()</code> is present and working. The frequency just means the broken insert logic runs 6× per hour per user, continuously.</p>
+</section>
+
+<!-- Proposed Fix -->
+<section>
+  <h2><span class="badge badge-green">Fix</span> Proposed Solutions</h2>
+
+  <div class="option-card recommended">
+    <h4><span class="badge badge-blue">A</span> Per-user links — Recommended</h4>
+    <p>Matches the existing code intent: <code class="inline-code">owner_user_id</code> is set on each <code class="inline-code">CalendarEvent</code>, so each user is meant to have their own row per event. Requires one migration and a one-line controller fix.</p>
+
+    <h3 style="margin-top:14px">Migration</h3>
+    <pre><code>Schema::<span class="fn">table</span>(<span class="str">'external_event_links'</span>, <span class="kw">function</span> (Blueprint <span class="kw">$table</span>) {
+    <span class="kw">$table</span>-><span class="fn">dropUnique</span>([<span class="str">'provider'</span>, <span class="str">'external_event_id'</span>]);
+    <span class="kw">$table</span>-><span class="fn">unique</span>([<span class="str">'provider'</span>, <span class="str">'microsoft_account_id'</span>, <span class="str">'external_event_id'</span>]);
+});</code></pre>
+
+    <h3>Controller fix — <code class="inline-code">syncNow()</code> lines 445–448</h3>
+    <pre><code>ExternalEventLink::<span class="fn">updateOrCreate</span>(
+    [
+        <span class="str">'provider'</span>             => <span class="str">'microsoft'</span>,
+<span class="fix-line">        <span class="str">'microsoft_account_id'</span> => <span class="kw">$account</span>->id,   <span class="comment">// ← ADD THIS LINE</span></span>
+        <span class="str">'external_event_id'</span>    => <span class="kw">$externalEventId</span>,
+    ],
+    [
+        <span class="str">'external_calendar_id'</span> => <span class="kw">$cal</span>->calendar_id,
+        <span class="str">'calendar_event_id'</span>    => <span class="kw">$calendarEvent</span>->id,
+        <span class="str">'last_synced_at'</span>       => <span class="fn">now</span>(),
+    ]
+);</code></pre>
+  </div>
+
+  <div class="option-card">
+    <h4><span class="badge badge-orange">B</span> Shared event — simpler, no migration</h4>
+    <p>One <code class="inline-code">CalendarEvent</code> per MS Graph event, shared across all users. Fix: change the lookup to drop <code class="inline-code">microsoft_account_id</code> and <code class="inline-code">external_calendar_id</code> from the WHERE clause so it matches the existing DB unique key. No migration needed, but all users see the same event row (may limit per-user customisation).</p>
+    <pre><code><span class="kw">$link</span> = ExternalEventLink::<span class="fn">where</span>(<span class="str">'provider'</span>, <span class="str">'microsoft'</span>)
+<span class="fix-line">    -><span class="fn">where</span>(<span class="str">'external_event_id'</span>, <span class="kw">$externalEventId</span>)   <span class="comment">// only 2 conditions</span></span>
+    -><span class="fn">first</span>();</code></pre>
+  </div>
+</section>
+
+<!-- Cleanup Plan -->
+<section>
+  <h2><span class="badge badge-orange">Cleanup</span> Safe Plan for Removing 16.7M Orphaned Rows</h2>
+
+  <div class="warning-box">
+    <strong>Important:</strong> Deploy and verify the fix above before running any cleanup. If you clean up first, the table will just refill within minutes.
+  </div>
+
+  <ol class="step-list">
+    <li>
+      <strong>Verify the orphan count before touching anything</strong>
+      <pre><code><span class="kw">SELECT</span> <span class="fn">COUNT</span>(*) <span class="kw">FROM</span> calendar_events
+<span class="kw">WHERE</span> id <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> calendar_event_id <span class="kw">FROM</span> external_event_links)
+<span class="kw">AND</span> related_type <span class="kw">IS NULL</span>;</code></pre>
+      <p style="font-size:0.85rem;margin-top:8px;color:#666">The <code class="inline-code">related_type IS NULL</code> guard ensures we never touch events that are organically linked to jobs or opportunities, even if they have no external link entry.</p>
+    </li>
+    <li>
+      <strong>Delete in batches of 100,000</strong> (avoids long table locks)
+      <pre><code><span class="comment">-- Run this repeatedly until rows affected = 0</span>
+<span class="kw">DELETE FROM</span> calendar_events
+<span class="kw">WHERE</span> id <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> calendar_event_id <span class="kw">FROM</span> external_event_links)
+<span class="kw">AND</span> related_type <span class="kw">IS NULL</span>
+<span class="kw">ORDER BY</span> id
+<span class="kw">LIMIT</span> <span class="num">100000</span>;</code></pre>
+      <p style="font-size:0.85rem;margin-top:8px;color:#666">~167 iterations to clear ~16.7M rows. Run via a loop in tinker or a one-off Artisan command. Each batch should take a few seconds.</p>
+    </li>
+    <li>
+      <strong>Reclaim disk space</strong>
+      <pre><code><span class="kw">OPTIMIZE TABLE</span> calendar_events;</code></pre>
+      <p style="font-size:0.85rem;margin-top:8px;color:#666">Rewrites the table and returns the ~5.4 GB. This may take a few minutes on a large table — run during off-hours or a low-traffic window.</p>
+    </li>
+    <li>
+      <strong>Confirm the table is clean</strong>
+      <pre><code><span class="kw">SELECT</span> <span class="fn">COUNT</span>(*) <span class="kw">FROM</span> calendar_events;   <span class="comment">-- expect a few hundred at most</span>
+<span class="kw">SELECT</span> <span class="fn">COUNT</span>(*) <span class="kw">FROM</span> external_event_links; <span class="comment">-- should match calendar_events ~1:1</span></code></pre>
+    </li>
+  </ol>
+</section>
+
+<!-- File Reference -->
+<section>
+  <h2><span class="badge badge-blue">Ref</span> Files Involved</h2>
+  <table>
+    <thead><tr><th>File</th><th>Role</th><th>Lines</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code class="inline-code">app/Http/Controllers/MicrosoftCalendarConnectController.php</code></td>
+        <td>Contains <code class="inline-code">syncNow()</code> — the broken sync loop</td>
+        <td>401–456</td>
+      </tr>
+      <tr>
+        <td><code class="inline-code">routes/console.php</code></td>
+        <td>Scheduler: calls <code class="inline-code">syncNow()</code> every 10 min for all connected users</td>
+        <td>54–101</td>
+      </tr>
+      <tr>
+        <td><code class="inline-code">app/Models/CalendarEvent.php</code></td>
+        <td>No <code class="inline-code">graph_event_id</code> field; no unique constraint — entirely unaware of MS Graph</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code class="inline-code">app/Models/ExternalEventLink.php</code></td>
+        <td>Bridge between CalendarEvent and MS Graph; unique key is too broad</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code class="inline-code">database/migrations/2026_01_13_010253_create_external_event_links_table.php</code></td>
+        <td>Defines the incorrect <code class="inline-code">UNIQUE(provider, external_event_id)</code> constraint</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code class="inline-code">database/migrations/2026_01_13_005749_create_calendar_events_table.php</code></td>
+        <td>No unique constraint on calendar_events — nothing prevents duplicate inserts</td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<footer style="text-align:center;font-size:0.8rem;color:#999;padding-top:16px">
+  Floor Manager — Calendar Sync Bug Report &mdash; Generated 2026-06-29 &mdash; Delete this file after review
+</footer>
+
+</div>
+</body>
+</html>
