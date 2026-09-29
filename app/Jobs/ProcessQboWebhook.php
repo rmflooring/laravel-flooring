@@ -50,6 +50,7 @@ class ProcessQboWebhook implements ShouldQueue
                     'VendorCredit'  => $sync->handleVendorCreditUpdate($qboId, $operation),
                     'Payment'       => $sync->handlePaymentUpdate($qboId, $operation),
                     'RefundReceipt' => $sync->handleRefundReceiptUpdate($qboId, $operation),
+                    'Customer'      => $sync->handleCustomerUpdate($qboId, $operation),
                     default         => null,
                 };
             }

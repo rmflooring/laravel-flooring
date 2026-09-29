@@ -348,7 +348,20 @@ class QboSyncService
             if ($customer->qbo_id) {
                 $payload['Id']        = $customer->qbo_id;
                 $payload['SyncToken'] = $customer->qbo_sync_token ?? '0';
-                $response = $this->qbo->post('customer', $payload);
+                try {
+                    $response = $this->qbo->post('customer', $payload);
+                } catch (\RuntimeException $e) {
+                    // Stale Object Error (code 5010): our cached SyncToken is behind
+                    // QBO's actual current one — happens whenever the customer was
+                    // edited directly in QBO since we last synced it. Re-fetch the
+                    // live token and retry once rather than failing the whole push.
+                    if (! str_contains($e->getMessage(), '"code":"5010"')) {
+                        throw $e;
+                    }
+                    $fresh = $this->qbo->get("customer/{$customer->qbo_id}");
+                    $payload['SyncToken'] = $fresh['Customer']['SyncToken'] ?? $payload['SyncToken'];
+                    $response = $this->qbo->post('customer', $payload);
+                }
                 $qboCustomer = $response['Customer'];
                 $action = 'updated';
             } else {
@@ -476,6 +489,51 @@ class QboSyncService
         $result = $this->qbo->query("SELECT * FROM Customer WHERE DisplayName = '{$escapedName}'");
         $customers = $result['QueryResponse']['Customer'] ?? [];
         return $customers[0] ?? null;
+    }
+
+    /**
+     * Called when QBO notifies us that a Customer was created/updated/deleted.
+     * Whenever a customer is edited directly in QBO (address, phone, etc.) its
+     * SyncToken advances without FM knowing — without this handler our cached
+     * qbo_sync_token drifts stale, and the next push FM makes to that customer
+     * fails with a "Stale Object Error" (QBO error code 5010). Refreshing the
+     * cached token here keeps it current so that never happens.
+     */
+    public function handleCustomerUpdate(string $qboId, string $operation): void
+    {
+        $customer = Customer::where('qbo_id', $qboId)->first();
+
+        if (! $customer) {
+            Log::info("[QBO Webhook] Customer qbo_id={$qboId} not found in FM — skipping.");
+            return;
+        }
+
+        if ($operation === 'Delete') {
+            $customer->update(['qbo_id' => null, 'qbo_sync_token' => null, 'qbo_synced_at' => null]);
+            $this->qbo->log('customer', $customer->id, 'pull', 'success', $qboId, 'Customer deleted in QBO — sync link cleared');
+            return;
+        }
+
+        try {
+            $response    = $this->qbo->get("customer/{$qboId}");
+            $qboCustomer = $response['Customer'] ?? null;
+
+            if (! $qboCustomer) {
+                Log::warning("[QBO Webhook] Customer #{$qboId} fetch returned empty response.");
+                return;
+            }
+
+            $customer->update([
+                'qbo_sync_token' => $qboCustomer['SyncToken'],
+                'qbo_synced_at'  => now(),
+            ]);
+
+            $this->qbo->log('customer', $customer->id, 'pull', 'success', $qboId, 'Customer sync token refreshed from QBO webhook');
+
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch Customer #{$qboId}: " . $e->getMessage());
+            $this->qbo->log('customer', $customer->id, 'pull', 'error', $qboId, $e->getMessage());
+        }
     }
 
     // =========================================================================
