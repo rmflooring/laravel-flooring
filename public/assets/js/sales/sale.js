@@ -11,6 +11,22 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  // The <form> element is not a DOM ancestor of #rooms-container on the sale
+  // edit page (a div opened above the form closes before the form does,
+  // which makes the browser's HTML parser implicitly end the form early —
+  // see the matching note in appendRowFromTemplate() below). Rows added via
+  // JS already get an explicit form= association there, but rows rendered
+  // server-side on page load never did, so their fields silently never
+  // reached the server on save — confirmed live 2026-10-01, Sale #85 (id 88):
+  // 2 of 3 material rows vanished after an edit+save despite never being
+  // touched, because they had no form= attribute and sat outside the form.
+  // Stamp it on every existing field now, the same way new rows get it.
+  const ownerFormId = roomsContainer.closest("form")?.id || "sale-edit-form";
+  roomsContainer.querySelectorAll("input, select, textarea").forEach(el => {
+    if (el.closest("template")) return;
+    el.setAttribute("form", ownerFormId);
+  });
+
   // ── Unsaved changes warning (Create Estimate) ───────────────────────────
   let fmHasUnsavedChanges = false;
 

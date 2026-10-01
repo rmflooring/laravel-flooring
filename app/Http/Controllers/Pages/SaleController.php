@@ -579,7 +579,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'sale_id'          => $sale->id,
                     'sale_room_id'     => $saleRoomId,
                     'item_type'        => 'material',
-                    'sort_order'       => (int)$i,
+                    'sort_order'       => (int)($item['line_item_order'] ?? ($i + 1)),
 
                     'product_type'     => $item['product_type'] ?? null,
                     'product_line_id'  => ($item['product_line_id'] ?? '') !== '' ? (int)$item['product_line_id'] : null,
@@ -610,7 +610,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'sale_id'            => $sale->id,
                     'sale_room_id'       => $saleRoomId,
                     'item_type'          => 'freight',
-                    'sort_order'         => (int)$i,
+                    'sort_order'         => (int)($item['line_item_order'] ?? ($i + 1)),
 
                     'freight_description'=> $item['freight_description'] ?? null,
                     'quantity'           => (float)($item['quantity'] ?? 0),
@@ -633,7 +633,7 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                     'sale_id'      => $sale->id,
                     'sale_room_id' => $saleRoomId,
                     'item_type'    => 'labour',
-                    'sort_order'   => (int)$i,
+                    'sort_order'   => (int)($item['line_item_order'] ?? ($i + 1)),
 
                     'labour_type'  => $item['labour_type'] ?? null,
                     'description'  => $item['description'] ?? null,

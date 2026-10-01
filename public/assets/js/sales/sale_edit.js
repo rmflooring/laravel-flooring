@@ -77,11 +77,14 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function renumberLineItems(tbody) {
-  tbody.querySelectorAll('tr').forEach((row, index) => {
+  let index = 0;
+  tbody.querySelectorAll('tr').forEach((row) => {
+    if (row.classList.contains('item-notes-row')) return;
     const orderInput = row.querySelector('.js-line-item-order');
     if (orderInput) {
       orderInput.value = index + 1;
     }
+    index++;
   });
 }
 
@@ -91,10 +94,17 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('.js-move-row-up')) {
     const row = e.target.closest('tr');
     const tbody = row.parentElement;
-    const prev = row.previousElementSibling;
-
-    if (prev) {
-      tbody.insertBefore(row, prev);
+    // Paired notes row immediately follows the main row
+    const rowNotes = row.nextElementSibling && row.nextElementSibling.classList.contains('item-notes-row')
+      ? row.nextElementSibling : null;
+    // Find previous main row (skip any notes rows going backwards)
+    let prevMain = row.previousElementSibling;
+    while (prevMain && prevMain.classList.contains('item-notes-row')) {
+      prevMain = prevMain.previousElementSibling;
+    }
+    if (prevMain) {
+      tbody.insertBefore(row, prevMain);
+      if (rowNotes) tbody.insertBefore(rowNotes, prevMain);
       renumberLineItems(tbody);
       fmMarkDirty(); // mark unsaved changes
     }
@@ -105,17 +115,25 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('.js-move-row-down')) {
     const row = e.target.closest('tr');
     const tbody = row.parentElement;
-    const next = row.nextElementSibling;
-
-    if (next) {
-      tbody.insertBefore(next, row);
+    const rowNotes = row.nextElementSibling && row.nextElementSibling.classList.contains('item-notes-row')
+      ? row.nextElementSibling : null;
+    // Find next main row (skip the notes row for this row)
+    let nextMain = (rowNotes || row).nextElementSibling;
+    while (nextMain && nextMain.classList.contains('item-notes-row')) {
+      nextMain = nextMain.nextElementSibling;
+    }
+    if (nextMain) {
+      const nextNotes = nextMain.nextElementSibling && nextMain.nextElementSibling.classList.contains('item-notes-row')
+        ? nextMain.nextElementSibling : null;
+      tbody.insertBefore(nextMain, row);
+      if (nextNotes) tbody.insertBefore(nextNotes, row);
       renumberLineItems(tbody);
       fmMarkDirty(); // mark unsaved changes
     }
     return;
   }
 
-}); 
+});
 
 function cleanupCopyModalBackdrop() {
   // Flowbite typically locks scrolling on body
