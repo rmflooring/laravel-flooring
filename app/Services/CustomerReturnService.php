@@ -99,12 +99,19 @@ class CustomerReturnService
     {
         $pt->load('items');
 
-        $anyStillOut  = false;
-        $anyDelivered = false;
+        $anyStillOut       = false;
+        $anyDelivered      = false;
+        // Whether the ticket still owes undelivered material, independent of
+        // returns — see the matching comment in PickTicketService::returnTicket().
+        // Without this, any RFC against a fully-delivered ticket (completely
+        // normal — return leftover material after the job) wrongly flagged it
+        // as 'partially_delivered', as if the warehouse still owed a delivery.
+        $anyUnderDelivered = false;
 
         foreach ($pt->items as $item) {
             $delivered = (float) $item->delivered_qty;
             $returned  = (float) $item->returned_qty;
+            $ordered   = (float) $item->quantity;
             $netOut    = $delivered - $returned;
 
             if ($delivered > 0) {
@@ -113,6 +120,9 @@ class CustomerReturnService
             if ($netOut > 0) {
                 $anyStillOut = true;
             }
+            if ($delivered + 0.01 < $ordered) {
+                $anyUnderDelivered = true;
+            }
         }
 
         if (! $anyDelivered) {
@@ -120,7 +130,11 @@ class CustomerReturnService
             return;
         }
 
-        $newStatus = $anyStillOut ? 'partially_delivered' : 'returned';
+        $newStatus = match (true) {
+            ! $anyStillOut                      => 'returned',
+            $anyStillOut && $anyUnderDelivered  => 'partially_delivered',
+            default                              => 'delivered',
+        };
 
         $pt->update([
             'status'      => $newStatus,

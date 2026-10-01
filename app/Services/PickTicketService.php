@@ -392,6 +392,16 @@ class PickTicketService
         DB::transaction(function () use ($pickTicket, $itemQtys, $returnNotes) {
             $now        = now();
             $anyStillOut = false;
+            // Whether the ticket still owes undelivered material, independent of
+            // returns — a ticket that was delivered in full and later has some of
+            // it returned is NOT "partially delivered"; only a ticket that never
+            // went out in full still belongs in that status. Conflating the two
+            // (added 2026-10-01, bug found live: 5 of 7 'partially_delivered'
+            // tickets had every item's delivered_qty already == quantity — they'd
+            // simply had a normal partial return of leftover material, not an
+            // incomplete delivery) wrongly flagged fully-delivered tickets as
+            // still needing warehouse action.
+            $anyUnderDelivered = false;
 
             foreach ($pickTicket->items as $item) {
                 $returning       = max(0, (float) ($itemQtys[$item->id] ?? 0));
@@ -408,6 +418,10 @@ class PickTicketService
                 if ($netOut > 0) {
                     $anyStillOut = true;
                 }
+
+                if ($totalDelivered + 0.01 < (float) $item->quantity) {
+                    $anyUnderDelivered = true;
+                }
             }
 
             $noteParts = [];
@@ -415,9 +429,18 @@ class PickTicketService
                 $noteParts[] = 'Return notes: ' . $returnNotes;
             }
 
-            if ($anyStillOut) {
+            if ($anyStillOut && $anyUnderDelivered) {
                 $pickTicket->update([
                     'status'      => 'partially_delivered',
+                    'returned_at' => $pickTicket->returned_at ?? $now,
+                    'notes'       => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                ]);
+            } elseif ($anyStillOut) {
+                // Delivery was complete; some (not all) of it has since come back.
+                // Nothing left for the warehouse to deliver, so this stays 'delivered'
+                // rather than reverting to a status that implies otherwise.
+                $pickTicket->update([
+                    'status'      => 'delivered',
                     'returned_at' => $pickTicket->returned_at ?? $now,
                     'notes'       => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
                 ]);
