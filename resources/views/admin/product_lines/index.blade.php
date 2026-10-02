@@ -130,6 +130,34 @@
     </div>
 </form>
 
+            @php
+                $currentSort  = request('sort', 'id_desc');
+                $filterParams = request()->only(['search', 'status', 'product_type_id', 'vendor_id', 'per_page']);
+
+                $colSorts = [
+                    'product_type' => ['asc' => 'product_type_asc', 'desc' => 'product_type_desc'],
+                    'name'         => ['asc' => 'name_asc',         'desc' => 'name_desc'],
+                    'vendor'       => ['asc' => 'vendor_asc',       'desc' => 'vendor_desc'],
+                    'manufacturer' => ['asc' => 'manufacturer_asc', 'desc' => 'manufacturer_desc'],
+                    'model'        => ['asc' => 'model_asc',        'desc' => 'model_desc'],
+                    'collection'   => ['asc' => 'collection_asc',   'desc' => 'collection_desc'],
+                    'status'       => ['asc' => 'status_asc',       'desc' => 'status_desc'],
+                    'shop'         => ['asc' => 'shop_asc',         'desc' => 'shop_desc'],
+                ];
+
+                $sortLink = function ($col) use ($currentSort, $filterParams, $colSorts) {
+                    $sorts = $colSorts[$col];
+                    $next  = ($currentSort === $sorts['asc']) ? $sorts['desc'] : $sorts['asc'];
+                    return route('admin.product_lines.index', array_merge($filterParams, ['sort' => $next]));
+                };
+
+                $sortArrow = function ($col) use ($currentSort, $colSorts) {
+                    if ($currentSort === $colSorts[$col]['asc'])  return ' ↑';
+                    if ($currentSort === $colSorts[$col]['desc']) return ' ↓';
+                    return '';
+                };
+            @endphp
+
             <!-- Table -->
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
@@ -138,14 +166,30 @@
                             <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Product Type</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Vendor</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Manufacturer</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Model</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Collection</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Shop</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('product_type') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Product Type{{ $sortArrow('product_type') }}</a>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('name') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Name{{ $sortArrow('name') }}</a>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('vendor') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Vendor{{ $sortArrow('vendor') }}</a>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('manufacturer') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Manufacturer{{ $sortArrow('manufacturer') }}</a>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('model') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Model{{ $sortArrow('model') }}</a>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('collection') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Collection{{ $sortArrow('collection') }}</a>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('status') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Status{{ $sortArrow('status') }}</a>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <a href="{{ $sortLink('shop') }}" class="hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap">Shop{{ $sortArrow('shop') }}</a>
+                                    </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>

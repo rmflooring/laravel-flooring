@@ -30,10 +30,10 @@ public function index(Request $request)
         $search = trim((string) $request->search);
 
         $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")
-              ->orWhere('manufacturer', 'like', "%{$search}%")
-              ->orWhere('model', 'like', "%{$search}%")
-              ->orWhere('collection', 'like', "%{$search}%")
+            $q->where('product_lines.name', 'like', "%{$search}%")
+              ->orWhere('product_lines.manufacturer', 'like', "%{$search}%")
+              ->orWhere('product_lines.model', 'like', "%{$search}%")
+              ->orWhere('product_lines.collection', 'like', "%{$search}%")
               ->orWhereHas('productType', function ($pt) use ($search) {
                   $pt->where('name', 'like', "%{$search}%");
               })
@@ -52,17 +52,17 @@ public function index(Request $request)
 
     // Filters — hide archived by default unless explicitly requested
     if ($request->filled('status')) {
-        $query->where('status', $request->status);
+        $query->where('product_lines.status', $request->status);
     } else {
-        $query->where('status', '<>', 'archived');
+        $query->where('product_lines.status', '<>', 'archived');
     }
 
     if ($request->filled('product_type_id')) {
-        $query->where('product_type_id', $request->product_type_id);
+        $query->where('product_lines.product_type_id', $request->product_type_id);
     }
 
     if ($request->filled('vendor_id')) {
-        $query->where('vendor_id', $request->vendor_id);
+        $query->where('product_lines.vendor_id', $request->vendor_id);
     }
 
     // Per page
@@ -71,9 +71,43 @@ public function index(Request $request)
         $perPage = 15;
     }
 
+    // Sort — single combined param (e.g. "name_asc"), same pattern as the
+    // Opportunities index. Relation columns sort via a left join so NULLs
+    // (no product type / no vendor) still sort predictably.
+    $sort = $request->input('sort', 'id_desc');
+    switch ($sort) {
+        case 'product_type_asc':
+        case 'product_type_desc':
+            $dir = $sort === 'product_type_asc' ? 'asc' : 'desc';
+            $query->select('product_lines.*')
+                  ->leftJoin('product_types', 'product_types.id', '=', 'product_lines.product_type_id')
+                  ->orderBy('product_types.name', $dir);
+            break;
+        case 'name_asc':   $query->orderBy('product_lines.name', 'asc'); break;
+        case 'name_desc':  $query->orderBy('product_lines.name', 'desc'); break;
+        case 'vendor_asc':
+        case 'vendor_desc':
+            $dir = $sort === 'vendor_asc' ? 'asc' : 'desc';
+            $query->select('product_lines.*')
+                  ->leftJoin('vendors', 'vendors.id', '=', 'product_lines.vendor_id')
+                  ->orderBy('vendors.company_name', $dir);
+            break;
+        case 'manufacturer_asc':  $query->orderBy('product_lines.manufacturer', 'asc'); break;
+        case 'manufacturer_desc': $query->orderBy('product_lines.manufacturer', 'desc'); break;
+        case 'model_asc':         $query->orderBy('product_lines.model', 'asc'); break;
+        case 'model_desc':        $query->orderBy('product_lines.model', 'desc'); break;
+        case 'collection_asc':    $query->orderBy('product_lines.collection', 'asc'); break;
+        case 'collection_desc':   $query->orderBy('product_lines.collection', 'desc'); break;
+        case 'status_asc':        $query->orderBy('product_lines.status', 'asc'); break;
+        case 'status_desc':       $query->orderBy('product_lines.status', 'desc'); break;
+        case 'shop_asc':          $query->orderBy('product_lines.shop_visible', 'asc'); break;
+        case 'shop_desc':         $query->orderBy('product_lines.shop_visible', 'desc'); break;
+        case 'id_asc':            $query->orderBy('product_lines.id', 'asc'); break;
+        default:                  $query->orderBy('product_lines.id', 'desc'); break;
+    }
+
     $lines = $query
         ->withCount(['estimateItems', 'saleItems'])
-        ->orderBy('id', 'desc')
         ->paginate($perPage)
         ->withQueryString(); // critical: keeps filters while paging
 
