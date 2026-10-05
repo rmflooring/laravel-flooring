@@ -114,9 +114,16 @@ class WarehousePickupsController extends Controller
             default              => null,
         };
 
-        $ptQuery = PickTicket::with(['sale.workOrders', 'creator'])
+        // Any pick ticket with a fulfillment type explicitly set belongs here,
+        // whether or not it's linked to a work order — previously restricted to
+        // whereNull('work_order_id'), which hid every WO-linked delivery/pickup
+        // from the page warehouse staff actually check each morning (reported
+        // live 2026-10-05: a WO-linked ticket set to "Deliver on Site" never
+        // showed up here). A WO-linked ticket that's never had its fulfillment
+        // type set at all is still correctly excluded by the fulfillment_type
+        // filter below, same as before.
+        $ptQuery = PickTicket::with(['sale.workOrders', 'workOrder', 'creator'])
             ->select('pick_tickets.*')
-            ->whereNull('work_order_id')
             ->whereIn('fulfillment_type', ['pickup', 'delivery'])
             ->whereNotIn('pick_tickets.status', ['cancelled', 'returned'])
             ->when($ptType, fn ($q) => $q->where('fulfillment_type', $ptType))

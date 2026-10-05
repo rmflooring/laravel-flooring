@@ -308,7 +308,7 @@
             <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                 <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 class="text-base font-semibold text-gray-900 dark:text-white">Sale Pickups &amp; Deliveries</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Material orders staged directly from a sale (no work order).</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Every pick ticket with a pickup or delivery scheduled, whether or not it's tied to a work order.</p>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -381,6 +381,11 @@
                                                class="font-medium text-blue-600 hover:underline dark:text-blue-400">
                                                 Sale #{{ $pt->sale->sale_number }}
                                             </a>
+                                            @if ($pt->workOrder)
+                                                <span class="ml-1 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                                    WO #{{ $pt->workOrder->wo_number }}
+                                                </span>
+                                            @endif
                                             @if ($pt->sale->customer_name)
                                                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ $pt->sale->customer_name }}</div>
                                             @endif
