@@ -18,9 +18,12 @@ class WarehousePickTicketController extends Controller
 {
     public function index(Request $request): View
     {
+        $showDelivered = $request->boolean('show_delivered', false);
+
         $query = PickTicket::query()
             ->with(['sale', 'workOrder', 'items'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->when(! $request->filled('status') && ! $showDelivered, fn ($q) => $q->where('status', '<>', 'delivered'))
             ->when($request->filled('search'), function ($q) use ($request) {
                 $q->where('pt_number', 'like', '%' . $request->search . '%');
             });
@@ -58,7 +61,7 @@ class WarehousePickTicketController extends Controller
 
         $statuses = PickTicket::STATUS_LABELS;
 
-        return view('pages.warehouse.pick-tickets.index', compact('pickTickets', 'statuses'));
+        return view('pages.warehouse.pick-tickets.index', compact('pickTickets', 'statuses', 'showDelivered'));
     }
 
     public function show(PickTicket $pickTicket, \App\Services\InventoryService $inventory): View

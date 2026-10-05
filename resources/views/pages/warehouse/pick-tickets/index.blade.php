@@ -36,11 +36,16 @@
                         <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none px-1">
+                    <input type="checkbox" name="show_delivered" value="1" @checked($showDelivered)
+                           class="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600">
+                    Show Delivered
+                </label>
                 <button type="submit"
                         class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
                     Filter
                 </button>
-                @if (request()->hasAny(['search', 'status', 'sort']))
+                @if (request()->hasAny(['search', 'status', 'sort', 'show_delivered']))
                     <a href="{{ route('pages.warehouse.pick-tickets.index') }}"
                        class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                         Clear
