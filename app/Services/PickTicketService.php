@@ -30,11 +30,18 @@ class PickTicketService
         return DB::transaction(function () use ($allocation, $workOrder) {
             // Consolidate into an existing open PT for the same sale + WO rather than
             // creating a new ticket for every allocation (which causes duplicate PTs per
-            // job). This must also catch 'staged' tickets — not just 'pending' — since a
-            // material can be staged from the sale/WO page before any stock is allocated
-            // to it, and allocating afterward should land on that same ticket.
+            // job). Must catch 'staged' and 'ready'/'picked' too, not just 'pending' —
+            // a material can be staged (or even marked ready/picked) before every item
+            // on it has stock allocated, and allocating the rest afterward should land
+            // on that same ticket. Confirmed live 2026-10-05, Sale #78 (id 81): a WO
+            // ticket already at 'ready' (covering only the underlayment) was invisible
+            // to this lookup when the laminate was allocated next, so a third, separate
+            // PT got created instead of adding the laminate to the existing one.
+            // Anything past 'picked' (partially_delivered, delivered, etc.) is excluded
+            // — some of that ticket has already physically left the warehouse, so a
+            // newly-allocated item belongs on a fresh ticket instead.
             $pt = PickTicket::where('sale_id', $allocation->sale_id)
-                ->whereIn('status', ['pending', 'staged'])
+                ->whereIn('status', ['pending', 'staged', 'ready', 'picked'])
                 ->where('work_order_id', $workOrder?->id)
                 ->first();
 
