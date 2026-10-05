@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\InventoryAllocation;
 use App\Models\InventoryReceipt;
+use App\Models\MicrosoftAccount;
+use App\Models\MicrosoftCalendar;
 use App\Models\PickTicket;
 use App\Models\PickTicketItem;
 use App\Models\PurchaseOrder;
@@ -12,10 +14,138 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PickTicketService
 {
+    // Microsoft 365 group calendar used for warehouse delivery scheduling.
+    private const WAREHOUSE_CALENDAR_GROUP_ID = '4bfd495c-4df2-4eaa-9d8c-987c4ef23b02';
+
     public function __construct(private InventoryService $inventory) {}
+
+    /**
+     * Create, update, or remove a pick ticket's warehouse delivery calendar event
+     * to match its current fulfillment_type/delivery_date/delivery_time/staging_notes.
+     *
+     * Previously this only ever ran once, inline in SaleController::stagePickTicket(),
+     * at the moment a brand-new ticket was first staged for delivery — so a ticket
+     * created another way (e.g. via "Assign from stock", which never asks for a
+     * fulfillment type) and later switched to delivery through the pick ticket's own
+     * Edit modal never got a calendar event at all. Pulled out here so both paths
+     * (initial staging and later edits) go through the same logic, and made
+     * idempotent: calling it again on a ticket that already has an event updates
+     * that event in place instead of creating a duplicate, and calling it after the
+     * ticket no longer qualifies (switched back to pickup, or date cleared) removes
+     * the now-stale event instead of leaving it sitting on the calendar.
+     *
+     * @return bool false only when an attempted create/update/delete actually
+     *     failed (e.g. an expired Microsoft 365 connection) — callers can use
+     *     this to warn the user. True covers both success and "nothing to do"
+     *     (no connected account, no warehouse calendar configured, etc.).
+     */
+    public function syncDeliveryCalendarEvent(PickTicket $pickTicket): bool
+    {
+        $pickTicket->loadMissing(['sale', 'calendarEvent.externalLink']);
+        $sale = $pickTicket->sale;
+        if (! $sale) {
+            return true;
+        }
+
+        $qualifies = $pickTicket->fulfillment_type === 'delivery' && $pickTicket->delivery_date;
+
+        if (! $qualifies) {
+            return $this->removeDeliveryCalendarEvent($pickTicket);
+        }
+
+        try {
+            $account = MicrosoftAccount::where('user_id', auth()->id())
+                ->where('is_connected', true)
+                ->first();
+            if (! $account) {
+                return true;
+            }
+
+            $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
+                ->where('group_id', self::WAREHOUSE_CALENDAR_GROUP_ID)
+                ->first();
+            if (! $calendar) {
+                return true;
+            }
+
+            $start = \Carbon\Carbon::parse(
+                $pickTicket->delivery_date->format('Y-m-d') . ' ' . ($pickTicket->delivery_time ?? '09:00')
+            );
+            $end = $start->copy()->addHour();
+
+            $pmName = $sale->pm_name ?? '';
+
+            $eventData = [
+                'title' => 'Delivery – ' . ($sale->customer_name ?? $sale->homeowner_name ?? 'Customer') . ' – Sale #' . $sale->sale_number,
+                'notes' => implode("\n", array_filter([
+                    'PT: ' . $pickTicket->pt_number,
+                    $sale->job_name ? 'Job: ' . $sale->job_name : null,
+                    $sale->homeowner_name ? 'Site contact: ' . $sale->homeowner_name : null,
+                    $sale->job_address ? 'Address: ' . str_replace("\n", ', ', $sale->job_address) : null,
+                    $pmName ? 'PM: ' . $pmName : null,
+                    $pickTicket->staging_notes ? 'Notes: ' . $pickTicket->staging_notes : null,
+                ])),
+                'start' => $start,
+                'end'   => $end,
+            ];
+
+            $calService = new GraphCalendarService();
+            $link       = $pickTicket->calendarEvent?->externalLink;
+
+            if ($link) {
+                $calService->updateEvent($account, $link, $eventData);
+                $pickTicket->calendarEvent?->update([
+                    'title'       => $eventData['title'],
+                    'starts_at'   => $eventData['start'],
+                    'ends_at'     => $eventData['end'],
+                    'description' => $eventData['notes'],
+                ]);
+            } else {
+                $externalId = $calService->createEvent($account, $calendar, $eventData);
+                $localEvent = $calService->persistLocalEvent(
+                    $account, $calendar, $externalId, $eventData, PickTicket::class, $pickTicket->id
+                );
+                $pickTicket->update(['calendar_event_id' => $localEvent->id]);
+            }
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('[PickTicket] Calendar sync failed', [
+                'pt_id' => $pickTicket->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    private function removeDeliveryCalendarEvent(PickTicket $pickTicket): bool
+    {
+        if (! $pickTicket->calendar_event_id) {
+            return true;
+        }
+
+        try {
+            $link = $pickTicket->calendarEvent?->externalLink;
+            if ($link) {
+                $account = MicrosoftAccount::find($link->microsoft_account_id);
+                if ($account) {
+                    (new GraphCalendarService())->deleteEvent($account, $link);
+                }
+            }
+            $pickTicket->calendarEvent?->delete();
+            $pickTicket->update(['calendar_event_id' => null]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('[PickTicket] Calendar event removal failed', [
+                'pt_id' => $pickTicket->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
 
     /**
      * Create a pick ticket from a single inventory allocation.

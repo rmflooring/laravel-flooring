@@ -130,7 +130,7 @@ class WarehousePickTicketController extends Controller
         return back()->with('success', 'Pick ticket has been unstaged.');
     }
 
-    public function update(Request $request, PickTicket $pickTicket): RedirectResponse
+    public function update(Request $request, PickTicket $pickTicket, PickTicketService $pickTickets): RedirectResponse
     {
         abort_unless(in_array($pickTicket->status, ['staged', 'pending']), 422);
 
@@ -147,6 +147,11 @@ class WarehousePickTicketController extends Controller
             'delivery_time'    => $data['delivery_time'] ?: null,
             'staging_notes'    => $data['staging_notes'] ?: null,
         ]);
+
+        // Keep the warehouse delivery calendar in sync — a ticket created another
+        // way (e.g. "Assign from stock") never gets a fulfillment type until it's
+        // edited here, so this is the only place that sync would otherwise happen.
+        $pickTickets->syncDeliveryCalendarEvent($pickTicket);
 
         return back()->with('success', 'Pick ticket updated.');
     }
