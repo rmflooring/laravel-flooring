@@ -75,6 +75,15 @@
                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     </div>
 
+                    {{-- Show Delivered toggle --}}
+                    <div class="lg:col-span-2 flex items-end">
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                            <input type="checkbox" name="show_delivered" value="1" @checked($showDelivered)
+                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
+                            Show Delivered
+                        </label>
+                    </div>
+
                     {{-- Buttons --}}
                     <div class="lg:col-span-12 flex flex-wrap items-center gap-2">
                         <button type="submit"
@@ -100,6 +109,7 @@
                     'status'     => $status,
                     'date_from'  => $dateFrom,
                     'date_to'    => $dateTo,
+                    'show_delivered' => $showDelivered ? '1' : null,
                     'pt_sort'    => $ptSort !== 'scheduled_date' ? $ptSort : null,
                     'pt_direction' => $ptDir !== 'asc' ? $ptDir : null,
                 ], fn ($v) => $v !== '' && $v !== null);
@@ -290,6 +300,7 @@
                     'status'    => $status,
                     'date_from' => $dateFrom,
                     'date_to'   => $dateTo,
+                    'show_delivered' => $showDelivered ? '1' : null,
                     'sort'      => $sort !== 'scheduled_date' ? $sort : null,
                     'direction' => $dir !== 'asc' ? $dir : null,
                 ], fn ($v) => $v !== '' && $v !== null);

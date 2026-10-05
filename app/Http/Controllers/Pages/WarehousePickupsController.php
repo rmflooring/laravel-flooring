@@ -19,6 +19,7 @@ class WarehousePickupsController extends Controller
         $status   = $request->input('status', '');
         $dateFrom = $request->input('date_from', '');
         $dateTo   = $request->input('date_to', '');
+        $showDelivered = $request->boolean('show_delivered', false);
 
         // PO table sort
         $sort = $request->input('sort', 'scheduled_date');
@@ -39,6 +40,7 @@ class WarehousePickupsController extends Controller
             ->whereIn('purchase_orders.fulfillment_method', self::WAREHOUSE_METHODS)
             ->when($type, fn ($q) => $q->where('purchase_orders.fulfillment_method', $type))
             ->when($status, fn ($q) => $q->where('purchase_orders.status', $status))
+            ->when(! $status && ! $showDelivered, fn ($q) => $q->where('purchase_orders.status', '<>', 'delivered'))
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('po_number', 'like', "%{$q}%")
@@ -128,6 +130,10 @@ class WarehousePickupsController extends Controller
             ->whereNotIn('pick_tickets.status', ['cancelled', 'returned'])
             ->when($ptType, fn ($q) => $q->where('fulfillment_type', $ptType))
             ->when($status && in_array($status, PickTicket::STATUSES), fn ($q) => $q->where('pick_tickets.status', $status))
+            ->when(
+                (! $status || ! in_array($status, PickTicket::STATUSES)) && ! $showDelivered,
+                fn ($q) => $q->where('pick_tickets.status', '<>', 'delivered')
+            )
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('pt_number', 'like', "%{$q}%")
@@ -150,7 +156,7 @@ class WarehousePickupsController extends Controller
 
         return view('pages.warehouse.pickups.index', compact(
             'purchaseOrders', 'statusOptions', 'pickTickets',
-            'q', 'type', 'status', 'dateFrom', 'dateTo',
+            'q', 'type', 'status', 'dateFrom', 'dateTo', 'showDelivered',
             'sort', 'dir', 'ptSort', 'ptDir'
         ));
     }
