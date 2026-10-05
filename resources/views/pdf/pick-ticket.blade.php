@@ -105,6 +105,12 @@
             @if($sale->job_address)
                 <div class="info-row"><span class="info-key">Address:</span> {{ $sale->job_address }}</div>
             @endif
+            @if($sale->job_phone)
+                <div class="info-row"><span class="info-key">Phone:</span> {{ $sale->job_phone }}</div>
+            @endif
+            @if($sale->job_mobile)
+                <div class="info-row"><span class="info-key">Mobile:</span> {{ $sale->job_mobile }}</div>
+            @endif
         @else
             <div class="info-row">—</div>
         @endif
