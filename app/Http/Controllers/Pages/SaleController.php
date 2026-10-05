@@ -196,11 +196,20 @@ class SaleController extends Controller
             ->orderBy('id')
             ->get();
 
-        // Any active PT for this sale — determines whether to show the Stage button
-        $directPickTicket  = $salePickTickets
-            ->whereIn('status', PickTicket::ACTIVE_STATUSES)
-            ->first();
         $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
+
+        // Materials not yet covered by any active pick ticket — determines whether to
+        // show the Stage button and which items its modal offers. A WO-linked ticket
+        // only ever covers the materials explicitly tied to that WO's labour items
+        // (see WorkOrderController::stagePickTicket), so it must not block staging the
+        // rest of the sale's materials — fixed 2026-10-05 after Sale #78 (id 81): a
+        // WO-staged ticket covering only the underlayment hid the Stage button
+        // entirely, leaving the laminate and transitions with no way to be staged.
+        $coveredSaleItemIds = PickTicketItem::whereIn('sale_item_id', $materialSaleItems->pluck('id'))
+            ->whereHas('pickTicket', fn ($q) => $q->where('sale_id', $sale->id)->whereIn('status', PickTicket::ACTIVE_STATUSES))
+            ->pluck('sale_item_id')
+            ->unique();
+        $stageableMaterialItems = $materialSaleItems->whereNotIn('id', $coveredSaleItemIds)->values();
 
         $trashedWorkOrders    = collect();
         $trashedPurchaseOrders = collect();
@@ -265,7 +274,7 @@ class SaleController extends Controller
             'sale', 'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'trashedWorkOrders', 'trashedPurchaseOrders', 'draftRfcs', 'customerContacts',
             'depositPayerOptions', 'depositPaymentMethods',
-            'salePickTickets', 'directPickTicket', 'materialSaleItems',
+            'salePickTickets', 'materialSaleItems', 'stageableMaterialItems',
             'unscheduledLabourCount', 'availableCredits',
         ));
 	}
@@ -339,6 +348,16 @@ class SaleController extends Controller
             ->first();
         $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
 
+        // Materials not yet covered by any active pick ticket (direct or WO-linked) —
+        // see the matching note in show(). Drives whether the Stage button shows and
+        // which items its modal offers, independent of $directPickTicket above (which
+        // only ever describes the direct-ticket summary card, not staging eligibility).
+        $coveredSaleItemIds = PickTicketItem::whereIn('sale_item_id', $materialSaleItems->pluck('id'))
+            ->whereHas('pickTicket', fn ($q) => $q->where('sale_id', $sale->id)->whereIn('status', PickTicket::ACTIVE_STATUSES))
+            ->pluck('sale_item_id')
+            ->unique();
+        $stageableMaterialItems = $materialSaleItems->whereNotIn('id', $coveredSaleItemIds)->values();
+
         $parentCustomer  = $sale->opportunity?->parentCustomer;
         $jobSiteCustomer = $sale->opportunity?->jobSiteCustomer;
         $depositPayerOptions = collect();
@@ -363,7 +382,7 @@ class SaleController extends Controller
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
             'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'deleteBlockReason', 'customerContacts',
-            'directPickTicket', 'materialSaleItems',
+            'directPickTicket', 'materialSaleItems', 'stageableMaterialItems',
             'unscheduledLabourCount', 'rtvCreditSaleItemIds',
             'depositPayerOptions', 'depositPaymentMethods',
         ));
@@ -823,15 +842,6 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
 {
     $warehouseGroupId = '4bfd495c-4df2-4eaa-9d8c-987c4ef23b02';
 
-    // Block if any active PT already exists for this sale
-    $existing = PickTicket::where('sale_id', $sale->id)
-        ->whereIn('status', PickTicket::ACTIVE_STATUSES)
-        ->first();
-
-    if ($existing) {
-        return back()->with('error', 'An active pick ticket (' . $existing->pt_number . ') already exists for this sale.');
-    }
-
     $data = $request->validate([
         'fulfillment_type' => ['required', 'in:pickup,delivery'],
         'sale_item_ids'    => ['required', 'array', 'min:1'],
@@ -841,6 +851,21 @@ public function stagePickTicket(Request $request, Sale $sale, PickTicketService 
         'delivery_time'    => ['nullable', 'date_format:H:i'],
         'sms_customer'     => ['nullable', 'boolean'],
     ]);
+
+    // Block only if one of the SELECTED materials is already on an active pick ticket
+    // (direct or WO-linked) — a WO-linked ticket covering some of the sale's materials
+    // must not block staging the rest. Previously blocked on "any active PT for the
+    // sale exists," which hid this entire action once a WO-staged ticket existed,
+    // even for materials that ticket never touched (Sale #78 id 81, 2026-10-05).
+    $alreadyCovered = PickTicketItem::whereIn('sale_item_id', $data['sale_item_ids'])
+        ->whereHas('pickTicket', fn ($q) => $q->where('sale_id', $sale->id)->whereIn('status', PickTicket::ACTIVE_STATUSES))
+        ->with('pickTicket')
+        ->get();
+
+    if ($alreadyCovered->isNotEmpty()) {
+        $ptNumbers = $alreadyCovered->pluck('pickTicket.pt_number')->unique()->implode(', ');
+        return back()->with('error', 'One or more selected items are already on an active pick ticket (' . $ptNumbers . ').');
+    }
 
     // Verify all selected items are material items belonging to this sale
     $validCount = SaleItem::whereIn('id', $data['sale_item_ids'])

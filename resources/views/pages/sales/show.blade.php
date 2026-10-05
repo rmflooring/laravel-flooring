@@ -714,7 +714,7 @@
                         <h3 class="font-semibold text-gray-900">Delivery / Pickup</h3>
                         <p class="text-xs text-gray-500 mt-0.5">Stage material items for warehouse fulfilment.</p>
                     </div>
-                    @if (!$directPickTicket)
+                    @if ($stageableMaterialItems->isNotEmpty())
                         <button @click="showStageModal = true"
                                 class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white rounded-lg"
                                 style="background:#ea580c">
@@ -928,7 +928,7 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Items to Stage</label>
                                     <div class="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-60 overflow-y-auto">
-                                        @foreach ($materialSaleItems as $item)
+                                        @foreach ($stageableMaterialItems as $item)
                                             @php
                                                 $itemLabel = implode(' — ', array_filter([
                                                     $item->product_type,
