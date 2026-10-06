@@ -7,12 +7,16 @@ use Illuminate\Support\Facades\Log;
 
 class ShopCacheService
 {
-    private ?string $shopUrl;
+    /** @var string[] Shop sites to notify — SHOP_URL may list several, comma-separated. */
+    private array $shopUrls;
     private ?string $bustKey;
 
     public function __construct()
     {
-        $this->shopUrl = rtrim(config('services.shop.url', ''), '/');
+        $this->shopUrls = array_values(array_filter(array_map(
+            fn ($url) => rtrim(trim($url), '/'),
+            explode(',', (string) config('services.shop.url', '')),
+        )));
         $this->bustKey = config('services.shop.cache_bust_key');
     }
 
@@ -38,16 +42,18 @@ class ShopCacheService
 
     private function bust(array $keys): void
     {
-        if (!$this->shopUrl || !$this->bustKey) {
+        if (!$this->shopUrls || !$this->bustKey) {
             return;
         }
 
-        try {
-            Http::timeout(3)
-                ->withHeader('X-Cache-Bust-Key', $this->bustKey)
-                ->post("{$this->shopUrl}/api/cache/bust", ['keys' => $keys]);  // /api prefix from Laravel api routes
-        } catch (\Exception $e) {
-            Log::warning('Shop cache bust failed', ['error' => $e->getMessage()]);
+        foreach ($this->shopUrls as $shopUrl) {
+            try {
+                Http::timeout(3)
+                    ->withHeader('X-Cache-Bust-Key', $this->bustKey)
+                    ->post("{$shopUrl}/api/cache/bust", ['keys' => $keys]);  // /api prefix from Laravel api routes
+            } catch (\Exception $e) {
+                Log::warning('Shop cache bust failed', ['url' => $shopUrl, 'error' => $e->getMessage()]);
+            }
         }
     }
 }

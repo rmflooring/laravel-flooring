@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- `SHOP_URL` can list several shop sites (comma-separated) so product changes refresh both shop.rmflooring.ca and the new rmflooring.ca shop during the changeover.
+
 ### Added
 - Confirmation prompt before moving events between calendars.
 
