@@ -2396,6 +2396,9 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     if (t.closest(".add-material-row")) {
   const room = t.closest(".room-card");
   appendRowFromTemplate(room, ".materials-tbody", ".material-row-template");
+  // New rows template in with line_item_order="0" — renumber so the new
+  // row lands at the end instead of sorting to the top on next save/reload.
+  if (typeof renumberLineItems === "function") renumberLineItems(room.querySelector(".materials-tbody"));
 
   initProductTypeDropdownForRoom(room);
   initManufacturerDropdownForRoom(room);
@@ -2413,6 +2416,7 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 if (t.closest(".add-freight-row")) {
   const room = t.closest(".room-card");
   appendRowFromTemplate(room, ".freight-tbody", ".freight-row-template");
+  if (typeof renumberLineItems === "function") renumberLineItems(room.querySelector(".freight-tbody"));
 
   initFreightDropdownForRoom(room);
   if (window.initRichNotesIn) window.initRichNotesIn(room);
@@ -2427,6 +2431,7 @@ if (t.closest(".add-freight-row")) {
   const room = t.closest(".room-card");
   appendRowFromTemplate(room, ".labour-tbody", ".labour-row-template");
   const tbody = room.querySelector(".labour-tbody");
+  if (typeof renumberLineItems === "function") renumberLineItems(tbody);
   const dataRows = tbody ? Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('item-notes-row')) : [];
   const newRow = dataRows.length ? dataRows[dataRows.length - 1] : null;
   if (newRow) initLabourTypeDropdownForRow(newRow);
