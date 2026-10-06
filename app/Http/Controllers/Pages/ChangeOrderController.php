@@ -16,14 +16,18 @@ class ChangeOrderController extends Controller
 
     public function create(Sale $sale)
     {
-        $this->authorizeCoCreate($sale);
+        if ($reason = $this->coCreateBlockReason($sale)) {
+            return redirect()->route('pages.sales.show', $sale)->with('error', $reason);
+        }
 
         return view('pages.change-orders.create', compact('sale'));
     }
 
     public function store(Request $request, Sale $sale)
     {
-        $this->authorizeCoCreate($sale);
+        if ($reason = $this->coCreateBlockReason($sale)) {
+            return redirect()->route('pages.sales.show', $sale)->with('error', $reason);
+        }
 
         $request->validate([
             'title'  => 'nullable|string|max:255',
@@ -160,26 +164,18 @@ class ChangeOrderController extends Controller
         return [$subject, $body];
     }
 
-    private function authorizeCoCreate(Sale $sale): void
+    /**
+     * Returns a user-facing reason a Change Order can't be created on this
+     * sale right now, or null if it's allowed.
+     */
+    private function coCreateBlockReason(Sale $sale): ?string
     {
         // Must be approved or change_in_progress is not already open with another CO
         if (! in_array($sale->status, ['approved'])) {
-            abort(422, 'A Change Order can only be created on an approved sale.');
+            return 'A Change Order can only be created on an approved sale.';
         }
 
-        // Gate: no ordered/received POs
-        $blockedPos = $sale->purchaseOrders()
-            ->whereNotIn('status', ['cancelled'])
-            ->withTrashed()
-            ->where(function ($q) {
-                $q->whereIn('status', ['ordered', 'received'])
-                  ->orWhere(function ($q2) {
-                      $q2->whereNotNull('deleted_at')->whereIn('status', ['ordered', 'received']);
-                  });
-            })
-            ->exists();
-
-        // Simpler: block if any non-cancelled PO/WO exists (pending is safe)
+        // Block if any non-cancelled PO/WO exists (pending is safe)
         $hasPendingPos = $sale->purchaseOrders()
             ->whereNotIn('status', ['cancelled'])
             ->where('status', '<>', 'pending')
@@ -193,7 +189,7 @@ class ChangeOrderController extends Controller
             ->exists();
 
         if ($hasPendingPos || $hasActiveWos) {
-            abort(422, 'Cannot create a Change Order: a Purchase Order or Work Order has already been actioned for this sale.');
+            return 'Cannot create a Change Order: a Purchase Order or Work Order has already been actioned for this sale.';
         }
 
         // Any non-cancelled PO in pending is fine — but ordered/received is blocked even if deleted
@@ -208,7 +204,9 @@ class ChangeOrderController extends Controller
             ->exists();
 
         if ($orderedPoExists || $scheduledWoExists) {
-            abort(422, 'Cannot create a Change Order: an ordered Purchase Order or scheduled Work Order exists for this sale.');
+            return 'Cannot create a Change Order: an ordered Purchase Order or scheduled Work Order exists for this sale.';
         }
+
+        return null;
     }
 }
