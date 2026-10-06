@@ -106,7 +106,10 @@ class ShopApiController extends Controller
             'shop_description' => $line->shop_description,
             'shop_show_price'  => (bool) $line->shop_show_price,
             'photo_url'        => $line->photo_path ? url(Storage::url($line->photo_path)) : null,
-            'styles'           => $line->productStyles->map(function ($style) {
+            'styles'           => $line->productStyles->map(function ($style) use ($line) {
+                // Never send a price the shop isn't allowed to show — it would be readable in page source.
+                $priceVisible = $line->shop_show_price || $style->shop_show_price;
+
                 return [
                     'id'             => $style->id,
                     'name'           => $style->name,
@@ -116,7 +119,7 @@ class ShopApiController extends Controller
                     'pattern'        => $style->pattern,
                     'description'    => $style->description,
                     'thickness'      => $style->thickness,
-                    'sell_price'     => $style->sell_price !== null ? (float) $style->sell_price : null,
+                    'sell_price'     => $priceVisible && $style->sell_price !== null ? (float) $style->sell_price : null,
                     'units_per'      => $style->units_per !== null ? (float) $style->units_per : null,
                     'use_box_qty'    => (bool) $style->use_box_qty,
                     'shop_show_price' => (bool) $style->shop_show_price,
