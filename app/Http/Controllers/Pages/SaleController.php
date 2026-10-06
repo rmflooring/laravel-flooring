@@ -296,6 +296,7 @@ class SaleController extends Controller
             'invoices',
             'invoices.payments',
             'deposits.payerCustomer',
+            'changeOrders',
         ]);
 
         $employees = Employee::orderBy('first_name')->orderBy('last_name')->get();
