@@ -138,6 +138,13 @@ Schedule::command('opportunities:advance-overdue-rfm')
     ->name('opportunities-advance-overdue-rfm')
     ->withoutOverlapping();
 
+// Review requests: one-time reminder for requests still unrated after 7 days
+Schedule::command('reviews:send-reminders')
+    ->dailyAt('09:00')
+    ->timezone('America/Vancouver')
+    ->name('reviews-send-reminders')
+    ->withoutOverlapping();
+
 // Opportunities: safety net — clear "Requires RFM" on any opportunity that already has one booked
 // (normally cleared the moment the RFM is created; this catches edge cases/legacy data)
 Schedule::command('opportunities:sync-requires-rfm')

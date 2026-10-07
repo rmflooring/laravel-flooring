@@ -10,12 +10,13 @@ class ReviewRequest extends Model
     protected $fillable = [
         'token', 'opportunity_id', 'sent_by', 'customer_name',
         'customer_phone', 'customer_email', 'sent_via',
-        'rating', 'feedback', 'submitted_at',
+        'rating', 'feedback', 'submitted_at', 'reminder_sent_at',
     ];
 
     protected $casts = [
-        'submitted_at' => 'datetime',
-        'rating'       => 'integer',
+        'submitted_at'     => 'datetime',
+        'reminder_sent_at' => 'datetime',
+        'rating'           => 'integer',
     ];
 
     protected static function boot(): void

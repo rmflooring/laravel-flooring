@@ -134,6 +134,12 @@
                                                 @else
                                                     <span class="text-gray-400 italic">No reason given</span>
                                                 @endif
+                                            @elseif (! $rr->isSubmitted())
+                                                @if ($rr->reminder_sent_at)
+                                                    <span class="text-xs text-gray-500 dark:text-gray-400">Reminder sent {{ $rr->reminder_sent_at->format('M j, Y') }}</span>
+                                                @else
+                                                    <span class="text-xs text-gray-400 dark:text-gray-500">No reminder yet</span>
+                                                @endif
                                             @else
                                                 <span class="text-gray-300 dark:text-gray-600">—</span>
                                             @endif
