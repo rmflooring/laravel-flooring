@@ -84,19 +84,38 @@ class WarehousePickTicketController extends Controller
 
         // For items not yet linked to inventory, find receipts they could be delivered
         // from — required at delivery time now (see PickTicketService::deliver()).
+        //
+        // Two ways a receipt can match this item, and both are checked — matching
+        // only by product_style_id (as this used to) misses receipts that came from
+        // a PO item which was never tagged with a catalog style (e.g. the material
+        // was ordered by typing a description rather than picking it from the
+        // dropdown, same free-text gap seen elsewhere in this app). Found live
+        // 2026-10-07, PT 106-78 item "Aqua Expert Reducer — AE1201 - Monet": PO 70-78
+        // was received (receipt #143, qty 1), but with product_style_id null and
+        // only linked via purchase_order_item_id — so this page said "No stock
+        // found to link" for material that had, in fact, already been received.
         $availableReceiptsByItemId = [];
         foreach ($pickTicket->items as $item) {
             if ($item->inventory_allocation_id || ! $item->saleItem) {
                 continue;
             }
 
-            $styleId = $inventory->resolveStyleId($item->saleItem);
-            if (! $styleId) {
+            $styleId   = $inventory->resolveStyleId($item->saleItem);
+            $poItemIds = \App\Models\PurchaseOrderItem::where('sale_item_id', $item->sale_item_id)->pluck('id');
+
+            if (! $styleId && $poItemIds->isEmpty()) {
                 continue;
             }
 
             $availableReceiptsByItemId[$item->id] = \App\Models\InventoryReceipt::with('allocations')
-                ->where('product_style_id', $styleId)
+                ->where(function ($q) use ($styleId, $poItemIds) {
+                    if ($styleId) {
+                        $q->orWhere('product_style_id', $styleId);
+                    }
+                    if ($poItemIds->isNotEmpty()) {
+                        $q->orWhereIn('purchase_order_item_id', $poItemIds);
+                    }
+                })
                 ->orderBy('received_date')
                 ->get()
                 ->map(fn ($receipt) => [
