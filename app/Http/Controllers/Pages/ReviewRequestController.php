@@ -54,14 +54,31 @@ class ReviewRequestController extends Controller
         return back()->with('success', "Review request sent to {$name}.");
     }
 
-    public function index(Opportunity $opportunity)
+    /**
+     * Site-wide list of every review request sent, for staff to track what's
+     * outstanding and follow up on low ratings.
+     */
+    public function index(Request $request)
     {
-        $reviews = ReviewRequest::where('opportunity_id', $opportunity->id)
-            ->with('sentBy')
-            ->latest()
-            ->get();
+        $status = $request->get('status', 'needs_followup');
+        if (! in_array($status, ['needs_followup', 'positive', 'pending', 'all'], true)) {
+            $status = 'needs_followup';
+        }
 
-        return view('pages.opportunities.reviews.index', compact('opportunity', 'reviews'));
+        $query = ReviewRequest::with(['opportunity.jobSiteCustomer', 'sentBy'])->latest();
+
+        match ($status) {
+            'needs_followup' => $query->whereNotNull('submitted_at')->where('rating', '<=', 3),
+            'positive'        => $query->whereNotNull('submitted_at')->where('rating', '>=', 4),
+            'pending'         => $query->whereNull('submitted_at'),
+            default           => null, // 'all' — no extra filter
+        };
+
+        $reviewRequests = $query->paginate(25)->withQueryString();
+
+        $needsFollowupCount = ReviewRequest::whereNotNull('submitted_at')->where('rating', '<=', 3)->count();
+
+        return view('pages.review-requests.index', compact('reviewRequests', 'status', 'needsFollowupCount'));
     }
 
     private function sendEmail(string $email, string $name, string $url, ?string $customMessage): void

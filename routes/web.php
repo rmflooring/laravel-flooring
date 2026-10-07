@@ -2083,6 +2083,11 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             ->name('reply-sms');
     });
 
+    // Review Requests (site-wide list)
+    Route::prefix('review-requests')->name('review-requests.')->middleware('role_or_permission:admin|view reviews')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Pages\ReviewRequestController::class, 'index'])->name('index');
+    });
+
     }); // end pages group
 
 
