@@ -18,6 +18,18 @@
         <p class="text-gray-500 mt-3">
             You've already submitted your review. Thank you for taking the time!
         </p>
+
+        @if ($review->isPositive())
+            <p class="text-gray-500 mt-4 text-sm">
+                Haven't left your Google review yet, or want to double-check it posted?
+            </p>
+            <a href="{{ \App\Http\Controllers\ReviewController::GOOGLE_REVIEW_URL }}"
+               target="_blank"
+               class="inline-flex items-center justify-center mt-4 px-6 py-3 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+                Leave / View Google Review
+            </a>
+        @endif
+
         <p class="text-gray-400 text-sm mt-8">— RM Flooring, Coquitlam BC</p>
     </div>
 
