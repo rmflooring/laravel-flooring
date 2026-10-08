@@ -426,15 +426,17 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
 
         // --- Server-side tax calc (authoritative) — mirrors EstimateController::
         // update(). Previously tax_amount/grand_total were saved straight from
-        // whatever the client submitted, which computes tax with a hardcoded
-        // "GST on everything, PST on materials only" assumption (sale.js
-        // updateEstimateTotals()) instead of reading each tax rate's actual
-        // applies_to configuration. A tax group where PST is ALSO configured as
-        // 'all' rather than materials-only — e.g. "GPT" — silently overcharged
-        // tax on every sale using it, with nothing server-side to catch it.
-        // Found live 2026-10-08: Estimate 2026-142 correctly computed $889.48 tax
-        // for this group; its converted Sale #81 (id 84) saved $981.04 for the
-        // identical pretax figures, purely from this client/server mismatch.
+        // whatever the client submitted, with no server-side check against the
+        // tax group's actual rates at all. Added 2026-10-08 after finding
+        // Estimate 2026-142 and its converted Sale #81 (id 84) disagreed on tax
+        // for identical pretax figures — the estimate used EstimateController's
+        // authoritative per-rate calc, the sale just trusted the client's own
+        // total. That divergence is also what surfaced a real data bug: the PST
+        // tax_rate was stored with applies_to='all' instead of 'materials' (now
+        // corrected), which had been silently overtaxing freight/labour on every
+        // estimate computed server-side under the "GPT" group — the client-side
+        // JS's hardcoded "PST on materials only" assumption had been correct all
+        // along, and was the only reason affected sales weren't also wrong.
         $taxGroupId = $data['tax_group_id'] ?? $sale->tax_group_id;
 
         $subtotalMaterials = (float) ($data['subtotal_materials'] ?? $sale->subtotal_materials ?? 0);
