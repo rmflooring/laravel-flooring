@@ -86,9 +86,10 @@ class ShopApiController extends Controller
                 'productStyles' => function ($q) {
                     $q->whereIn('status', ['active', 'out_of_stock'])
                       ->where('shop_visible', true)
-                      ->with('photos')
+                      ->with(['photos', 'vendor'])
                       ->orderBy('name');
                 },
+                'vendorRelation',
             ])
             ->findOrFail($id);
 
@@ -124,6 +125,8 @@ class ShopApiController extends Controller
                     'use_box_qty'    => (bool) $style->use_box_qty,
                     'shop_show_price' => (bool) $style->shop_show_price,
                     'in_stock'       => $style->status === 'active',
+                    // The style's vendor decides returns; fall back to the line's vendor. Vendor name is not exposed.
+                    'return_policy'  => ($style->vendor ?? $line->vendorRelation)?->returnPolicy(),
                     'stock_note'     => $style->status === 'out_of_stock' ? 'Currently no stock available' : null,
                     'photos'       => $style->photos->map(fn ($p) => [
                         'id'         => $p->id,
@@ -186,6 +189,46 @@ class ShopApiController extends Controller
         })->values();
 
         return response()->json($items);
+    }
+
+    /**
+     * Return policies by brand, for the website's Returns & Refunds page.
+     * Built from the vendors of visible products; brands whose vendor has no policy set up are left out.
+     */
+    public function returnPolicies(): JsonResponse
+    {
+        $styles = ProductStyle::query()
+            ->where('status', 'active')->where('shop_visible', true)
+            ->whereHas('productLine', fn ($q) => $q->where('status', 'active')->where('shop_visible', true))
+            ->with(['vendor', 'productLine.vendorRelation'])
+            ->get();
+
+        $byBrand = [];
+        foreach ($styles as $style) {
+            $brand  = trim((string) $style->productLine?->manufacturer) ?: 'Other';
+            $policy = ($style->vendor ?? $style->productLine?->vendorRelation)?->returnPolicy();
+            if ($policy) {
+                $byBrand[$brand][$policy['summary']] = $policy;
+            }
+        }
+
+        ksort($byBrand, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return response()->json(collect($byBrand)->map(fn ($policies, $brand) => [
+            'brand'    => $brand,
+            'policies' => array_values($policies),
+        ])->values());
+    }
+
+    /** Pickup / abandoned-order terms for web orders (FM → Admin → Shop Settings). */
+    public function storePolicy(): JsonResponse
+    {
+        return response()->json([
+            'pickup_hold_days'       => (int) Setting::get('web_order_hold_days', 14),
+            'storage_fee_after_days' => (int) Setting::get('web_order_storage_fee_after_days', 30),
+            'storage_fee_text'       => (string) Setting::get('web_order_storage_fee_text', 'a storage fee'),
+            'forfeit_after_days'     => (int) Setting::get('web_order_forfeit_after_days', 90),
+        ]);
     }
 
     public function quoteRequest(Request $request): JsonResponse

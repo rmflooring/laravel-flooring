@@ -200,9 +200,18 @@ class VendorController extends Controller
             'website' => 'nullable|url',
             'reps' => 'array',
             'reps.*' => 'exists:vendor_reps,id',
+            'returns_accepted' => 'nullable|in:,0,1',
+            'return_days' => 'nullable|integer|min:0|max:3650',
+            'return_condition' => 'nullable|string|max:255',
+            'restocking_fee_percent' => 'nullable|numeric|min:0|max:100',
+            'return_policy_notes' => 'nullable|string|max:2000',
         ]);
 
-        $vendor->update($request->all());
+        $vendor->update(array_merge($request->all(), [
+            // "" = not set up yet (no policy shown online); "1" / "0" = accepts / doesn't accept returns
+            'returns_accepted' => $request->input('returns_accepted') === '' || $request->input('returns_accepted') === null ? null : (bool) $request->input('returns_accepted'),
+            'special_orders_final_sale' => $request->boolean('special_orders_final_sale'),
+        ]));
 
         if ($request->input('vendor_type') === 'Subcontractor') {
             // Clear any previously linked installer for this vendor

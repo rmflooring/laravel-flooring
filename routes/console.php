@@ -152,3 +152,6 @@ Schedule::command('opportunities:sync-requires-rfm')
     ->timezone('America/Vancouver')
     ->name('opportunities-sync-requires-rfm')
     ->withoutOverlapping();
+
+// Web orders: remind customers whose order has been ready for pickup past the hold period (Admin → Shop Settings)
+Schedule::command('web-orders:remind')->dailyAt('10:00')->timezone('America/Vancouver')->name('web-orders-remind')->withoutOverlapping();

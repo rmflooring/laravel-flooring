@@ -31,11 +31,54 @@ class Vendor extends Model
         'qbo_id',
         'qbo_sync_token',
         'qbo_synced_at',
+        'returns_accepted',
+        'return_days',
+        'return_condition',
+        'restocking_fee_percent',
+        'special_orders_final_sale',
+        'return_policy_notes',
     ];
 
     protected $casts = [
         'qbo_synced_at' => 'datetime',
+        'returns_accepted' => 'boolean',
+        'special_orders_final_sale' => 'boolean',
+        'restocking_fee_percent' => 'decimal:2',
     ];
+
+    /**
+     * Return policy as shown to website customers, or null if it hasn't been set up for this vendor.
+     * The vendor's name is never included (customers see the brand, not the supplier).
+     */
+    public function returnPolicy(): ?array
+    {
+        if ($this->returns_accepted === null) {
+            return null;
+        }
+
+        if (! $this->returns_accepted) {
+            $summary = 'Final sale — this product can’t be returned.';
+        } else {
+            $parts = [$this->return_days ? "Returns accepted within {$this->return_days} days" : 'Returns accepted'];
+            if ($this->return_condition) {
+                $parts[] = lcfirst(rtrim($this->return_condition, '.'));
+            }
+            $summary = implode(' — ', $parts) . '.';
+            if ((float) $this->restocking_fee_percent > 0) {
+                $summary .= ' A ' . rtrim(rtrim(number_format((float) $this->restocking_fee_percent, 2), '0'), '.') . '% restocking fee applies.';
+            }
+        }
+
+        return [
+            'returns_accepted' => (bool) $this->returns_accepted,
+            'return_days' => $this->return_days,
+            'condition' => $this->return_condition,
+            'restocking_fee_percent' => $this->restocking_fee_percent !== null ? (float) $this->restocking_fee_percent : null,
+            'special_orders_final_sale' => (bool) $this->special_orders_final_sale,
+            'notes' => $this->return_policy_notes,
+            'summary' => $summary,
+        ];
+    }
 
     // Automatically set created_by and updated_by
     protected static function booted()

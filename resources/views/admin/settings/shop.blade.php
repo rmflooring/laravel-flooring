@@ -69,6 +69,44 @@
                             </div>
                         </div>
 
+                        <div class="pt-6 border-t border-gray-100 dark:border-gray-700">
+                            <h2 class="text-base font-semibold text-gray-800 dark:text-white mb-1">Web Orders (rmflooring.ca online shop)</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Paid online orders appear under Sales → Web Orders. Customers are notified by email and text automatically.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="web_order_alert_emails" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New-order alert emails</label>
+                                    <textarea id="web_order_alert_emails" name="web_order_alert_emails" rows="3" placeholder="one email per line" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">{{ old('web_order_alert_emails', $webOrder['web_order_alert_emails']) }}</textarea>
+                                    @error('web_order_alert_emails')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                                </div>
+                                <div>
+                                    <label for="web_order_alert_sms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New-order alert texts (SMS)</label>
+                                    <textarea id="web_order_alert_sms" name="web_order_alert_sms" rows="3" placeholder="one phone number per line" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">{{ old('web_order_alert_sms', $webOrder['web_order_alert_sms']) }}</textarea>
+                                    @error('web_order_alert_sms')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                                </div>
+                                <div>
+                                    <label for="web_order_hold_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pickup hold (days)</label>
+                                    <input type="number" min="1" id="web_order_hold_days" name="web_order_hold_days" value="{{ old('web_order_hold_days', $webOrder['web_order_hold_days']) }}" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <p class="mt-1 text-xs text-gray-500">A reminder is sent if an order hasn’t been picked up this many days after it’s ready.</p>
+                                </div>
+                                <div>
+                                    <label for="web_order_storage_fee_after_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Storage fees start after (days)</label>
+                                    <input type="number" min="1" id="web_order_storage_fee_after_days" name="web_order_storage_fee_after_days" value="{{ old('web_order_storage_fee_after_days', $webOrder['web_order_storage_fee_after_days']) }}" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                </div>
+                                <div>
+                                    <label for="web_order_storage_fee_text" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Storage fee wording</label>
+                                    <input type="text" id="web_order_storage_fee_text" name="web_order_storage_fee_text" value="{{ old('web_order_storage_fee_text', $webOrder['web_order_storage_fee_text']) }}" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <p class="mt-1 text-xs text-gray-500">e.g. “a storage fee of $5 per day” — shown in the policy.</p>
+                                </div>
+                                <div>
+                                    <label for="web_order_forfeit_after_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Order forfeited after (days)</label>
+                                    <input type="number" min="1" id="web_order_forfeit_after_days" name="web_order_forfeit_after_days" value="{{ old('web_order_forfeit_after_days', $webOrder['web_order_forfeit_after_days']) }}" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    @error('web_order_forfeit_after_days')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                                </div>
+                            </div>
+                            <p class="mt-4 text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Customers see:</span>
+                                Orders are held for pickup for {{ $webOrder['web_order_hold_days'] }} days. Orders not picked up within {{ $webOrder['web_order_storage_fee_after_days'] }} days of being ready may be charged {{ $webOrder['web_order_storage_fee_text'] }}, and orders not picked up within {{ $webOrder['web_order_forfeit_after_days'] }} days are forfeited without refund.</p>
+                        </div>
+
                         <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
                             <div class="rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-700 p-4 text-sm text-blue-800 dark:text-blue-300 space-y-1">
                                 <p class="font-medium">What happens when a quote is submitted:</p>

@@ -63,4 +63,10 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    // rmflooring.ca website: FM asks it to refund web orders (Stripe keys live on the website).
+    'website' => [
+        'url'     => env('WEBSITE_URL'),
+        'api_key' => env('WEBSITE_API_KEY'),
+    ],
+
 ];

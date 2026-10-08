@@ -129,6 +129,49 @@
                             </div>
                         </div>
 
+                        {{-- Return policy shown on rmflooring.ca for this vendor's products --}}
+                        @php $ra = old('returns_accepted', $vendor->returns_accepted === null ? '' : (int) $vendor->returns_accepted); @endphp
+                        <div class="mt-8 rounded-lg border border-gray-200 p-5" x-data="{ accepts: '{{ $ra }}' }">
+                            <h3 class="text-base font-semibold text-gray-900">Return policy (online shop)</h3>
+                            <p class="mt-1 text-sm text-gray-500">Shown to customers on rmflooring.ca for products from this vendor, at checkout and on the Returns page. The vendor’s name is never shown — customers see the brand.</p>
+                            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Returns</label>
+                                    <select name="returns_accepted" x-model="accepts" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        <option value="" {{ $ra === '' ? 'selected' : '' }}>Not set up yet</option>
+                                        <option value="1" {{ (string) $ra === '1' ? 'selected' : '' }}>Returns accepted</option>
+                                        <option value="0" {{ (string) $ra === '0' ? 'selected' : '' }}>No returns (final sale)</option>
+                                    </select>
+                                </div>
+                                <div x-show="accepts === '1'">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Return window (days)</label>
+                                    <input type="number" name="return_days" min="0" value="{{ old('return_days', $vendor->return_days) }}" placeholder="e.g., 30" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+                                <div x-show="accepts === '1'">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+                                    <input type="text" name="return_condition" value="{{ old('return_condition', $vendor->return_condition) }}" placeholder="e.g., Unopened, full boxes only" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+                                <div x-show="accepts === '1'">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Restocking fee (%)</label>
+                                    <input type="number" name="restocking_fee_percent" min="0" max="100" step="0.01" value="{{ old('restocking_fee_percent', $vendor->restocking_fee_percent) }}" placeholder="e.g., 15" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+                                <div class="md:col-span-2" x-show="accepts !== ''">
+                                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                        <input type="hidden" name="special_orders_final_sale" value="0">
+                                        <input type="checkbox" name="special_orders_final_sale" value="1" {{ old('special_orders_final_sale', $vendor->special_orders_final_sale ?? true) ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600">
+                                        Special orders are final sale
+                                    </label>
+                                </div>
+                                <div class="md:col-span-2" x-show="accepts !== ''">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Extra notes for customers (optional)</label>
+                                    <textarea name="return_policy_notes" rows="2" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('return_policy_notes', $vendor->return_policy_notes) }}</textarea>
+                                </div>
+                            </div>
+                            @if ($vendor->returnPolicy())
+                                <p class="mt-4 text-sm text-gray-700"><span class="font-medium">Customers currently see:</span> {{ $vendor->returnPolicy()['summary'] }}</p>
+                            @endif
+                        </div>
+
                         <div class="mt-6">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
                             <textarea name="notes" rows="4" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('notes', $vendor->notes) }}</textarea>

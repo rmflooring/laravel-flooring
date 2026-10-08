@@ -23,6 +23,7 @@ class InvoicePayment extends Model implements Auditable
         'e-transfer'   => 'E-Transfer',
         'visa'         => 'Visa',
         'mastercard'   => 'Mastercard',
+        'online'       => 'Online (Stripe)',
         'other'        => 'Other',
     ];
 

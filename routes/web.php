@@ -972,6 +972,14 @@ Route::prefix('pages')
 		Route::get('mail-attachments/{type}/{id}', [\App\Http\Controllers\Pages\MailLogController::class, 'servePdf'])
 			->name('mail-attachments.pdf');
 
+		// Web Orders (online orders from rmflooring.ca)
+		Route::get('web-orders', [\App\Http\Controllers\Pages\WebOrderController::class, 'index'])
+			->middleware('role_or_permission:admin|view sales')->name('web-orders.index');
+		Route::get('web-orders/{sale}', [\App\Http\Controllers\Pages\WebOrderController::class, 'show'])
+			->middleware('role_or_permission:admin|view sales')->name('web-orders.show');
+		Route::post('web-orders/{sale}/status', [\App\Http\Controllers\Pages\WebOrderController::class, 'update'])
+			->middleware('role_or_permission:admin|edit sales')->name('web-orders.update');
+
 		// Quick Sales (Cash & Carry) — static routes before {sale} wildcard
 		Route::get('quick-sales/create', [\App\Http\Controllers\Pages\QuickSaleController::class, 'create'])
 			->name('quick-sales.create')

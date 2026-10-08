@@ -184,7 +184,7 @@
                 </li>
 
 			    {{-- Sales --}}
-                <li x-data="{ open: {{ request()->routeIs('pages.sales.*') || request()->routeIs('pages.quick-sales.*') || request()->routeIs('pages.quick-returns.*') ? 'true' : 'false' }} }">
+                <li x-data="{ open: {{ request()->routeIs('pages.sales.*') || request()->routeIs('pages.quick-sales.*') || request()->routeIs('pages.quick-returns.*') || request()->routeIs('pages.web-orders.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open"
                             class="sidebar-link flex w-full items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 text-left">
                         <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400"
@@ -209,6 +209,18 @@
                                 All Sales
                             </a>
                         </li>
+                        @can('view sales')
+                        @php $openWebOrders = \App\Models\Sale::where('channel', 'web')->whereIn('web_status', ['new', 'confirmed', 'ready'])->count(); @endphp
+                        <li>
+                            <a href="{{ route('pages.web-orders.index') }}"
+                               class="sidebar-link flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.web-orders.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
+                                Web Orders
+                                @if ($openWebOrders)
+                                    <span class="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-xs font-semibold" style="background:#f97316;color:#fff">{{ $openWebOrders }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
                         @can('create sales')
                         <li>
                             <a href="{{ route('pages.quick-sales.create') }}"

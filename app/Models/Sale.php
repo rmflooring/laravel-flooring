@@ -16,7 +16,22 @@ class Sale extends Model implements Auditable
     protected array $auditExclude = ['condition_body'];
 
     // Protect sale_number from mass assignment (non-editable)
+    public const WEB_STATUSES = [
+        'new'       => 'New',
+        'confirmed' => 'Confirmed',
+        'ready'     => 'Ready for pickup',
+        'picked_up' => 'Picked up',
+        'refunded'  => 'Refunded',
+    ];
+
     protected $guarded = ['id', 'sale_number'];
+
+    protected $casts = [
+        'web_status_at'        => 'datetime',
+        'web_ready_at'         => 'datetime',
+        'web_reminder_sent_at' => 'datetime',
+        'web_order_data'       => 'array',
+    ];
 
     protected static function booted(): void
     {
