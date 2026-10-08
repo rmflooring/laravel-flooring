@@ -424,6 +424,53 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
 
     \DB::transaction(function () use ($sale, $data) {
 
+        // --- Server-side tax calc (authoritative) — mirrors EstimateController::
+        // update(). Previously tax_amount/grand_total were saved straight from
+        // whatever the client submitted, which computes tax with a hardcoded
+        // "GST on everything, PST on materials only" assumption (sale.js
+        // updateEstimateTotals()) instead of reading each tax rate's actual
+        // applies_to configuration. A tax group where PST is ALSO configured as
+        // 'all' rather than materials-only — e.g. "GPT" — silently overcharged
+        // tax on every sale using it, with nothing server-side to catch it.
+        // Found live 2026-10-08: Estimate 2026-142 correctly computed $889.48 tax
+        // for this group; its converted Sale #81 (id 84) saved $981.04 for the
+        // identical pretax figures, purely from this client/server mismatch.
+        $taxGroupId = $data['tax_group_id'] ?? $sale->tax_group_id;
+
+        $subtotalMaterials = (float) ($data['subtotal_materials'] ?? $sale->subtotal_materials ?? 0);
+        $subtotalLabour    = (float) ($data['subtotal_labour'] ?? $sale->subtotal_labour ?? 0);
+        $subtotalFreight   = (float) ($data['subtotal_freight'] ?? $sale->subtotal_freight ?? 0);
+        $pretaxTotal       = (float) ($data['pretax_total'] ?? ($subtotalMaterials + $subtotalLabour + $subtotalFreight));
+
+        $taxAmount        = 0.0;
+        $effectivePercent = 0.0;
+
+        if ($taxGroupId) {
+            $taxRates = \DB::table('tax_rate_group_items as gi')
+                ->join('tax_rates as tr', 'tr.id', '=', 'gi.tax_rate_id')
+                ->where('gi.tax_rate_group_id', (int) $taxGroupId)
+                ->select('tr.sales_rate', 'tr.applies_to')
+                ->get();
+
+            foreach ($taxRates as $tr) {
+                $rate = (float) ($tr->sales_rate ?? 0);
+
+                $base = match ($tr->applies_to) {
+                    'materials' => $subtotalMaterials,
+                    'labour'    => $subtotalLabour,
+                    'freight'   => $subtotalFreight,
+                    default     => $pretaxTotal, // 'all' or anything unknown
+                };
+
+                $taxAmount += ($base * ($rate / 100));
+            }
+
+            $taxAmount        = round($taxAmount, 2);
+            $effectivePercent = $pretaxTotal > 0 ? round(($taxAmount / $pretaxTotal) * 100, 3) : 0.0;
+        }
+
+        $grandTotal = round($pretaxTotal + $taxAmount, 2);
+
         // 1) Header
         $sale->fill([
             'customer_name'      => $data['parent_customer_name'] ?? $sale->customer_name,
@@ -439,15 +486,15 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
             'job_address'        => $data['job_address'] ?? $sale->job_address,
             'notes'              => $data['notes'] ?? $sale->notes,
 
-            'subtotal_materials' => (float)($data['subtotal_materials'] ?? $sale->subtotal_materials ?? 0),
-            'subtotal_labour'    => (float)($data['subtotal_labour'] ?? $sale->subtotal_labour ?? 0),
-            'subtotal_freight'   => (float)($data['subtotal_freight'] ?? $sale->subtotal_freight ?? 0),
-            'pretax_total'       => (float)($data['pretax_total'] ?? $sale->pretax_total ?? 0),
+            'subtotal_materials' => $subtotalMaterials,
+            'subtotal_labour'    => $subtotalLabour,
+            'subtotal_freight'   => $subtotalFreight,
+            'pretax_total'       => $pretaxTotal,
 
-            'tax_group_id'       => $data['tax_group_id'] ?? $sale->tax_group_id,
-            'tax_rate_percent'   => (float)($data['tax_rate_percent'] ?? $sale->tax_rate_percent ?? 0),
-            'tax_amount'         => (float)($data['tax_amount'] ?? $sale->tax_amount ?? 0),
-            'grand_total'        => (float)($data['grand_total'] ?? $sale->grand_total ?? 0),
+            'tax_group_id'       => $taxGroupId,
+            'tax_rate_percent'   => $effectivePercent,
+            'tax_amount'         => $taxAmount,
+            'grand_total'        => $grandTotal,
 
             'updated_by'         => auth()->id(),
         ])->save();
