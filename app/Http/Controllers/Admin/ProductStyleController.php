@@ -99,6 +99,7 @@ class ProductStyleController extends Controller
             'sku' => 'nullable|string|max:255',
             'style_number' => 'nullable|string|max:255',
             'color' => 'nullable|string|max:255',
+            'color_tone' => 'nullable|in:' . implode(',', array_keys(\App\Support\ShopAttributes::TONES)),
             'pattern' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'cost_price' => 'nullable|numeric|min:0',
@@ -143,6 +144,7 @@ class ProductStyleController extends Controller
             'sku' => 'nullable|string|max:255',
             'style_number' => 'nullable|string|max:255',
             'color' => 'nullable|string|max:255',
+            'color_tone' => 'nullable|in:' . implode(',', array_keys(\App\Support\ShopAttributes::TONES)),
             'pattern' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'cost_price' => 'nullable|numeric|min:0',
@@ -188,6 +190,7 @@ class ProductStyleController extends Controller
             'sku'          => null,
             'style_number' => null,
             'color'        => $original->color,
+            'color_tone'   => $original->color_tone,
             'pattern'      => $original->pattern,
             'description'  => $original->description,
             'cost_price'   => $original->cost_price,
@@ -235,6 +238,7 @@ class ProductStyleController extends Controller
             'status'             => 'nullable|in:active,out_of_stock,inactive,dropped',
             'units_per'          => 'nullable|numeric|min:0',
             'thickness'          => 'nullable|string|max:50',
+            'color_tone'         => 'nullable|in:' . implode(',', array_keys(\App\Support\ShopAttributes::TONES)),
             'shop_visible'       => 'nullable|in:0,1',
             'shop_show_price'    => 'nullable|in:0,1',
             'price_change_date'  => 'nullable|date|after:today',
@@ -249,6 +253,7 @@ class ProductStyleController extends Controller
         if ($request->filled('status'))          $updates['status']          = $request->input('status');
         if ($request->filled('units_per'))       $updates['units_per']       = $request->input('units_per');
         if ($request->filled('thickness'))       $updates['thickness']       = $request->input('thickness');
+        if ($request->filled('color_tone'))      $updates['color_tone']      = $request->input('color_tone');
         if ($request->filled('shop_visible'))    $updates['shop_visible']    = (bool) $request->input('shop_visible');
         if ($request->filled('shop_show_price')) $updates['shop_show_price'] = (bool) $request->input('shop_show_price');
         if ($request->filled('price_change_date')) {

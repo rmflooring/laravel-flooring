@@ -10,6 +10,7 @@ use App\Models\ProductStyle;
 use App\Models\ProductType;
 use App\Models\Setting;
 use App\Services\EmailTemplateService;
+use App\Support\ShopAttributes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -65,10 +66,12 @@ class ShopApiController extends Controller
                 'shop_description' => $line->shop_description,
                 'shop_show_price'  => (bool) $line->shop_show_price,
                 'photo_url'        => $line->photo_path ? url(Storage::url($line->photo_path)) : null,
+                'attributes'       => $line->shop_attributes ?: new \stdClass(),
                 'styles_preview'   => $line->productStyles->map(fn ($s) => [
                     'id'               => $s->id,
                     'name'             => $s->name,
                     'color'            => $s->color,
+                    'color_tone'       => $s->color_tone,
                     'primary_photo_url' => $s->photos->first() ? url(Storage::url($s->photos->first()->file_path)) : null,
                 ]),
             ];
@@ -107,6 +110,9 @@ class ShopApiController extends Controller
             'shop_description' => $line->shop_description,
             'shop_show_price'  => (bool) $line->shop_show_price,
             'photo_url'        => $line->photo_path ? url(Storage::url($line->photo_path)) : null,
+            // Product details for shop filters (stable option keys) + readable labels for a spec list.
+            'attributes'       => $line->shop_attributes ?: new \stdClass(),
+            'attribute_labels' => ShopAttributes::display($line->shop_attributes, $line->productType?->name) ?: new \stdClass(),
             'styles'           => $line->productStyles->map(function ($style) use ($line) {
                 // Never send a price the shop isn't allowed to show — it would be readable in page source.
                 $priceVisible = $line->shop_show_price || $style->shop_show_price;
@@ -117,6 +123,7 @@ class ShopApiController extends Controller
                     'sku'            => $style->sku,
                     'style_number'   => $style->style_number,
                     'color'          => $style->color,
+                    'color_tone'     => $style->color_tone,
                     'pattern'        => $style->pattern,
                     'description'    => $style->description,
                     'thickness'      => $style->thickness,

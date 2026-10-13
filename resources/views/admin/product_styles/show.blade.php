@@ -100,6 +100,10 @@
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $style->color ?: '—' }}</div>
                             </div>
                             <div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Colour tone</div>
+                                <div class="font-medium text-gray-900 dark:text-white">{{ \App\Support\ShopAttributes::TONES[$style->color_tone] ?? '—' }}</div>
+                            </div>
+                            <div>
                                 <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Pattern</div>
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $style->pattern ?: '—' }}</div>
                             </div>

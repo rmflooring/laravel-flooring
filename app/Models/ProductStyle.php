@@ -30,6 +30,7 @@ class ProductStyle extends Model
         'sku',
         'style_number',
         'color',
+        'color_tone',
         'pattern',
         'description',
         'cost_price',

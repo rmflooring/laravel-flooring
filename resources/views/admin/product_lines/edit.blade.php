@@ -216,6 +216,8 @@
                             @enderror
                         </div>
 
+                        @include('admin.product_lines._shop_attributes', ['product_line' => $product_line])
+
                         <!-- Shop Visibility -->
                         <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Public Shop</h3>

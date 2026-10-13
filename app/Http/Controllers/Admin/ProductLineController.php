@@ -9,6 +9,7 @@ use App\Models\ProductType;
 use App\Models\UnitMeasure;
 use App\Models\Vendor;
 use App\Services\ShopCacheService;
+use App\Support\ShopAttributes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -154,13 +155,14 @@ public function index(Request $request)
         'store_available'  => 'boolean',
         'store_qty'        => 'nullable|integer|min:0|max:9999',
         'photo'            => 'nullable|image|max:5120',
-    ]);
+    ] + ShopAttributes::rules());
 
     $validated['shop_visible']    = $request->boolean('shop_visible');
     $validated['shop_show_price'] = $request->boolean('shop_show_price');
     $validated['store_available'] = $request->boolean('store_available');
     $validated['store_qty']       = $validated['store_qty'] ?? 1;
-    unset($validated['photo']);
+    unset($validated['photo'], $validated['attrs']);
+    $validated['shop_attributes'] = ShopAttributes::clean($request->input('attrs'), ProductType::find($validated['product_type_id'])?->name);
 
     $validated['default_cost_price'] = $validated['default_cost_price'] ?? 0;
     $validated['default_sell_price'] = $validated['default_sell_price'] ?? 0;
@@ -226,7 +228,7 @@ public function update(Request $request, ProductLine $product_line)
         'store_qty'        => 'nullable|integer|min:0|max:9999',
         'photo'            => 'nullable|image|max:5120',
         'remove_photo'     => 'nullable|boolean',
-    ]);
+    ] + ShopAttributes::rules());
 
     $validated['shop_visible']    = $request->boolean('shop_visible');
     $validated['shop_show_price'] = $request->boolean('shop_show_price');
@@ -234,7 +236,8 @@ public function update(Request $request, ProductLine $product_line)
     $validated['store_qty']       = $validated['store_qty'] ?? 1;
     $validated['default_cost_price'] = $validated['default_cost_price'] ?? 0;
     $validated['default_sell_price'] = $validated['default_sell_price'] ?? 0;
-    unset($validated['photo'], $validated['remove_photo']);
+    unset($validated['photo'], $validated['remove_photo'], $validated['attrs']);
+    $validated['shop_attributes'] = ShopAttributes::clean($request->input('attrs'), ProductType::find($validated['product_type_id'])?->name);
 
     if ($request->hasFile('photo')) {
         if ($product_line->photo_path) {
@@ -518,6 +521,7 @@ public function update(Request $request, ProductLine $product_line)
             'shop_visible'       => false,
             'shop_show_price'    => $product_line->shop_show_price,
             'shop_description'   => $product_line->shop_description,
+            'shop_attributes'    => $product_line->shop_attributes,
             'store_available'    => $product_line->store_available,
             'store_qty'          => $product_line->store_qty,
             'created_by'         => Auth::id(),
@@ -532,6 +536,7 @@ public function update(Request $request, ProductLine $product_line)
                     'sku'          => null,
                     'style_number' => null,
                     'color'        => $style->color,
+                    'color_tone'   => $style->color_tone,
                     'pattern'      => $style->pattern,
                     'description'  => $style->description,
                     'cost_price'   => $style->cost_price,

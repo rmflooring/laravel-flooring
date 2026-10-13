@@ -425,6 +425,17 @@
                                    class="w-32 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
                         </div>
 
+                        {{-- Colour tone (shop filter) --}}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Colour tone</label>
+                            <select name="color_tone" class="w-36 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-1.5">
+                                <option value="">— No change —</option>
+                                @foreach (\App\Support\ShopAttributes::TONES as $toneKey => $toneLabel)
+                                    <option value="{{ $toneKey }}">{{ $toneLabel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         {{-- Status --}}
                         <div class="flex flex-col gap-1">
                             <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</label>
@@ -561,6 +572,16 @@
                         <div class="col-span-2 sm:col-span-1">
                             <label for="color" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Color</label>
                             <input type="text" name="color" id="color" value="{{ session('editStyle')->color ?? '' }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        </div>
+
+                        <div class="col-span-2 sm:col-span-1">
+                            <label for="color_tone" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Colour tone <span class="font-normal text-gray-500">(shop filter)</span></label>
+                            <select name="color_tone" id="color_tone" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                <option value="">—</option>
+                                @foreach (\App\Support\ShopAttributes::TONES as $toneKey => $toneLabel)
+                                    <option value="{{ $toneKey }}" @selected((session('editStyle')->color_tone ?? null) === $toneKey)>{{ $toneLabel }}</option>
+                                @endforeach
+                            </select>
                         </div>
 
                         <div class="col-span-2 sm:col-span-1">

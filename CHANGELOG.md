@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Shop filter details** for rmflooring.ca: Product line → "Product details (shop filters)" (species, construction, wear layer, AC rating, core, finish, edge, installation, water resistance, pad attached; carpet fibre/style; tile material — fields depend on the product type) and a **Colour tone** per style (style form + bulk edit). Sent in the shop API as `attributes`, `attribute_labels` and `color_tone`. `php artisan shop:prefill-attributes` guesses empty fields from names/descriptions (dry run; `--apply` to save). See `Context/context_shop_attributes.md`.
 - **Web Orders** (Sales → Web Orders): paid online orders from rmflooring.ca become Customer → Opportunity (source "Website") → Sale + paid invoice; New → Confirmed → Ready for pickup → Picked up / Refunded, with customer email + SMS at each step, staff alerts, and a daily pickup reminder. See `Context/context_web_orders.md`.
 - Vendor **return policy** for the online shop (Vendors → edit), exposed per product in the shop API, plus `api/shop/return-policies` and `api/shop/store-policy`.
 - Shop Settings: web-order alert emails/SMS (multiple), pickup hold days, storage-fee and forfeit terms.
