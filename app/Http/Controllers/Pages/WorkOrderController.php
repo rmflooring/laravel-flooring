@@ -271,18 +271,20 @@ class WorkOrderController extends Controller
         $template        = $templateService->getTemplate($user, 'work_order');
 
         $vars = [
-            'customer_name' => $sale->sourceEstimate?->homeowner_name ?: $sale->customer_name,
-            'wo_number'     => $workOrder->wo_number,
-            'job_name'      => $sale->job_name,
-            'job_no'        => $sale->job_no,
-            'job_address'   => $sale->job_address,
-            'job_phone'     => $sale->job_phone,
-            'job_mobile'    => $sale->job_mobile,
-            'pm_name'       => $sale->pm_name,
-            'pm_first_name' => explode(' ', trim($sale->pm_name ?? ''))[0],
-            'sender_name'   => $user->name,
-            'sender_email'  => $user->email,
-            'wo_link'       => route('mobile.work-orders.show', $workOrder),
+            'customer_name'      => $sale->sourceEstimate?->homeowner_name ?: $sale->customer_name,
+            'wo_number'          => $workOrder->wo_number,
+            'job_name'           => $sale->job_name,
+            'job_no'             => $sale->job_no,
+            'job_address'        => $sale->job_address,
+            'job_phone'          => $sale->job_phone,
+            'job_mobile'         => $sale->job_mobile,
+            'pm_name'            => $sale->pm_name,
+            'pm_first_name'      => explode(' ', trim($sale->pm_name ?? ''))[0],
+            'installer'          => $workOrder->installer?->company_name,
+            'installer_contact'  => $workOrder->installer?->contact_name,
+            'sender_name'        => $user->name,
+            'sender_email'       => $user->email,
+            'wo_link'            => route('mobile.work-orders.show', $workOrder),
         ];
 
         return [

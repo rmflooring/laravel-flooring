@@ -56,6 +56,7 @@ class EmailTemplate extends Model
         'work_order' => [
             '{{customer_name}}', '{{wo_number}}', '{{job_name}}', '{{job_no}}', '{{job_address}}',
             '{{job_phone}}', '{{job_mobile}}', '{{pm_name}}', '{{pm_first_name}}',
+            '{{installer}}', '{{installer_contact}}',
             '{{sender_name}}', '{{sender_email}}', '{{wo_link}}',
         ],
         'purchase_order' => [
