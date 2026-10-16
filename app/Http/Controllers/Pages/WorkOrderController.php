@@ -282,6 +282,10 @@ class WorkOrderController extends Controller
             'pm_first_name'      => explode(' ', trim($sale->pm_name ?? ''))[0],
             'installer'          => $workOrder->installer?->company_name,
             'installer_contact'  => $workOrder->installer?->contact_name,
+            'scheduled_date'     => $workOrder->scheduled_date?->format('M j, Y'),
+            'scheduled_time'     => $workOrder->scheduled_time
+                ? \Carbon\Carbon::createFromFormat('H:i', $workOrder->scheduled_time)->format('g:i A')
+                : null,
             'sender_name'        => $user->name,
             'sender_email'       => $user->email,
             'wo_link'            => route('mobile.work-orders.show', $workOrder),
