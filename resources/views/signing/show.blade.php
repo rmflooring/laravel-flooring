@@ -163,7 +163,16 @@
             switchTab(tab) {
                 this.tab      = tab;
                 this.errorMsg = '';
-                if (tab === 'draw') {
+                // Only initialize once — re-running initPad() on every switch back to
+                // "Draw" resizes the canvas (setting .width/.height, even to the same
+                // value, clears it per the HTML5 canvas spec) and replaces signaturePad
+                // with a fresh, empty instance. That silently erased a signature someone
+                // had already drawn if they tapped over to "Type" to look and back
+                // without noticing — the only sign anything was wrong was a small error
+                // message on Submit, easy to miss on mobile. The canvas's drawn content
+                // persists fine across x-show toggles on its own; it never needed
+                // re-initializing after the first time.
+                if (tab === 'draw' && !this.signaturePad) {
                     this.$nextTick(() => this.initPad());
                 }
             },
