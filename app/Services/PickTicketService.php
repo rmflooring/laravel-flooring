@@ -160,18 +160,22 @@ class PickTicketService
         return DB::transaction(function () use ($allocation, $workOrder) {
             // Consolidate into an existing open PT for the same sale + WO rather than
             // creating a new ticket for every allocation (which causes duplicate PTs per
-            // job). Must catch 'staged' and 'ready'/'picked' too, not just 'pending' —
-            // a material can be staged (or even marked ready/picked) before every item
-            // on it has stock allocated, and allocating the rest afterward should land
-            // on that same ticket. Confirmed live 2026-10-05, Sale #78 (id 81): a WO
-            // ticket already at 'ready' (covering only the underlayment) was invisible
-            // to this lookup when the laminate was allocated next, so a third, separate
-            // PT got created instead of adding the laminate to the existing one.
-            // Anything past 'picked' (partially_delivered, delivered, etc.) is excluded
-            // — some of that ticket has already physically left the warehouse, so a
-            // newly-allocated item belongs on a fresh ticket instead.
+            // job). Matches PickTicket::ACTIVE_STATUSES — the same definition of "still
+            // open" used everywhere else in this app (e.g. blocking duplicate staging) —
+            // rather than a hand-picked subset. A previous version of this fix excluded
+            // 'partially_delivered', reasoning that once anything on a ticket has shipped
+            // it shouldn't take new unrelated items. That was wrong per how this app
+            // actually treats tickets: 'partially_delivered' already means "some items/qty
+            // out, not all" and is itself counted as active everywhere else, so a ticket
+            // in that state is exactly where a newly-allocated item on the same sale
+            // belongs — it isn't a frozen, past-tense record just because something else
+            // on it already went out. Confirmed live 2026-10-19, Sale #81 (id 84): PT
+            // 109-81 had reached 'partially_delivered' (other items already delivered)
+            // when the cork underlayment was allocated next; excluding that status meant
+            // this lookup missed it and spawned PT 113-81 instead, which read as an
+            // unexplained duplicate.
             $pt = PickTicket::where('sale_id', $allocation->sale_id)
-                ->whereIn('status', ['pending', 'staged', 'ready', 'picked'])
+                ->whereIn('status', PickTicket::ACTIVE_STATUSES)
                 ->where('work_order_id', $workOrder?->id)
                 ->first();
 
