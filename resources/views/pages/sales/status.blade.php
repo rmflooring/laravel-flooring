@@ -510,55 +510,58 @@
                             <form method="POST" :action="modalAction" class="px-6 py-5 space-y-5">
                                 @csrf
 
-                                {{-- Receipt selector --}}
+                                {{-- Receipt selector — multi-select: tick as many receipts as needed to
+                                     cover the full quantity, splitting across them. Each ticked receipt
+                                     gets its own quantity field, auto-filled with however much of the
+                                     remaining need it can cover (capped at what it has available) so the
+                                     common case (two partial receipts adding up to the full need) needs no
+                                     manual math — still freely editable per receipt before submitting. --}}
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Available stock receipts
-                                    </label>
-                                    <div class="space-y-2">
-                                        <template x-for="receipt in modalReceipts" :key="receipt.id">
-                                            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
-                                                   :class="selectedReceiptId === receipt.id ? 'border-teal-500 bg-teal-50' : ''">
-                                                <input type="radio"
-                                                       name="inventory_receipt_id"
-                                                       :value="receipt.id"
-                                                       x-model.number="selectedReceiptId"
-                                                       @change="maxQty = receipt.available; qty = Math.min(receipt.available, modalNeededQty) || receipt.available"
-                                                       class="text-teal-600 focus:ring-teal-500">
-                                                <div class="flex-1 min-w-0">
-                                                    <span class="text-sm font-medium text-gray-900 block truncate" x-text="receipt.item_name"></span>
-                                                    <span class="text-xs text-gray-500" x-text="'Received ' + receipt.date"></span>
-                                                </div>
-                                                <span class="shrink-0 text-sm font-semibold text-teal-700"
-                                                      x-text="receipt.available + ' ' + receipt.unit + ' avail.'"></span>
-                                            </label>
-                                        </template>
-                                    </div>
-                                </div>
-
-                                {{-- Qty input --}}
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        Quantity to allocate
-                                    </label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number"
-                                               name="quantity"
-                                               x-model.number="qty"
-                                               :max="maxQty"
-                                               min="0.01"
-                                               step="any"
-                                               :disabled="! selectedReceiptId"
-                                               class="w-36 rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500 disabled:bg-gray-100 disabled:text-gray-400"
-                                               required>
-                                        <span class="text-xs text-gray-500" x-show="maxQty > 0">
-                                            max <span x-text="maxQty"></span>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="block text-sm font-medium text-gray-700">
+                                            Available stock receipts
+                                        </label>
+                                        <span class="text-xs font-medium"
+                                              :class="selectedTotal() >= modalNeededQty ? 'text-teal-700' : 'text-gray-400'"
+                                              x-show="modalNeededQty > 0">
+                                            <span x-text="selectedTotal()"></span> of <span x-text="modalNeededQty"></span> selected
                                         </span>
                                     </div>
-                                    <p x-show="qty > maxQty && maxQty > 0"
-                                       class="mt-1 text-xs text-red-600">
-                                        Cannot exceed available quantity.
-                                    </p>
+                                    <div class="space-y-2">
+                                        <template x-for="receipt in modalReceipts" :key="receipt.id">
+                                            <div class="border border-gray-200 rounded-lg hover:bg-gray-50"
+                                                 :class="selectedReceiptIds.includes(receipt.id) ? 'border-teal-500 bg-teal-50' : ''">
+                                                <label class="flex items-center gap-3 p-3 cursor-pointer">
+                                                    <input type="checkbox"
+                                                           :value="receipt.id"
+                                                           :checked="selectedReceiptIds.includes(receipt.id)"
+                                                           @change="toggleReceipt(receipt)"
+                                                           class="rounded text-teal-600 focus:ring-teal-500">
+                                                    <div class="flex-1 min-w-0">
+                                                        <span class="text-sm font-medium text-gray-900 block truncate" x-text="receipt.item_name"></span>
+                                                        <span class="text-xs text-gray-500" x-text="'Received ' + receipt.date"></span>
+                                                    </div>
+                                                    <span class="shrink-0 text-sm font-semibold text-teal-700"
+                                                          x-text="receipt.available + ' ' + receipt.unit + ' avail.'"></span>
+                                                </label>
+                                                <div x-show="selectedReceiptIds.includes(receipt.id)" x-cloak
+                                                     class="flex items-center gap-2 px-3 pb-3 pl-11">
+                                                    <input type="number"
+                                                           :name="'quantities[' + receipt.id + ']'"
+                                                           x-model.number="quantities[receipt.id]"
+                                                           :max="receipt.available"
+                                                           min="0.01"
+                                                           step="any"
+                                                           class="w-32 rounded-lg border-gray-300 text-sm focus:border-teal-500 focus:ring-teal-500">
+                                                    <span class="text-xs text-gray-500">
+                                                        of <span x-text="receipt.available"></span> <span x-text="receipt.unit"></span>
+                                                    </span>
+                                                    <p x-show="(quantities[receipt.id] || 0) > receipt.available"
+                                                       class="text-xs text-red-600">Exceeds available</p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
                                 </div>
 
                                 {{-- Notes --}}
@@ -577,7 +580,7 @@
                                         Cancel
                                     </button>
                                     <button type="submit"
-                                            :disabled="! selectedReceiptId || qty <= 0 || qty > maxQty"
+                                            :disabled="! canSubmit()"
                                             class="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                         Assign stock
                                     </button>
@@ -599,19 +602,49 @@
                 modalReceipts: [],
                 modalAction: '',
                 modalNeededQty: 0,
-                selectedReceiptId: null,
-                qty: 0,
-                maxQty: 0,
+                selectedReceiptIds: [],
+                quantities: {},
 
                 openModal(saleItemId, itemName, receipts, action, neededQty) {
-                    this.modalItemName     = itemName;
-                    this.modalReceipts     = receipts;
-                    this.modalAction       = action;
-                    this.modalNeededQty    = neededQty;
-                    this.selectedReceiptId = null;
-                    this.qty               = 0;
-                    this.maxQty            = 0;
-                    this.modalOpen         = true;
+                    this.modalItemName      = itemName;
+                    this.modalReceipts      = receipts;
+                    this.modalAction        = action;
+                    this.modalNeededQty     = neededQty;
+                    this.selectedReceiptIds = [];
+                    this.quantities         = {};
+                    this.modalOpen          = true;
+                },
+
+                // Ticking a receipt auto-fills however much of the still-remaining
+                // need it can cover (capped at what it actually has), so selecting
+                // receipts in order naturally splits the full amount across them
+                // without manual math — the field stays freely editable afterward.
+                // Unticking clears its quantity so it's never submitted.
+                toggleReceipt(receipt) {
+                    const idx = this.selectedReceiptIds.indexOf(receipt.id);
+                    if (idx === -1) {
+                        this.selectedReceiptIds.push(receipt.id);
+                        const remaining = Math.max(0, this.modalNeededQty - this.selectedTotal());
+                        this.quantities[receipt.id] = Math.min(receipt.available, remaining || receipt.available);
+                    } else {
+                        this.selectedReceiptIds.splice(idx, 1);
+                        delete this.quantities[receipt.id];
+                    }
+                },
+
+                selectedTotal() {
+                    return this.selectedReceiptIds.reduce(
+                        (sum, id) => sum + (Number(this.quantities[id]) || 0), 0
+                    );
+                },
+
+                canSubmit() {
+                    if (this.selectedReceiptIds.length === 0) return false;
+                    return this.selectedReceiptIds.every(id => {
+                        const qty = Number(this.quantities[id]) || 0;
+                        const receipt = this.modalReceipts.find(r => r.id === id);
+                        return qty > 0 && receipt && qty <= receipt.available;
+                    });
                 },
             };
         }

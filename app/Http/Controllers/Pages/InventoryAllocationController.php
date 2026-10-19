@@ -13,9 +13,21 @@ use App\Services\InventoryService;
 use App\Services\PickTicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InventoryAllocationController extends Controller
 {
+    /**
+     * Allocate stock from one or more receipts in a single submission — e.g. the
+     * full need splits across two partial receipts, neither of which alone covers
+     * it. Previously this only accepted a single inventory_receipt_id/quantity
+     * pair, forcing the user to repeat "Assign from stock" once per receipt.
+     * Each receipt gets its own InventoryAllocation + pick ticket consolidation
+     * (via PickTicketService::createFromAllocation(), which already merges onto
+     * the same pick ticket for the sale), all inside one transaction so a
+     * mid-way failure (e.g. someone else claimed a receipt's stock first)
+     * doesn't leave a partial split applied.
+     */
     public function store(
         Request $request,
         Sale $sale,
@@ -23,26 +35,26 @@ class InventoryAllocationController extends Controller
         InventoryService $inventory,
         PickTicketService $pickTickets
     ): RedirectResponse {
-        $request->validate([
-            'inventory_receipt_id' => ['required', 'integer', 'exists:inventory_receipts,id'],
-            'quantity'             => ['required', 'numeric', 'min:0.01'],
-            'notes'                => ['nullable', 'string', 'max:500'],
-        ]);
-
-        // Ensure the sale item belongs to this sale
         abort_unless($saleItem->sale_id === $sale->id, 404);
 
-        $receipt = InventoryReceipt::with('allocations')->findOrFail($request->inventory_receipt_id);
+        $data = $request->validate([
+            'quantities'   => ['required', 'array'],
+            'quantities.*' => ['nullable', 'numeric', 'min:0'],
+            'notes'        => ['nullable', 'string', 'max:500'],
+        ]);
 
-        $available = max(0, (float) $receipt->quantity_received - $receipt->allocations->sum('quantity'));
+        // Drop receipts that were ticked but left at 0/blank — a checkbox with no
+        // real quantity shouldn't silently create a zero-quantity allocation.
+        $selections = array_filter(
+            $data['quantities'],
+            fn ($qty) => $qty !== null && (float) $qty > 0
+        );
 
-        if ((float) $request->quantity > $available) {
-            return back()->withErrors([
-                'quantity' => "Only {$available} {$receipt->unit} available in that receipt.",
-            ])->withInput();
+        if (empty($selections)) {
+            return back()
+                ->withErrors(['quantities' => 'Select at least one receipt and enter a quantity.'])
+                ->withInput();
         }
-
-        $allocation = $inventory->allocate($receipt, $saleItem, (float) $request->quantity, $request->notes ?: null);
 
         // Find the best non-cancelled WO for this sale that covers this material item
         // (via work_order_item_materials linking the labour item to this material sale item)
@@ -51,11 +63,30 @@ class InventoryAllocationController extends Controller
             ->whereHas('items.relatedMaterials', fn ($q) => $q->where('sale_item_id', $saleItem->id))
             ->first();
 
-        $pickTickets->createFromAllocation($allocation, $workOrder);
+        $notes = $data['notes'] ?? null;
+
+        try {
+            DB::transaction(function () use ($selections, $inventory, $saleItem, $pickTickets, $workOrder, $notes) {
+                foreach ($selections as $receiptId => $quantity) {
+                    $receipt    = InventoryReceipt::with('allocations')->findOrFail((int) $receiptId);
+                    $allocation = $inventory->allocate($receipt, $saleItem, (float) $quantity, $notes);
+                    $pickTickets->createFromAllocation($allocation, $workOrder);
+                }
+            });
+        } catch (\InvalidArgumentException $e) {
+            // Thrown by InventoryService::allocate() if a receipt's available
+            // quantity was exceeded (e.g. a race with another allocation) — the
+            // whole transaction above rolls back automatically on exception.
+            return back()->withErrors(['quantities' => $e->getMessage()])->withInput();
+        }
+
+        $count = count($selections);
 
         return redirect()
             ->route('pages.sales.status', $sale)
-            ->with('success', 'Inventory allocated and pick ticket created.');
+            ->with('success', $count > 1
+                ? "Inventory allocated from {$count} receipts and pick ticket updated."
+                : 'Inventory allocated and pick ticket created.');
     }
 
     /**
