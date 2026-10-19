@@ -219,6 +219,25 @@ class InventoryService
                 }
             }
 
+            // Disambiguate using the free-text product line/style name the user
+            // typed, matched against each candidate's actual product line name —
+            // e.g. two different cork underlayments that both happen to use "6mm"
+            // as their color/size code. Confirmed live 2026-10-19, Sale #81: "6mm"
+            // matched two ProductStyles (ids 679/680) from two different cork
+            // product lines, both manufacturer "Roberts" — the manufacturer
+            // fallback below can't break that tie since both lines share it, but
+            // the item's own typed style name ("Cork Plus Acoustic Underlayment
+            // 2 ft. x 3 ft. - 1/4" (6 mm)") matches exactly one line's name.
+            if ($item->style) {
+                $byStyleName = $candidates->filter(
+                    fn ($c) => $c->productLine?->name
+                        && strcasecmp(trim($c->productLine->name), trim($item->style)) === 0
+                );
+                if ($byStyleName->count() === 1) {
+                    return $byStyleName->first()->id;
+                }
+            }
+
             $byMfr = $candidates->filter(
                 fn ($c) => $c->productLine?->manufacturer && $item->manufacturer
                     && strcasecmp(trim($c->productLine->manufacturer), trim($item->manufacturer)) === 0
