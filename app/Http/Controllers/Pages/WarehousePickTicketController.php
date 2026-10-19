@@ -244,10 +244,15 @@ class WarehousePickTicketController extends Controller
         abort_unless(in_array($pickTicket->status, ['staged', 'pending']), 422);
         abort_unless($item->pick_ticket_id === $pickTicket->id, 404);
 
+        // Delete the allocation outright rather than stamping released_at — that flag
+        // means "physically shipped out" (see PickTicketService::deliver()) and
+        // InventoryReceipt::available_qty counts it against the receipt forever
+        // regardless of released_at, so stamping it here never actually freed the
+        // reserved quantity for anyone else to use. Deleting the row is what makes it
+        // available again. Mirrors InventoryAllocationController::destroy() and
+        // PickTicketService::cancel(), which already do this correctly.
         if ($item->inventory_allocation_id) {
-            InventoryAllocation::where('id', $item->inventory_allocation_id)
-                ->whereNull('released_at')
-                ->update(['released_at' => now()]);
+            InventoryAllocation::where('id', $item->inventory_allocation_id)->delete();
         }
 
         $item->delete();

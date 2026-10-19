@@ -1114,6 +1114,14 @@ Route::prefix('pages')
 			->name('sales.inventory-allocations.store')
 			->middleware('role_or_permission:admin|view sale status');
 
+		Route::patch('sales/{sale}/sale-items/{saleItem}/inventory-allocations/{allocation}', [\App\Http\Controllers\Pages\InventoryAllocationController::class, 'update'])
+			->name('sales.inventory-allocations.update')
+			->middleware('role_or_permission:admin|view sale status');
+
+		Route::delete('sales/{sale}/sale-items/{saleItem}/inventory-allocations/{allocation}', [\App\Http\Controllers\Pages\InventoryAllocationController::class, 'destroy'])
+			->name('sales.inventory-allocations.destroy')
+			->middleware('role_or_permission:admin|view sale status');
+
 		Route::get('sales/{sale}', [\App\Http\Controllers\Pages\SaleController::class, 'show'])
     ->name('sales.show');
 

@@ -431,6 +431,54 @@
                                     @endif
                                 @endcan
                             </div>
+
+                            @can('view sale status')
+                                @if ($coverage['allocations']->isNotEmpty())
+                                    <div class="pl-8 pb-2 -mt-1 space-y-1">
+                                        @foreach ($coverage['allocations'] as $alloc)
+                                            <div class="flex items-center gap-2 text-xs text-gray-500"
+                                                 x-data="{ editing: false }">
+                                                <svg class="w-3 h-3 shrink-0 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                                </svg>
+                                                <span class="flex-1 min-w-0 truncate" title="{{ $alloc['item_name'] }}" x-show="!editing">
+                                                    {{ rtrim(rtrim(number_format($alloc['quantity'], 2), '0'), '.') }} {{ $alloc['unit'] }} allocated from {{ $alloc['item_name'] }}
+                                                </span>
+                                                <span class="flex-1 min-w-0" x-show="editing" x-cloak>Editing quantity:</span>
+
+                                                @if ($alloc['editable'])
+                                                    <span x-show="!editing" class="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                                                        <button type="button" @click="editing = true"
+                                                                class="font-medium text-teal-700 hover:underline">Edit</button>
+                                                        <form method="POST"
+                                                              action="{{ route('pages.sales.inventory-allocations.destroy', [$sale, $item, $alloc['id']]) }}"
+                                                              onsubmit="return confirm('Remove this allocation? The stock will become available again for re-assigning.')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="font-medium text-red-600 hover:underline">Delete</button>
+                                                        </form>
+                                                    </span>
+                                                    <form method="POST" x-show="editing" x-cloak
+                                                          action="{{ route('pages.sales.inventory-allocations.update', [$sale, $item, $alloc['id']]) }}"
+                                                          class="flex items-center gap-1 shrink-0 whitespace-nowrap">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="number" step="any" min="0.01" name="quantity"
+                                                               value="{{ $alloc['quantity'] }}"
+                                                               class="w-20 rounded border border-gray-300 text-xs px-1.5 py-0.5 focus:border-teal-500 focus:ring-teal-500">
+                                                        <button type="submit" class="font-medium text-teal-700 hover:underline">Save</button>
+                                                        <button type="button" @click="editing = false" class="text-gray-400 hover:underline">Cancel</button>
+                                                    </form>
+                                                @else
+                                                    <span class="shrink-0 whitespace-nowrap text-gray-400">
+                                                        locked — {{ $alloc['pt_number'] ?? 'pick ticket' }} already {{ str_replace('_', ' ', $alloc['pt_status']) }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            @endcan
                         @endforeach
                     </div>
 

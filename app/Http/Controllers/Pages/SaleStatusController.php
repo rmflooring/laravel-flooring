@@ -103,6 +103,34 @@ class SaleStatusController extends Controller
             ->map(fn ($v) => (float) $v)
             ->all();
 
+        // Individual allocation rows (not just the summed total above) so the page can
+        // offer an edit/delete action per allocation — added after a real incident
+        // (2026-10-19, Sale #81) where a wrong "Assign from stock" quantity had no way
+        // to be corrected short of a direct database fix. Only allocations whose pick
+        // ticket is still 'pending' or 'staged' (or has no pick ticket item at all) are
+        // editable — matching the same status gate already used elsewhere for pick
+        // ticket item changes (WarehousePickTicketController::update/addItems/removeItem).
+        $allocationsBySaleItemId = \App\Models\InventoryAllocation::whereIn('sale_item_id', $saleItemIds)
+            ->with('inventoryReceipt')
+            ->get()
+            ->groupBy('sale_item_id')
+            ->map(function ($allocs) {
+                return $allocs->map(function ($alloc) {
+                    $ptItem   = PickTicketItem::where('inventory_allocation_id', $alloc->id)->with('pickTicket')->first();
+                    $ptStatus = $ptItem?->pickTicket?->status;
+                    return [
+                        'id'          => $alloc->id,
+                        'quantity'    => (float) $alloc->quantity,
+                        'unit'        => $alloc->inventoryReceipt->unit ?? '',
+                        'item_name'   => $alloc->inventoryReceipt->item_name ?? '',
+                        'pt_number'   => $ptItem?->pickTicket?->pt_number,
+                        'pt_status'   => $ptStatus,
+                        'editable'    => $ptStatus === null || in_array($ptStatus, ['pending', 'staged']),
+                    ];
+                })->values();
+            })
+            ->all();
+
         // For uncovered items: find available receipts matching the item's product_style_id.
         // Items saved without a linked style (e.g. Color/Item# retyped without re-selecting
         // from the dropdown) fall back to an exact catalog name match.
@@ -173,13 +201,15 @@ class SaleStatusController extends Controller
             $receiptsByStyleId,
             $receiptsByPoItemId,
             $ptBySaleItemId,
-            $effectiveStyleIds
+            $effectiveStyleIds,
+            $allocationsBySaleItemId
         ) {
             $matches        = $poItemsBySaleItemId[$item->id] ?? [];
             $invQty         = $invAllocatedQtys[$item->id] ?? 0;
             $hasInvCoverage = $invQty > 0;
             $pickTicket     = $ptBySaleItemId[$item->id] ?? null;
             $effectiveStyleId = $effectiveStyleIds[$item->id] ?? null;
+            $allocations    = $allocationsBySaleItemId[$item->id] ?? collect();
 
             // Resolve available receipts: by effective product_style_id first, then fall
             // back to PO item link for free-text items that have no catalog entry.
@@ -203,6 +233,7 @@ class SaleStatusController extends Controller
                         'inv_qty'            => $invQty,
                         'available_receipts' => $availableReceipts,
                         'pick_ticket'        => $pickTicket,
+                        'allocations'        => $allocations,
                     ];
                 }
 
@@ -213,6 +244,7 @@ class SaleStatusController extends Controller
                     'inv_qty'            => 0,
                     'available_receipts' => $availableReceipts,
                     'pick_ticket'        => null,
+                    'allocations'        => $allocations,
                 ];
             }
 
@@ -230,6 +262,7 @@ class SaleStatusController extends Controller
                     'inv_qty'            => $invQty,
                     'available_receipts' => $availableReceipts,
                     'pick_ticket'        => $pickTicket,
+                    'allocations'        => $allocations,
                 ];
             }
 
@@ -247,6 +280,7 @@ class SaleStatusController extends Controller
                 'inv_qty'            => $invQty,
                 'available_receipts' => $availableReceipts,
                 'pick_ticket'        => $pickTicket,
+                'allocations'        => $allocations,
             ];
         });
 

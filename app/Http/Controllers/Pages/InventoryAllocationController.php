@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryAllocation;
 use App\Models\InventoryReceipt;
+use App\Models\PickTicketItem;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\WorkOrder;
@@ -54,5 +56,81 @@ class InventoryAllocationController extends Controller
         return redirect()
             ->route('pages.sales.status', $sale)
             ->with('success', 'Inventory allocated and pick ticket created.');
+    }
+
+    /**
+     * Correct an allocation's quantity (e.g. "Assign from stock" was given the wrong
+     * amount). Blocked once the owning pick ticket has progressed past pending/staged —
+     * same gate used for every other pick-ticket-item edit (see
+     * WarehousePickTicketController::update/addItems/removeItem) — since at that point
+     * the quantity may already be reflected in picking/delivery and should go through
+     * that flow instead of being silently rewritten here.
+     */
+    public function update(Request $request, Sale $sale, SaleItem $saleItem, InventoryAllocation $allocation): RedirectResponse
+    {
+        abort_unless($saleItem->sale_id === $sale->id, 404);
+        abort_unless($allocation->sale_item_id === $saleItem->id, 404);
+
+        $ptItem   = PickTicketItem::where('inventory_allocation_id', $allocation->id)->with('pickTicket')->first();
+        $ptStatus = $ptItem?->pickTicket?->status;
+        abort_unless(
+            $ptStatus === null || in_array($ptStatus, ['pending', 'staged']),
+            422,
+            'This allocation can no longer be edited — its pick ticket has already progressed.'
+        );
+
+        $request->validate([
+            'quantity' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $allocation->loadMissing('inventoryReceipt');
+        // The ceiling is what's available on the receipt PLUS this allocation's own
+        // current quantity — available_qty already subtracts this allocation along
+        // with every other one, so adding it back reconstitutes "how much could this
+        // one allocation be set to at most" without double-counting itself.
+        $ceiling = $allocation->inventoryReceipt->available_qty + (float) $allocation->quantity;
+
+        if ((float) $request->quantity > $ceiling) {
+            return back()->withErrors([
+                'quantity' => "Only {$ceiling} {$allocation->inventoryReceipt->unit} available in that receipt.",
+            ])->withInput();
+        }
+
+        $allocation->update(['quantity' => $request->quantity]);
+        $ptItem?->update(['quantity' => $request->quantity]);
+
+        return redirect()
+            ->route('pages.sales.status', $sale)
+            ->with('success', 'Allocation updated.');
+    }
+
+    /**
+     * Fully revert an allocation (e.g. "Assign from stock" was done against the wrong
+     * receipt entirely). Nulls the owning pick ticket item's allocation link rather than
+     * deleting the item itself — restoring it to the same "staged, not yet linked to
+     * inventory" placeholder state it would be in if stock had never been assigned —
+     * then deletes the allocation row, which is what actually frees the quantity back
+     * to available_qty (unlike the released_at flag, which available_qty always counts
+     * regardless — that flag means "physically shipped," not "undo this reservation").
+     */
+    public function destroy(Sale $sale, SaleItem $saleItem, InventoryAllocation $allocation): RedirectResponse
+    {
+        abort_unless($saleItem->sale_id === $sale->id, 404);
+        abort_unless($allocation->sale_item_id === $saleItem->id, 404);
+
+        $ptItem   = PickTicketItem::where('inventory_allocation_id', $allocation->id)->with('pickTicket')->first();
+        $ptStatus = $ptItem?->pickTicket?->status;
+        abort_unless(
+            $ptStatus === null || in_array($ptStatus, ['pending', 'staged']),
+            422,
+            'This allocation can no longer be removed — its pick ticket has already progressed.'
+        );
+
+        $ptItem?->update(['inventory_allocation_id' => null]);
+        $allocation->delete();
+
+        return redirect()
+            ->route('pages.sales.status', $sale)
+            ->with('success', 'Allocation removed — the stock is available again.');
     }
 }
