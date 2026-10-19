@@ -100,7 +100,11 @@ class WarehousePickupsController extends Controller
                 ->orderBy('purchase_orders.status', $dir)
                 ->orderByDesc('purchase_orders.created_at'),
 
+            // Default view: surface "ordered" POs first (what the warehouse needs to
+            // act on — chase down / receive), same as before otherwise. Clicking any
+            // column header, including Status, still does a plain sort on that column.
             default => $poQuery
+                ->orderByRaw("CASE WHEN purchase_orders.status = 'ordered' THEN 0 ELSE 1 END ASC")
                 ->orderByRaw("COALESCE(pickup_at, expected_delivery_date) IS NULL ASC, COALESCE(pickup_at, expected_delivery_date) {$dir}")
                 ->orderByDesc('purchase_orders.created_at'),
         };
