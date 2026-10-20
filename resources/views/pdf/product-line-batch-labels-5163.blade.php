@@ -1,7 +1,15 @@
 @php
-    $mmToPt      = 2.8346;
-    $topPadPt    = round($topOffsetMm  * $mmToPt, 2);
-    $leftPadPt   = round($leftOffsetMm * $mmToPt, 2);
+    $mmToPt     = 2.8346;
+    $baseTopPt  = 36;
+    $baseLeftPt = 11;
+    // Shift is applied as the FULL desired position (base + offset) via body
+    // margin, with @page's own top/left reserved to 0 — see the full explanation,
+    // including the two approaches that didn't work (body padding; moving @page's
+    // margin dynamically — dompdf silently ignored that one), in
+    // pdf/batch-labels-5163.blade.php. bottom/right stay fixed since they aren't
+    // being offset and still need real margin so the sheet edges aren't flush.
+    $topMarginPt  = max(0, round($baseTopPt  + ($topOffsetMm  * $mmToPt), 2));
+    $leftMarginPt = max(0, round($baseLeftPt + ($leftOffsetMm * $mmToPt), 2));
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -9,7 +17,7 @@
     <meta charset="UTF-8">
     <style>
         @page {
-            margin: 36pt 11pt;
+            margin: 0 11pt 36pt 0;
             size: letter;
         }
 
@@ -18,8 +26,8 @@
         html, body {
             margin: 0;
             padding: 0;
-            padding-top: {{ $topPadPt }}pt;
-            padding-left: {{ $leftPadPt }}pt;
+            margin-top: {{ $topMarginPt }}pt;
+            margin-left: {{ $leftMarginPt }}pt;
             font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 7pt;
             color: #1f2937;

@@ -1,7 +1,33 @@
 @php
-    $mmToPt      = 2.8346;
-    $topPadPt    = round($topOffsetMm  * $mmToPt, 2);
-    $leftPadPt   = round($leftOffsetMm * $mmToPt, 2);
+    $mmToPt     = 2.8346;
+    $baseTopPt  = 36;
+    $baseLeftPt = 11;
+    // The shift needs three different approaches ruled out before landing here, all
+    // confirmed live 2026-10-20 by actually rendering and visually/pixel-comparing
+    // the output (not just by reading the CSS):
+    //   1. padding-top/left on <body> (original code): CSS padding can never go
+    //      negative — it silently clamps to 0 — so a negative offset (needed to
+    //      shift UP/LEFT, per the form's own "positive = move down/right" labeling)
+    //      did nothing. top_offset_mm=-10 rendered byte-identical to 0.
+    //   2. margin-top/left on <body>: margin IS valid negative, and positive values
+    //      shifted content correctly — but dompdf clips body content at the @page
+    //      margin's inner box edge, so a negative margin big enough to matter just
+    //      pushed the logo/product-name block off the top-left edge entirely rather
+    //      than sliding it inward.
+    //   3. Moving the @page margin's own top/left values dynamically: in theory the
+    //      cleanest fix (no inner box to clip against) — but dompdf did not visibly
+    //      respond to this at all; re-rendering with top/left both at +10mm produced
+    //      pixel-identical output to 0mm, even after clearing the compiled view
+    //      cache and confirming the computed values were correct in the template.
+    // What actually works: @page margin is zeroed out for top/left (kept nonzero for
+    // bottom/right, which aren't being offset and still need real physical margin so
+    // the last row/column isn't flush against the sheet edge), and the FULL desired
+    // position — base position plus the user's offset — is applied as body margin
+    // instead of just the offset. There's no longer an inner @page-margin box
+    // narrower than body's margin for content to clip against, since @page no longer
+    // reserves any of its own space on those two sides.
+    $topMarginPt  = max(0, round($baseTopPt  + ($topOffsetMm  * $mmToPt), 2));
+    $leftMarginPt = max(0, round($baseLeftPt + ($leftOffsetMm * $mmToPt), 2));
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -9,7 +35,7 @@
     <meta charset="UTF-8">
     <style>
         @page {
-            margin: 36pt 11pt;
+            margin: 0 11pt 36pt 0;
             size: letter;
         }
 
@@ -18,8 +44,8 @@
         html, body {
             margin: 0;
             padding: 0;
-            padding-top: {{ $topPadPt }}pt;
-            padding-left: {{ $leftPadPt }}pt;
+            margin-top: {{ $topMarginPt }}pt;
+            margin-left: {{ $leftMarginPt }}pt;
             font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 7pt;
             color: #1f2937;
