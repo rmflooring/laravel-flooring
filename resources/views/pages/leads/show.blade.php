@@ -159,7 +159,7 @@
                             class="pb-3 text-sm font-medium border-b-2 -mb-px transition-colors">
                         SMS
                         @if (! $lead->sms_consent)
-                            <span class="ml-1 text-xs text-gray-400">(no consent)</span>
+                            <span class="ml-1 text-xs text-gray-400">(estimate replies only)</span>
                         @endif
                     </button>
                 </div>
@@ -203,9 +203,14 @@
 
                     {{-- SMS tab --}}
                     <div x-show="activeTab === 'sms'">
-                        @if ($lead->sms_consent && $lead->phone)
+                        @if ($lead->phone)
                             <form method="POST" action="{{ route('pages.leads.reply-sms', $lead) }}" class="space-y-3">
                                 @csrf
+                                @unless ($lead->sms_consent)
+                                    <div class="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/30 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                                        This lead didn’t choose texting. You can still send a one-off reply <strong>about their estimate request</strong> (e.g. booking the measure, sending the price) — no promotions or follow-up marketing.
+                                    </div>
+                                @endunless
                                 <div>
                                     <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">To</label>
                                     <p class="text-sm text-gray-900 dark:text-white">{{ $lead->phone }}</p>
@@ -217,6 +222,13 @@
                                               placeholder="Hi {{ $lead->name }}, thanks for your inquiry…"></textarea>
                                     <p class="mt-1 text-xs text-gray-400">Max 1600 characters</p>
                                 </div>
+                                @unless ($lead->sms_consent)
+                                    <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <input type="checkbox" name="estimate_reply" value="1" required class="mt-0.5 rounded border-gray-300 text-blue-600">
+                                        This text is only about their estimate request.
+                                    </label>
+                                    @error('estimate_reply')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                                @endunless
                                 <div class="flex justify-end">
                                     <button type="submit"
                                             class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
@@ -227,8 +239,6 @@
                                     </button>
                                 </div>
                             </form>
-                        @elseif (! $lead->sms_consent)
-                            <p class="text-sm text-gray-500 dark:text-gray-400">This lead has not consented to SMS messages.</p>
                         @else
                             <p class="text-sm text-gray-500 dark:text-gray-400">No phone number on this lead.</p>
                         @endif

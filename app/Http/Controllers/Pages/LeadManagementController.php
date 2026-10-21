@@ -201,12 +201,13 @@ class LeadManagementController extends Controller
             return back()->with('error', 'This lead has no phone number.');
         }
 
-        if (! $lead->sms_consent) {
-            return back()->with('error', 'This lead has not consented to SMS.');
-        }
-
+        // No SMS consent: a one-off reply about the estimate they asked for is still allowed
+        // (CASL exempts requested quotes/estimates) — staff must confirm that's all it is.
         $validated = $request->validate([
             'body' => 'required|string|max:1600',
+            'estimate_reply' => $lead->sms_consent ? 'nullable' : 'accepted',
+        ], [
+            'estimate_reply.accepted' => 'This lead has not consented to SMS — confirm the text is only about their estimate request.',
         ]);
 
         $smsService   = app(SmsService::class);
