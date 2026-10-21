@@ -966,6 +966,10 @@ Route::prefix('pages')
 			->middleware('permission:view estimates')
 			->name('estimates.pdf');
 
+		Route::get('estimates/{estimate}/export-excel', [EstimateController::class, 'exportExcel'])
+			->middleware('permission:view estimates')
+			->name('estimates.export-excel');
+
 		Route::get('mail-log/{type}/{id}', [\App\Http\Controllers\Pages\MailLogController::class, 'latest'])
 			->name('mail-log.latest');
 

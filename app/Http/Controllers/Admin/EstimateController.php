@@ -10,6 +10,7 @@ use App\Models\Sale;
 use App\Models\SaleRoom;
 use App\Models\SaleItem;
 use App\Services\EmailTemplateService;
+use App\Services\EstimateExcelExportService;
 use App\Services\GraphMailService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -1457,6 +1458,17 @@ public function linkOpportunity(Request $request, Estimate $estimate)
         return response($pdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function exportExcel(Estimate $estimate, EstimateExcelExportService $exporter)
+    {
+        $content  = $exporter->stream($estimate);
+        $filename = $exporter->filename($estimate);
+
+        return response($content, 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 
