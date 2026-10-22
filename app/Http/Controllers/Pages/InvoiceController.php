@@ -148,12 +148,7 @@ class InvoiceController extends Controller
 
         [$emailSubject, $emailBody] = $this->resolveEmailTemplate($sale, $invoice);
 
-        $taxRates = $sale->tax_group_id
-            ? \DB::table('tax_rate_group_items')
-                ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
-                ->where('tax_rate_group_id', $sale->tax_group_id)
-                ->get(['tax_rates.name', 'tax_rates.sales_rate'])
-            : collect();
+        $taxBreakdown = $this->taxBreakdown($invoice);
 
         $openedAt = \App\Models\MailLog::where('related_id', $invoice->id)
             ->where('related_type', 'invoice')
@@ -162,7 +157,7 @@ class InvoiceController extends Controller
             ->value('opened_at');
 
         return view('pages.invoices.show', compact(
-            'sale', 'invoice', 'paymentMethods', 'taxRates',
+            'sale', 'invoice', 'paymentMethods', 'taxBreakdown',
             'pmEmail', 'homeownerEmail', 'customerContacts', 'emailSubject', 'emailBody',
             'openedAt', 'availableCredits'
         ));
@@ -564,16 +559,11 @@ class InvoiceController extends Controller
         $invoice->load(['rooms.items', 'paymentTerm', 'payments']);
         $sale->load(['opportunity.projectManager', 'opportunity.customer', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer']);
 
-        $taxRates = $sale->tax_group_id
-            ? \DB::table('tax_rate_group_items')
-                ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
-                ->where('tax_rate_group_id', $sale->tax_group_id)
-                ->get(['tax_rates.name', 'tax_rates.sales_rate'])
-            : collect();
+        $taxBreakdown = $this->taxBreakdown($invoice);
 
         $branding = $this->getBranding();
 
-        $pdf = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxRates'))
+        $pdf = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxBreakdown'))
             ->setPaper('letter', 'portrait');
 
         return $pdf->stream("invoice-{$invoice->invoice_number}.pdf");
@@ -607,6 +597,79 @@ class InvoiceController extends Controller
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Per-tax-rate dollar breakdown for a saved invoice (e.g. "GST (5%): $113.53",
+     * "PST (7%): $158.94") for the show page and PDF.
+     *
+     * Replaces three independent, buggy inline computations (pages/invoices/show
+     * .blade.php ×2, pdf/invoice.blade.php) that each applied every tax rate to the
+     * FULL invoice subtotal, ignoring each rate's own applies_to (materials/labour/
+     * freight/all) — and, separately, rounded each line to 2dp independently of the
+     * others, so the displayed lines didn't necessarily sum to the printed Total.
+     * Reported live 2026-10-22, Invoice 2026-073 (Sale #89, id 92): printed
+     * Subtotal $2,270.52 + GST $113.53 + PST $158.94 = $2,542.99, but the printed
+     * Total read $2,542.98 — a one-cent gap purely from independent per-line
+     * rounding (113.526→113.53, 158.9364→158.94; correctly summed-then-rounded-once
+     * it's 272.4624→272.46, matching the invoice's actual stored tax_amount).
+     *
+     * Bases are computed from the INVOICE's own line items (grouped by item_type),
+     * not the parent sale's — a partial/progress invoice can cover only some of a
+     * sale's items, so the sale's own subtotal_materials/labour/freight wouldn't
+     * necessarily match what this specific invoice actually bills.
+     *
+     * The last line absorbs whatever rounding remainder is left so the breakdown
+     * always sums to exactly $invoice->tax_amount (the authoritative, already-correct
+     * value used for grand_total) — never drifting from the printed Total by even a
+     * cent, regardless of how many rates or lines are involved.
+     *
+     * @return \Illuminate\Support\Collection<int, array{name: string, rate: float, amount: float}>
+     */
+    private function taxBreakdown(Invoice $invoice): \Illuminate\Support\Collection
+    {
+        if (! $invoice->sale->tax_group_id) {
+            return collect();
+        }
+
+        $invoice->loadMissing('items');
+
+        $bases = [
+            'materials' => (float) $invoice->items->where('item_type', 'material')->sum('line_total'),
+            'labour'    => (float) $invoice->items->where('item_type', 'labour')->sum('line_total'),
+            'freight'   => (float) $invoice->items->where('item_type', 'freight')->sum('line_total'),
+        ];
+        $pretaxTotal = array_sum($bases);
+
+        $rates = \DB::table('tax_rate_group_items')
+            ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
+            ->where('tax_rate_group_id', $invoice->sale->tax_group_id)
+            ->get(['tax_rates.name', 'tax_rates.sales_rate', 'tax_rates.applies_to']);
+
+        if ($rates->isEmpty()) {
+            return collect();
+        }
+
+        // Plain array, not ->map() straight to a Collection — Collection's ArrayAccess
+        // returns array items by value, so `$lines[$i]['amount'] = ...` below would
+        // silently no-op (confirmed live: PHP raises "Indirect modification of
+        // overloaded element ... has no effect" and the remainder was never applied).
+        $lines = $rates->map(function ($rate) use ($bases, $pretaxTotal) {
+            $base = $bases[$rate->applies_to] ?? $pretaxTotal; // 'all' or unknown -> full pretax
+            return [
+                'name'   => $rate->name,
+                'rate'   => (float) $rate->sales_rate,
+                'amount' => round($base * ((float) $rate->sales_rate / 100), 2),
+            ];
+        })->all();
+
+        $remainder = round((float) $invoice->tax_amount - array_sum(array_column($lines, 'amount')), 2);
+        if ($remainder != 0.0) {
+            $lastIndex = array_key_last($lines);
+            $lines[$lastIndex]['amount'] = round($lines[$lastIndex]['amount'] + $remainder, 2);
+        }
+
+        return collect($lines);
+    }
 
     private function resolveEmailTemplate(Sale $sale, Invoice $invoice): array
     {
@@ -642,15 +705,10 @@ class InvoiceController extends Controller
         try {
             $invoice->load(['rooms.items', 'paymentTerm', 'payments']);
             $sale->load(['opportunity.projectManager', 'opportunity.customer']);
-            $taxRates = $sale->tax_group_id
-                ? \DB::table('tax_rate_group_items')
-                    ->join('tax_rates', 'tax_rates.id', '=', 'tax_rate_group_items.tax_rate_id')
-                    ->where('tax_rate_group_id', $sale->tax_group_id)
-                    ->get(['tax_rates.name', 'tax_rates.sales_rate'])
-                : collect();
+            $taxBreakdown = $this->taxBreakdown($invoice);
             $branding = $this->getBranding();
 
-            $pdf        = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxRates'))->setPaper('letter', 'portrait');
+            $pdf        = Pdf::loadView('pdf.invoice', compact('sale', 'invoice', 'branding', 'taxBreakdown'))->setPaper('letter', 'portrait');
             $pdfContent = $pdf->output();
 
             Storage::disk('local')->put("mail-attachments/invoice/{$invoice->id}.pdf", $pdfContent);

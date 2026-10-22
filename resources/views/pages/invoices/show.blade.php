@@ -133,10 +133,9 @@
             {{-- Financial summary --}}
             <div class="text-right space-y-1">
                 <div class="text-sm text-gray-500">Subtotal: <span class="text-gray-900 dark:text-white font-medium">${{ number_format((float)$invoice->subtotal, 2) }}</span></div>
-                @if($taxRates->isNotEmpty())
-                    @foreach($taxRates as $taxRate)
-                        @php $lineAmt = round((float)$invoice->subtotal * ((float)$taxRate->sales_rate / 100), 2); @endphp
-                        <div class="text-sm text-gray-500">{{ $taxRate->name }} ({{ number_format((float)$taxRate->sales_rate, 0) }}%): <span class="text-gray-900 dark:text-white font-medium">${{ number_format($lineAmt, 2) }}</span></div>
+                @if($taxBreakdown->isNotEmpty())
+                    @foreach($taxBreakdown as $line)
+                        <div class="text-sm text-gray-500">{{ $line['name'] }} ({{ number_format($line['rate'], 0) }}%): <span class="text-gray-900 dark:text-white font-medium">${{ number_format($line['amount'], 2) }}</span></div>
                     @endforeach
                 @else
                     <div class="text-sm text-gray-500">Tax: <span class="text-gray-900 dark:text-white font-medium">${{ number_format((float)$invoice->tax_amount, 2) }}</span></div>
@@ -282,12 +281,11 @@
                 <span>Subtotal</span>
                 <span class="w-28 text-right">${{ number_format((float)$invoice->subtotal, 2) }}</span>
             </div>
-            @if($taxRates->isNotEmpty())
-                @foreach($taxRates as $taxRate)
-                    @php $lineAmt = round((float)$invoice->subtotal * ((float)$taxRate->sales_rate / 100), 2); @endphp
+            @if($taxBreakdown->isNotEmpty())
+                @foreach($taxBreakdown as $line)
                     <div class="flex gap-8 text-sm text-gray-600 dark:text-gray-300">
-                        <span>{{ $taxRate->name }} ({{ number_format((float)$taxRate->sales_rate, 0) }}%)</span>
-                        <span class="w-28 text-right">${{ number_format($lineAmt, 2) }}</span>
+                        <span>{{ $line['name'] }} ({{ number_format($line['rate'], 0) }}%)</span>
+                        <span class="w-28 text-right">${{ number_format($line['amount'], 2) }}</span>
                     </div>
                 @endforeach
             @else
