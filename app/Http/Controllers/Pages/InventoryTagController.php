@@ -18,7 +18,7 @@ class InventoryTagController extends Controller
         $receipt->load([
             'purchaseOrder.vendor',
             'purchaseOrder.sale',
-            'allocations.sale',
+            'allocations.sale.opportunity.jobSiteCustomer',
             'transactions',
             'productStyle.productLine.unit',
         ]);
@@ -42,7 +42,8 @@ class InventoryTagController extends Controller
             ->with([
                 'purchaseOrder.vendor',
                 'purchaseOrder.sale',
-                'allocations.sale',
+                'purchaseOrder.sale.opportunity.jobSiteCustomer',
+                'allocations.sale.opportunity.jobSiteCustomer',
                 'transactions',
                 'productStyle.productLine.unit',
             ])
@@ -51,8 +52,9 @@ class InventoryTagController extends Controller
         abort_if($receipts->isEmpty(), 404, 'No inventory receipts found for this PO.');
 
         $format = Setting::get('label_printer_format', 'standard');
-        // Standard: ~8cm × 6cm  |  Zebra: 4"×6" stock, auto-rotated to 6"×4" landscape (432 × 288 pt)
-        $paper = $format === 'zebra' ? [0, 0, 432, 288] : [0, 0, 226.77, 170.08];
+        // Same as the inventory page's Print Tag — Standard: 4"×6" portrait (288 × 432 pt)
+        // Zebra: 4"×6" stock, auto-rotated to 6"×4" landscape (432 × 288 pt)
+        $paper = $format === 'zebra' ? [0, 0, 432, 288] : [0, 0, 288, 432];
 
         $pdf = Pdf::loadView('pdf.inventory-tags', compact('receipts', 'purchaseOrder', 'format'))
             ->setPaper($paper);

@@ -15,6 +15,9 @@
     $mobileUrl  = route('mobile.inventory.show', $receipt);
     $qrSvg      = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::size($qrSize)->margin(1)->generate($mobileUrl);
     $allocSale  = $receipt->allocations->first()?->sale;
+    // Show the jobsite customer under the sale #, not the parent (billing) customer
+    $allocJobSiteCust = $allocSale?->opportunity?->jobSiteCustomer;
+    $allocJobSite = $allocJobSiteCust?->company_name ?: ($allocJobSiteCust?->name ?? '');
     $qtyDisplay = rtrim(rtrim(number_format((float)$receipt->quantity_received, 2), '0'), '.');
 
     $manufacturer    = $receipt->productStyle?->productLine?->manufacturer;
@@ -62,7 +65,7 @@
             {{-- Allocation badge --}}
             @if ($allocSale)
                 <div style="background: #f0fdf4; border: 1pt solid #bbf7d0; border-radius: 3pt; padding: 3pt 5pt; font-size: 7pt; font-weight: bold; color: #166534; text-align: center; line-height: 1.3; margin-bottom: 4pt;">
-                    Sale #{{ $allocSale->sale_number }}<br>{{ $allocSale->customer_name ?? $allocSale->job_name ?? '' }}
+                    Sale #{{ $allocSale->sale_number }}<br>{{ $allocJobSite ?: ($allocSale->customer_name ?? $allocSale->job_name ?? '') }}
                 </div>
             @else
                 <div style="background: #fefce8; border: 1pt solid #fde68a; border-radius: 3pt; padding: 3pt 5pt; font-size: 6.5pt; font-weight: bold; color: #854d0e; text-align: center; margin-bottom: 4pt;">
