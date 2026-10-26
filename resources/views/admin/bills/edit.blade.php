@@ -233,8 +233,8 @@
                             </div>
 
                             {{-- GST row --}}
-                            <div class="flex items-center justify-between w-72" x-show="gstRate > 0 || taxManual">
-                                <span x-text="taxManual ? 'GST' : `GST (${gstRate}%)`">GST</span>
+                            <div class="flex items-start justify-between gap-3 w-72" x-show="gstRate > 0 || gstAmount !== 0 || taxManual">
+                                <span x-text="taxManual ? 'GST' : gstLabel">GST</span>
                                 <div x-show="!taxManual" class="font-medium">$<span x-text="gstAmount.toFixed(2)"></span></div>
                                 <div x-show="taxManual" class="flex items-center gap-1">
                                     <span class="text-gray-500">$</span>
@@ -247,8 +247,8 @@
                             </div>
 
                             {{-- PST row --}}
-                            <div class="flex items-center justify-between w-72" x-show="pstRate > 0 || taxManual">
-                                <span x-text="taxManual ? 'PST' : `PST (${pstRate}%)`">PST</span>
+                            <div class="flex items-start justify-between gap-3 w-72" x-show="pstRate > 0 || pstAmount !== 0 || taxManual">
+                                <span x-text="taxManual ? 'PST' : pstLabel">PST</span>
                                 <div x-show="!taxManual" class="font-medium">$<span x-text="pstAmount.toFixed(2)"></span></div>
                                 <div x-show="taxManual" class="flex items-center gap-1">
                                     <span class="text-gray-500">$</span>
@@ -311,6 +311,7 @@
                                         <th class="px-4 py-3 w-52">Type</th>
                                         <th class="px-4 py-3">Description</th>
                                         <th class="px-4 py-3 w-40">Amount</th>
+                                        <th class="px-4 py-3 w-44">Tax</th>
                                         <th class="px-4 py-3 w-10"></th>
                                     </tr>
                                 </thead>
@@ -361,6 +362,26 @@
                                                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                                         placeholder="0.00" required>
                                                 </div>
+                                            </td>
+                                            <td class="px-4 py-2">
+                                                {{-- Early payment credits are always zero-rated --}}
+                                                <template x-if="charge.charge_type === 'early_payment'">
+                                                    <div>
+                                                        <input type="hidden" :name="`items[${rows.length + ci}][tax_rate_group_id]`" value="">
+                                                        <span class="text-xs text-gray-500 dark:text-gray-400">No tax</span>
+                                                    </div>
+                                                </template>
+                                                <template x-if="charge.charge_type !== 'early_payment'">
+                                                    <select :name="`items[${rows.length + ci}][tax_rate_group_id]`"
+                                                        x-model="charge.tax_rate_group_id"
+                                                        @change="recalculate()"
+                                                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                                        <option value="">Same as bill</option>
+                                                        @foreach ($taxGroups as $tg)
+                                                            <option value="{{ $tg->id }}">{{ $tg->name }}{{ $tg->description ? ' — '.$tg->description : '' }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </template>
                                             </td>
                                             <td class="px-4 py-2 text-center">
                                                 <button type="button" @click="removeCharge(ci)"
@@ -417,6 +438,7 @@
             'item_name'   => $item->item_name,
             'unit_cost'   => abs((float) $item->unit_cost),
             'line_total'  => (float) $item->line_total,
+            'tax_rate_group_id' => $item->tax_rate_group_id ? (string) $item->tax_rate_group_id : '',
         ])->values()->toArray();
 @endphp
 
@@ -437,6 +459,10 @@ function billEditForm() {
     const taxGroupData = @json($taxGroups);
 
     const creditTypes = new Set(['early_payment', 'other_credit']);
+
+    const taxGroupRates = Object.fromEntries(@json($taxGroups).map(g => [
+        String(g.id), { gst: parseFloat(g.gst_rate) || 0, pst: parseFloat(g.pst_rate) || 0 },
+    ]));
 
     const chargeTypeLabels = {
         fuel:          'Fuel Surcharge',
@@ -469,7 +495,7 @@ function billEditForm() {
         taxManual: savedTaxManual,
         gstAmountOverride: savedTaxManual ? savedGstAmount : 0,
         pstAmountOverride: savedTaxManual ? savedPstAmount : 0,
-        subtotal: 0, chargeTotal: 0, grossChargesTotal: 0, grossCreditsTotal: 0, grossEarlyPaymentTotal: 0, gstAmount: 0, pstAmount: 0, grandTotal: 0,
+        subtotal: 0, chargeTotal: 0, grossChargesTotal: 0, grossCreditsTotal: 0, grossEarlyPaymentTotal: 0, gstAmount: 0, pstAmount: 0, grandTotal: 0, gstLabel: 'GST', pstLabel: 'PST',
 
         init() { this.recalculate(); },
 
@@ -499,7 +525,7 @@ function billEditForm() {
         },
 
         addCharge() {
-            this.chargeRows.push({ key: this.chargeKey++, id: null, charge_type: 'fuel', item_name: chargeTypeLabels['fuel'], unit_cost: 0, line_total: 0 });
+            this.chargeRows.push({ key: this.chargeKey++, id: null, charge_type: 'fuel', item_name: chargeTypeLabels['fuel'], unit_cost: 0, line_total: 0, tax_rate_group_id: '' });
         },
 
         removeCharge(ci) {
@@ -539,8 +565,34 @@ function billEditForm() {
                 this.gstAmount = Math.round((parseFloat(this.gstAmountOverride) || 0) * 100) / 100;
                 this.pstAmount = Math.round((parseFloat(this.pstAmountOverride) || 0) * 100) / 100;
             } else {
-                this.gstAmount = Math.round(taxBase * (this.gstRate / 100) * 100) / 100;
-                this.pstAmount = Math.round(taxBase * (this.pstRate / 100) * 100) / 100;
+                // Line items use the bill's rates; each charge/credit can carry its own tax
+                // group. Total the amounts per rate first, then apply each rate once.
+                const gstBases = { [this.gstRate]: this.subtotal };
+                const pstBases = { [this.pstRate]: this.subtotal };
+                this.chargeRows
+                    .filter(c => c.charge_type !== 'early_payment')
+                    .forEach(c => {
+                        const amount = (creditTypes.has(c.charge_type) ? -1 : 1) * (parseFloat(c.unit_cost) || 0);
+                        const group  = taxGroupRates[c.tax_rate_group_id];
+                        const gst = group ? group.gst : this.gstRate;
+                        const pst = group ? group.pst : this.pstRate;
+                        gstBases[gst] = (gstBases[gst] || 0) + amount;
+                        pstBases[pst] = (pstBases[pst] || 0) + amount;
+                    });
+                const taxOn = bases => Object.entries(bases).reduce((s, [rate, base]) => s + base * rate / 100, 0);
+                this.gstAmount = Math.round(taxOn(gstBases) * 100) / 100;
+                this.pstAmount = Math.round(taxOn(pstBases) * 100) / 100;
+
+                // "PST (7%)" when it applies to everything; "PST (7% on $1,050.00)" when
+                // some lines carry a different tax group than the bill.
+                const describe = (name, bases) => {
+                    const parts = Object.entries(bases).filter(([rate, base]) => +rate > 0 && Math.abs(base) >= 0.005);
+                    if (parts.length === 0) return name;
+                    if (parts.length === 1 && Math.abs(parts[0][1] - taxBase) < 0.005) return `${name} (${+parts[0][0]}%)`;
+                    return `${name} (${parts.map(([rate, base]) => `${+rate}% on $${base.toFixed(2)}`).join(', ')})`;
+                };
+                this.gstLabel = describe('GST', gstBases);
+                this.pstLabel = describe('PST', pstBases);
             }
             this.grandTotal = taxBase + this.gstAmount + this.pstAmount - this.grossEarlyPaymentTotal;
         },

@@ -169,6 +169,7 @@ class BillController extends Controller
             'items.*.purchase_order_item_id' => 'nullable|exists:purchase_order_items,id',
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
             'items.*.charge_type'            => 'nullable|string',
+            'items.*.tax_rate_group_id'      => 'nullable|exists:tax_rate_groups,id',
             'documents'   => 'nullable|array',
             'documents.*' => 'file|max:20480|mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx,csv,txt',
         ]);
@@ -188,7 +189,9 @@ class BillController extends Controller
         $pstRate   = round(($validated['pst_rate'] ?? 0) / 100, 6);
         $taxManual = $request->boolean('tax_manual');
 
-        $bill = DB::transaction(function () use ($validated, $gstRate, $pstRate, $taxManual) {
+        $taxGroups = $this->taxGroups()->keyBy('id');
+
+        $bill = DB::transaction(function () use ($validated, $gstRate, $pstRate, $taxManual, $taxGroups) {
             $bill = Bill::create([
                 'bill_type'         => $validated['bill_type'],
                 'vendor_id'         => $validated['vendor_id'] ?? null,
@@ -212,7 +215,7 @@ class BillController extends Controller
             ]);
 
             foreach ($validated['items'] as $i => $row) {
-                BillItem::create([
+                BillItem::create(array_merge($this->itemTaxFields($row, $taxGroups), [
                     'bill_id'                 => $bill->id,
                     'purchase_order_item_id'  => $row['purchase_order_item_id'] ?? null,
                     'work_order_item_id'      => $row['work_order_item_id'] ?? null,
@@ -223,7 +226,7 @@ class BillController extends Controller
                     'unit_cost'               => $row['unit_cost'],
                     'line_total'              => (float) ($row['line_total'] ?? round($row['quantity'] * $row['unit_cost'], 2)),
                     'sort_order'              => $i,
-                ]);
+                ]));
             }
 
             $bill->load('items');
@@ -310,13 +313,16 @@ class BillController extends Controller
             'items.*.purchase_order_item_id' => 'nullable|exists:purchase_order_items,id',
             'items.*.work_order_item_id'     => 'nullable|exists:work_order_items,id',
             'items.*.charge_type'            => 'nullable|string',
+            'items.*.tax_rate_group_id'      => 'nullable|exists:tax_rate_groups,id',
         ]);
 
         $gstRate   = round(($validated['gst_rate'] ?? 0) / 100, 6);
         $pstRate   = round(($validated['pst_rate'] ?? 0) / 100, 6);
         $taxManual = $request->boolean('tax_manual');
 
-        DB::transaction(function () use ($bill, $validated, $gstRate, $pstRate, $taxManual) {
+        $taxGroups = $this->taxGroups()->keyBy('id');
+
+        DB::transaction(function () use ($bill, $validated, $gstRate, $pstRate, $taxManual, $taxGroups) {
             $bill->update([
                 'vendor_id'        => $validated['vendor_id'] ?? null,
                 'installer_id'     => $validated['installer_id'] ?? null,
@@ -337,7 +343,7 @@ class BillController extends Controller
             $bill->items()->delete();
 
             foreach ($validated['items'] as $i => $row) {
-                BillItem::create([
+                BillItem::create(array_merge($this->itemTaxFields($row, $taxGroups), [
                     'bill_id'                => $bill->id,
                     'purchase_order_item_id' => $row['purchase_order_item_id'] ?? null,
                     'work_order_item_id'     => $row['work_order_item_id'] ?? null,
@@ -348,7 +354,7 @@ class BillController extends Controller
                     'unit_cost'              => $row['unit_cost'],
                     'line_total'             => (float) ($row['line_total'] ?? round($row['quantity'] * $row['unit_cost'], 2)),
                     'sort_order'             => $i,
-                ]);
+                ]));
             }
 
             $bill->load('items');
@@ -436,6 +442,21 @@ class BillController extends Controller
     // -----------------------------------------------------------------------
     // HELPERS
     // -----------------------------------------------------------------------
+
+    /**
+     * Per-line tax override: snapshot the chosen tax group's rates onto the item.
+     * No group = NULL rates, so the line inherits the bill's rates.
+     */
+    private function itemTaxFields(array $row, \Illuminate\Support\Collection $taxGroups): array
+    {
+        $group = $taxGroups->get($row['tax_rate_group_id'] ?? null);
+
+        return [
+            'tax_rate_group_id' => $group?->id,
+            'gst_rate'          => $group ? round($group->gst_rate / 100, 6) : null,
+            'pst_rate'          => $group ? round($group->pst_rate / 100, 6) : null,
+        ];
+    }
 
     private function taxGroups(): \Illuminate\Support\Collection
     {

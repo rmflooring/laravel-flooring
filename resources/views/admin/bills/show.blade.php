@@ -179,6 +179,11 @@
                                     ])>
                                         {{ $typeLabels[$item->charge_type] ?? $item->charge_type }}
                                     </span>
+                                    @if ($item->gst_rate !== null && ! $bill->tax_manual)
+                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                            {{ (float) $item->pst_rate > 0 ? 'GST + PST' : ((float) $item->gst_rate > 0 ? 'GST only' : 'No tax') }}
+                                        </span>
+                                    @endif
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-right">{{ $item->charge_type ? '—' : rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
@@ -195,21 +200,39 @@
                 </table>
 
                 {{-- Totals --}}
+                @php
+                    $hasLineTaxOverrides = $bill->items->contains(fn ($item) => $item->gst_rate !== null);
+
+                    // e.g. "(7.000% on $1,050.00)" — what each tax actually applied to when
+                    // some lines carry a different tax group than the bill
+                    $taxBreakdown = function (callable $rateOf) use ($bill) {
+                        $bases = $bill->items
+                            ->groupBy(fn ($item) => (string) $rateOf($item))
+                            ->filter(fn ($lines, $rate) => (float) $rate > 0)
+                            ->map(fn ($lines) => (float) $lines->sum('line_total'));
+
+                        if ($bases->count() === 1 && abs($bases->first() - (float) $bill->subtotal) < 0.005) {
+                            return '(' . number_format($bases->keys()->first() * 100, 3) . '%)';
+                        }
+
+                        return '(' . $bases->map(fn ($base, $rate) => number_format($rate * 100, 3) . '% on $' . number_format($base, 2))->implode(', ') . ')';
+                    };
+                @endphp
                 <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
                     <div class="flex flex-col items-end gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                        <div class="flex justify-between w-56">
+                        <div class="flex justify-between w-80">
                             <span>Subtotal</span>
                             <span class="font-medium">${{ number_format($bill->subtotal, 2) }}</span>
                         </div>
                         @if ($bill->gst_amount > 0)
-                        <div class="flex justify-between w-56">
-                            <span>GST {{ $bill->tax_manual ? '(manual)' : '('.number_format($bill->gst_rate * 100, 3).'%)' }}</span>
+                        <div class="flex justify-between w-80">
+                            <span>GST {{ $bill->tax_manual ? '(manual)' : ($hasLineTaxOverrides ? $taxBreakdown(fn ($item) => $item->effectiveGstRate($bill)) : '('.number_format($bill->gst_rate * 100, 3).'%)') }}</span>
                             <span class="font-medium">${{ number_format($bill->gst_amount, 2) }}</span>
                         </div>
                         @endif
                         @if ($bill->pst_amount > 0)
-                        <div class="flex justify-between w-56">
-                            <span>PST {{ $bill->tax_manual ? '(manual)' : '('.number_format($bill->pst_rate * 100, 3).'%)' }}</span>
+                        <div class="flex justify-between w-80">
+                            <span>PST {{ $bill->tax_manual ? '(manual)' : ($hasLineTaxOverrides ? $taxBreakdown(fn ($item) => $item->effectivePstRate($bill)) : '('.number_format($bill->pst_rate * 100, 3).'%)') }}</span>
                             <span class="font-medium">${{ number_format($bill->pst_amount, 2) }}</span>
                         </div>
                         @endif
@@ -217,12 +240,12 @@
                             $earlyPaymentCredit = $bill->items->where('charge_type', 'early_payment')->sum('line_total');
                         @endphp
                         @if ($earlyPaymentCredit != 0)
-                        <div class="flex justify-between w-56 text-green-700 dark:text-green-400">
+                        <div class="flex justify-between w-80 text-green-700 dark:text-green-400">
                             <span>Early Payment Credit</span>
                             <span class="font-medium">−${{ number_format(abs($earlyPaymentCredit), 2) }}</span>
                         </div>
                         @endif
-                        <div class="flex justify-between w-56 font-bold text-base text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
+                        <div class="flex justify-between w-80 font-bold text-base text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
                             <span>Total</span>
                             <span>${{ number_format($bill->grand_total, 2) }}</span>
                         </div>
@@ -253,6 +276,7 @@
                             <input type="hidden" name="items[{{ $i }}][purchase_order_item_id]" value="{{ $item->purchase_order_item_id }}">
                             <input type="hidden" name="items[{{ $i }}][work_order_item_id]" value="{{ $item->work_order_item_id }}">
                             <input type="hidden" name="items[{{ $i }}][charge_type]" value="{{ $item->charge_type }}">
+                            <input type="hidden" name="items[{{ $i }}][tax_rate_group_id]" value="{{ $item->tax_rate_group_id }}">
                             <input type="hidden" name="items[{{ $i }}][item_name]" value="{{ $item->item_name }}">
                             <input type="hidden" name="items[{{ $i }}][quantity]" value="{{ $item->quantity }}">
                             <input type="hidden" name="items[{{ $i }}][unit]" value="{{ $item->unit }}">

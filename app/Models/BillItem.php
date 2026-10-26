@@ -23,6 +23,8 @@ class BillItem extends Model
         'quantity'   => 'decimal:2',
         'unit_cost'  => 'decimal:2',
         'line_total' => 'decimal:2',
+        'gst_rate'   => 'decimal:4',
+        'pst_rate'   => 'decimal:4',
     ];
 
     protected static function booted(): void
@@ -41,6 +43,28 @@ class BillItem extends Model
     public function bill(): BelongsTo
     {
         return $this->belongsTo(Bill::class);
+    }
+
+    // Helpers
+
+    /**
+     * GST rate (decimal) applied to this line: its own override, else the bill's.
+     * Early payment credits are zero-rated.
+     */
+    public function effectiveGstRate(Bill $bill): float
+    {
+        if ($this->charge_type === 'early_payment') {
+            return 0.0;
+        }
+        return (float) ($this->gst_rate ?? $bill->gst_rate);
+    }
+
+    public function effectivePstRate(Bill $bill): float
+    {
+        if ($this->charge_type === 'early_payment') {
+            return 0.0;
+        }
+        return (float) ($this->pst_rate ?? $bill->pst_rate);
     }
 
     public function purchaseOrderItem(): BelongsTo

@@ -175,8 +175,15 @@ class Bill extends Model
             $gst = round((float) $this->gst_amount, 2);
             $pst = round((float) $this->pst_amount, 2);
         } else {
-            $gst = round($subtotal * $this->gst_rate, 2);
-            $pst = round($subtotal * $this->pst_rate, 2);
+            // A charge row can carry its own tax group (e.g. GST-only freight), so total
+            // the lines per rate first, then apply each rate once.
+            $taxAt = fn (callable $rateOf) => round($this->items
+                ->groupBy(fn (BillItem $item) => (string) $rateOf($item))
+                ->map(fn ($lines, $rate) => (float) $lines->sum('line_total') * (float) $rate)
+                ->sum(), 2);
+
+            $gst = $taxAt(fn (BillItem $item) => $item->effectiveGstRate($this));
+            $pst = $taxAt(fn (BillItem $item) => $item->effectivePstRate($this));
         }
 
         $this->subtotal    = $subtotal;

@@ -633,8 +633,11 @@ class QboSyncService
                 };
             }
 
-            // Tax code: GST+PST for vendor bills with PST, GST-only otherwise
-            $hasPst     = $bill->pst_amount > 0;
+            // Tax code: GST+PST when this line carries PST, GST-only otherwise. Manual-tax
+            // bills have no per-line rates to go on, so fall back to the bill's PST amount.
+            $hasPst     = $bill->tax_manual
+                ? $bill->pst_amount > 0
+                : $item->effectivePstRate($bill) > 0;
             $taxCodeId  = ($hasPst && ($accountIds['gst_pst_code_id'] ?? null))
                 ? $accountIds['gst_pst_code_id']
                 : ($accountIds['gst_code_id'] ?? null);
@@ -655,7 +658,15 @@ class QboSyncService
             ];
         }
 
-        // Build TxnTaxDetail so QBO shows proper GST/PST instead of expense lines
+        // Build TxnTaxDetail so QBO shows proper GST/PST instead of expense lines.
+        // Taxable base per tax = only the lines that tax applies to (charges can be GST-only).
+        $gstTaxable = $bill->tax_manual
+            ? (float) $bill->subtotal
+            : round((float) $bill->items->filter(fn ($item) => $item->effectiveGstRate($bill) > 0)->sum('line_total'), 2);
+        $pstTaxable = $bill->tax_manual
+            ? (float) $bill->subtotal
+            : round((float) $bill->items->filter(fn ($item) => $item->effectivePstRate($bill) > 0)->sum('line_total'), 2);
+
         $taxLines = [];
         $gstRateId = $accountIds['gst_rate_id'] ?? null;
         $pstRateId = $accountIds['pst_rate_id'] ?? null;
@@ -667,7 +678,7 @@ class QboSyncService
                 'TaxLineDetail' => [
                     'TaxRateRef'        => ['value' => $gstRateId],
                     'PercentBased'      => false,
-                    'NetAmountTaxable'  => (float) $bill->subtotal,
+                    'NetAmountTaxable'  => $gstTaxable,
                 ],
             ];
         }
@@ -679,7 +690,7 @@ class QboSyncService
                 'TaxLineDetail' => [
                     'TaxRateRef'        => ['value' => $pstRateId],
                     'PercentBased'      => false,
-                    'NetAmountTaxable'  => (float) $bill->subtotal,
+                    'NetAmountTaxable'  => $pstTaxable,
                 ],
             ];
         }
