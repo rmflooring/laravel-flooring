@@ -33,6 +33,14 @@
         .tag-job-number   { font-size: {{ $isZebra ? '17pt' : '18pt' }}; font-weight: bold; color: #15803d; font-family: Courier, monospace; }
         .tag-job-customer { font-size: {{ $isZebra ? '9pt' : '10pt' }}; font-weight: bold; color: #166534; margin-top: 1pt; }
 
+        .tag-qty          { background: #eff6ff; border: 0.75pt solid #93c5fd; border-radius: 3pt; padding: {{ $isZebra ? '4pt 6pt' : '4.5pt 7.5pt' }}; margin-bottom: {{ $isZebra ? '6pt' : '7.5pt' }}; }
+        .tag-qty-label    { font-size: {{ $isZebra ? '7pt' : '8pt' }}; color: #1e40af; font-weight: bold; text-transform: uppercase; letter-spacing: 0.4pt; margin-bottom: 1pt; }
+        .tag-qty-number   { font-size: {{ $isZebra ? '20pt' : '22pt' }}; font-weight: bold; color: #1d4ed8; }
+        .tag-qty-unit     { font-size: {{ $isZebra ? '11pt' : '12pt' }}; font-weight: bold; color: #1e40af; }
+
+        .tag-cards        { width: 100%; border-collapse: collapse; }
+        .tag-cards td     { vertical-align: top; }
+
         .tag-footer-text  { font-size: 7pt; color: #9ca3af; }
         .tag-qr-caption   { font-size: 6pt; color: #c0c0c0; margin-top: 2pt; text-align: center; }
 
@@ -92,16 +100,14 @@
         @if ($styleSku)
             <div class="tag-detail"><strong>SKU:</strong> {{ $styleSku }}</div>
         @endif
-        @if ($unitsPer && $unitLabel)
-            <div class="tag-detail"><strong>{{ rtrim(rtrim(number_format((float) $unitsPer, 2), '0'), '.') }}</strong> {{ $unitLabel }}</div>
-        @else
-            <div class="tag-detail"><strong>Qty:</strong> {{ rtrim(rtrim(number_format((float) $receipt->quantity_received, 2), '0'), '.') }} {{ $receipt->unit }}</div>
-        @endif
         <div class="tag-date">Received: {{ $receipt->received_date?->format('M j, Y') ?? '—' }}</div>
         @if ($po)
             <div class="tag-detail"><strong>PO:</strong> {{ $po->po_number }}{{ $po->vendor ? ' — ' . $po->vendor->company_name : '' }}</div>
         @endif
+        {{-- Zebra is only 4" tall, so the Job # and Qty cards sit side by side there --}}
+        @if ($isZebra)<table class="tag-cards"><tr>@endif
         @if ($tagSales->isNotEmpty())
+            @if ($isZebra)<td style="width: 60%; padding-right: 6pt;">@endif
             <div class="tag-job">
                 <div class="tag-job-label">Job #</div>
                 <div class="tag-job-number">{{ $tagSales->pluck('sale_number')->implode(' · ') }}</div>
@@ -109,7 +115,20 @@
                     <div class="tag-job-customer">{{ $tagJobSites->implode(' · ') }}</div>
                 @endif
             </div>
+            @if ($isZebra)</td>@endif
         @endif
+        @if ($isZebra)<td>@endif
+        <div class="tag-qty">
+            @if ($unitsPer && $unitLabel)
+                <span class="tag-qty-number">{{ rtrim(rtrim(number_format((float) $unitsPer, 2), '0'), '.') }}</span>
+                <span class="tag-qty-unit">{{ $unitLabel }}</span>
+            @else
+                <div class="tag-qty-label">Qty</div>
+                <span class="tag-qty-number">{{ rtrim(rtrim(number_format((float) $receipt->quantity_received, 2), '0'), '.') }}</span>
+                <span class="tag-qty-unit">{{ $receipt->unit }}</span>
+            @endif
+        </div>
+        @if ($isZebra)</td></tr></table>@endif
     </div>
 
     @if ($isZebra)
