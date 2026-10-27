@@ -72,7 +72,7 @@ class SmsPortalController extends Controller
         );
 
         if (! $sent) {
-            return back()->with('error', 'Failed to send SMS. Check SMS settings.');
+            return back()->with('error', 'Failed to send SMS: ' . ($smsService->lastError ?? 'check SMS settings.'));
         }
 
         SmsMessage::create([
@@ -160,7 +160,7 @@ class SmsPortalController extends Controller
         $sent = $smsService->send($normalized, $validated['body'], 'portal_outbound', $customer);
 
         if (! $sent) {
-            return back()->withInput()->with('error', 'Failed to send SMS. Check SMS settings.');
+            return back()->withInput()->with('error', 'Failed to send SMS: ' . ($smsService->lastError ?? 'check SMS settings.'));
         }
 
         $conversation = SmsConversation::firstOrCreate(

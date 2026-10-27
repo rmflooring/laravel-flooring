@@ -16,13 +16,23 @@ class VoipMsSmsService
 {
     private const API_URL = 'https://voip.ms/api/v1/rest.php';
 
+    // VoIP.ms rejects sendSMS bodies over 160 chars (sms_toolong); longer messages go
+    // out as a single MMS instead, which allows up to 2048 chars.
+    private const SMS_MAX_LENGTH = 160;
+
+    /** Error from the most recent failed send(), for showing to the user. */
+    public ?string $lastError = null;
+
     /**
      * Send an SMS. Returns true on success, false on failure.
      * Never throws — logs the result either way, same contract as SmsService::send().
      */
     public function send(string $to, string $body, string $type = 'general', ?Model $related = null): bool
     {
+        $this->lastError = null;
+
         if (! Setting::get('voipms_enabled')) {
+            $this->lastError = 'VoIP.ms SMS is disabled.';
             return false;
         }
 
@@ -31,6 +41,7 @@ class VoipMsSmsService
         $did      = Setting::get('voipms_did');
 
         if (! $username || ! $password || ! $did) {
+            $this->lastError = 'VoIP.ms SMS not configured — missing API credentials or DID.';
             SmsLog::create([
                 'to'           => $to,
                 'from'         => $did,
@@ -46,6 +57,7 @@ class VoipMsSmsService
         }
 
         $normalized = $this->normalizePhone($to);
+        $method     = mb_strlen($body) > self::SMS_MAX_LENGTH ? 'sendMMS' : 'sendSMS';
 
         try {
             // VoIP.ms's REST API is inherently slow — confirmed real sendSMS/getDIDsInfo
@@ -55,7 +67,7 @@ class VoipMsSmsService
             $response = Http::timeout(30)->get(self::API_URL, [
                 'api_username' => $username,
                 'api_password' => $password,
-                'method'       => 'sendSMS',
+                'method'       => $method,
                 'did'          => $did,
                 'dst'          => $normalized,
                 'message'      => $body,
@@ -80,6 +92,7 @@ class VoipMsSmsService
 
             return true;
         } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
             SmsLog::create([
                 'to'           => $normalized,
                 'from'         => $did,
