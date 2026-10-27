@@ -273,6 +273,7 @@
                                                             <input type="number"
                                                                    name="new_qty[{{ $saleItemId }}]"
                                                                    x-model="qty"
+                                                                   :disabled="!checked"
                                                                    step="0.01" min="0.01" max="{{ $item->remaining_qty }}"
                                                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                             <p class="mt-0.5 text-xs text-gray-400">max {{ number_format($item->remaining_qty, 2) }}</p>
@@ -282,6 +283,8 @@
                                                             <input type="number"
                                                                    name="new_cost[{{ $saleItemId }}]"
                                                                    x-model="cost"
+                                                                   :disabled="!checked"
+                                                                   step="0.01" min="0"
                                                                    @blur="cost = cost !== '' && !isNaN(parseFloat(cost)) ? parseFloat(cost).toFixed(2) : cost"
                                                                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                         </div>
