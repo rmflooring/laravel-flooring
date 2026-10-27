@@ -57,9 +57,51 @@
                     <span class="rounded-full bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">{{ $archivedCount }}</span>
                 @endif
             </a>
+            <a href="{{ route('pages.sms.index', ['view' => 'errors']) }}"
+               class="px-4 py-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-1.5 {{ $view === 'errors' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300' }}">
+                Errors
+                @if ($errorCount > 0)
+                    <span class="rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 text-xs font-semibold text-red-700 dark:text-red-300" title="Failed in the last 7 days">{{ $errorCount }}</span>
+                @endif
+            </a>
         </div>
 
-        @if ($conversations->isEmpty())
+        @if ($view === 'errors')
+            @if ($failures->isEmpty())
+                <div class="rounded-lg border border-gray-200 bg-white p-12 text-center text-gray-500 dark:bg-gray-800 dark:border-gray-700">
+                    <p class="text-sm">No failed messages.</p>
+                </div>
+            @else
+                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach ($failures as $failure)
+                            <li class="px-5 py-4" x-data="{ open: false }">
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">To {{ $failure->to }}</span>
+                                        <span class="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                            {{ str_replace('_', ' ', $failure->type) }}
+                                        </span>
+                                    </div>
+                                    <span class="flex-shrink-0 text-xs text-gray-400" title="{{ $failure->created_at }}">
+                                        {{ $failure->created_at->diffForHumans() }}
+                                    </span>
+                                </div>
+                                <p class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">{{ $failure->error }}</p>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 cursor-pointer whitespace-pre-line"
+                                   :class="open ? '' : 'truncate'" @click="open = !open" title="Click to show full message">{{ $failure->body }}</p>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                @if ($failures->hasPages())
+                    <div class="mt-4">
+                        {{ $failures->links() }}
+                    </div>
+                @endif
+            @endif
+        @elseif ($conversations->isEmpty())
             <div class="rounded-lg border border-gray-200 bg-white p-12 text-center text-gray-500 dark:bg-gray-800 dark:border-gray-700">
                 <svg class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/>

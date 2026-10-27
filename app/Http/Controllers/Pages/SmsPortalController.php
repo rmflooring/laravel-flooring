@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Opportunity;
 use App\Models\OpportunityNote;
 use App\Models\SmsConversation;
+use App\Models\SmsLog;
 use App\Models\SmsMessage;
 use App\Services\SmsService;
 use App\Services\VoipMsSmsService;
@@ -18,6 +19,17 @@ class SmsPortalController extends Controller
     public function index(Request $request)
     {
         $view = $request->input('view', 'active');
+
+        $totalUnread   = SmsConversation::sum('unread_count');
+        $archivedCount = SmsConversation::archived()->count();
+        // Badge only counts recent failures so old ones don't nag forever; the tab lists all.
+        $errorCount    = SmsLog::where('status', 'failed')->where('created_at', '>=', now()->subDays(7))->count();
+
+        if ($view === 'errors') {
+            $failures = SmsLog::where('status', 'failed')->latest()->paginate(30)->withQueryString();
+
+            return view('pages.sms.index', compact('failures', 'totalUnread', 'archivedCount', 'errorCount', 'view'));
+        }
 
         $query = SmsConversation::with(['customer', 'messages' => function ($q) {
             $q->latest()->limit(1);
@@ -31,10 +43,7 @@ class SmsPortalController extends Controller
 
         $conversations = $query->paginate(30)->withQueryString();
 
-        $totalUnread   = SmsConversation::sum('unread_count');
-        $archivedCount = SmsConversation::archived()->count();
-
-        return view('pages.sms.index', compact('conversations', 'totalUnread', 'archivedCount', 'view'));
+        return view('pages.sms.index', compact('conversations', 'totalUnread', 'archivedCount', 'errorCount', 'view'));
     }
 
     public function show(SmsConversation $conversation)
