@@ -23,10 +23,10 @@ class SmsPortalController extends Controller
         $totalUnread   = SmsConversation::sum('unread_count');
         $archivedCount = SmsConversation::archived()->count();
         // Badge only counts recent failures so old ones don't nag forever; the tab lists all.
-        $errorCount    = SmsLog::where('status', 'failed')->where('created_at', '>=', now()->subDays(7))->count();
+        $errorCount    = SmsLog::whereIn('status', ['failed', 'unconfirmed'])->where('created_at', '>=', now()->subDays(7))->count();
 
         if ($view === 'errors') {
-            $failures = SmsLog::where('status', 'failed')->latest()->paginate(30)->withQueryString();
+            $failures = SmsLog::whereIn('status', ['failed', 'unconfirmed'])->latest()->paginate(30)->withQueryString();
 
             return view('pages.sms.index', compact('failures', 'totalUnread', 'archivedCount', 'errorCount', 'view'));
         }
@@ -89,12 +89,25 @@ class SmsPortalController extends Controller
             'direction'       => 'outbound',
             'body'            => $validated['body'],
             'sent_by_id'      => auth()->id(),
-        ]);
+        ] + (($smsService->unconfirmed ?? false) ? ['unconfirmed' => true] : []));
 
         $conversation->update(['last_message_at' => now()]);
 
         return redirect()->route('pages.sms.show', $conversation)
-            ->with('success', 'Message sent.');
+            ->with(...$this->sentFlash($smsService));
+    }
+
+    /**
+     * A send that timed out may still have gone out — warn instead of claiming success,
+     * so nobody resends and double-texts the customer.
+     */
+    private function sentFlash($smsService): array
+    {
+        if ($smsService->unconfirmed ?? false) {
+            return ['warning', 'VoIP.ms didn\'t respond in time, so this message is unconfirmed. It has probably still gone out — check with the customer before resending.'];
+        }
+
+        return ['success', 'Message sent.'];
     }
 
     public function unreadCount()
@@ -186,12 +199,12 @@ class SmsPortalController extends Controller
             'direction'       => 'outbound',
             'body'            => $validated['body'],
             'sent_by_id'      => auth()->id(),
-        ]);
+        ] + (($smsService->unconfirmed ?? false) ? ['unconfirmed' => true] : []));
 
         $conversation->update(['last_message_at' => now()]);
 
         return redirect()->route('pages.sms.show', $conversation)
-            ->with('success', 'Message sent.');
+            ->with(...$this->sentFlash($smsService));
     }
 
     public function linkCustomer(Request $request, SmsConversation $conversation)

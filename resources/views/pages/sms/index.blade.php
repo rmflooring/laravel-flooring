@@ -82,12 +82,17 @@
                                         <span class="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                                             {{ str_replace('_', ' ', $failure->type) }}
                                         </span>
+                                        @if ($failure->status === 'unconfirmed')
+                                            <span class="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" title="Timed out — probably still sent">
+                                                unconfirmed
+                                            </span>
+                                        @endif
                                     </div>
                                     <span class="flex-shrink-0 text-xs text-gray-400" title="{{ $failure->created_at }}">
                                         {{ $failure->created_at->diffForHumans() }}
                                     </span>
                                 </div>
-                                <p class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">{{ $failure->error }}</p>
+                                <p class="mt-1 text-xs font-medium {{ $failure->status === 'unconfirmed' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400' }}">{{ $failure->error }}</p>
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 cursor-pointer whitespace-pre-line"
                                    :class="open ? '' : 'truncate'" @click="open = !open" title="Click to show full message">{{ $failure->body }}</p>
                             </li>
@@ -227,7 +232,8 @@
                         </svg>
                     </button>
                 </div>
-                <form method="POST" action="{{ route('pages.sms.compose') }}">
+                <form method="POST" action="{{ route('pages.sms.compose') }}"
+                      onsubmit="this.querySelector('[type=submit]').disabled = true">
                     @csrf
                     <div class="px-6 py-4 space-y-4">
 

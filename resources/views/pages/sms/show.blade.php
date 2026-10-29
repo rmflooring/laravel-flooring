@@ -138,6 +138,9 @@
                                     {{ $conversation->displayName() }}
                                 @endif
                                 &middot; {{ $message->created_at->diffForHumans() }}
+                                @if ($message->unconfirmed)
+                                    &middot; <span class="font-medium text-amber-600 dark:text-amber-400" title="VoIP.ms didn't respond in time — it probably still went out">Unconfirmed</span>
+                                @endif
                             </p>
                         </div>
                         @if ($isOutbound)
@@ -158,7 +161,8 @@
                         This customer has opted out of SMS (sent STOP). You cannot send them messages.
                     </div>
                 @else
-                    <form method="POST" action="{{ route('pages.sms.reply', $conversation) }}" class="p-4">
+                    <form method="POST" action="{{ route('pages.sms.reply', $conversation) }}" class="p-4"
+                          onsubmit="this.querySelector('[type=submit]').disabled = true">
                         @csrf
                         <textarea name="body" required rows="3" maxlength="1600"
                                   class="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:border-blue-400"

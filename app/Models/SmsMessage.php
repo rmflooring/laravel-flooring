@@ -13,11 +13,13 @@ class SmsMessage extends Model
         'body',
         'sent_by_id',
         'twilio_sid',
+        'unconfirmed',
         'read_at',
     ];
 
     protected $casts = [
-        'read_at' => 'datetime',
+        'read_at'     => 'datetime',
+        'unconfirmed' => 'boolean',
     ];
 
     public function conversation(): BelongsTo

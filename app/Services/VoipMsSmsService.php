@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Setting;
 use App\Models\SmsLog;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -24,12 +25,20 @@ class VoipMsSmsService
     public ?string $lastError = null;
 
     /**
+     * True when the most recent send() timed out waiting for VoIP.ms. VoIP.ms often
+     * still delivers these (seen 2026-10-29: two "failed" sends both arrived), so
+     * send() returns true and callers should flag the message rather than resend.
+     */
+    public bool $unconfirmed = false;
+
+    /**
      * Send an SMS. Returns true on success, false on failure.
      * Never throws — logs the result either way, same contract as SmsService::send().
      */
     public function send(string $to, string $body, string $type = 'general', ?Model $related = null): bool
     {
-        $this->lastError = null;
+        $this->lastError   = null;
+        $this->unconfirmed = false;
 
         if (! Setting::get('voipms_enabled')) {
             $this->lastError = 'VoIP.ms SMS is disabled.';
@@ -92,20 +101,25 @@ class VoipMsSmsService
 
             return true;
         } catch (\Throwable $e) {
-            $this->lastError = $e->getMessage();
+            // cURL errors include the full request URL, which carries the API password.
+            $error    = str_replace([$password, urlencode($password)], '***', $e->getMessage());
+            $timedOut = $e instanceof ConnectionException && str_contains($e->getMessage(), 'cURL error 28');
+
+            $this->lastError   = $error;
+            $this->unconfirmed = $timedOut;
             SmsLog::create([
                 'to'           => $normalized,
                 'from'         => $did,
                 'body'         => $body,
                 'type'         => $type,
-                'status'       => 'failed',
-                'error'        => $e->getMessage(),
+                'status'       => $timedOut ? 'unconfirmed' : 'failed',
+                'error'        => $error,
                 'related_type' => $related ? get_class($related) : null,
                 'related_id'   => $related?->id,
                 'sent_at'      => null,
             ]);
 
-            return false;
+            return $timedOut;
         }
     }
 
