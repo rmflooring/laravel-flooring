@@ -64,6 +64,23 @@
                     <span class="rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 text-xs font-semibold text-red-700 dark:text-red-300" title="Failed in the last 7 days">{{ $errorCount }}</span>
                 @endif
             </a>
+
+            @if ($view !== 'errors')
+                @php
+                    $unreadToggleUrl = route('pages.sms.index', array_filter([
+                        'view'   => $view === 'active' ? null : $view,
+                        'unread' => $unreadOnly ? null : 1,
+                    ]));
+                @endphp
+                <a href="{{ $unreadToggleUrl }}"
+                   class="ml-auto mb-1 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium {{ $unreadOnly ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                    <span class="h-2 w-2 rounded-full {{ $unreadOnly ? 'bg-white' : 'bg-blue-600' }}"></span>
+                    Unread only
+                    @if ($unreadOnly)
+                        <span aria-hidden="true">&times;</span>
+                    @endif
+                </a>
+            @endif
         </div>
 
         @if ($view === 'errors')
@@ -111,8 +128,13 @@
                 <svg class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/>
                 </svg>
-                <p class="text-sm">No SMS conversations yet.</p>
-                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Start one with the New SMS button, or wait for a customer to text in.</p>
+                @if ($unreadOnly)
+                    <p class="text-sm">No unread {{ $view === 'archived' ? 'archived ' : '' }}conversations.</p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">You're all caught up. <a href="{{ route('pages.sms.index', $view === 'archived' ? ['view' => 'archived'] : []) }}" class="text-blue-600 hover:underline dark:text-blue-400">Show all</a></p>
+                @else
+                    <p class="text-sm">No SMS conversations yet.</p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Start one with the New SMS button, or wait for a customer to text in.</p>
+                @endif
             </div>
         @else
             <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:bg-gray-800 dark:border-gray-700">

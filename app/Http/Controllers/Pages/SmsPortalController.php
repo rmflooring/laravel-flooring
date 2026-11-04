@@ -43,9 +43,14 @@ class SmsPortalController extends Controller
             $query->active();
         }
 
+        $unreadOnly = $request->boolean('unread');
+        if ($unreadOnly) {
+            $query->where('unread_count', '>', 0);
+        }
+
         $conversations = $query->paginate(30)->withQueryString();
 
-        return view('pages.sms.index', compact('conversations', 'totalUnread', 'archivedCount', 'errorCount', 'view'));
+        return view('pages.sms.index', compact('conversations', 'totalUnread', 'archivedCount', 'errorCount', 'view', 'unreadOnly'));
     }
 
     public function show(SmsConversation $conversation)
