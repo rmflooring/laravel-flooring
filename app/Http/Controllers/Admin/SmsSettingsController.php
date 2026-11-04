@@ -38,9 +38,9 @@ class SmsSettingsController extends Controller
             // placeholders — as this one originally was — receives no data at all,
             // which is why a real inbound test text logged an empty from/message).
             // The query string here must exactly match what VoipMsSmsWebhookController
-            // reads (`to`, `from`, `message`, `id`).
+            // reads (`to`, `from`, `message`, `id`, `media`).
             'voipmsWebhookUrl'    => route('webhook.voipms.sms', $voipmsWebhookSecret)
-                . '?to={TO}&from={FROM}&message={MESSAGE}&id={ID}',
+                . '?to={TO}&from={FROM}&message={MESSAGE}&id={ID}&media={MEDIA}',
             // Per-notification toggles
             'notifyWoScheduled'   => Setting::get('sms_notify_wo_scheduled', '0'),
             'notifyWoReminder'    => Setting::get('sms_notify_wo_reminder', '0'),

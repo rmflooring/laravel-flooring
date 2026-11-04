@@ -11,8 +11,10 @@ class SmsMessage extends Model
         'conversation_id',
         'direction',
         'body',
+        'media',
         'sent_by_id',
         'twilio_sid',
+        'voipms_id',
         'unconfirmed',
         'read_at',
     ];
@@ -20,6 +22,7 @@ class SmsMessage extends Model
     protected $casts = [
         'read_at'     => 'datetime',
         'unconfirmed' => 'boolean',
+        'media'       => 'array',
     ];
 
     public function conversation(): BelongsTo
@@ -40,5 +43,25 @@ class SmsMessage extends Model
     public function isOutbound(): bool
     {
         return $this->direction === 'outbound';
+    }
+
+    public function hasMedia(): bool
+    {
+        return ! empty($this->media);
+    }
+
+    /**
+     * Body for one-line previews (conversation list, alerts) — a picture-only MMS has
+     * no text of its own.
+     */
+    public function previewText(): string
+    {
+        if (trim((string) $this->body) !== '') {
+            return $this->body;
+        }
+
+        $count = count($this->media ?? []);
+
+        return $count > 1 ? "📷 {$count} pictures" : ($count ? '📷 Picture' : '');
     }
 }

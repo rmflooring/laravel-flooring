@@ -7,6 +7,7 @@ use App\Models\Opportunity;
 use App\Models\Setting;
 use App\Models\SmsConversation;
 use App\Models\SmsMessage;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -18,15 +19,28 @@ use Illuminate\Support\Facades\Log;
  */
 class InboundSmsRecorder
 {
-    public function record(string $channel, string $rawPhone, string $body): void
-    {
+    /**
+     * @param  string[]  $mediaUrls  MMS picture links to download and keep with the message
+     * @param  string|null  $voipmsId  provider message id, so the same message is never recorded twice
+     * @param  CarbonInterface|null  $receivedAt  when it actually arrived, for messages imported after the fact
+     * @param  bool  $alert  whether to send the staff "new SMS" alert
+     */
+    public function record(
+        string $channel,
+        string $rawPhone,
+        string $body,
+        array $mediaUrls = [],
+        ?string $voipmsId = null,
+        ?CarbonInterface $receivedAt = null,
+        bool $alert = true,
+    ): ?SmsMessage {
         $upper = strtoupper(trim($body));
 
         if (in_array($upper, ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'])) {
             $this->markOptedOut($rawPhone);
         }
 
-        $this->recordInboundMessage($channel, $rawPhone, $body);
+        return $this->recordInboundMessage($channel, $rawPhone, $body, $mediaUrls, $voipmsId, $receivedAt, $alert);
     }
 
     private function markOptedOut(string $rawPhone): void
@@ -61,10 +75,31 @@ class InboundSmsRecorder
         }
     }
 
-    private function recordInboundMessage(string $channel, string $rawPhone, string $body): void
-    {
-        if (! $body) {
-            return;
+    private function recordInboundMessage(
+        string $channel,
+        string $rawPhone,
+        string $body,
+        array $mediaUrls,
+        ?string $voipmsId,
+        ?CarbonInterface $receivedAt,
+        bool $alert,
+    ): ?SmsMessage {
+        if (! $body && ! $mediaUrls) {
+            return null;
+        }
+
+        if ($voipmsId && SmsMessage::where('voipms_id', $voipmsId)->exists()) {
+            Log::info('[Inbound SMS] Already recorded — skipping duplicate', ['voipms_id' => $voipmsId]);
+            return null;
+        }
+
+        $media = array_values(array_filter(array_map(
+            fn (string $url) => app(SmsMediaStore::class)->storeFromUrl($url),
+            $mediaUrls
+        )));
+
+        if (! $body && ! $media) {
+            $body = '(Picture received, but it couldn\'t be downloaded — check the VoIP.ms portal.)';
         }
 
         $normalized = app(SmsService::class)->normalizePhone($rawPhone);
@@ -74,14 +109,23 @@ class InboundSmsRecorder
             ['channel' => $channel, 'status' => 'active']
         );
 
-        SmsMessage::create([
+        $message = new SmsMessage([
             'conversation_id' => $conversation->id,
             'direction'       => 'inbound',
             'body'            => $body,
+            'media'           => $media ?: null,
+            'voipms_id'       => $voipmsId,
         ]);
+        if ($receivedAt) {
+            $message->created_at = $receivedAt;
+        }
+        $message->save();
 
         $conversation->increment('unread_count');
-        $conversation->update(['last_message_at' => now()]);
+        $receivedAt ??= now();
+        if (! $conversation->last_message_at || $conversation->last_message_at->lt($receivedAt)) {
+            $conversation->update(['last_message_at' => $receivedAt]);
+        }
 
         if ($conversation->customer_id === null) {
             $last10 = $this->last10Digits($rawPhone);
@@ -127,7 +171,11 @@ class InboundSmsRecorder
             }
         }
 
-        $this->sendInboundAlert($conversation, $rawPhone, $body);
+        if ($alert) {
+            $this->sendInboundAlert($conversation, $rawPhone, $message->previewText());
+        }
+
+        return $message;
     }
 
     private function sendInboundAlert(SmsConversation $conversation, string $rawPhone, string $body): void

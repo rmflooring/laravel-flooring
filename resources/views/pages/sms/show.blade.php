@@ -129,7 +129,26 @@
                         @endif
                         <div class="max-w-lg">
                             <div class="{{ $isOutbound ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100' }} rounded-2xl px-4 py-3 shadow-sm">
-                                <p class="whitespace-pre-wrap text-sm">{{ $message->body }}</p>
+                                @if ($message->hasMedia())
+                                    <div class="flex flex-wrap gap-2 {{ trim($message->body) !== '' ? 'mb-2' : '' }}">
+                                        @foreach ($message->media as $i => $item)
+                                            @php $mediaUrl = route('pages.sms.media', [$message, $i]); @endphp
+                                            @if (in_array($item['mime'], ['image/jpeg', 'image/png', 'image/gif', 'image/webp']))
+                                                <a href="{{ $mediaUrl }}" target="_blank" title="Open full size">
+                                                    <img src="{{ $mediaUrl }}" alt="Picture" loading="lazy"
+                                                         class="max-h-64 max-w-full rounded-lg object-cover">
+                                                </a>
+                                            @elseif (str_starts_with($item['mime'], 'video/'))
+                                                <video src="{{ $mediaUrl }}" controls preload="metadata" class="max-h-64 max-w-full rounded-lg"></video>
+                                            @else
+                                                <a href="{{ $mediaUrl }}" target="_blank" class="text-sm underline">📎 Open attachment</a>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                @endif
+                                @if (trim($message->body) !== '')
+                                    <p class="whitespace-pre-wrap text-sm">{{ $message->body }}</p>
+                                @endif
                             </div>
                             <p class="mt-1 text-xs text-gray-400 {{ $isOutbound ? 'text-right' : '' }}">
                                 @if ($isOutbound)
@@ -162,13 +181,17 @@
                     </div>
                 @else
                     <form method="POST" action="{{ route('pages.sms.reply', $conversation) }}" class="p-4"
+                          enctype="multipart/form-data"
                           onsubmit="this.querySelector('[type=submit]').disabled = true">
                         @csrf
-                        <textarea name="body" required rows="3" maxlength="1600"
+                        <textarea name="body" rows="3" maxlength="1600"
                                   class="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:border-blue-400"
-                                  placeholder="Type a message…"></textarea>
+                                  placeholder="Type a message…">{{ old('body') }}</textarea>
+                        @if ($conversation->channel === 'voipms')
+                            @include('pages.sms.partials.photo-picker')
+                        @endif
                         <div class="mt-2 flex items-center justify-between">
-                            <span class="text-xs text-gray-400 dark:text-gray-500">SMS · Max 1600 chars</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">{{ $conversation->channel === 'voipms' ? 'Max 1600 chars · up to 3 pictures' : 'SMS · Max 1600 chars' }}</span>
                             <button type="submit"
                                     class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

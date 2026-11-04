@@ -146,7 +146,7 @@
                                                 @if ($latest->isOutbound())
                                                     <span class="font-medium text-gray-600 dark:text-gray-300">You:</span>
                                                 @endif
-                                                {{ Str::limit($latest->body, 80) }}
+                                                {{ Str::limit($latest->previewText(), 80) }}
                                             @else
                                                 <span class="italic">No messages</span>
                                             @endif
@@ -232,7 +232,7 @@
                         </svg>
                     </button>
                 </div>
-                <form method="POST" action="{{ route('pages.sms.compose') }}"
+                <form method="POST" action="{{ route('pages.sms.compose') }}" enctype="multipart/form-data"
                       onsubmit="this.querySelector('[type=submit]').disabled = true">
                     @csrf
                     <div class="px-6 py-4 space-y-4">
@@ -275,10 +275,11 @@
                         {{-- Message --}}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
-                            <textarea name="body" required rows="4" maxlength="1600"
+                            <textarea name="body" rows="4" maxlength="1600"
                                       class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                                       placeholder="Type your message…"></textarea>
                             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Max 1600 characters</p>
+                            @include('pages.sms.partials.photo-picker')
                         </div>
 
                     </div>

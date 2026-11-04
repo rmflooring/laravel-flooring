@@ -2076,6 +2076,9 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
             ->name('api.customers');
         Route::post('/compose', [\App\Http\Controllers\Pages\SmsPortalController::class, 'compose'])
             ->name('compose');
+        Route::get('/media/{smsMessage}/{index}', [\App\Http\Controllers\Pages\SmsPortalController::class, 'media'])
+            ->whereNumber('index')
+            ->name('media');
         Route::get('/', [\App\Http\Controllers\Pages\SmsPortalController::class, 'index'])->name('index');
         Route::get('/{conversation}', [\App\Http\Controllers\Pages\SmsPortalController::class, 'show'])->name('show');
         Route::post('/{conversation}/reply', [\App\Http\Controllers\Pages\SmsPortalController::class, 'reply'])
