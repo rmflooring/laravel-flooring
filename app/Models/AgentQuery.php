@@ -9,6 +9,7 @@ class AgentQuery extends Model
 {
     protected $fillable = [
         'user_id',
+        'conversation_id',
         'question',
         'tools_used',
         'answer',
@@ -24,5 +25,10 @@ class AgentQuery extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(AgentConversation::class, 'conversation_id');
     }
 }

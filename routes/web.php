@@ -893,6 +893,12 @@ Route::prefix('pages')
             ->name('knowledge-chat.ask');
         Route::post('knowledge-chat/{agentQuery}/feedback', [\App\Http\Controllers\Pages\KnowledgeChatController::class, 'feedback'])
             ->name('knowledge-chat.feedback');
+        Route::get('knowledge-chat/chats/{agentConversation}', [\App\Http\Controllers\Pages\KnowledgeChatController::class, 'show'])
+            ->name('knowledge-chat.show');
+        Route::post('knowledge-chat/chats/{agentConversation}/archive', [\App\Http\Controllers\Pages\KnowledgeChatController::class, 'archive'])
+            ->name('knowledge-chat.archive');
+        Route::post('knowledge-chat/chats/{agentConversation}/unarchive', [\App\Http\Controllers\Pages\KnowledgeChatController::class, 'unarchive'])
+            ->name('knowledge-chat.unarchive');
 
 		// Estimates (moved to pages)
 		Route::get('estimates', [EstimateController::class, 'index'])

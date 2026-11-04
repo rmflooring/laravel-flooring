@@ -2,6 +2,7 @@
 
 namespace App\Services\Agent;
 
+use App\Models\AgentConversation;
 use App\Models\AgentQuery;
 use App\Models\User;
 
@@ -15,6 +16,11 @@ use App\Models\User;
 class RunKnowledgeChatQuery
 {
     private const MAX_TOOL_ITERATIONS = 5;
+
+    // Earlier question/answer pairs from the same chat sent along for follow-up context.
+    // Only the final answers go back, not the tool calls behind them — enough for
+    // "what about for tile?" to make sense without the token cost of a full replay.
+    private const HISTORY_TURNS = 6;
 
     private const SYSTEM_PROMPT = <<<'TEXT'
         You are the Floor Manager staff knowledge assistant. Staff ask you questions and
@@ -51,6 +57,11 @@ class RunKnowledgeChatQuery
         anything relevant after trying both, say so rather than guessing or inventing an
         answer. When you do have an answer, cite what it's based on (which knowledge
         entry, or which record you looked up) so the user can verify it themselves.
+
+        Earlier messages in the conversation are this user's previous questions in the
+        same chat and your answers to them. Use them to understand follow-ups (e.g. "what
+        about for tile?"), but look live data up again with the tools rather than
+        repeating an earlier answer's figures — they may have changed since.
         TEXT;
 
     public function __construct(
@@ -64,9 +75,9 @@ class RunKnowledgeChatQuery
         private GetScheduleForCrewService $getScheduleForCrew,
     ) {}
 
-    public function run(User $user, string $question): AgentQuery
+    public function run(User $user, string $question, AgentConversation $conversation): AgentQuery
     {
-        $messages = [['role' => 'user', 'content' => $question]];
+        $messages = [...$this->historyMessages($conversation), ['role' => 'user', 'content' => $question]];
 
         $toolsUsed = [];
         $sourceRefs = [];
@@ -105,13 +116,39 @@ class RunKnowledgeChatQuery
             $answer = 'I wasn\'t able to fully answer that within the allowed number of steps — try rephrasing or narrowing the question.';
         }
 
-        return AgentQuery::create([
+        $query = AgentQuery::create([
             'user_id' => $user->id,
+            'conversation_id' => $conversation->id,
             'question' => $question,
             'tools_used' => array_values(array_unique($toolsUsed)),
             'answer' => $answer,
             'source_refs' => $sourceRefs,
         ]);
+
+        // Bumps the chat to the top of the list
+        $conversation->touch();
+
+        return $query;
+    }
+
+    /**
+     * The last few question/answer pairs in this chat, oldest first, as alternating
+     * user/assistant messages.
+     */
+    private function historyMessages(AgentConversation $conversation): array
+    {
+        return AgentQuery::where('conversation_id', $conversation->id)
+            ->whereNotNull('answer')
+            ->latest('id')
+            ->limit(self::HISTORY_TURNS)
+            ->get()
+            ->reverse()
+            ->flatMap(fn (AgentQuery $q) => [
+                ['role' => 'user', 'content' => $q->question],
+                ['role' => 'assistant', 'content' => $q->answer],
+            ])
+            ->values()
+            ->all();
     }
 
     /**
