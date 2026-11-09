@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Log;
  */
 class ShowroomVisitService
 {
+    // "Team RM" M365 group calendar — where showroom visits are booked.
+    // Override with the `showroom_calendar_group_id` setting if that ever changes.
+    public const TEAM_RM_GROUP_ID = '451694e6-e1d4-4b5b-9c11-6cee3c9c8ca9';
+
     // Customer-facing notice kinds → [email subject suffix, SMS template type]
     public const CUSTOMER_NOTICES = [
         'booked'              => ['Your showroom visit is booked',         'showroom_booked_customer'],
@@ -218,10 +222,10 @@ class ShowroomVisitService
 
             [$account, $calendar] = $this->resolveCalendar();
             if (! $account || ! $calendar) {
-                Log::warning('[ShowroomVisit] Showroom calendar not found for any connected Microsoft account', [
+                Log::warning('[ShowroomVisit] Team RM calendar not found for any connected Microsoft account', [
                     'visit_id' => $visit->id,
                 ]);
-                return 'Visit saved, but the Showroom calendar was not found. In Settings → Integrations → Microsoft, run "Discover calendars" so the Team Showroom calendar is picked up.';
+                return 'Visit saved, but the Team RM calendar was not found for any connected Microsoft account — check Settings → Integrations → Microsoft.';
             }
 
             $externalId = $service->createEvent($account, $calendar, $eventData);
@@ -238,7 +242,7 @@ class ShowroomVisitService
                 'visit_id' => $visit->id,
                 'error'    => $e->getMessage(),
             ]);
-            return 'Visit saved, but the Showroom calendar event could not be saved. The Microsoft 365 connection may have expired — check Settings → Integrations.';
+            return 'Visit saved, but the Team RM calendar event could not be saved. The Microsoft 365 connection may have expired — check Settings → Integrations.';
         }
     }
 
@@ -267,7 +271,7 @@ class ShowroomVisitService
     }
 
     /**
-     * Find the Showroom group calendar. Prefers the current user's connected
+     * Find the Team RM group calendar. Prefers the current user's connected
      * account; falls back to any connected account that has it (group calendars
      * are shared, so staff without an MS connection can still book).
      *
@@ -279,10 +283,11 @@ class ShowroomVisitService
             ->orderByRaw('user_id = ? desc', [auth()->id() ?? 0])
             ->get();
 
+        $groupId = Setting::get('showroom_calendar_group_id') ?: self::TEAM_RM_GROUP_ID;
+
         foreach ($accounts as $account) {
             $calendar = MicrosoftCalendar::where('microsoft_account_id', $account->id)
-                ->where('name', 'like', '%Showroom%')
-                ->orderByRaw('group_id is null') // prefer the real group calendar over a personal subscription
+                ->where('group_id', $groupId)
                 ->first();
 
             if ($calendar) {

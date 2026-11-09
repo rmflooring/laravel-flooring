@@ -111,7 +111,7 @@
                                     </td>
                                     <td class="px-6 py-3 text-center">
                                         @if ($visit->calendar_event_id)
-                                            <span title="On the Showroom calendar" class="text-green-600">●</span>
+                                            <span title="On the Team RM calendar" class="text-green-600">●</span>
                                         @else
                                             <span title="Not on a calendar" class="text-gray-300">○</span>
                                         @endif

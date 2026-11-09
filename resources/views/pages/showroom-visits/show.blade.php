@@ -90,9 +90,9 @@
                         @endif
                     </div>
                     <div>
-                        <div class="text-xs uppercase text-gray-500 mb-1">Showroom calendar</div>
+                        <div class="text-xs uppercase text-gray-500 mb-1">Team RM calendar</div>
                         @if ($visit->calendar_event_id)
-                            <span class="text-green-700 text-sm">● On the Showroom calendar</span>
+                            <span class="text-green-700 text-sm">● On the Team RM calendar</span>
                         @elseif ($visit->status === 'cancelled')
                             <span class="text-gray-500 text-sm">Removed (cancelled)</span>
                         @else
