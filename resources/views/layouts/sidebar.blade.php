@@ -172,6 +172,26 @@
                     </a>
                 </li>
 
+                {{-- Showroom Visits --}}
+                @can('view showroom visits')
+                @php $showroomChangeRequests = \App\Models\ShowroomVisit::where('status', 'change_requested')->count(); @endphp
+                <li>
+                    <a href="{{ route('pages.showroom-visits.index') }}"
+                       class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                        <svg class="h-5 w-5 flex-shrink-0 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z"/>
+                        </svg>
+                        <span class="sidebar-label flex-1">Showroom Visits</span>
+                        @if ($showroomChangeRequests > 0)
+                            <span class="sidebar-label inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                  title="Customers asking to change their visit">
+                                {{ $showroomChangeRequests }}
+                            </span>
+                        @endif
+                    </a>
+                </li>
+                @endcan
+
                 {{-- Estimates --}}
                 <li>
                     <a href="{{ route('pages.estimates.index') }}"

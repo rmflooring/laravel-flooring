@@ -23,6 +23,11 @@ class SmsTemplate extends Model
         'estimate_follow_up_2'     => 'Estimate Follow-up — Stage 2 (14 days)',
         'estimate_follow_up_3'     => 'Estimate Follow-up — Stage 3 (30 days)',
         'review_request'           => 'Google Review Request',
+        'showroom_booked_customer'           => 'Showroom Visit Booked — Customer',
+        'showroom_updated_customer'          => 'Showroom Visit Updated — Customer',
+        'showroom_reminder_customer'         => 'Showroom Visit Day-Before Reminder — Customer',
+        'showroom_reminder_morning_customer' => 'Showroom Visit Morning-Of Reminder — Customer',
+        'showroom_cancelled_customer'        => 'Showroom Visit Cancelled — Customer',
     ];
 
     public const TAGS = [
@@ -98,6 +103,11 @@ class SmsTemplate extends Model
         'review_request' => [
             '{{customer_name}}', '{{review_link}}',
         ],
+        'showroom_booked_customer'           => ['{{customer_name}}', '{{customer_first_name}}', '{{visit_date}}', '{{visit_time}}', '{{host_name}}', '{{showroom_address}}', '{{showroom_phone}}', '{{company_name}}', '{{manage_link}}'],
+        'showroom_updated_customer'          => ['{{customer_name}}', '{{customer_first_name}}', '{{visit_date}}', '{{visit_time}}', '{{host_name}}', '{{showroom_address}}', '{{showroom_phone}}', '{{company_name}}', '{{manage_link}}'],
+        'showroom_reminder_customer'         => ['{{customer_name}}', '{{customer_first_name}}', '{{visit_date}}', '{{visit_time}}', '{{host_name}}', '{{showroom_address}}', '{{showroom_phone}}', '{{company_name}}', '{{manage_link}}'],
+        'showroom_reminder_morning_customer' => ['{{customer_name}}', '{{customer_first_name}}', '{{visit_date}}', '{{visit_time}}', '{{host_name}}', '{{showroom_address}}', '{{showroom_phone}}', '{{company_name}}', '{{manage_link}}'],
+        'showroom_cancelled_customer'        => ['{{customer_name}}', '{{customer_first_name}}', '{{visit_date}}', '{{visit_time}}', '{{host_name}}', '{{showroom_address}}', '{{showroom_phone}}', '{{company_name}}', '{{manage_link}}'],
     ];
 
     public const DEFAULTS = [
@@ -115,5 +125,10 @@ class SmsTemplate extends Model
         'estimate_follow_up_2'   => "Hi {{customer_name}}, checking in on estimate {{estimate_number}} for {{job_name}}. Happy to adjust anything or answer questions. — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
         'estimate_follow_up_3'   => "Hi {{customer_name}}, one last follow-up on estimate {{estimate_number}} for {{job_name}}. Let us know either way — no pressure! — {{sender_name}}, RM Flooring. Reply STOP to unsubscribe.",
         'review_request'         => "Hi {{customer_name}}, thank you for choosing RM Flooring! We'd love a quick Google review — it only takes about 30 seconds: {{review_link}} Reply STOP to unsubscribe.",
+        'showroom_booked_customer'           => "Hi {{customer_first_name}}, your showroom visit at {{company_name}} is booked for {{visit_date}} at {{visit_time}}. {{showroom_address}}. Need to cancel or change it? {{manage_link}} Reply STOP to unsubscribe.",
+        'showroom_updated_customer'          => "Hi {{customer_first_name}}, your showroom visit at {{company_name}} has been moved to {{visit_date}} at {{visit_time}}. Need to cancel or change it? {{manage_link}} Reply STOP to unsubscribe.",
+        'showroom_reminder_customer'         => "Reminder: your showroom visit at {{company_name}} is tomorrow, {{visit_date}} at {{visit_time}}. {{showroom_address}}. Can't make it? {{manage_link}} Reply STOP to unsubscribe.",
+        'showroom_reminder_morning_customer' => "Hi {{customer_first_name}}, see you today at {{visit_time}} at the {{company_name}} showroom, {{showroom_address}}. Can't make it? {{manage_link}} Reply STOP to unsubscribe.",
+        'showroom_cancelled_customer'        => "Hi {{customer_first_name}}, your showroom visit at {{company_name}} on {{visit_date}} at {{visit_time}} has been cancelled. Call us at {{showroom_phone}} to rebook. Reply STOP to unsubscribe.",
     ];
 }

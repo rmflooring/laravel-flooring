@@ -27,6 +27,19 @@ Schedule::command('sms:send-reminders')
     ->name('sms-send-reminders')
     ->withoutOverlapping();
 
+// Showroom visit reminders — customer email + SMS, day-before at 4pm and morning-of at 8am
+Schedule::command('showroom:send-reminders day-before')
+    ->dailyAt('16:00')
+    ->timezone('America/Vancouver')
+    ->name('showroom-reminders-day-before')
+    ->withoutOverlapping();
+
+Schedule::command('showroom:send-reminders morning')
+    ->dailyAt('08:00')
+    ->timezone('America/Vancouver')
+    ->name('showroom-reminders-morning')
+    ->withoutOverlapping();
+
 // Sample overdue reminders — runs daily at 9am, emails + SMS customers with overdue samples
 Schedule::command('samples:send-reminders')
     ->dailyAt('09:00')

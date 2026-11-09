@@ -108,6 +108,16 @@ Route::get('/review/{token}', [\App\Http\Controllers\ReviewController::class, 's
 Route::post('/review/{token}', [\App\Http\Controllers\ReviewController::class, 'submit'])
     ->name('review.submit');
 
+// Showroom visit — customer "manage my appointment" link (no auth; token is the key)
+Route::get('/visit/{token}', [\App\Http\Controllers\PublicShowroomVisitController::class, 'show'])
+    ->name('showroom-visit.public.show');
+Route::post('/visit/{token}/cancel', [\App\Http\Controllers\PublicShowroomVisitController::class, 'cancel'])
+    ->middleware('throttle:10,1')
+    ->name('showroom-visit.public.cancel');
+Route::post('/visit/{token}/request-change', [\App\Http\Controllers\PublicShowroomVisitController::class, 'requestChange'])
+    ->middleware('throttle:10,1')
+    ->name('showroom-visit.public.request-change');
+
 // E-Signature public signing routes — no auth required
 Route::get('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'show'])->name('sign.show');
 Route::get('/sign/{uuid}/document', [\App\Http\Controllers\SigningController::class, 'document'])->name('sign.document');
@@ -1457,6 +1467,41 @@ Route::prefix('pages')
 		Route::get('rfms', [\App\Http\Controllers\Pages\RfmController::class, 'index'])
 			->middleware('role_or_permission:admin|view rfms')
 			->name('rfms.index');
+
+		// Showroom Visits (flooring selection appointments)
+		Route::get('showroom-visits', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'index'])
+			->middleware('role_or_permission:admin|view showroom visits')
+			->name('showroom-visits.index');
+		Route::get('showroom-visits/create', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'create'])
+			->middleware('role_or_permission:admin|create showroom visits')
+			->name('showroom-visits.create');
+		Route::get('showroom-visits/api/customers', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'searchCustomers'])
+			->middleware('role_or_permission:admin|create showroom visits')
+			->name('showroom-visits.api.customers');
+		Route::get('showroom-visits/api/customers/{customer}/opportunities', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'customerOpportunities'])
+			->middleware('role_or_permission:admin|create showroom visits')
+			->name('showroom-visits.api.customer-opportunities');
+		Route::post('showroom-visits', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'store'])
+			->middleware('role_or_permission:admin|create showroom visits')
+			->name('showroom-visits.store');
+		Route::get('showroom-visits/{showroomVisit}', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'show'])
+			->middleware('role_or_permission:admin|view showroom visits')
+			->name('showroom-visits.show');
+		Route::get('showroom-visits/{showroomVisit}/edit', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'edit'])
+			->middleware('role_or_permission:admin|edit showroom visits')
+			->name('showroom-visits.edit');
+		Route::patch('showroom-visits/{showroomVisit}', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'update'])
+			->middleware('role_or_permission:admin|edit showroom visits')
+			->name('showroom-visits.update');
+		Route::patch('showroom-visits/{showroomVisit}/status', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'updateStatus'])
+			->middleware('role_or_permission:admin|edit showroom visits')
+			->name('showroom-visits.update-status');
+		Route::post('showroom-visits/{showroomVisit}/resend', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'resend'])
+			->middleware('role_or_permission:admin|edit showroom visits')
+			->name('showroom-visits.resend');
+		Route::delete('showroom-visits/{showroomVisit}', [\App\Http\Controllers\Pages\ShowroomVisitController::class, 'destroy'])
+			->middleware('role_or_permission:admin|edit showroom visits')
+			->name('showroom-visits.destroy');
 
 		// Work Orders — index
 		Route::get('work-orders', [\App\Http\Controllers\Pages\WorkOrderController::class, 'index'])

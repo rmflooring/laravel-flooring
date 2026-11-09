@@ -114,6 +114,11 @@ class Opportunity extends Model
         return $this->hasMany(Rfm::class)->orderByDesc('scheduled_at');
     }
 
+    public function showroomVisits()
+    {
+        return $this->hasMany(ShowroomVisit::class)->orderByDesc('scheduled_at');
+    }
+
     public function sales()
     {
         return $this->hasMany(Sale::class);

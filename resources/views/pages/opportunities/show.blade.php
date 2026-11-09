@@ -674,6 +674,64 @@
                 </div>
             </div>
 
+            {{-- Showroom Visits --}}
+            @can('view showroom visits')
+            <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex flex-col gap-3 border-b border-gray-200 p-6 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Showroom Visits</h2>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Flooring selection appointments at the showroom.</p>
+                    </div>
+                    @can('create showroom visits')
+                    <a href="{{ route('pages.showroom-visits.create', ['opportunity_id' => $opportunity->id]) }}"
+                       class="inline-flex items-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                        + Book Showroom Visit
+                    </a>
+                    @endcan
+                </div>
+
+                <div class="p-6">
+                    @if($opportunity->showroomVisits->isEmpty())
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No showroom visits yet.</p>
+                    @else
+                        <div class="relative overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                                <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                        <th class="px-4 py-3">Scheduled</th>
+                                        <th class="px-4 py-3">Customer</th>
+                                        <th class="px-4 py-3">Host</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($opportunity->showroomVisits as $visit)
+                                        <tr class="border-b bg-white last:border-0 dark:border-gray-700 dark:bg-gray-800">
+                                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                                                {{ $visit->scheduled_at->format('M j, Y g:i A') }}
+                                            </td>
+                                            <td class="px-4 py-3">{{ $visit->contact_name }}</td>
+                                            <td class="px-4 py-3">{{ $visit->hostName() ?: '—' }}</td>
+                                            <td class="px-4 py-3">
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $visit->statusColor() }}">
+                                                    {{ $visit->statusLabel() }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <a href="{{ route('pages.showroom-visits.show', $visit) }}"
+                                                   class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">View</a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endcan
+
             {{-- Purchase Orders --}}
             @can('view purchase orders')
             <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">

@@ -291,6 +291,7 @@ $employees = Employee::query()
 				'source',
 				'estimates',
 				'rfms.estimator',
+				'showroomVisits.host',
 				'notes.user',
 			])->findOrFail($id);
 
