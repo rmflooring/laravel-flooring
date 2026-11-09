@@ -9,7 +9,7 @@ class IncomingLead extends Model
     protected $fillable = [
         'source', 'name', 'phone', 'email', 'sms_consent',
         'service_type', 'project_type', 'area', 'city', 'timeline',
-        'message', 'referral_source', 'status',
+        'message', 'referral_source', 'ip_address', 'status',
         'opportunity_id', 'reviewed_by', 'reviewed_at', 'denial_reason',
     ];
 

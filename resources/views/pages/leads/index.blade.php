@@ -64,6 +64,7 @@
                                     <th class="px-4 py-3">Service Type</th>
                                     <th class="px-4 py-3">Timeline</th>
                                     <th class="px-4 py-3">Source</th>
+                                    <th class="px-4 py-3">IP</th>
                                     <th class="px-4 py-3">Received</th>
                                     <th class="px-4 py-3">Status</th>
                                     <th class="px-4 py-3"></th>
@@ -83,6 +84,7 @@
                                         <td class="px-4 py-3">{{ $lead->service_type ?? '—' }}</td>
                                         <td class="px-4 py-3">{{ $lead->timeline ?? '—' }}</td>
                                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ $lead->source }}</td>
+                                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs font-mono whitespace-nowrap">{{ $lead->ip_address ?? '—' }}</td>
                                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                                             {{ $lead->created_at->diffForHumans() }}
                                         </td>

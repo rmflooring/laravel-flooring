@@ -79,6 +79,18 @@
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Referral Source</p>
                         <p class="mt-0.5 text-sm text-gray-900 dark:text-white">{{ $lead->referral_source ?? '—' }}</p>
                     </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">IP Address</p>
+                        @if ($lead->ip_address)
+                            <p class="mt-0.5 text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                                <span class="font-mono select-all">{{ $lead->ip_address }}</span>
+                                <button type="button" onclick="navigator.clipboard.writeText('{{ $lead->ip_address }}'); this.textContent='Copied'; setTimeout(() => this.textContent='Copy', 1500)"
+                                        class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">Copy</button>
+                            </p>
+                        @else
+                            <p class="mt-0.5 text-sm text-gray-900 dark:text-white">—</p>
+                        @endif
+                    </div>
                 </div>
                 @if ($lead->message)
                     <div class="px-6 pb-4">
