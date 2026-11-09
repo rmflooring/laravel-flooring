@@ -67,6 +67,7 @@ class ShowroomVisit extends Model
     ];
 
     protected $casts = [
+        'duration_minutes'            => 'integer',
         'scheduled_at'                => 'datetime',
         'notify_email'                => 'boolean',
         'notify_sms'                  => 'boolean',
@@ -138,7 +139,7 @@ class ShowroomVisit extends Model
 
     public function endsAt(): \Carbon\Carbon
     {
-        return $this->scheduled_at->copy()->addMinutes($this->duration_minutes ?: 60);
+        return $this->scheduled_at->copy()->addMinutes((int) ($this->duration_minutes ?: 60));
     }
 
     public function publicUrl(): string
