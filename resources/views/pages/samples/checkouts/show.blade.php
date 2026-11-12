@@ -19,6 +19,12 @@
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
+                    @can('manage sample checkouts')
+                        <a href="{{ route('pages.samples.checkout.form', ['add_to' => $checkoutNumber]) }}"
+                           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
+                            + Add Items
+                        </a>
+                    @endcan
                     <a href="{{ route('pages.samples.checkouts.receipt', $checkoutNumber) }}" target="_blank"
                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

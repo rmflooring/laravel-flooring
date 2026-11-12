@@ -368,10 +368,29 @@ class SampleController extends Controller
             ->orderBy('name')->get(['id', 'name']);
         $defaultDays = (int) Setting::get('sample_checkout_days', 5);
 
+        // "Add Items" from an existing checkout — borrower is locked to that checkout's.
+        $addTo = null;
+        if ($request->filled('add_to')) {
+            $existing = $this->existingCheckoutHead((string) $request->input('add_to'));
+            abort_unless($existing, 404);
+
+            $addTo = [
+                'checkout_number' => $existing->checkout_number,
+                'checkout_type'   => $existing->checkout_type,
+                'borrower_name'   => $existing->borrower_name,
+                'customer_phone'  => $existing->customer_phone,
+                'customer_email'  => $existing->customer_email,
+                'due_back_at'     => $existing->due_back_at?->format('Y-m-d'),
+                'destination'     => $existing->destination,
+                'open_count'      => SampleCheckout::where('checkout_number', $existing->checkout_number)->whereNull('returned_at')->count(),
+            ];
+        }
+
         return view('pages.samples.checkout', [
             'cartItems'   => $cartItems->values(),
             'staffUsers'  => $staffUsers,
             'defaultDays' => $defaultDays,
+            'addTo'       => $addTo,
         ]);
     }
 
@@ -483,6 +502,25 @@ class SampleController extends Controller
 
     public function storeCheckout(Request $request)
     {
+        // Adding to an existing checkout: the borrower comes from that checkout,
+        // never from the form, so the new lines can't drift onto someone else.
+        $existing = null;
+        if ($request->filled('add_to')) {
+            $existing = $this->existingCheckoutHead((string) $request->input('add_to'));
+            if (! $existing) {
+                return back()->withErrors(['add_to' => 'That checkout could not be found.'])->withInput();
+            }
+
+            $request->merge([
+                'checkout_type'  => $existing->checkout_type,
+                'customer_id'    => $existing->customer_id,
+                'customer_name'  => $existing->customer_name,
+                'customer_phone' => $existing->customer_phone,
+                'customer_email' => $existing->customer_email,
+                'user_id'        => $existing->user_id,
+            ]);
+        }
+
         $validated = $request->validate([
             'checkout_type'   => ['required', 'in:customer,staff'],
             'sample_ids'      => ['nullable', 'array'],
@@ -522,13 +560,14 @@ class SampleController extends Controller
             return back()->withErrors(['sample_ids' => 'Add at least one sample or set.'])->withInput();
         }
 
-        if ($validated['checkout_type'] === 'customer'
+        if (! $existing
+            && $validated['checkout_type'] === 'customer'
             && empty($validated['customer_id'])
             && empty($validated['customer_name'])) {
             return back()->withErrors(['customer_name' => 'Please select a customer or enter a name.'])->withInput();
         }
 
-        if (! empty($validated['customer_id'])) {
+        if (! $existing && ! empty($validated['customer_id'])) {
             $customer = Customer::find($validated['customer_id']);
             $validated['customer_name']  = ($validated['customer_name']  ?? null) ?: ($customer->company_name ?: $customer->name);
             $validated['customer_phone'] = ($validated['customer_phone'] ?? null) ?: $customer->phone;
@@ -566,9 +605,9 @@ class SampleController extends Controller
         }
 
         $batchId        = (string) \Illuminate\Support\Str::uuid();
-        $checkoutNumber = SampleCheckout::generateCheckoutNumber();
+        $checkoutNumber = $existing?->checkout_number ?? SampleCheckout::generateCheckoutNumber();
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $samples, $sets, $sampleIds, $setIds, $manualItems, $batchId, $checkoutNumber) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $samples, $sets, $sampleIds, $setIds, $manualItems, $batchId, $checkoutNumber, $existing, $request) {
             foreach ($sampleIds as $sampleId) {
                 $sample = $samples->get($sampleId);
                 $qty    = (int) $validated['qty'][$sampleId];
@@ -630,6 +669,14 @@ class SampleController extends Controller
                     'user_id'            => $validated['user_id'] ?? null,
                 ]);
             }
+
+            // Optionally move everything still out on this checkout to the new due date,
+            // so the whole checkout stays on one schedule (and one reminder).
+            if ($existing && $request->boolean('apply_due_to_open') && ! empty($validated['due_back_at'])) {
+                SampleCheckout::where('checkout_number', $checkoutNumber)
+                    ->whereNull('returned_at')
+                    ->update(['due_back_at' => $validated['due_back_at']]);
+            }
         });
 
         $count   = count($sampleIds) + count($setIds) + count($manualItems);
@@ -637,8 +684,24 @@ class SampleController extends Controller
             ? ($validated['customer_name'] ?? 'the customer')
             : (User::find($validated['user_id'])?->name ?? 'staff');
 
+        $message = $existing
+            ? "{$count} item" . ($count === 1 ? '' : 's') . " added to checkout {$checkoutNumber} for {$existing->borrower_name}."
+            : "{$count} item" . ($count === 1 ? '' : 's') . " checked out to {$borrower}. Reference # {$checkoutNumber}.";
+
         return redirect()->route('pages.samples.checkouts.show', $checkoutNumber)
-            ->with('success', "{$count} item" . ($count === 1 ? '' : 's') . " checked out to {$borrower}. Reference # {$checkoutNumber}.");
+            ->with('success', $message);
+    }
+
+    /**
+     * The first (original) row of an existing checkout — holds the borrower
+     * details every line in that checkout shares.
+     */
+    private function existingCheckoutHead(string $checkoutNumber): ?SampleCheckout
+    {
+        return SampleCheckout::with(['customer', 'user'])
+            ->where('checkout_number', $checkoutNumber)
+            ->orderBy('id')
+            ->first();
     }
 
     // -----------------------------------------------------------------------

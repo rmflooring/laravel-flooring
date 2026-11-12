@@ -5,10 +5,15 @@
             {{-- Header --}}
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Check Out Samples</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Pick who it's going to, then search and add samples.</p>
+                    @if ($addTo)
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Add Items to <span class="font-mono">{{ $addTo['checkout_number'] }}</span></h1>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Search and add more samples to this checkout.</p>
+                    @else
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Check Out Samples</h1>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Pick who it's going to, then search and add samples.</p>
+                    @endif
                 </div>
-                <a href="{{ route('pages.samples.index') }}"
+                <a href="{{ $addTo ? route('pages.samples.checkouts.show', $addTo['checkout_number']) : route('pages.samples.index') }}"
                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
                     ← Back
                 </a>
@@ -29,6 +34,23 @@
                   @submit="if (!isValid) $event.preventDefault()">
                 @csrf
 
+                @if ($addTo)
+                    <input type="hidden" name="add_to" value="{{ $addTo['checkout_number'] }}">
+
+                    {{-- Borrower is fixed to the existing checkout --}}
+                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 mb-6">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-3">Checked Out To</h2>
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+                            <span class="font-medium text-gray-900 dark:text-white">{{ $addTo['borrower_name'] }}</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $addTo['checkout_type'] === 'staff' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700' }}">
+                                {{ ucfirst($addTo['checkout_type']) }}
+                            </span>
+                            @if ($addTo['customer_phone'])<span class="text-gray-500">{{ $addTo['customer_phone'] }}</span>@endif
+                            @if ($addTo['customer_email'])<span class="text-gray-500">{{ $addTo['customer_email'] }}</span>@endif
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">New items are added under the same checkout number, receipt and reminders.</p>
+                    </div>
+                @else
                 {{-- 1. Who it's going to --}}
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 space-y-4 mb-6">
                     <h2 class="text-base font-semibold text-gray-900 dark:text-white">Who's Checking Out</h2>
@@ -121,6 +143,7 @@
                         </select>
                     </div>
                 </div>
+                @endif
 
                 {{-- 2. Search and add samples --}}
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 space-y-4 mb-6">
@@ -240,25 +263,32 @@
                         <div>
                             <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Due Back</label>
                             <input type="date" name="due_back_at"
-                                   value="{{ old('due_back_at', now()->addDays($defaultDays)->format('Y-m-d')) }}"
+                                   value="{{ old('due_back_at', ($addTo['due_back_at'] ?? null) && $addTo['due_back_at'] >= now()->toDateString() ? $addTo['due_back_at'] : now()->addDays($defaultDays)->format('Y-m-d')) }}"
                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                         </div>
                         <div>
                             <label class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Destination / Notes</label>
                             <input type="text" name="destination"
+                                   value="{{ old('destination', $addTo['destination'] ?? '') }}"
                                    placeholder="e.g. Job site: 123 Main St, Trade show, etc."
                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                         </div>
                     </div>
+                    @if ($addTo && $addTo['open_count'] > 0)
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" name="apply_due_to_open" value="1" checked class="rounded border-gray-300 text-blue-600">
+                            Also use this due date for the {{ $addTo['open_count'] }} {{ Str::plural('item', $addTo['open_count']) }} already out on this checkout
+                        </label>
+                    @endif
                 </div>
 
                 <div class="flex items-center gap-3">
                     <button type="submit" :disabled="!isValid"
                             :class="isValid ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-300 cursor-not-allowed'"
                             class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
-                        <span x-text="cart.length > 0 ? 'Check Out ' + cart.length + ' Item' + (cart.length === 1 ? '' : 's') : 'Check Out'"></span>
+                        <span x-text="(cart.length > 0 ? @js($addTo ? 'Add ' : 'Check Out ') + cart.length + ' Item' + (cart.length === 1 ? '' : 's') : @js($addTo ? 'Add Items' : 'Check Out'))"></span>
                     </button>
-                    <a href="{{ route('pages.samples.index') }}"
+                    <a href="{{ $addTo ? route('pages.samples.checkouts.show', $addTo['checkout_number']) : route('pages.samples.index') }}"
                        class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
                         Cancel
                     </a>
