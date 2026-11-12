@@ -112,10 +112,10 @@ Route::post('/review/{token}', [\App\Http\Controllers\ReviewController::class, '
 Route::get('/visit/{token}', [\App\Http\Controllers\PublicShowroomVisitController::class, 'show'])
     ->name('showroom-visit.public.show');
 Route::post('/visit/{token}/cancel', [\App\Http\Controllers\PublicShowroomVisitController::class, 'cancel'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:10,1,visit-cancel')
     ->name('showroom-visit.public.cancel');
 Route::post('/visit/{token}/request-change', [\App\Http\Controllers\PublicShowroomVisitController::class, 'requestChange'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:10,1,visit-change')
     ->name('showroom-visit.public.request-change');
 
 // E-Signature public signing routes — no auth required
@@ -123,7 +123,7 @@ Route::get('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'sho
 Route::get('/sign/{uuid}/document', [\App\Http\Controllers\SigningController::class, 'document'])->name('sign.document');
 Route::post('/sign/{uuid}', [\App\Http\Controllers\SigningController::class, 'sign'])
     ->name('sign.submit')
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:5,1,sign-submit');
 
 // Dashboard (authenticated)
 Route::get('/dashboard', function () {

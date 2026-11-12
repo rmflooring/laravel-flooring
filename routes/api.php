@@ -11,13 +11,13 @@ Route::post('leads/incoming', [IncomingLeadController::class, 'receive'])
 
 // rmflooring.ca → paid online orders (Sales → Web Orders)
 Route::post('web-orders', [WebOrderController::class, 'store'])
-    ->middleware(['api.key:WEB_ORDERS_API_KEY', 'throttle:60,1']);
+    ->middleware(['api.key:WEB_ORDERS_API_KEY', 'throttle:60,1,web-orders']);
 
 Route::post('agent/inbound-email', [AgentInboundEmailController::class, 'receive'])
     ->middleware('api.key:AGENT_INBOUND_API_KEY');
 
 Route::prefix('shop')->group(function () {
-    Route::middleware('throttle:60,1')->group(function () {
+    Route::middleware('throttle:300,1,shop-read')->group(function () {
         Route::get('product-types', [ShopApiController::class, 'productTypes']);
         Route::get('product-lines', [ShopApiController::class, 'productLines']);
         Route::get('product-lines/{id}', [ShopApiController::class, 'productLineShow'])
@@ -27,7 +27,7 @@ Route::prefix('shop')->group(function () {
         Route::get('store-policy', [ShopApiController::class, 'storePolicy']);
     });
 
-    Route::middleware('throttle:10,1')->group(function () {
+    Route::middleware('throttle:10,1,shop-forms')->group(function () {
         Route::post('quote-request', [ShopApiController::class, 'quoteRequest']);
         Route::post('sample-request', [ShopApiController::class, 'sampleRequest']);
     });
