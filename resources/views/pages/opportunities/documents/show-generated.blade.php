@@ -76,15 +76,6 @@
                         </svg>
                         Awaiting Signature
                     </span>
-                @else
-                    <button type="button"
-                            onclick="document.getElementById('request-signature-modal').classList.remove('hidden')"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
-                        </svg>
-                        Request Signature
-                    </button>
                 @endif
                 @endcan
 
@@ -306,48 +297,5 @@
         });
     </script>
 
-    @can('manage signing requests')
-    @if (! $signingRequest || $signingRequest->status === 'expired' || $signingRequest->status === 'cancelled')
-    <div id="request-signature-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Request E-Signature</h3>
-                <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
-            </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                The client will receive an email with a link to review and sign <strong>{{ $document->original_name }}</strong>. The link expires in 10 days.
-            </p>
-            <form method="POST" action="{{ route('pages.opportunities.documents.request-signature', [$opportunity->id, $document->id]) }}">
-                @csrf
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name</label>
-                    <input type="text" name="client_name"
-                           value="{{ $opportunity->jobSiteCustomer?->name ?? $opportunity->parentCustomer?->name }}"
-                           required
-                           class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                </div>
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Email</label>
-                    <input type="email" name="client_email"
-                           value="{{ $jobSiteEmail ?? $pmEmail }}"
-                           required
-                           class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-                </div>
-                <div class="flex justify-end gap-3">
-                    <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
-                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300">
-                        Send Signature Request
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    @endif
-    @endcan
 
 </x-app-layout>
