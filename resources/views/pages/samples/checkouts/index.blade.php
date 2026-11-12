@@ -34,11 +34,16 @@
                     <input type="text" name="q" value="{{ $search }}"
                            placeholder="Checkout #, borrower name…"
                            class="flex-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                        <input type="checkbox" name="manual" value="1" @checked($manualOnly) onchange="this.form.submit()"
+                               class="rounded border-gray-300 text-amber-600">
+                        Items not in system
+                    </label>
                     <button type="submit"
                             class="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800">
                         Search
                     </button>
-                    @if ($search)
+                    @if ($search || $manualOnly)
                         <a href="{{ route('pages.samples.checkouts.index') }}"
                            class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                             Clear
@@ -91,7 +96,15 @@
                                             {{ ucfirst($checkout->checkout_type) }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-3 text-right">{{ $checkout->item_count }}</td>
+                                    <td class="px-6 py-3 text-right">
+                                        {{ $checkout->item_count }}
+                                        @if ($checkout->manual_count > 0)
+                                            <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800"
+                                                  title="{{ $checkout->manual_count }} typed-in {{ Str::plural('item', $checkout->manual_count) }} not yet in the system">
+                                                {{ $checkout->manual_count }} not in system
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $checkout->checked_out_at?->format('M j, Y') }}</td>
                                     <td class="px-6 py-3 text-gray-600 dark:text-gray-400">{{ $checkout->due_back_at?->format('M j, Y') ?? '—' }}</td>
                                     <td class="px-6 py-3">

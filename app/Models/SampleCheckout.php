@@ -114,7 +114,39 @@ class SampleCheckout extends Model
         if ($this->sampleSet) {
             return $this->sampleSet->set_id;
         }
+        if ($this->is_manual) {
+            return 'Manual entry';
+        }
         return $this->sample?->sample_id ?? '—';
+    }
+
+    /**
+     * A typed-in line for a sample that isn't in the system yet.
+     */
+    public function getIsManualAttribute(): bool
+    {
+        return $this->sample_id === null
+            && $this->sample_set_id === null
+            && filled($this->manual_description);
+    }
+
+    /**
+     * Human-readable "manufacturer + style" description of the item, whatever
+     * kind of line it is (sample, set, or manual entry).
+     */
+    public function getItemDescriptionAttribute(): string
+    {
+        if ($this->is_manual) {
+            return trim($this->manual_description . ($this->manual_details ? ' — ' . $this->manual_details : ''));
+        }
+
+        if ($this->sampleSet) {
+            return trim(($this->sampleSet->productLine?->manufacturer ?? '') . ' ' . ($this->sampleSet->name ?? ''));
+        }
+
+        $style = $this->sample?->productStyle;
+
+        return trim(($style?->productLine?->manufacturer ?? '') . ' ' . ($style?->name ?? ''));
     }
 
     /**

@@ -288,6 +288,28 @@ class SampleController extends Controller
         return back()->with('success', 'Sample marked as returned.');
     }
 
+    /**
+     * Return a manual (typed-in) checkout line — it has no sample or set to
+     * route through, so it gets its own endpoint keyed on the checkout row.
+     */
+    public function returnManualCheckout(Request $request, SampleCheckout $checkout)
+    {
+        if (! $checkout->is_manual) {
+            abort(404);
+        }
+
+        if ($checkout->returned_at) {
+            return back()->with('error', 'This item has already been returned.');
+        }
+
+        $checkout->update([
+            'returned_at'  => now(),
+            'return_notes' => $request->input('return_notes'),
+        ]);
+
+        return back()->with('success', 'Item marked as returned.');
+    }
+
     // -----------------------------------------------------------------------
     // CHECKOUT FORM (desktop — one or many samples in a single batch)
     // -----------------------------------------------------------------------
@@ -469,6 +491,13 @@ class SampleController extends Controller
             'qty.*'           => ['integer', 'min:1'],
             'set_ids'         => ['nullable', 'array'],
             'set_ids.*'       => ['integer', 'exists:sample_sets,id'],
+
+            // Typed-in items that aren't in the system yet
+            'manual_items'               => ['nullable', 'array', 'max:50'],
+            'manual_items.*.description' => ['required', 'string', 'max:255'],
+            'manual_items.*.details'     => ['nullable', 'string', 'max:255'],
+            'manual_items.*.qty'         => ['required', 'integer', 'min:1', 'max:999'],
+
             'due_back_at'     => ['nullable', 'date', 'after_or_equal:today'],
             'destination'     => ['nullable', 'string', 'max:255'],
 
@@ -480,12 +509,16 @@ class SampleController extends Controller
 
             // Staff fields
             'user_id'         => ['nullable', 'exists:users,id'],
+        ], [
+            'manual_items.*.description.required' => 'Enter a description for each item that\'s not in the system.',
+            'manual_items.*.qty.*'                => 'Enter a quantity of at least 1 for each item that\'s not in the system.',
         ]);
 
-        $sampleIds = $validated['sample_ids'] ?? [];
-        $setIds    = $validated['set_ids'] ?? [];
+        $sampleIds   = $validated['sample_ids'] ?? [];
+        $setIds      = $validated['set_ids'] ?? [];
+        $manualItems = array_values($validated['manual_items'] ?? []);
 
-        if (empty($sampleIds) && empty($setIds)) {
+        if (empty($sampleIds) && empty($setIds) && empty($manualItems)) {
             return back()->withErrors(['sample_ids' => 'Add at least one sample or set.'])->withInput();
         }
 
@@ -535,7 +568,7 @@ class SampleController extends Controller
         $batchId        = (string) \Illuminate\Support\Str::uuid();
         $checkoutNumber = SampleCheckout::generateCheckoutNumber();
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $samples, $sets, $sampleIds, $setIds, $batchId, $checkoutNumber) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $samples, $sets, $sampleIds, $setIds, $manualItems, $batchId, $checkoutNumber) {
             foreach ($sampleIds as $sampleId) {
                 $sample = $samples->get($sampleId);
                 $qty    = (int) $validated['qty'][$sampleId];
@@ -579,9 +612,27 @@ class SampleController extends Controller
 
                 $set->update(['status' => 'checked_out']);
             }
+
+            foreach ($manualItems as $manual) {
+                SampleCheckout::create([
+                    'manual_description' => trim($manual['description']),
+                    'manual_details'     => filled($manual['details'] ?? null) ? trim($manual['details']) : null,
+                    'checkout_batch_id'  => $batchId,
+                    'checkout_number'    => $checkoutNumber,
+                    'checkout_type'      => $validated['checkout_type'],
+                    'qty_checked_out'    => (int) $manual['qty'],
+                    'due_back_at'        => $validated['due_back_at'] ?? null,
+                    'destination'        => $validated['destination'] ?? null,
+                    'customer_id'        => $validated['customer_id'] ?? null,
+                    'customer_name'      => $validated['customer_name'] ?? null,
+                    'customer_phone'     => $validated['customer_phone'] ?? null,
+                    'customer_email'     => $validated['customer_email'] ?? null,
+                    'user_id'            => $validated['user_id'] ?? null,
+                ]);
+            }
         });
 
-        $count   = count($sampleIds) + count($setIds);
+        $count   = count($sampleIds) + count($setIds) + count($manualItems);
         $borrower = $validated['checkout_type'] === 'customer'
             ? ($validated['customer_name'] ?? 'the customer')
             : (User::find($validated['user_id'])?->name ?? 'staff');
@@ -596,13 +647,16 @@ class SampleController extends Controller
 
     public function checkoutsIndex(Request $request)
     {
-        $search = $request->input('q', '');
+        $search     = $request->input('q', '');
+        $manualOnly = $request->boolean('manual');
 
         $base = SampleCheckout::whereNotNull('checkout_number')
             ->when($search, fn ($q) => $q->where(function ($qq) use ($search) {
                 $qq->where('checkout_number', 'like', "%{$search}%")
-                   ->orWhere('customer_name', 'like', "%{$search}%");
-            }));
+                   ->orWhere('customer_name', 'like', "%{$search}%")
+                   ->orWhere('manual_description', 'like', "%{$search}%");
+            }))
+            ->when($manualOnly, fn ($q) => $q->whereNull('sample_id')->whereNull('sample_set_id')->whereNotNull('manual_description'));
 
         $numbers = (clone $base)
             ->select('checkout_number')
@@ -635,6 +689,7 @@ class SampleController extends Controller
                 'checked_out_at'  => $first?->checked_out_at,
                 'due_back_at'     => $first?->due_back_at,
                 'item_count'      => $total,
+                'manual_count'    => $items->filter(fn ($i) => $i->is_manual)->count(),
                 'returned_count'  => $returnedCount,
                 'status'          => $status,
             ];
@@ -642,7 +697,7 @@ class SampleController extends Controller
 
         $numbers->setCollection($checkouts);
 
-        return view('pages.samples.checkouts.index', ['checkouts' => $numbers, 'search' => $search]);
+        return view('pages.samples.checkouts.index', ['checkouts' => $numbers, 'search' => $search, 'manualOnly' => $manualOnly]);
     }
 
     // -----------------------------------------------------------------------

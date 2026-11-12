@@ -120,12 +120,20 @@
                                     @elseif ($item->sampleSet)
                                         <a href="{{ route('pages.sample-sets.show', $item->sampleSet) }}" class="hover:underline">{{ $item->sampleSet->set_id }}</a>
                                         <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">SET</span>
+                                    @elseif ($item->is_manual)
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800"
+                                              title="Typed in at checkout — this sample hasn't been entered into the system yet">NOT IN SYSTEM</span>
                                     @else
                                         —
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 text-gray-600 dark:text-gray-400">
-                                    {{ $manufacturer }} {{ $styleName }}
+                                    @if ($item->is_manual)
+                                        <span class="text-gray-900 dark:text-white">{{ $item->manual_description }}</span>
+                                        @if ($item->manual_details)<div class="text-xs">{{ $item->manual_details }}</div>@endif
+                                    @else
+                                        {{ $manufacturer }} {{ $styleName }}
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3 text-right">{{ $item->sampleSet ? '—' : $item->qty_checked_out }}</td>
                                 <td class="px-6 py-3">
@@ -148,6 +156,14 @@
                                         @if (! $item->returned_at && $item->sample)
                                             <form method="POST" action="{{ route('pages.samples.checkouts.return', [$item->sample, $item]) }}"
                                                   onsubmit="return confirm('Mark this sample as returned?')">
+                                                @csrf
+                                                <button type="submit" class="text-xs px-3 py-1.5 font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 border border-green-200">
+                                                    Mark Returned
+                                                </button>
+                                            </form>
+                                        @elseif (! $item->returned_at && $item->is_manual)
+                                            <form method="POST" action="{{ route('pages.samples.checkouts.return-manual', $item) }}"
+                                                  onsubmit="return confirm('Mark this item as returned?')">
                                                 @csrf
                                                 <button type="submit" class="text-xs px-3 py-1.5 font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 border border-green-200">
                                                     Mark Returned

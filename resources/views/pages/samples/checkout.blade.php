@@ -148,14 +148,25 @@
                             </template>
                         </div>
                         <div x-show="query.length > 0 && !searching && results.length === 0" x-cloak
-                             class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg px-4 py-2.5 text-sm text-gray-400">
-                            No available samples or sets match "<span x-text="query"></span>".
+                             class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg text-sm">
+                            <div class="px-4 py-2.5 text-gray-400">No available samples or sets match "<span x-text="query"></span>".</div>
+                            <button type="button" @click="addManual(query)"
+                                    class="w-full text-left px-4 py-2.5 border-t border-gray-100 dark:border-gray-600 font-medium text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-gray-600">
+                                + Add "<span x-text="query"></span>" as an item not in the system
+                            </button>
                         </div>
+                    </div>
+
+                    <div class="flex justify-end -mt-2">
+                        <button type="button" @click="addManual('')"
+                                class="text-sm font-medium text-amber-700 hover:underline dark:text-amber-300">
+                            + Add an item that's not in the system
+                        </button>
                     </div>
 
                     {{-- Cart --}}
                     <div x-show="cart.length === 0" x-cloak class="text-sm text-gray-400 py-4 text-center">
-                        Nothing added yet — search above to add samples or sets.
+                        Nothing added yet — search above to add samples or sets, or add an item that's not in the system.
                     </div>
 
                     <table x-show="cart.length > 0" x-cloak class="w-full text-sm">
@@ -171,17 +182,38 @@
                             <template x-for="item in cart" :key="item.cart_key">
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                                        <span x-text="item.display_id"></span>
-                                        <span x-show="item.type === 'set'" class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">SET</span>
-                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400" x-text="(item.manufacturer || '') + ' ' + (item.style_name || '')"></div>
-                                        <input type="hidden" :name="item.type === 'set' ? 'set_ids[]' : 'sample_ids[]'" :value="item.id">
+                                        <template x-if="item.type !== 'manual'">
+                                            <div>
+                                                <span x-text="item.display_id"></span>
+                                                <span x-show="item.type === 'set'" class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">SET</span>
+                                                <div class="text-xs font-normal text-gray-500 dark:text-gray-400" x-text="(item.manufacturer || '') + ' ' + (item.style_name || '')"></div>
+                                                <input type="hidden" :name="item.type === 'set' ? 'set_ids[]' : 'sample_ids[]'" :value="item.id">
+                                            </div>
+                                        </template>
+                                        <template x-if="item.type === 'manual'">
+                                            <div class="space-y-1.5">
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">NOT IN SYSTEM</span>
+                                                <input type="text" x-model="item.description" :name="'manual_items[' + item.cart_key + '][description]'"
+                                                       x-init="if (! item.description) $nextTick(() => $el.focus())"
+                                                       required maxlength="255" placeholder="What is it? e.g. Mohawk carpet, grey loop"
+                                                       class="block w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm font-normal rounded-lg p-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                                <input type="text" x-model="item.details" :name="'manual_items[' + item.cart_key + '][details]'"
+                                                       maxlength="255" placeholder="Colour / style # / tag on the sample (optional)"
+                                                       class="block w-full bg-gray-50 border border-gray-300 text-gray-900 text-xs font-normal rounded-lg p-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                            </div>
+                                        </template>
                                     </td>
-                                    <td class="px-4 py-3 text-right text-gray-500" x-text="item.type === 'set' ? '—' : item.available_qty"></td>
+                                    <td class="px-4 py-3 text-right text-gray-500" x-text="item.type === 'sample' ? item.available_qty : '—'"></td>
                                     <td class="px-4 py-3 text-right">
                                         <template x-if="item.type === 'set'">
                                             <span class="text-gray-400">1</span>
                                         </template>
-                                        <template x-if="item.type !== 'set'">
+                                        <template x-if="item.type === 'manual'">
+                                            <input type="number" x-model.number="item.qty" :name="'manual_items[' + item.cart_key + '][qty]'"
+                                                   min="1" max="999"
+                                                   class="w-20 text-right bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                        </template>
+                                        <template x-if="item.type === 'sample'">
                                             <input type="number" x-model.number="item.qty" :name="'qty[' + item.id + ']'"
                                                    min="1" :max="item.available_qty"
                                                    class="w-20 text-right bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
@@ -253,7 +285,12 @@
             searching: false,
             cart: (initialCart || []).map(s => ({ ...s, qty: 1 })),
 
-            get isValid() { return this.cart.length > 0; },
+            manualCounter: 0,
+
+            get isValid() {
+                return this.cart.length > 0
+                    && this.cart.every(c => c.type !== 'manual' || (c.description || '').trim() !== '');
+            },
 
             searchCustomer() {
                 if (! this.customerQuery) { this.customerResults = []; return; }
@@ -299,6 +336,19 @@
             addItem(item) {
                 if (this.cart.some(c => c.cart_key === item.cart_key)) return;
                 this.cart.push({ ...item, qty: 1 });
+                this.query = '';
+                this.results = [];
+            },
+
+            addManual(description) {
+                this.manualCounter++;
+                this.cart.push({
+                    cart_key: 'manual-' + this.manualCounter,
+                    type: 'manual',
+                    description: description || '',
+                    details: '',
+                    qty: 1,
+                });
                 this.query = '';
                 this.results = [];
             },

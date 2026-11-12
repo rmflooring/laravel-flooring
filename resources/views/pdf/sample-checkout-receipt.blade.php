@@ -94,7 +94,7 @@
                 @endphp
                 <tr>
                     <td>{{ $item->sample?->sample_id ?? $item->sampleSet?->set_id ?? '—' }}{{ $item->sampleSet ? ' (Set)' : '' }}</td>
-                    <td>{{ $manufacturer }} {{ $styleName }}</td>
+                    <td>{{ $item->is_manual ? $item->item_description : trim($manufacturer . ' ' . $styleName) }}</td>
                     <td class="right">{{ $item->sampleSet ? '—' : $item->qty_checked_out }}</td>
                 </tr>
             @endforeach

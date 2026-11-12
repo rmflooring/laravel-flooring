@@ -2027,6 +2027,10 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
         ->middleware('role_or_permission:admin|manage sample checkouts')
         ->name('samples.checkouts.return-all');
 
+    Route::post('samples/checkouts/items/{checkout}/return', [\App\Http\Controllers\Pages\SampleController::class, 'returnManualCheckout'])
+        ->middleware('role_or_permission:admin|manage sample checkouts')
+        ->name('samples.checkouts.return-manual');
+
     // Wildcard {sample} routes after all static routes
     Route::get('samples/{sample}', [\App\Http\Controllers\Pages\SampleController::class, 'show'])
         ->middleware('role_or_permission:admin|view samples')

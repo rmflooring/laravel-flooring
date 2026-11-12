@@ -74,6 +74,13 @@ class SendSampleReminders extends Command
             $first = $group->first();
 
             $items = $group->map(function (SampleCheckout $c) {
+                if ($c->is_manual) {
+                    return [
+                        'id'   => $c->manual_description,
+                        'name' => $c->manual_details,
+                    ];
+                }
+
                 if ($c->sampleSet) {
                     return [
                         'id'   => $c->sampleSet->set_id,
@@ -88,7 +95,7 @@ class SendSampleReminders extends Command
             })->all();
 
             $itemCount = count($items);
-            $itemLines = array_map(fn ($i) => trim($i['id'] . ' — ' . ($i['name'] ?? '')), $items);
+            $itemLines = array_map(fn ($i) => filled($i['name'] ?? null) ? trim($i['id'] . ' — ' . $i['name']) : trim((string) $i['id']), $items);
 
             $itemsSummary = $itemCount === 1
                 ? "flooring sample ({$itemLines[0]})"
@@ -115,7 +122,9 @@ class SendSampleReminders extends Command
                 try {
                     $subject = $itemCount > 1
                         ? "[{$companyName}] {$itemCount} overdue samples" . ($first->checkout_number ? " — Checkout {$first->checkout_number}" : '')
-                        : "[{$companyName}] Sample {$items[0]['id']} is overdue";
+                        : ($group->first()->is_manual
+                            ? "[{$companyName}] Sample ({$items[0]['id']}) is overdue"
+                            : "[{$companyName}] Sample {$items[0]['id']} is overdue");
 
                     $body = view('emails.samples.overdue-reminder', $vars)->render();
 
