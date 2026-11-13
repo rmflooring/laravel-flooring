@@ -2301,6 +2301,8 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const row = anyInput.closest('tr');
     if (!row) return;
 
+    updateOrderQtyBoxHighlight(anyInput);
+
     const qtyInput = row.querySelector('input[name*="[quantity]"]');
     if (!qtyInput) return;
 
@@ -2329,6 +2331,32 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     } else {
       clear();
     }
+  }
+
+  // ── Order Qty box highlight ─────────────────────────────────────────────
+  // Green Order Qty = a clean multiple of the style's box size. Lines already on
+  // a PO (data-po-status) keep their PO-status colouring instead.
+  const ORDER_QTY_DEFAULT_STYLE = { backgroundColor: '#eef2ff', borderColor: '#a5b4fc' };
+  const ORDER_QTY_BOXED_STYLE   = { backgroundColor: '#dcfce7', borderColor: '#22c55e' };
+
+  function updateOrderQtyBoxHighlight(anyInput) {
+    const row = anyInput.closest('tr');
+    if (!row) return;
+    const orderInput = row.querySelector('input[name*="[materials]"][name*="[order_qty]"]');
+    if (!orderInput || orderInput.dataset.poStatus) return;
+
+    const colorInput = row.querySelector('[data-color-input]');
+    const useBoxQty  = colorInput && colorInput.dataset.useBoxQty === '1';
+    const unitsPer   = parseFloat(colorInput?.dataset.unitsPer || 0);
+    const qty        = parseFloat(orderInput.value || 0);
+
+    let aligned = false;
+    if (useBoxQty && unitsPer > 0 && qty > 0) {
+      const remainder = qty % unitsPer;
+      aligned = remainder < 0.001 || Math.abs(remainder - unitsPer) < 0.001;
+    }
+
+    Object.assign(orderInput.style, aligned ? ORDER_QTY_BOXED_STYLE : ORDER_QTY_DEFAULT_STYLE);
   }
 
   // ── Box quantity target ──────────────────────────────────────────────────

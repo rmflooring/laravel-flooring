@@ -2403,6 +2403,32 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     if (roomCard) updateRoomTotals(roomCard);
   });
 
+  // ── Order Qty box highlight ─────────────────────────────────────────────
+  // Green Order Qty = a clean multiple of the style's box size. Lines already on
+  // a PO (data-po-status) keep their PO-status colouring instead.
+  const ORDER_QTY_DEFAULT_STYLE = { backgroundColor: '#eef2ff', borderColor: '#a5b4fc' };
+  const ORDER_QTY_BOXED_STYLE   = { backgroundColor: '#dcfce7', borderColor: '#22c55e' };
+
+  function updateOrderQtyBoxHighlight(anyInput) {
+    const row = anyInput.closest('tr');
+    if (!row) return;
+    const orderInput = row.querySelector('input[name*="[materials]"][name*="[order_qty]"]');
+    if (!orderInput || orderInput.dataset.poStatus) return;
+
+    const colorInput = row.querySelector('[data-color-input]');
+    const useBoxQty  = colorInput && colorInput.dataset.useBoxQty === '1';
+    const unitsPer   = parseFloat(colorInput?.dataset.unitsPer || 0);
+    const qty        = parseFloat(orderInput.value || 0);
+
+    let aligned = false;
+    if (useBoxQty && unitsPer > 0 && qty > 0) {
+      const remainder = qty % unitsPer;
+      aligned = remainder < 0.001 || Math.abs(remainder - unitsPer) < 0.001;
+    }
+
+    Object.assign(orderInput.style, aligned ? ORDER_QTY_BOXED_STYLE : ORDER_QTY_DEFAULT_STYLE);
+  }
+
   // ── Box quantity target ──────────────────────────────────────────────────
   // The box check runs against ORDER QTY (what actually gets ordered on the PO),
   // falling back to Qty when the row has no order qty (same rule as POs use).
@@ -2426,6 +2452,8 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
     if (!useBoxQty || !unitsPer || unitsPer <= 0) return;
 
+    updateOrderQtyBoxHighlight(qtyInput);
+
     const target = boxQtyTarget(row) || qtyInput;
     const isOrderQty = target.matches('input[name*="[order_qty]"]');
     const qty = parseFloat(target.value || 0);
@@ -2443,6 +2471,19 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const input = e.target;
     if (!input.matches('input[name*="[quantity]"], input[name*="[order_qty]"]')) return;
     checkBoxQty(input);
+  });
+
+  // Live green Order Qty highlight as user types (also after modal confirm / Qty→Order sync)
+  roomsContainer.addEventListener("input", e => {
+    const input = e.target;
+    if (!input.matches('input[name*="[materials]"][name*="[quantity]"], input[name*="[materials]"][name*="[order_qty]"]')) return;
+    // Defer so the page's Qty → Order Qty sync (a document-level listener) runs first
+    setTimeout(() => updateOrderQtyBoxHighlight(input), 0);
+  });
+
+  // Initial paint for existing material rows
+  roomsContainer.querySelectorAll('input[name*="[materials]"][name*="[order_qty]"]').forEach(input => {
+    updateOrderQtyBoxHighlight(input);
   });
 
   function showBoxQtyModal(qtyInput, currentQty, unitsPer, boxes, boxQty, styleName, isOrderQty) {

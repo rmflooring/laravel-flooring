@@ -498,6 +498,7 @@
           value="{{ old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty !== null ? $item->order_qty : '') }}"
           placeholder="—"
           class="w-24 border rounded-lg p-2 js-order-qty-input"
+          @if($qtyStyle) data-po-status="{{ $poStatus }}" @endif
           style="{{ $qtyStyle ?: 'background-color:#eef2ff; border-color:#a5b4fc;' }}">
       </td>
 
