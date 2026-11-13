@@ -38,3 +38,17 @@ if (!function_exists('linkify')) {
         );
     }
 }
+
+if (!function_exists('versioned_asset')) {
+    /**
+     * asset() plus a ?v=<last-modified time> cache-buster, for files in public/
+     * that aren't built by Vite (e.g. public/assets/js/*). Browsers fetch a
+     * fresh copy automatically whenever the file changes after a deploy.
+     */
+    function versioned_asset(string $path): string
+    {
+        $file = public_path($path);
+
+        return asset($path) . (is_file($file) ? '?v=' . filemtime($file) : '');
+    }
+}

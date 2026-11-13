@@ -1035,6 +1035,6 @@
   });
 </script>
 
-<script src="{{ asset('assets/js/invoices/invoice_edit.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/invoices/invoice_edit.js') }}" defer></script>
 
 </x-admin-layout>

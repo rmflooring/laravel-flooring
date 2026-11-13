@@ -2496,11 +2496,11 @@
 }());
 </script>
 
-<script src="{{ asset('assets/js/rich-notes.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/estimate_edit.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/rich-notes.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/estimates/estimate.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/estimates/estimate_edit.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
 
 <script>
 (function () {

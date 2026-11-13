@@ -819,10 +819,10 @@
     "{{ route('estimates.api.tax-groups.rate', ['tax_group' => '__GROUP__']) }}";
 </script>
 
-<script src="{{ asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
-<script src="{{ asset('assets/js/rich-notes.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/estimate.js') }}" defer></script>
-<script src="{{ asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/estimates/dropdown_pin.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/rich-notes.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/estimates/estimate.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/estimates/wide_mode_toggle.js') }}" defer></script>
 
 @include('components.modals.box-qty-modal')
 

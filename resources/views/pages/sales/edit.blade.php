@@ -3133,7 +3133,7 @@ function updatePayerCustomer(select) {
 }());
 </script>
 
-<script src="{{ asset('assets/js/rich-notes.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/rich-notes.js') }}" defer></script>
 <script>
 (function () {
   function hasContent(el) {
@@ -3175,10 +3175,10 @@ function updatePayerCustomer(select) {
   });
 }());
 </script>
-<script src="{{ asset('assets/js/sales/sale.js') }}" defer></script>
-<script src="{{ asset('assets/js/sales/sale_edit.js') }}" defer></script>
-<script src="{{ asset('assets/js/sales/dropdown_pin.js') }}" defer></script>
-<script src="{{ asset('assets/js/sales/wide_mode_toggle.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/sales/sale.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/sales/sale_edit.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/sales/dropdown_pin.js') }}" defer></script>
+<script src="{{ versioned_asset('assets/js/sales/wide_mode_toggle.js') }}" defer></script>
 
 {{-- Send Email Modal --}}
 @php
