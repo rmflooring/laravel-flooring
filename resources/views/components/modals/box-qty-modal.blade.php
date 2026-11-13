@@ -19,7 +19,7 @@
                     comes in boxes of <span class="font-medium" data-box-units-per></span>.
                 </p>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Your qty of <span class="font-medium text-gray-900 dark:text-white" data-box-current-qty></span>
+                    Your <span data-box-qty-label>qty</span> of <span class="font-medium text-gray-900 dark:text-white" data-box-current-qty></span>
                     requires <span class="font-medium" data-box-count></span>.
                     Round up to <span class="font-semibold text-blue-600 dark:text-blue-400 text-base" data-box-suggested-qty></span>?
                 </p>
@@ -53,9 +53,20 @@
     }
 
     document.getElementById('box-qty-confirm').addEventListener('click', function () {
-        if (window._boxQtyPendingInput != null && window._boxQtyPendingValue != null) {
-            window._boxQtyPendingInput.value = window._boxQtyPendingValue;
-            window._boxQtyPendingInput.dispatchEvent(new Event('input', { bubbles: true }));
+        const input = window._boxQtyPendingInput;
+        if (input != null && window._boxQtyPendingValue != null) {
+            // Rounding Order Qty up to full boxes isn't a "manual" edit — keep it
+            // following Qty if it was, so a later Qty change re-runs the check.
+            const wasSynced = input.dataset.synced;
+            input.value = window._boxQtyPendingValue;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            if (wasSynced !== undefined) input.dataset.synced = wasSynced;
+
+            // If the Order Qty column is hidden, show it so the change is visible
+            const cell = input.closest('[data-order-qty-cell]');
+            if (cell && cell.style.display === 'none') {
+                document.querySelector('[data-order-qty-toggle]')?.click();
+            }
         }
         close();
     });

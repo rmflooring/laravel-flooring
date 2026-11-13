@@ -2403,6 +2403,16 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     if (roomCard) updateRoomTotals(roomCard);
   });
 
+  // ── Box quantity target ──────────────────────────────────────────────────
+  // The box check runs against ORDER QTY (what actually gets ordered on the PO),
+  // falling back to Qty when the row has no order qty (same rule as POs use).
+  function boxQtyTarget(row) {
+    const qtyInput   = row.querySelector('input[name*="[quantity]"]');
+    const orderInput = row.querySelector('input[name*="[order_qty]"]');
+    if (orderInput && orderInput.value.trim() !== '') return orderInput;
+    return qtyInput;
+  }
+
   // ── Box quantity prompt ──────────────────────────────────────────────────
   function checkBoxQty(qtyInput) {
     const row = qtyInput.closest('tr');
@@ -2416,7 +2426,9 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
     if (!useBoxQty || !unitsPer || unitsPer <= 0) return;
 
-    const qty = parseFloat(qtyInput.value || 0);
+    const target = boxQtyTarget(row) || qtyInput;
+    const isOrderQty = target.matches('input[name*="[order_qty]"]');
+    const qty = parseFloat(target.value || 0);
     if (!qty || qty <= 0) return;
 
     const boxes = Math.ceil(qty / unitsPer);
@@ -2424,16 +2436,16 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
     if (Math.abs(qty - boxQty) < 0.001) return; // already a clean multiple
 
-    showBoxQtyModal(qtyInput, qty, unitsPer, boxes, boxQty, colorInput.value);
+    showBoxQtyModal(target, qty, unitsPer, boxes, boxQty, colorInput.value, isOrderQty);
   }
 
   roomsContainer.addEventListener("focusout", e => {
     const input = e.target;
-    if (!input.matches('input[name*="[quantity]"]')) return;
+    if (!input.matches('input[name*="[quantity]"], input[name*="[order_qty]"]')) return;
     checkBoxQty(input);
   });
 
-  function showBoxQtyModal(qtyInput, currentQty, unitsPer, boxes, boxQty, styleName) {
+  function showBoxQtyModal(qtyInput, currentQty, unitsPer, boxes, boxQty, styleName, isOrderQty) {
     const modalEl = document.getElementById('box-qty-modal');
     if (!modalEl) return;
 
@@ -2442,6 +2454,7 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
     modalEl.querySelectorAll('[data-box-style-name]').forEach(el => el.textContent = styleName || 'this style');
     modalEl.querySelectorAll('[data-box-units-per]').forEach(el => el.textContent = unitsPer);
+    modalEl.querySelectorAll('[data-box-qty-label]').forEach(el => el.textContent = isOrderQty ? 'order qty' : 'qty');
     modalEl.querySelectorAll('[data-box-current-qty]').forEach(el => el.textContent = currentQty);
     modalEl.querySelectorAll('[data-box-count]').forEach(el => el.textContent = boxes + (boxes === 1 ? ' box' : ' boxes'));
     modalEl.querySelectorAll('[data-box-suggested-qty]').forEach(el => el.textContent = boxQty);

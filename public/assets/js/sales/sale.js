@@ -2294,28 +2294,31 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
   });
 
   // ── Box quantity highlight ───────────────────────────────────────────────
-  function updateBoxQtyHighlight(qtyInput) {
-    const row = qtyInput.closest('tr');
+  // Orange Qty field = this line's ORDER QTY (or Qty when there's no order qty)
+  // is a clean multiple of the box size. Painted on the Qty field so the Order
+  // Qty field keeps its PO-status colouring.
+  function updateBoxQtyHighlight(anyInput) {
+    const row = anyInput.closest('tr');
     if (!row) return;
 
+    const qtyInput = row.querySelector('input[name*="[quantity]"]');
+    if (!qtyInput) return;
+
+    const clear = () => {
+      qtyInput.style.backgroundColor = '';
+      qtyInput.style.borderColor = '';
+    };
+
     const colorInput = row.querySelector('[data-color-input]');
-    if (!colorInput) return;
+    if (!colorInput) return clear();
 
     const useBoxQty = colorInput.dataset.useBoxQty === '1';
     const unitsPer  = parseFloat(colorInput.dataset.unitsPer || 0);
+    if (!useBoxQty || !unitsPer || unitsPer <= 0) return clear();
 
-    if (!useBoxQty || !unitsPer || unitsPer <= 0) {
-      qtyInput.style.backgroundColor = '';
-      qtyInput.style.borderColor = '';
-      return;
-    }
-
-    const qty = parseFloat(qtyInput.value || 0);
-    if (!qty || qty <= 0) {
-      qtyInput.style.backgroundColor = '';
-      qtyInput.style.borderColor = '';
-      return;
-    }
+    const target = boxQtyTarget(row) || qtyInput;
+    const qty = parseFloat(target.value || 0);
+    if (!qty || qty <= 0) return clear();
 
     const remainder = qty % unitsPer;
     const isAligned = remainder < 0.001 || Math.abs(remainder - unitsPer) < 0.001;
@@ -2324,9 +2327,18 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
       qtyInput.style.backgroundColor = '#fed7aa';
       qtyInput.style.borderColor     = '#fb923c';
     } else {
-      qtyInput.style.backgroundColor = '';
-      qtyInput.style.borderColor     = '';
+      clear();
     }
+  }
+
+  // ── Box quantity target ──────────────────────────────────────────────────
+  // The box check runs against ORDER QTY (what actually gets ordered on the PO),
+  // falling back to Qty when the row has no order qty (same rule as POs use).
+  function boxQtyTarget(row) {
+    const qtyInput   = row.querySelector('input[name*="[quantity]"]');
+    const orderInput = row.querySelector('input[name*="[order_qty]"]');
+    if (orderInput && orderInput.value.trim() !== '') return orderInput;
+    return qtyInput;
   }
 
   // ── Box quantity prompt ──────────────────────────────────────────────────
@@ -2342,37 +2354,35 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
     if (!useBoxQty || !unitsPer || unitsPer <= 0) return;
 
-    const qty = parseFloat(qtyInput.value || 0);
+    const target = boxQtyTarget(row) || qtyInput;
+    const isOrderQty = target.matches('input[name*="[order_qty]"]');
+    const qty = parseFloat(target.value || 0);
     if (!qty || qty <= 0) return;
 
     const boxes = Math.ceil(qty / unitsPer);
     const boxQty = parseFloat((boxes * unitsPer).toFixed(4));
 
-    if (Math.abs(qty - boxQty) < 0.001) {
-      updateBoxQtyHighlight(qtyInput); // already aligned — highlight orange
-      return;
-    }
+    updateBoxQtyHighlight(qtyInput); // orange if aligned, cleared if not
+    if (Math.abs(qty - boxQty) < 0.001) return; // already aligned
 
-    // Not aligned — clear any stale highlight, then show modal
-    qtyInput.style.backgroundColor = '';
-    qtyInput.style.borderColor     = '';
-    showBoxQtyModal(qtyInput, qty, unitsPer, boxes, boxQty, colorInput.value);
+    showBoxQtyModal(target, qty, unitsPer, boxes, boxQty, colorInput.value, isOrderQty);
   }
 
   roomsContainer.addEventListener("focusout", e => {
     const input = e.target;
-    if (!input.matches('input[name*="[quantity]"]')) return;
+    if (!input.matches('input[name*="[quantity]"], input[name*="[order_qty]"]')) return;
     checkBoxQty(input);
   });
 
   // Live highlight update as user types (also fires after modal confirm dispatches input)
   roomsContainer.addEventListener("input", e => {
     const input = e.target;
-    if (!input.matches('input[name*="[materials]"][name*="[quantity]"]')) return;
-    updateBoxQtyHighlight(input);
+    if (!input.matches('input[name*="[materials]"][name*="[quantity]"], input[name*="[materials]"][name*="[order_qty]"]')) return;
+    // Defer so the page's Qty → Order Qty sync (a document-level listener) runs first
+    setTimeout(() => updateBoxQtyHighlight(input), 0);
   });
 
-  function showBoxQtyModal(qtyInput, currentQty, unitsPer, boxes, boxQty, styleName) {
+  function showBoxQtyModal(qtyInput, currentQty, unitsPer, boxes, boxQty, styleName, isOrderQty) {
     const modalEl = document.getElementById('box-qty-modal');
     if (!modalEl) return;
 
@@ -2381,6 +2391,7 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
 
     modalEl.querySelectorAll('[data-box-style-name]').forEach(el => el.textContent = styleName || 'this style');
     modalEl.querySelectorAll('[data-box-units-per]').forEach(el => el.textContent = unitsPer);
+    modalEl.querySelectorAll('[data-box-qty-label]').forEach(el => el.textContent = isOrderQty ? 'order qty' : 'qty');
     modalEl.querySelectorAll('[data-box-current-qty]').forEach(el => el.textContent = currentQty);
     modalEl.querySelectorAll('[data-box-count]').forEach(el => el.textContent = boxes + (boxes === 1 ? ' box' : ' boxes'));
     modalEl.querySelectorAll('[data-box-suggested-qty]').forEach(el => el.textContent = boxQty);

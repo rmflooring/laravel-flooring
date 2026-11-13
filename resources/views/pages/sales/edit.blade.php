@@ -473,7 +473,9 @@
           };
           $useBoxQty  = $item->productStyle?->use_box_qty;
           $unitsPer   = (float)($item->productStyle?->units_per ?? 0);
-          $currentQty = (float)old("rooms.$roomIndex.materials.$i.quantity", $item->quantity);
+          // Box alignment is judged on Order Qty (what goes on the PO), falling back to Qty
+          $orderQtyRaw = old("rooms.$roomIndex.materials.$i.order_qty", $item->order_qty);
+          $currentQty = (float)(($orderQtyRaw !== null && $orderQtyRaw !== '') ? $orderQtyRaw : old("rooms.$roomIndex.materials.$i.quantity", $item->quantity));
           $boxAligned = $useBoxQty && $unitsPer > 0 && $currentQty > 0
               && abs(round($currentQty / $unitsPer) * $unitsPer - $currentQty) < 0.001;
         @endphp
