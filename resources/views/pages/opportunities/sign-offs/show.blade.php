@@ -409,7 +409,7 @@
             @csrf
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name</label>
-                <input type="text" name="client_name" value="{{ $signOff->customer_name }}" required
+                <input type="text" name="client_name" value="{{ $signOff->job_site_name ?: $signOff->customer_name }}" required
                        class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             </div>
             <div class="mb-4">

@@ -147,8 +147,9 @@ class FlooringSignOffController extends Controller
         // Preview of the signature-request email, pre-filled with what's known now
         // (client name, document label); {{signing_link_button}}, {{signing_link}}
         // and {{expires_date}} are resolved when the request is actually sent.
+        // The signer is the job site customer (falls back to the parent customer)
         $signatureVars = [
-            'client_name'    => $signOff->customer_name,
+            'client_name'    => $signOff->job_site_name ?: $signOff->customer_name,
             'job_site_name'  => $signOff->job_site_name,
             'document_label' => 'Flooring Selection',
         ];
