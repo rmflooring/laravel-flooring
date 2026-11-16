@@ -98,6 +98,11 @@
                                                 Stock PO
                                             </span>
                                         @endif
+                                        @if($po->isPartiallyReceived())
+                                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-300">
+                                                Partially received
+                                            </span>
+                                        @endif
                                     </div>
                                     <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                                         <span class="font-medium text-gray-700 dark:text-gray-300">{{ $po->vendor->company_name }}</span>

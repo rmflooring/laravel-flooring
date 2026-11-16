@@ -91,6 +91,15 @@
                                 <option value="received"  {{ old('status', $purchaseOrder->status) === 'received'  ? 'selected' : '' }}>Received</option>
                                 <option value="cancelled" {{ old('status', $purchaseOrder->status) === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                             </select>
+                            @if ($purchaseOrder->hasReceipts())
+                                <p class="mt-1 text-xs {{ $purchaseOrder->isFullyReceived() ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400' }}">
+                                    @if ($purchaseOrder->isFullyReceived())
+                                        Everything on this PO has been received ({{ $purchaseOrder->receivedSummary() }}). Changing the status won't let it be received again.
+                                    @else
+                                        Partially received ({{ $purchaseOrder->receivedSummary() }}) &mdash; {{ $purchaseOrder->remainingToReceive() }} still to receive.
+                                    @endif
+                                </p>
+                            @endif
                         </div>
 
                         <div x-show="status === 'ordered' || status === 'received'" x-cloak>
@@ -301,8 +310,9 @@
                         <div>
                             <h3 class="text-base font-semibold text-gray-900 dark:text-white">Receive items</h3>
                             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                Confirm quantities received. The PO status will be set to
-                                <span class="font-medium text-green-700 dark:text-green-400">Received</span>.
+                                Enter what arrived. The PO changes to
+                                <span class="font-medium text-green-700 dark:text-green-400">Received</span> once everything is in;
+                                a partial delivery stays Ordered.
                             </p>
                         </div>
                         <button type="button" @click="showReceiveModal = false"
@@ -337,7 +347,7 @@
                                     <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Items ordered</h4>
                                     <button type="button" @click="setAllToOrdered()"
                                             class="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">
-                                        Reset all to ordered qty
+                                        Reset all to remaining qty
                                     </button>
                                 </div>
                                 <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
@@ -345,13 +355,15 @@
                                         <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-400">
                                             <tr>
                                                 <th class="px-4 py-3">Item</th>
-                                                <th class="px-4 py-3 text-right whitespace-nowrap">Ordered qty</th>
-                                                <th class="px-4 py-3 text-right whitespace-nowrap">Qty received</th>
+                                                <th class="px-4 py-3 text-right whitespace-nowrap">Ordered</th>
+                                                <th class="px-4 py-3 text-right whitespace-nowrap">Already received</th>
+                                                <th class="px-4 py-3 text-right whitespace-nowrap">Receiving now</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                             @foreach ($purchaseOrder->items as $item)
-                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                                @php $remaining = $item->remainingQty(); $received = $item->receivedQty(); @endphp
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {{ $remaining <= 0 ? 'opacity-60' : '' }}">
                                                     <td class="px-4 py-3">
                                                         <div class="font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</div>
                                                         @if ($item->po_notes)
@@ -362,15 +374,23 @@
                                                     <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">
                                                         {{ $item->quantity }} {{ $item->unit }}
                                                     </td>
+                                                    <td class="px-4 py-3 text-right whitespace-nowrap {{ $received > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400' }}">
+                                                        {{ $received > 0 ? $received . ' ' . $item->unit : '—' }}
+                                                    </td>
                                                     <td class="px-4 py-3 text-right">
-                                                        <input type="number"
-                                                               name="quantities[{{ $item->id }}]"
-                                                               value="{{ $item->quantity }}"
-                                                               min="0"
-                                                               step="any"
-                                                               data-ordered="{{ $item->quantity }}"
-                                                               class="modal-qty-input w-24 rounded-lg border-gray-300 text-sm text-right shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                               required>
+                                                        @if ($remaining <= 0)
+                                                            <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">Fully received</span>
+                                                        @else
+                                                            <input type="number"
+                                                                   name="quantities[{{ $item->id }}]"
+                                                                   value="{{ $remaining }}"
+                                                                   min="0"
+                                                                   max="{{ $remaining }}"
+                                                                   step="any"
+                                                                   data-ordered="{{ $remaining }}"
+                                                                   class="modal-qty-input w-24 rounded-lg border-gray-300 text-sm text-right shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                                   required>
+                                                        @endif
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -421,8 +441,10 @@
             fulfillmentMethod: '{{ old('fulfillment_method', $purchaseOrder->fulfillment_method) }}',
             originalStatus: '{{ $purchaseOrder->status }}',
             showReceiveModal: false,
+            // Nothing left to receive → picking "Received" just sets the status, no receive modal.
+            nothingToReceive: @json($purchaseOrder->hasReceipts() && $purchaseOrder->isFullyReceived()),
             handleStatusChange() {
-                if (this.status === 'received') {
+                if (this.status === 'received' && !this.nothingToReceive) {
                     this.status = this.originalStatus;
                     this.showReceiveModal = true;
                 }

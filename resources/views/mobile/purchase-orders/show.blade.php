@@ -18,6 +18,18 @@
         </div>
     @endif
 
+    @if (session('warning'))
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @if ($purchaseOrder->isPartiallyReceived())
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span class="font-semibold">Partially received</span> &mdash; {{ $purchaseOrder->remainingToReceive() }} still to receive.
+        </div>
+    @endif
+
     {{-- PO Identity card --}}
     <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4">
         <div class="flex items-start justify-between gap-3">
@@ -54,7 +66,7 @@
 
     {{-- Receive Inventory --}}
     @can('edit purchase orders')
-    @if($purchaseOrder->status === 'ordered')
+    @if($purchaseOrder->canReceive())
     <a href="{{ route('mobile.purchase-orders.receive', $purchaseOrder) }}"
        class="flex items-center gap-4 rounded-xl border-2 border-green-500 bg-green-50 dark:bg-green-900/20 px-5 py-4 shadow-sm active:scale-95 transition-transform">
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">

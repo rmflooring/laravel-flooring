@@ -24,8 +24,9 @@
 
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Receive items</h1>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Confirm quantities received. Each item will be added to inventory and the PO status will be set to
-                    <span class="font-medium text-green-700 dark:text-green-400">Received</span>.
+                    Enter what arrived. Each item is added to inventory. Once everything on the PO has been received, its status
+                    changes to <span class="font-medium text-green-700 dark:text-green-400">Received</span> automatically &mdash;
+                    if only part arrived, it stays Ordered so you can receive the rest later.
                 </p>
             </div>
 
@@ -71,7 +72,7 @@
                         <h2 class="text-base font-semibold text-gray-900 dark:text-white">Items ordered</h2>
                         <button type="button" @click="setAllToOrdered()"
                                 class="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">
-                            Reset all to ordered qty
+                            Reset all to remaining qty
                         </button>
                     </div>
 
@@ -80,13 +81,15 @@
                             <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-400">
                                 <tr>
                                     <th class="px-6 py-3">Item</th>
-                                    <th class="px-6 py-3 text-right whitespace-nowrap">Ordered qty</th>
-                                    <th class="px-6 py-3 text-right whitespace-nowrap">Qty received</th>
+                                    <th class="px-6 py-3 text-right whitespace-nowrap">Ordered</th>
+                                    <th class="px-6 py-3 text-right whitespace-nowrap">Already received</th>
+                                    <th class="px-6 py-3 text-right whitespace-nowrap">Receiving now</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @foreach ($purchaseOrder->items as $item)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                    @php $remaining = $item->remainingQty(); $received = $item->receivedQty(); @endphp
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {{ $remaining <= 0 ? 'opacity-60' : '' }}">
                                         <td class="px-6 py-4">
                                             <div class="font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</div>
                                             @if ($item->saleItem?->room)
@@ -100,15 +103,26 @@
                                         <td class="px-6 py-4 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">
                                             {{ $item->quantity }} {{ $item->unit }}
                                         </td>
+                                        <td class="px-6 py-4 text-right whitespace-nowrap {{ $received > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400' }}">
+                                            {{ $received > 0 ? $received . ' ' . $item->unit : '—' }}
+                                        </td>
                                         <td class="px-6 py-4 text-right">
-                                            <input type="number"
-                                                   name="quantities[{{ $item->id }}]"
-                                                   value="{{ old('quantities.' . $item->id, $item->quantity) }}"
-                                                   min="0"
-                                                   step="any"
-                                                   data-ordered="{{ $item->quantity }}"
-                                                   class="qty-input w-28 rounded-lg border-gray-300 text-sm text-right shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                   required>
+                                            @if ($remaining <= 0)
+                                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">Fully received</span>
+                                            @else
+                                                <input type="number"
+                                                       name="quantities[{{ $item->id }}]"
+                                                       value="{{ old('quantities.' . $item->id, $remaining) }}"
+                                                       min="0"
+                                                       max="{{ $remaining }}"
+                                                       step="any"
+                                                       data-ordered="{{ $remaining }}"
+                                                       class="qty-input w-28 rounded-lg border-gray-300 text-sm text-right shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                       required>
+                                                @if ($received > 0)
+                                                    <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $remaining }} left</div>
+                                                @endif
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach
@@ -139,7 +153,7 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        Confirm receipt &amp; mark received
+                        Confirm receipt
                     </button>
                 </div>
             </form>

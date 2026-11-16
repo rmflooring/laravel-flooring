@@ -666,7 +666,7 @@ class PurchaseOrderController extends Controller
 
     public function show(PurchaseOrder $purchaseOrder, BillableQuantityService $billableQuantityService)
     {
-        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale', 'orderedBy', 'documents.uploader']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'items.receipts', 'receipts', 'sale', 'orderedBy', 'documents.uploader']);
 
         // Scope: within same sale (if sale-linked), or within all stock POs
         $base = PurchaseOrder::query();
@@ -746,7 +746,13 @@ class PurchaseOrderController extends Controller
     {
         abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
 
-        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'items.receipts', 'sale', 'receipts']);
+
+        if (! $purchaseOrder->canReceive()) {
+            return redirect()
+                ->route('pages.purchase-orders.show', $purchaseOrder)
+                ->with('warning', 'Nothing left to receive — this PO was already fully received on ' . $purchaseOrder->receivedSummary() . '.');
+        }
 
         return view('pages.purchase-orders.receive', compact('purchaseOrder'));
     }
@@ -778,9 +784,34 @@ class PurchaseOrderController extends Controller
                 ->withInput();
         }
 
-        DB::transaction(function () use ($purchaseOrder, $inventory, $pickTickets, $receivedDate, $quantities) {
+        $fullyReceived = DB::transaction(function () use ($purchaseOrder, $inventory, $pickTickets, $receivedDate, $quantities) {
+            // Lock the PO so a double-tap or two people receiving at once can't
+            // both pass the checks below, then re-read everything fresh.
+            $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->firstOrFail();
+            abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
+            $purchaseOrder->load(['items.saleItem', 'items.receipts', 'receipts']);
+
+            // The real block: never receive more than is still owed on a line,
+            // whatever the PO status says.
+            $errors = [];
             foreach ($purchaseOrder->items as $poItem) {
-                $qty = (float) ($quantities[$poItem->id] ?? 0);
+                $qty       = round((float) ($quantities[$poItem->id] ?? 0), 2);
+                $remaining = $poItem->remainingQty();
+                if ($qty > 0 && $qty > $remaining + 0.001) {
+                    $errors['quantities.' . $poItem->id] = $remaining <= 0
+                        ? "{$poItem->item_name}: already fully received ({$poItem->receivedQty()} {$poItem->unit})."
+                        : "{$poItem->item_name}: only {$remaining} {$poItem->unit} left to receive (ordered {$poItem->quantity}, already received {$poItem->receivedQty()}).";
+                }
+            }
+            if ($errors) {
+                if ($purchaseOrder->remainingToReceive() <= 0) {
+                    $errors = ['quantities' => 'Nothing left to receive — this PO was already fully received on ' . $purchaseOrder->receivedSummary() . '.'];
+                }
+                throw \Illuminate\Validation\ValidationException::withMessages($errors);
+            }
+
+            foreach ($purchaseOrder->items as $poItem) {
+                $qty = round((float) ($quantities[$poItem->id] ?? 0), 2);
 
                 if ($qty <= 0) {
                     continue;
@@ -801,12 +832,23 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            $purchaseOrder->update(['status' => 'received']);
+            // Only mark Received once every line is in. A partial delivery stays
+            // Ordered so the rest can be received later — no need to change the
+            // status back by hand.
+            $purchaseOrder->load('items.receipts');
+            $fully = $purchaseOrder->remainingToReceive() <= 0;
+            if ($fully) {
+                $purchaseOrder->update(['status' => 'received']);
+            }
+
+            return $fully;
         });
 
         return redirect()
             ->route('pages.purchase-orders.show', $purchaseOrder)
-            ->with('success', 'Items received and added to inventory.');
+            ->with('success', $fullyReceived
+                ? 'Items received and added to inventory. The PO is now fully received.'
+                : 'Items received and added to inventory. The rest of the order is still to be received — the PO stays Ordered (partially received).');
     }
 
     // -------------------------------------------------------------------------
@@ -815,7 +857,7 @@ class PurchaseOrderController extends Controller
 
     public function edit(PurchaseOrder $purchaseOrder)
     {
-        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'items.receipts', 'receipts', 'sale']);
 
         $installerVendorIds = Installer::whereNotNull('vendor_id')->pluck('vendor_id');
 
@@ -921,7 +963,8 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
-        $isStock = ! $purchaseOrder->sale_id;
+        $isStock   = ! $purchaseOrder->sale_id;
+        $oldStatus = $purchaseOrder->status;
 
         $fulfillmentOptions = $isStock
             ? 'delivery_warehouse,delivery_custom,pickup'
@@ -1131,9 +1174,23 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // Status set back to Pending/Ordered on a PO whose stock is already all in:
+        // allowed (so a wrong status can be fixed), but say so — receiving is based on
+        // quantities, so it won't show as needing to be received again.
+        $warning = null;
+        $purchaseOrder->refresh()->load(['items.receipts', 'receipts']);
+        if ($purchaseOrder->status !== $oldStatus
+            && in_array($purchaseOrder->status, ['pending', 'ordered'], true)
+            && $purchaseOrder->hasReceipts()
+            && $purchaseOrder->isFullyReceived()) {
+            $warning = 'Heads up: everything on this PO was already received on ' . $purchaseOrder->receivedSummary()
+                . '. It won\'t show as needing to be received, and it can\'t be received again.';
+        }
+
         return redirect()
             ->route('pages.purchase-orders.show', $purchaseOrder)
-            ->with('success', 'Purchase order updated.');
+            ->with('success', 'Purchase order updated.')
+            ->with('warning', $warning);
     }
 
     // -------------------------------------------------------------------------

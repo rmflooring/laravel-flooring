@@ -25,6 +25,11 @@
                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $statusColor }}">
                             {{ $purchaseOrder->status_label }}
                         </span>
+                        @if ($purchaseOrder->isPartiallyReceived())
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-300">
+                            Partially received
+                        </span>
+                        @endif
 
                         @if($purchaseOrder->sale)
                         <span class="text-gray-400">•</span>
@@ -80,7 +85,7 @@
                     @endcan
 
                     @can('edit purchase orders')
-                    @if ($purchaseOrder->status === 'ordered')
+                    @if ($purchaseOrder->canReceive())
                     <a href="{{ route('pages.purchase-orders.receive.form', $purchaseOrder) }}"
                        class="inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -238,6 +243,25 @@
             @if (session('warning'))
                 <div class="mb-6 flex items-center rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200" role="alert">
                     <span class="text-sm font-medium">{{ session('warning') }}</span>
+                </div>
+            @endif
+
+            {{-- Receiving progress (based on inventory receipts, not the status) --}}
+            @if ($purchaseOrder->hasReceipts() && in_array($purchaseOrder->status, ['pending', 'ordered']))
+                <div class="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+                    @if ($purchaseOrder->isFullyReceived())
+                        <span class="font-semibold">Already fully received</span> on {{ $purchaseOrder->receivedSummary() }}.
+                        Nothing on this PO is left to receive, so it won't show as needing receiving.
+                    @else
+                        <span class="font-semibold">Partially received</span> &mdash; received so far on {{ $purchaseOrder->receivedSummary() }}.
+                        <ul class="mt-2 space-y-0.5">
+                            @foreach ($purchaseOrder->items as $line)
+                                @if ($line->remainingQty() > 0)
+                                    <li>{{ $line->item_name }}: <strong>{{ $line->remainingQty() }} {{ $line->unit }}</strong> still to receive (ordered {{ $line->quantity }}, received {{ $line->receivedQty() }})</li>
+                                @endif
+                            @endforeach
+                        </ul>
+                    @endif
                 </div>
             @endif
 

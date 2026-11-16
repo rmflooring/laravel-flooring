@@ -5,7 +5,7 @@
     (quantities[po_item_id]) in proportion to what each room ordered. The
     per-room inputs stay editable. Used by the desktop and mobile receive pages.
 --}}
-@php $combinedLines = $purchaseOrder->vendorLines()->where('is_combined', true); @endphp
+@php $combinedLines = $purchaseOrder->vendorLines()->where('is_combined', true)->filter(fn ($l) => $l->remaining > 0); @endphp
 @if ($combinedLines->isNotEmpty())
     <div class="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20" data-receive-combined>
         <h2 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Combined lines — receive the total</h2>
@@ -18,15 +18,15 @@
                     <div class="text-sm">
                         <div class="font-medium text-gray-900 dark:text-white">{{ $line->item_name }}</div>
                         <div class="text-xs text-gray-600 dark:text-gray-400">
-                            Ordered {{ $line->quantity }} {{ $line->unit }} ·
+                            Ordered {{ $line->quantity }} {{ $line->unit }}@if ($line->remaining < $line->quantity) · <strong>{{ $line->remaining }} still to receive</strong>@endif ·
                             {{ $line->members->map(fn ($m) => ($m->saleItem?->room?->room_name ?: 'Unnamed Room') . ' ' . (float) $m->quantity)->implode(', ') }}
                         </div>
                     </div>
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                         Total received
-                        <input type="number" min="0" step="any" value="{{ $line->quantity }}"
+                        <input type="number" min="0" max="{{ $line->remaining }}" step="any" value="{{ $line->remaining }}"
                                data-combined-total
-                               data-members='@json($line->members->map(fn ($m) => ['id' => $m->id, 'ordered' => (float) $m->quantity])->values())'
+                               data-members='@json($line->members->filter(fn ($m) => $m->remainingQty() > 0)->map(fn ($m) => ['id' => $m->id, 'ordered' => $m->remainingQty()])->values())'
                                class="w-28 rounded-lg border-gray-300 text-right text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                         <span class="text-xs text-gray-500">{{ $line->unit }}</span>
                     </label>
@@ -36,7 +36,8 @@
     </div>
 
     <script>
-    // Split a combined total across the rooms, in proportion to each room's ordered qty
+    // Split a combined total across the rooms, in proportion to what each room still has
+    // to receive ("ordered" here = remaining qty; fully received rooms are left out)
     document.addEventListener('input', function (e) {
         if (!e.target.matches('[data-combined-total]')) return;
         const total   = parseFloat(e.target.value) || 0;

@@ -9,7 +9,7 @@ class PurchaseOrderController extends Controller
 {
     public function show(PurchaseOrder $purchaseOrder)
     {
-        $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy']);
+        $purchaseOrder->load(['vendor', 'items.receipts', 'sale', 'orderedBy', 'receipts']);
 
         return view('mobile.purchase-orders.show', compact('purchaseOrder'));
     }
@@ -18,7 +18,13 @@ class PurchaseOrderController extends Controller
     {
         abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
 
-        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'items.receipts', 'sale', 'receipts']);
+
+        if (! $purchaseOrder->canReceive()) {
+            return redirect()
+                ->route('mobile.purchase-orders.show', $purchaseOrder)
+                ->with('warning', 'Nothing left to receive — this PO was already fully received on ' . $purchaseOrder->receivedSummary() . '.');
+        }
 
         return view('mobile.purchase-orders.receive', compact('purchaseOrder'));
     }

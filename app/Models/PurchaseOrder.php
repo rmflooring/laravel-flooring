@@ -96,6 +96,58 @@ class PurchaseOrder extends Model
         return $this->hasMany(Bill::class)->whereNotIn('status', ['voided'])->latest();
     }
 
+    // ── Receiving ───────────────────────────────────────────────────────────
+    // "Needs receiving" is based on quantities (inventory receipts per line),
+    // not on the status alone — setting a received PO back to Ordered by hand
+    // must never make it look unreceived again.
+
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(InventoryReceipt::class);
+    }
+
+    /** Total quantity still owed across all lines. */
+    public function remainingToReceive(): float
+    {
+        return round((float) $this->items->sum(fn (PurchaseOrderItem $i) => $i->remainingQty()), 2);
+    }
+
+    public function hasReceipts(): bool
+    {
+        return $this->relationLoaded('receipts') ? $this->receipts->isNotEmpty() : $this->receipts()->exists();
+    }
+
+    public function isFullyReceived(): bool
+    {
+        return $this->items->isNotEmpty() && $this->remainingToReceive() <= 0;
+    }
+
+    /** Some stock received, some still owed. */
+    public function isPartiallyReceived(): bool
+    {
+        return $this->hasReceipts() && ! $this->isFullyReceived();
+    }
+
+    /** Whether the Receive screens should be offered for this PO. */
+    public function canReceive(): bool
+    {
+        return $this->status === 'ordered' && $this->remainingToReceive() > 0;
+    }
+
+    /** e.g. "Nov 16, 2026 (inventory #173)" — for "already received" messages. */
+    public function receivedSummary(): ?string
+    {
+        $receipts = $this->relationLoaded('receipts') ? $this->receipts : $this->receipts()->get();
+        if ($receipts->isEmpty()) {
+            return null;
+        }
+
+        $date = $receipts->max('received_date');
+        $ids  = $receipts->sortBy('id')->pluck('id')->map(fn ($id) => '#' . $id)->implode(', ');
+
+        return \Illuminate\Support\Carbon::parse($date)->format('M j, Y') . ' (inventory ' . $ids . ')';
+    }
+
     public function calendarEvent(): BelongsTo
     {
         return $this->belongsTo(\App\Models\CalendarEvent::class, 'calendar_event_id');
@@ -179,6 +231,7 @@ class PurchaseOrder extends Model
                 'cost_total'   => round((float) $members->sum('cost_total'), 2),
                 'po_notes'     => $notes !== '' ? $notes : null,
                 'members'      => $members,
+                'remaining'    => round((float) $members->sum(fn ($m) => $m->remainingQty()), 2),
                 'is_combined'  => $members->count() > 1,
                 'vendor_group' => $members->count() > 1 ? $first->vendor_group : null,
             ];
