@@ -744,14 +744,10 @@ class PurchaseOrderController extends Controller
 
     public function receiveForm(PurchaseOrder $purchaseOrder)
     {
-        abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
-
         $purchaseOrder->load(['vendor', 'items.saleItem.room', 'items.receipts', 'sale', 'receipts']);
 
-        if (! $purchaseOrder->canReceive()) {
-            return redirect()
-                ->route('pages.purchase-orders.show', $purchaseOrder)
-                ->with('warning', 'Nothing left to receive — this PO was already fully received on ' . $purchaseOrder->receivedSummary() . '.');
+        if ($reason = $purchaseOrder->receiveBlockedReason()) {
+            return redirect()->route('pages.purchase-orders.show', $purchaseOrder)->with('warning', $reason);
         }
 
         return view('pages.purchase-orders.receive', compact('purchaseOrder'));
@@ -763,9 +759,11 @@ class PurchaseOrderController extends Controller
 
     public function receive(Request $request, PurchaseOrder $purchaseOrder, InventoryService $inventory, PickTicketService $pickTickets)
     {
-        abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
+        $purchaseOrder->load(['items.saleItem', 'items.receipts', 'receipts']);
 
-        $purchaseOrder->load(['items.saleItem']);
+        if ($reason = $purchaseOrder->receiveBlockedReason()) {
+            return redirect()->route('pages.purchase-orders.show', $purchaseOrder)->with('warning', $reason);
+        }
 
         $request->validate([
             'received_date'   => ['required', 'date', 'before_or_equal:today'],
@@ -788,8 +786,12 @@ class PurchaseOrderController extends Controller
             // Lock the PO so a double-tap or two people receiving at once can't
             // both pass the checks below, then re-read everything fresh.
             $purchaseOrder = PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->firstOrFail();
-            abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
             $purchaseOrder->load(['items.saleItem', 'items.receipts', 'receipts']);
+
+            // e.g. a double-tap: the first submit already received everything
+            if ($reason = $purchaseOrder->receiveBlockedReason()) {
+                return $reason;
+            }
 
             // The real block: never receive more than is still owed on a line,
             // whatever the PO status says.
@@ -843,6 +845,10 @@ class PurchaseOrderController extends Controller
 
             return $fully;
         });
+
+        if (is_string($fullyReceived)) {
+            return redirect()->route('pages.purchase-orders.show', $purchaseOrder)->with('warning', $fullyReceived);
+        }
 
         return redirect()
             ->route('pages.purchase-orders.show', $purchaseOrder)

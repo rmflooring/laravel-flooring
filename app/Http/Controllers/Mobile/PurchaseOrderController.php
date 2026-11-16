@@ -16,14 +16,10 @@ class PurchaseOrderController extends Controller
 
     public function receiveForm(PurchaseOrder $purchaseOrder)
     {
-        abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
-
         $purchaseOrder->load(['vendor', 'items.saleItem.room', 'items.receipts', 'sale', 'receipts']);
 
-        if (! $purchaseOrder->canReceive()) {
-            return redirect()
-                ->route('mobile.purchase-orders.show', $purchaseOrder)
-                ->with('warning', 'Nothing left to receive — this PO was already fully received on ' . $purchaseOrder->receivedSummary() . '.');
+        if ($reason = $purchaseOrder->receiveBlockedReason()) {
+            return redirect()->route('mobile.purchase-orders.show', $purchaseOrder)->with('warning', $reason);
         }
 
         return view('mobile.purchase-orders.receive', compact('purchaseOrder'));

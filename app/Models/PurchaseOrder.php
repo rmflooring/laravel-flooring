@@ -134,6 +134,24 @@ class PurchaseOrder extends Model
         return $this->status === 'ordered' && $this->remainingToReceive() > 0;
     }
 
+    /**
+     * Why this PO can't be received right now, in plain words — or null if it can.
+     * Used to send staff back to the PO with a message instead of an error page.
+     */
+    public function receiveBlockedReason(): ?string
+    {
+        if ($this->items->isNotEmpty() && $this->remainingToReceive() <= 0 && $this->hasReceipts()) {
+            return 'Nothing left to receive — this PO was already fully received on ' . $this->receivedSummary() . '.';
+        }
+
+        return match ($this->status) {
+            'ordered'   => $this->remainingToReceive() > 0 ? null : 'Nothing left to receive on this PO.',
+            'pending'   => "This PO hasn't been ordered yet — set it to Ordered (with the vendor order #) before receiving.",
+            'cancelled' => 'This PO is cancelled, so it can\'t be received.',
+            default     => 'This PO is already marked ' . $this->status_label . ', so there is nothing to receive.',
+        };
+    }
+
     /** e.g. "Nov 16, 2026 (inventory #173)" — for "already received" messages. */
     public function receivedSummary(): ?string
     {
