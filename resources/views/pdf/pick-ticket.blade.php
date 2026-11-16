@@ -168,7 +168,7 @@
         <tbody>
             @foreach($roomItems as $ptItem)
                 <tr>
-                    <td>{{ $ptItem->item_name }}</td>
+                    <td>{{ $ptItem->item_name }}@if($ptItem->notes)<div style="margin-top:3px; font-size:9px; color:#92400e; white-space:pre-wrap"><strong>Note:</strong> {{ $ptItem->notes }}</div>@endif</td>
                     @if(!$roomName)
                         <td class="info-key">—</td>
                     @endif

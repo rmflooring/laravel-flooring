@@ -94,6 +94,9 @@
             @foreach ($items as $item)
                 <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
                     <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</p>
+                    @if ($item->notes)
+                        <p class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-900 whitespace-pre-line dark:bg-amber-900/30 dark:text-amber-200"><span class="font-semibold">Note:</span> {{ $item->notes }}</p>
+                    @endif
                     <div class="flex items-center gap-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
                         <span>Qty: <strong class="text-gray-700 dark:text-gray-300">{{ rtrim(rtrim(number_format((float)$item->quantity, 2), '0'), '.') }} {{ $item->unit }}</strong></span>
                         @if ((float)$item->delivered_qty > 0)

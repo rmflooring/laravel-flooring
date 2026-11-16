@@ -204,6 +204,14 @@ class WarehousePickTicketController extends Controller
 
         $nextSortOrder = $pickTicket->items()->max('sort_order') + 1;
 
+        // Optional note for the warehouse (e.g. "not in inventory — leftover jug
+        // labelled BINTING"). Saved on the added line(s) themselves, not the ticket,
+        // so removing an item also removes its note. Stamped with who and when.
+        $note     = trim((string) $request->input('notes'));
+        $lineNote = $note !== ''
+            ? $note . ' — ' . (auth()->user()?->name ?? 'Staff') . ', ' . now()->timezone('America/Vancouver')->format('M j')
+            : null;
+
         foreach ($saleItems as $index => $saleItem) {
             $itemName = implode(' — ', array_filter([
                 $saleItem->product_type,
@@ -219,19 +227,9 @@ class WarehousePickTicketController extends Controller
                 'item_name'               => $itemName,
                 'unit'                    => $saleItem->unit ?? '',
                 'quantity'                => $saleItem->quantity,
+                'notes'                   => $lineNote,
                 'sort_order'              => $nextSortOrder + $index,
             ]);
-        }
-
-        // Optional note for the warehouse (e.g. "not in inventory, leftover box on
-        // shelf B3"). Appended to the ticket's notes — shown on the pick ticket page,
-        // the mobile warehouse view and the printed ticket — with who/when/which items.
-        $note = trim((string) $request->input('notes'));
-        if ($note !== '') {
-            $itemNames = $saleItems->map(fn ($i) => implode(' ', array_filter([$i->manufacturer, $i->style])) ?: ($i->product_type ?: 'Material'))->implode(', ');
-            $entry = now()->timezone('America/Vancouver')->format('M j') . ' · ' . (auth()->user()?->name ?? 'Staff')
-                . ' — Added ' . $itemNames . ': ' . $note;
-            $pickTicket->update(['notes' => trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . $entry)]);
         }
 
         return back()->with('success', $saleItems->count() . ' ' . \Str::plural('item', $saleItems->count()) . ' added to pick ticket.' . ($note !== '' ? ' Note saved.' : ''));
