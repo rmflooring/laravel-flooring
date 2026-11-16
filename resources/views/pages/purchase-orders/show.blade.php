@@ -327,7 +327,52 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @foreach($purchaseOrder->items as $item)
+                            @foreach($purchaseOrder->vendorLines() as $line)
+                                @if($line->is_combined)
+                                    {{-- Same material for several rooms: one line on the vendor's PO --}}
+                                    <tr class="bg-indigo-50/50 dark:bg-indigo-900/10">
+                                        <td class="px-6 py-4">
+                                            <div class="font-medium text-gray-900 dark:text-white">{{ $line->item_name }}</div>
+                                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                                <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                                    Combined for vendor · {{ $line->members->count() }} rooms
+                                                </span>
+                                                @can('edit purchase orders')
+                                                    <form method="POST" action="{{ route('pages.purchase-orders.split-vendor-group', [$purchaseOrder, $line->vendor_group]) }}"
+                                                          onsubmit="return confirm('Split this combined line back into one line per room on the vendor\'s PO?')">
+                                                        @csrf
+                                                        <button class="text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-300">Split back out</button>
+                                                    </form>
+                                                @endcan
+                                            </div>
+                                            @if($line->po_notes)
+                                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $line->po_notes }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 text-right font-semibold">{{ $line->quantity }}</td>
+                                        <td class="px-6 py-4 text-gray-500 dark:text-gray-400">{{ $line->unit }}</td>
+                                        <td class="px-6 py-4 text-right">${{ number_format($line->cost_price, 2) }}</td>
+                                        <td class="px-6 py-4 text-right font-semibold">${{ number_format($line->cost_total, 2) }}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                    @foreach($line->members as $item)
+                                        @php $billableRow = $billableQty[$item->id] ?? null; @endphp
+                                        <tr class="text-xs text-gray-600 dark:text-gray-400">
+                                            <td class="py-2 pl-12 pr-6">↳ {{ $item->saleItem?->room?->room_name ?: 'Unnamed Room' }}</td>
+                                            <td class="px-6 py-2 text-right">{{ $item->quantity }}</td>
+                                            <td class="px-6 py-2">{{ $item->unit }}</td>
+                                            <td class="px-6 py-2"></td>
+                                            <td class="px-6 py-2 text-right">${{ number_format($item->cost_total, 2) }}</td>
+                                            <td class="px-6 py-2 text-right">
+                                                {{ $billableRow ? rtrim(rtrim(number_format($billableRow['billed'], 2), '0'), '.') : '—' }}
+                                            </td>
+                                            <td class="px-6 py-2 text-right {{ $billableRow && $billableRow['remaining'] > 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400' }}">
+                                                {{ $billableRow ? rtrim(rtrim(number_format($billableRow['remaining'], 2), '0'), '.') : '—' }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    @php $item = $line->members->first(); @endphp
                                 @php $billableRow = $billableQty[$item->id] ?? null; @endphp
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                     <td class="px-6 py-4">
@@ -347,6 +392,7 @@
                                         {{ $billableRow ? rtrim(rtrim(number_format($billableRow['remaining'], 2), '0'), '.') : '—' }}
                                     </td>
                                 </tr>
+                                @endif
                             @endforeach
                         </tbody>
                         <tfoot class="border-t-2 border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-700/40">

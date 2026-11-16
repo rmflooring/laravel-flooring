@@ -296,12 +296,13 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($purchaseOrder->items as $item)
+            {{-- vendorLines(): the same material for several rooms shows as one combined line --}}
+            @foreach ($purchaseOrder->vendorLines() as $item)
                 <tr>
                     <td>
                         {{ $item->item_name }}
                         @if ($item->po_notes)
-                            <div style="margin-top: 3px; font-size: 10px; color: #555;">{{ $item->po_notes }}</div>
+                            <div style="margin-top: 3px; font-size: 10px; color: #555; white-space: pre-line;">{{ $item->po_notes }}</div>
                         @endif
                     </td>
                     <td class="right">{{ $item->quantity }}</td>

@@ -148,11 +148,37 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                @php
+                                    $groupSizes = $purchaseOrder->items->whereNotNull('vendor_group')->countBy('vendor_group');
+                                    $seenGroups = [];
+                                @endphp
                                 @foreach($purchaseOrder->items as $item)
-                                    @php $maxInfo = $maxQtys[$item->id] ?? ['max' => $item->quantity, 'sale_qty' => $item->quantity]; @endphp
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                    @php
+                                        $maxInfo = $maxQtys[$item->id] ?? ['max' => $item->quantity, 'sale_qty' => $item->quantity];
+                                        $inGroup = $item->vendor_group && ($groupSizes[$item->vendor_group] ?? 0) > 1;
+                                        $firstOfGroup = $inGroup && ! isset($seenGroups[$item->vendor_group]);
+                                        if ($inGroup) { $seenGroups[$item->vendor_group] = true; }
+                                    @endphp
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {{ $inGroup ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : '' }}">
                                         <td class="px-6 py-3">
                                             <div class="font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</div>
+                                            @if($item->saleItem?->room)
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ $item->saleItem->room->room_name ?: 'Unnamed Room' }}</div>
+                                            @endif
+                                            @if($inGroup)
+                                                <div class="mt-1 flex flex-wrap items-center gap-2">
+                                                    <span class="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                                        Combined for vendor · {{ $groupSizes[$item->vendor_group] }} rooms
+                                                    </span>
+                                                    @if($firstOfGroup)
+                                                        <button type="submit" form="split-group-{{ $item->vendor_group }}"
+                                                                onclick="return confirm('Split this combined line back into one line per room on the vendor\'s PO?')"
+                                                                class="text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-300">
+                                                            Split back out
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            @endif
                                             <textarea name="po_items[{{ $item->id }}][po_notes]"
                                                       rows="2"
                                                       placeholder="PO notes..."
@@ -429,6 +455,14 @@
                 </div>
 
             </form>
+
+            {{-- "Split back out" buttons above post through these (forms can't be nested) --}}
+            @foreach($purchaseOrder->items->whereNotNull('vendor_group')->pluck('vendor_group')->unique() as $group)
+                <form id="split-group-{{ $group }}" method="POST" class="hidden"
+                      action="{{ route('pages.purchase-orders.split-vendor-group', [$purchaseOrder, $group]) }}">
+                    @csrf
+                </form>
+            @endforeach
 
             {{-- Receive Inventory Modal --}}
             @can('edit purchase orders')

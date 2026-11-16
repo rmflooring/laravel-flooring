@@ -272,8 +272,12 @@ class PurchaseOrderController extends Controller
         $orderedQtys   = $this->orderedQtys($sale->id);
         $remainingQtys = [];
         $itemVendorMap = []; // sale_item_id => vendor_id (resolved via product_line or manufacturer name match)
+        $materialKeys  = []; // sale_item_id => "same material" key — lines sharing one can be combined for the vendor
+        $itemInfo      = []; // sale_item_id => room / name / unit, for the combine prompt
         foreach ($sale->rooms as $room) {
             foreach ($room->items as $item) {
+                $materialKeys[$item->id] = $this->materialKey($item);
+                $itemInfo[$item->id]     = ['room' => $room->room_name ?: 'Unnamed Room', 'name' => $this->buildItemName($item), 'unit' => $item->unit];
                 $effectiveQty = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
                 $remainingQtys[$item->id] = max(0, $effectiveQty - ($orderedQtys[$item->id] ?? 0));
 
@@ -306,7 +310,187 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        return view('pages.purchase-orders.create', compact('sale', 'vendors', 'warehouseAddress', 'remainingQtys', 'itemVendorMap'));
+        return view('pages.purchase-orders.create', compact('sale', 'vendors', 'warehouseAddress', 'remainingQtys', 'itemVendorMap', 'materialKeys', 'itemInfo'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Combine preview — same material across rooms → one vendor line
+    // -------------------------------------------------------------------------
+
+    /**
+     * Called by the create form before submitting, for the groups the user chose
+     * to combine: checks each group really is the same material and works out
+     * any full-box rounding of the combined total (the user confirms it).
+     */
+    public function combinePreview(Request $request, Sale $sale)
+    {
+        $request->validate([
+            'items'     => ['required', 'array'],
+            'items.*'   => ['integer'],
+            'qty'       => ['nullable', 'array'],
+            'cost'      => ['nullable', 'array'],
+            'combine'   => ['required', 'array'],
+            'combine.*' => ['string', 'max:40'],
+        ]);
+
+        $groups = $this->resolveCombineGroups($sale, $request->input('items', []), $request->input('combine', []),
+            $request->input('qty', []), $request->input('cost', []));
+
+        return response()->json(['groups' => array_values(array_map(fn ($g) => [
+            'token'    => $g['token'],
+            'ok'       => $g['error'] === null,
+            'error'    => $g['error'],
+            'name'     => $g['name'],
+            'unit'     => $g['unit'],
+            'combined' => $g['combined'],
+            'rows'     => $g['rows'],
+            'box'      => $g['box'],
+        ], $groups))]);
+    }
+
+    /**
+     * Key identifying "exactly the same material": the catalog style + unit, or
+     * for typed-in lines the full description + unit.
+     */
+    private function materialKey(\App\Models\SaleItem $item): string
+    {
+        $unit = strtolower(trim((string) $item->unit));
+
+        return $item->product_style_id
+            ? 'style:' . $item->product_style_id . '|' . $unit
+            : 'text:' . strtolower(trim($this->buildItemName($item))) . '|' . $unit;
+    }
+
+    /**
+     * Turn the create form's combine[sale_item_id] = token input into validated
+     * groups (2+ selected lines, same material, same unit cost), each with its
+     * per-room rows and — when the style is sold by the box — a box-rounding plan.
+     *
+     * @return array<string, array{token: string, item_ids: int[], error: ?string, name: string, unit: ?string, combined: float, rows: array, box: ?array}>
+     */
+    private function resolveCombineGroups(Sale $sale, array $selectedIds, array $combine, array $qtyInput, array $costInput): array
+    {
+        $selectedIds = array_map('intval', $selectedIds);
+        $byToken = [];
+        foreach ($combine as $itemId => $token) {
+            if ($token !== '' && in_array((int) $itemId, $selectedIds, true)) {
+                $byToken[(string) $token][] = (int) $itemId;
+            }
+        }
+        $byToken = array_filter($byToken, fn ($ids) => count($ids) > 1);
+        if (! $byToken) {
+            return [];
+        }
+
+        $saleItems = $sale->items()
+            ->with(['productStyle', 'room'])
+            ->where('item_type', 'material')
+            ->where('is_removed', false)
+            ->whereIn('id', array_merge(...array_values($byToken)))
+            ->orderBy('sort_order')
+            ->get()
+            ->keyBy('id');
+        $orderedQtys = $this->orderedQtys($sale->id);
+
+        $groups = [];
+        foreach ($byToken as $token => $ids) {
+            $items = collect($ids)->map(fn ($id) => $saleItems->get($id))->filter()->values();
+            $first = $items->first();
+            $group = [
+                'token'    => $token,
+                'item_ids' => $items->pluck('id')->all(),
+                'error'    => null,
+                'name'     => $first ? $this->buildItemName($first) : '',
+                'unit'     => $first?->unit,
+                'combined' => 0.0,
+                'rows'     => [],
+                'box'      => null,
+            ];
+
+            $submitted = [];
+            $costs     = [];
+            foreach ($items as $item) {
+                $effective = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+                $remaining = max(0, $effective - ($orderedQtys[$item->id] ?? 0));
+                $submitted[$item->id] = isset($qtyInput[$item->id]) && $qtyInput[$item->id] !== '' ? (float) $qtyInput[$item->id] : $remaining;
+                $costs[$item->id]     = isset($costInput[$item->id]) && $costInput[$item->id] !== '' ? round((float) $costInput[$item->id], 3) : round((float) $item->cost_price, 3);
+                $group['rows'][] = ['sale_item_id' => $item->id, 'room' => $item->room?->room_name ?: 'Unnamed Room', 'qty' => $submitted[$item->id]];
+            }
+            $group['combined'] = round(array_sum($submitted), 2);
+
+            if ($items->count() < 2) {
+                $group['error'] = 'Not enough lines to combine.';
+            } elseif ($items->map(fn ($i) => $this->materialKey($i))->unique()->count() > 1) {
+                $group['error'] = 'These lines are not the exact same material.';
+            } elseif (count(array_unique(array_map('strval', $costs))) > 1) {
+                $group['error'] = 'The unit costs are different, so they can\'t be shown as one line.';
+            } else {
+                $group['box'] = $this->planBoxRounding($items, $submitted, $orderedQtys);
+            }
+
+            $groups[$token] = $group;
+        }
+
+        return $groups;
+    }
+
+    /**
+     * Full-box check on a combined line. When every room is being ordered in full
+     * (nothing on other POs yet), the boxes are worked out from the rooms' actual
+     * Qty — combining often needs fewer boxes than rounding each room separately.
+     * Otherwise the combined total is just rounded up to the next full box.
+     *
+     * Returns null when the combined total already is the right number of boxes;
+     * else the suggested total, its per-room split (extra goes on the first room),
+     * and the sale lines whose Order Qty must change so they read fully ordered.
+     */
+    private function planBoxRounding($items, array $submitted, array $orderedQtys): ?array
+    {
+        $style    = $items->first()->productStyle;
+        $unitsPer = (float) ($style?->units_per ?? 0);
+        if (! $style?->use_box_qty || $unitsPer <= 0) {
+            return null;
+        }
+
+        $full = $items->every(function ($item) use ($submitted, $orderedQtys) {
+            $effective = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+            return ($orderedQtys[$item->id] ?? 0) <= 0 && abs($submitted[$item->id] - $effective) < 0.001;
+        });
+
+        $base = [];
+        foreach ($items as $item) {
+            $base[$item->id] = $full ? (float) $item->quantity : $submitted[$item->id];
+        }
+
+        $combined  = array_sum($submitted);
+        $boxes     = (int) ceil(round(array_sum($base) / $unitsPer, 6));
+        $suggested = round($boxes * $unitsPer, 2);
+        if ($boxes <= 0 || abs($suggested - $combined) < 0.001) {
+            return null;
+        }
+
+        $lines = $base;
+        $firstId = $items->first()->id;
+        $lines[$firstId] = round($lines[$firstId] + ($suggested - array_sum($base)), 2);
+
+        $orderQty = [];
+        foreach ($items as $item) {
+            $effective = $item->order_qty !== null ? (float) $item->order_qty : (float) $item->quantity;
+            $needed    = round(($orderedQtys[$item->id] ?? 0) + $lines[$item->id], 2);
+            if ($full ? abs($needed - $effective) >= 0.001 : $needed > $effective + 0.001) {
+                $orderQty[$item->id] = ['from' => $effective, 'to' => $needed, 'room' => $item->room?->room_name ?: 'Unnamed Room'];
+            }
+        }
+
+        return [
+            'units_per'       => $unitsPer,
+            'current_boxes'   => round($combined / $unitsPer, 2),
+            'suggested'       => $suggested,
+            'suggested_boxes' => $boxes,
+            'need'            => round(array_sum($base), 2),
+            'lines'           => array_map(fn ($q) => round($q, 2), $lines),
+            'order_qty'       => $orderQty,
+        ];
     }
 
     // -------------------------------------------------------------------------
@@ -337,7 +521,32 @@ class PurchaseOrderController extends Controller
             'cost.*'                  => ['nullable', 'numeric', 'min:0'],
             'po_notes'                => ['nullable', 'array'],
             'po_notes.*'              => ['nullable', 'string'],
+            'combine'                 => ['nullable', 'array'],
+            'combine.*'               => ['nullable', 'string', 'max:40'],
+            'box_round'               => ['nullable', 'array'],
         ]);
+
+        // Same material in several rooms, combined into one vendor line
+        $combineGroups = $this->resolveCombineGroups($sale, $data['items'], $data['combine'] ?? [], $data['qty'] ?? [], $data['cost'] ?? []);
+        $combineErrors = [];
+        $orderQtyUpdates = []; // sale_item_id => new order_qty (accepted box rounding)
+        foreach ($combineGroups as $token => $group) {
+            if ($group['error']) {
+                $combineErrors['combine'] = '"' . $group['name'] . '" — ' . $group['error'];
+                continue;
+            }
+            if ($group['box'] && ! empty($data['box_round'][$token])) {
+                foreach ($group['box']['lines'] as $itemId => $qty) {
+                    $data['qty'][$itemId] = $qty;
+                }
+                foreach ($group['box']['order_qty'] as $itemId => $change) {
+                    $orderQtyUpdates[$itemId] = $change['to'];
+                }
+            }
+        }
+        if ($combineErrors) {
+            return back()->withErrors($combineErrors)->withInput();
+        }
 
         // Validate qty overrides don't exceed remaining available per item
         $orderedQtys   = $this->orderedQtys($sale->id);
@@ -355,7 +564,8 @@ class PurchaseOrderController extends Controller
                 continue;
             }
             $saleItem  = $saleItemsForValidation[$itemId];
-            $effectiveQty = $saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity;
+            $effectiveQty = $orderQtyUpdates[$itemId]
+                ?? ($saleItem->order_qty !== null ? (float) $saleItem->order_qty : (float) $saleItem->quantity);
             $remaining = max(0, $effectiveQty - ($orderedQtys[$itemId] ?? 0));
             $submitted = isset($qtyOverrides[$itemId]) && $qtyOverrides[$itemId] !== ''
                 ? (float) $qtyOverrides[$itemId]
@@ -376,7 +586,21 @@ class PurchaseOrderController extends Controller
             $sale,
         );
 
-        $po = DB::transaction(function () use ($data, $sale, $resolvedAddress) {
+        // Each combined group gets one id shared by its PO lines
+        $vendorGroupFor = [];
+        foreach ($combineGroups as $group) {
+            $groupId = (string) \Illuminate\Support\Str::uuid();
+            foreach ($group['item_ids'] as $itemId) {
+                $vendorGroupFor[$itemId] = $groupId;
+            }
+        }
+
+        $po = DB::transaction(function () use ($data, $sale, $resolvedAddress, $vendorGroupFor, $orderQtyUpdates) {
+
+            // Accepted full-box rounding: keep the sale's Order Qty in step with what's ordered
+            foreach ($orderQtyUpdates as $itemId => $orderQty) {
+                \App\Models\SaleItem::where('id', $itemId)->where('sale_id', $sale->id)->update(['order_qty' => $orderQty]);
+            }
 
             $pickupAt = null;
             if ($data['fulfillment_method'] === 'pickup' && ! empty($data['pickup_date']) && ! empty($data['pickup_time'])) {
@@ -414,6 +638,7 @@ class PurchaseOrderController extends Controller
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $po->id,
                     'sale_item_id'      => $item->id,
+                    'vendor_group'      => $vendorGroupFor[$item->id] ?? null,
                     'item_name'         => $this->buildItemName($item),
                     'quantity'          => $qty,
                     'unit'              => $item->unit,
@@ -441,7 +666,7 @@ class PurchaseOrderController extends Controller
 
     public function show(PurchaseOrder $purchaseOrder, BillableQuantityService $billableQuantityService)
     {
-        $purchaseOrder->load(['vendor', 'items', 'sale', 'orderedBy', 'documents.uploader']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale', 'orderedBy', 'documents.uploader']);
 
         // Scope: within same sale (if sale-linked), or within all stock POs
         $base = PurchaseOrder::query();
@@ -521,7 +746,7 @@ class PurchaseOrderController extends Controller
     {
         abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
 
-        $purchaseOrder->load(['vendor', 'items', 'sale']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale']);
 
         return view('pages.purchase-orders.receive', compact('purchaseOrder'));
     }
@@ -590,7 +815,7 @@ class PurchaseOrderController extends Controller
 
     public function edit(PurchaseOrder $purchaseOrder)
     {
-        $purchaseOrder->load(['vendor', 'items.saleItem', 'sale']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale']);
 
         $installerVendorIds = Installer::whereNotNull('vendor_id')->pluck('vendor_id');
 
@@ -831,6 +1056,18 @@ class PurchaseOrderController extends Controller
 
                 $poItem->update($fields);
             }
+
+            // A combined vendor line needs one unit cost — if edits made them differ, split it
+            $splitNames = [];
+            foreach ($purchaseOrder->items()->whereNotNull('vendor_group')->get()->groupBy('vendor_group') as $group => $members) {
+                if ($members->count() > 1 && $members->map(fn ($m) => round((float) $m->cost_price, 3) . '|' . $m->unit)->unique()->count() > 1) {
+                    $purchaseOrder->items()->where('vendor_group', $group)->update(['vendor_group' => null]);
+                    $splitNames[] = $members->first()->item_name;
+                }
+            }
+            if ($splitNames) {
+                session()->flash('warning', 'Unit costs no longer match, so these combined lines were split back into one line per room: ' . implode(', ', $splitNames) . '.');
+            }
         }
 
         // Add new items from sale (sale-linked POs in pending/ordered status only)
@@ -897,6 +1134,18 @@ class PurchaseOrderController extends Controller
         return redirect()
             ->route('pages.purchase-orders.show', $purchaseOrder)
             ->with('success', 'Purchase order updated.');
+    }
+
+    // -------------------------------------------------------------------------
+    // Split a combined vendor line back into one line per room
+    // -------------------------------------------------------------------------
+
+    public function splitVendorGroup(PurchaseOrder $purchaseOrder, string $group)
+    {
+        $count = $purchaseOrder->items()->where('vendor_group', $group)->update(['vendor_group' => null]);
+        abort_if($count === 0, 404);
+
+        return back()->with('success', 'Combined line split back into ' . $count . ' separate lines.');
     }
 
     // -------------------------------------------------------------------------

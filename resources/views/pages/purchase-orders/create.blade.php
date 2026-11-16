@@ -36,6 +36,16 @@
 
             <form method="POST" action="{{ route('pages.sales.purchase-orders.store', $sale) }}"
                   x-data="poCreate()" @submit.prevent="submitForm">
+                {{-- Filled by the "combine same material" step just before submitting --}}
+                <template x-for="(token, itemId) in combineTokens" :key="'c' + itemId">
+                    <input type="hidden" :name="'combine[' + itemId + ']'" :value="token">
+                </template>
+                <template x-for="token in boxRoundTokens" :key="'b' + token">
+                    <input type="hidden" :name="'box_round[' + token + ']'" value="1">
+                </template>
+                @error('combine')
+                    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ $message }}</div>
+                @enderror
 
                 @csrf
 
@@ -341,6 +351,87 @@
                     </button>
                 </div>
 
+                {{-- ── Combine same material — step 1: which to combine; step 2: full-box check ── --}}
+                <div x-show="combineStep" x-cloak style="display:none"
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+
+                        <template x-if="combineStep === 'choose'">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Same material in more than one room</h3>
+                                <p class="mt-1 mb-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Combine into one line so the vendor sees a single order for the full amount?
+                                    Each room is still tracked separately inside Floor Manager.
+                                </p>
+                                <template x-for="group in dupGroups" :key="group.key">
+                                    <label class="mb-3 block cursor-pointer rounded-lg border p-3"
+                                           :class="group.combine ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600'">
+                                        <div class="flex items-start gap-3">
+                                            <input type="checkbox" x-model="group.combine" class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="text-sm font-semibold text-gray-900 dark:text-white" x-text="group.name"></div>
+                                                <ul class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                                    <template x-for="row in group.rows" :key="row.id">
+                                                        <li>• <span x-text="row.room"></span> — <span x-text="fmt(row.qty) + ' ' + group.unit"></span></li>
+                                                    </template>
+                                                </ul>
+                                                <div class="mt-1 text-sm text-gray-800 dark:text-gray-200">
+                                                    Combine into one line of <strong x-text="fmt(group.total) + ' ' + group.unit"></strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </template>
+                                <div class="mt-5 flex justify-end gap-3">
+                                    <button type="button" @click="combineStep = null"
+                                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">Back</button>
+                                    <button type="button" @click="confirmCombine()" :disabled="combineBusy"
+                                            class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+                                            x-text="combineBusy ? 'Checking…' : 'Continue'"></button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="combineStep === 'boxes'">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Full-box check</h3>
+                                <p class="mt-1 mb-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Combined, these lines can be ordered in a different number of full boxes.
+                                </p>
+                                <template x-for="g in boxGroups" :key="g.token">
+                                    <div class="mb-3 rounded-lg border border-gray-200 p-3 dark:border-gray-600">
+                                        <div class="text-sm font-semibold text-gray-900 dark:text-white" x-text="g.name"></div>
+                                        <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                                            Combined order: <strong x-text="fmt(g.combined) + ' ' + g.unit"></strong>
+                                            (<span x-text="fmt(g.box.current_boxes)"></span> boxes of <span x-text="fmt(g.box.units_per)"></span>).
+                                            The rooms need <span x-text="fmt(g.box.need) + ' ' + g.unit"></span>, which is
+                                            <strong x-text="g.box.suggested_boxes + ' full boxes = ' + fmt(g.box.suggested) + ' ' + g.unit"></strong>.
+                                        </p>
+                                        <template x-if="Object.keys(g.box.order_qty).length">
+                                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                Using it also updates the sale's Order Qty:
+                                                <template x-for="(c, id) in g.box.order_qty" :key="id">
+                                                    <span><span x-text="c.room"></span> <span x-text="fmt(c.from) + ' → ' + fmt(c.to)"></span>; </span>
+                                                </template>
+                                            </p>
+                                        </template>
+                                        <div class="mt-2 flex flex-wrap gap-4 text-sm">
+                                            <label class="flex items-center gap-2"><input type="radio" :name="'boxpick_' + g.token" value="1" x-model="g.pick" class="text-blue-600"> Use <strong x-text="fmt(g.box.suggested)"></strong></label>
+                                            <label class="flex items-center gap-2"><input type="radio" :name="'boxpick_' + g.token" value="0" x-model="g.pick" class="text-blue-600"> Keep <span x-text="fmt(g.combined)"></span></label>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div class="mt-5 flex justify-end gap-3">
+                                    <button type="button" @click="combineStep = 'choose'"
+                                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">Back</button>
+                                    <button type="button" @click="finishCombine()"
+                                            class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">Create Purchase Order</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
             </form>
         </div>
     </div>
@@ -355,6 +446,81 @@
 
             // sale_item_id => vendor_id from product_lines (null if item has no catalog link)
             itemVendorMap: @json($itemVendorMap),
+
+            // ── Combine same material across rooms ──
+            materialKeys: @json($materialKeys),
+            itemInfo: @json($itemInfo),
+            combineStep: null,   // null | 'choose' | 'boxes'
+            combineBusy: false,
+            dupGroups: [],       // [{key, name, unit, rows:[{id, room, qty}], total, combine}]
+            boxGroups: [],       // groups from the server that have a full-box suggestion
+            combineTokens: {},   // sale_item_id => token   (posted as combine[])
+            boxRoundTokens: [],  // tokens whose box rounding was accepted (posted as box_round[])
+            combineDone: false,
+
+            fmt(n) { return (Math.round(parseFloat(n) * 100) / 100).toString(); },
+            fieldVal(name) { const el = this.$root.querySelector('[name="' + name + '"]'); return el ? el.value : ''; },
+
+            // Selected lines that share the exact same material (2+ rooms)
+            findDuplicateGroups() {
+                const byKey = {};
+                this.selectedItems.map(String).forEach(id => {
+                    const key = this.materialKeys[id];
+                    if (!key) return;
+                    (byKey[key] = byKey[key] || []).push(id);
+                });
+                return Object.entries(byKey).filter(([, ids]) => ids.length > 1).map(([key, ids]) => {
+                    const rows  = ids.map(id => ({ id, room: this.itemInfo[id].room, qty: parseFloat(this.fieldVal('qty[' + id + ']')) || 0 }));
+                    return { key, name: this.itemInfo[ids[0]].name, unit: this.itemInfo[ids[0]].unit || '', rows,
+                             total: rows.reduce((t, r) => t + r.qty, 0), combine: true };
+                });
+            },
+
+            async confirmCombine() {
+                this.combineTokens = {};
+                this.boxRoundTokens = [];
+                const chosen = this.dupGroups.filter(g => g.combine);
+                if (chosen.length === 0) return this.finishCombine();
+
+                const fd = new FormData();
+                fd.append('_token', '{{ csrf_token() }}');
+                this.selectedItems.forEach(id => fd.append('items[]', id));
+                chosen.forEach((g, i) => g.rows.forEach(r => {
+                    fd.append('combine[' + r.id + ']', 'g' + i);
+                    fd.append('qty[' + r.id + ']', this.fieldVal('qty[' + r.id + ']'));
+                    fd.append('cost[' + r.id + ']', this.fieldVal('cost[' + r.id + ']'));
+                }));
+
+                this.combineBusy = true;
+                try {
+                    const res  = await fetch(@json(route('pages.sales.purchase-orders.combine-preview', $sale)), { method: 'POST', body: fd, headers: { 'Accept': 'application/json' } });
+                    const data = await res.json();
+                    const problems = [];
+                    (data.groups || []).forEach(g => {
+                        if (!g.ok) { problems.push(g.name + ': ' + g.error); return; }
+                        g.rows.forEach(r => { this.combineTokens[r.sale_item_id] = g.token; });
+                    });
+                    if (problems.length) {
+                        alert("These can't be combined and will stay as separate lines:\n\n" + problems.join('\n'));
+                    }
+                    this.boxGroups = (data.groups || []).filter(g => g.ok && g.box).map(g => ({ ...g, pick: '1' }));
+                } catch (e) {
+                    alert('Could not check the combined lines — please try again.');
+                    return;
+                } finally {
+                    this.combineBusy = false;
+                }
+
+                if (this.boxGroups.length) { this.combineStep = 'boxes'; return; }
+                this.finishCombine();
+            },
+
+            finishCombine() {
+                this.boxRoundTokens = this.boxGroups.filter(g => g.pick === '1' && this.combineTokens && Object.values(this.combineTokens).includes(g.token)).map(g => g.token);
+                this.combineStep = null;
+                this.combineDone = true;
+                this.$nextTick(() => this.$root.submit());
+            },
 
             // Called when vendor dropdown changes
             onVendorChange() {
@@ -450,6 +616,15 @@
                 if (Object.keys(this.qtyErrors).length > 0) {
                     alert('Please fix qty errors before submitting.');
                     return;
+                }
+                // Same material in several rooms? Ask whether to combine for the vendor
+                if (!this.combineDone) {
+                    this.dupGroups = this.findDuplicateGroups();
+                    if (this.dupGroups.length) {
+                        this.boxGroups = [];
+                        this.combineStep = 'choose';
+                        return;
+                    }
                 }
                 this.$el.submit();
             },

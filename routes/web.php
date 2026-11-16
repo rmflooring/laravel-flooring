@@ -1517,6 +1517,11 @@ Route::prefix('pages')
 			->middleware('role_or_permission:admin|create purchase orders')
 			->name('sales.purchase-orders.store');
 
+		// Same material in several rooms → one vendor line (checked before creating the PO)
+		Route::post('sales/{sale}/purchase-orders/combine-preview', [PurchaseOrderController::class, 'combinePreview'])
+			->middleware('role_or_permission:admin|create purchase orders')
+			->name('sales.purchase-orders.combine-preview');
+
 		// Purchase Orders — stock (no sale) create/store — must be before {purchaseOrder} wildcard
 		Route::get('purchase-orders/create', [PurchaseOrderController::class, 'createStock'])
 			->middleware('role_or_permission:admin|create purchase orders')
@@ -1558,6 +1563,10 @@ Route::prefix('pages')
 		Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])
 			->middleware('role_or_permission:admin|edit purchase orders')
 			->name('purchase-orders.receive');
+
+		Route::post('purchase-orders/{purchaseOrder}/vendor-groups/{group}/split', [PurchaseOrderController::class, 'splitVendorGroup'])
+			->middleware('role_or_permission:admin|edit purchase orders')
+			->name('purchase-orders.split-vendor-group');
 
 		Route::get('purchase-orders/{purchaseOrder}/tags', [\App\Http\Controllers\Pages\InventoryTagController::class, 'poTags'])
 			->middleware('role_or_permission:admin|view purchase orders')

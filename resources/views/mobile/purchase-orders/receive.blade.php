@@ -54,11 +54,16 @@
                 </button>
             </div>
 
+            @include('pages.purchase-orders._receive-combined')
+
             @foreach ($purchaseOrder->items as $item)
                 <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 px-4 py-4">
 
                     {{-- Item name + notes --}}
                     <p class="text-base font-bold text-gray-900 dark:text-white leading-tight">{{ $item->item_name }}</p>
+                    @if ($item->saleItem?->room)
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $item->saleItem->room->room_name ?: 'Unnamed Room' }}{{ $item->vendor_group ? ' · combined for vendor' : '' }}</p>
+                    @endif
                     @if ($item->po_notes)
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $item->po_notes }}</p>
                     @endif

@@ -148,4 +148,40 @@ class PurchaseOrder extends Model
     {
         return $this->items->sum('cost_total');
     }
+
+    // ── Combined lines (same material across rooms) ─────────────────────────
+
+    /**
+     * Lines as the VENDOR sees them: PO items sharing a vendor_group are merged
+     * into one line with the summed quantity and total. Each line carries its
+     * `members` (the underlying per-room PO items) for staff-facing breakdowns.
+     *
+     * @return \Illuminate\Support\Collection<int, object{item_name: string, quantity: float, unit: ?string, cost_price: float, cost_total: float, po_notes: ?string, members: \Illuminate\Support\Collection, is_combined: bool, vendor_group: ?string}>
+     */
+    public function vendorLines()
+    {
+        $groups = [];
+        foreach ($this->items->sortBy([['sort_order', 'asc'], ['id', 'asc']]) as $item) {
+            $key = $item->vendor_group ? 'g:' . $item->vendor_group : 'i:' . $item->id;
+            $groups[$key][] = $item;
+        }
+
+        return collect($groups)->values()->map(function (array $members) {
+            $members = collect($members);
+            $first   = $members->first();
+            $notes   = $members->pluck('po_notes')->map(fn ($n) => trim((string) $n))->filter()->unique()->implode("\n");
+
+            return (object) [
+                'item_name'    => $first->item_name,
+                'quantity'     => round((float) $members->sum('quantity'), 2),
+                'unit'         => $first->unit,
+                'cost_price'   => (float) $first->cost_price,
+                'cost_total'   => round((float) $members->sum('cost_total'), 2),
+                'po_notes'     => $notes !== '' ? $notes : null,
+                'members'      => $members,
+                'is_combined'  => $members->count() > 1,
+                'vendor_group' => $members->count() > 1 ? $first->vendor_group : null,
+            ];
+        });
+    }
 }

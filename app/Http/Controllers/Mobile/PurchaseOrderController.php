@@ -18,7 +18,7 @@ class PurchaseOrderController extends Controller
     {
         abort_unless($purchaseOrder->status === 'ordered', 403, 'Only ordered POs can be received.');
 
-        $purchaseOrder->load(['vendor', 'items', 'sale']);
+        $purchaseOrder->load(['vendor', 'items.saleItem.room', 'sale']);
 
         return view('mobile.purchase-orders.receive', compact('purchaseOrder'));
     }

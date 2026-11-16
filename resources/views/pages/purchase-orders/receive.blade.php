@@ -63,6 +63,8 @@
                     </div>
                 </div>
 
+                @include('pages.purchase-orders._receive-combined')
+
                 {{-- Items --}}
                 <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -87,6 +89,9 @@
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                                         <td class="px-6 py-4">
                                             <div class="font-medium text-gray-900 dark:text-white">{{ $item->item_name }}</div>
+                                            @if ($item->saleItem?->room)
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">{{ $item->saleItem->room->room_name ?: 'Unnamed Room' }}{{ $item->vendor_group ? ' · combined for vendor' : '' }}</div>
+                                            @endif
                                             @if ($item->po_notes)
                                                 <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{{ $item->po_notes }}</div>
                                             @endif
