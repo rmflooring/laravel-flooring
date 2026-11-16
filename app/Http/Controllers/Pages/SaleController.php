@@ -338,18 +338,21 @@ class SaleController extends Controller
             })->count();
         }
 
-        // Direct (no-WO) pick ticket for staging card
-        $directPickTicket  = PickTicket::where('sale_id', $sale->id)
-            ->whereNull('work_order_id')
+        // Every active pick ticket for the sale — direct AND work-order-linked — for the
+        // Delivery / Pickup card. It used to show only the latest direct (no-WO) ticket,
+        // so a ticket auto-created on PO receive (WO-linked) left the card saying
+        // "No active pick ticket" while it hid those materials from staging (Sale #100).
+        $activePickTickets = PickTicket::with(['workOrder', 'items'])
+            ->where('sale_id', $sale->id)
             ->whereIn('status', PickTicket::ACTIVE_STATUSES)
-            ->latest()
-            ->first();
+            ->orderBy('id')
+            ->get();
         $materialSaleItems = $sale->rooms->flatMap(fn ($r) => $r->items->where('item_type', 'material'))->values();
 
         // Materials not yet covered by any active pick ticket (direct or WO-linked) —
         // see the matching note in show(). Drives whether the Stage button shows and
-        // which items its modal offers, independent of $directPickTicket above (which
-        // only ever describes the direct-ticket summary card, not staging eligibility).
+        // which items its modal offers, independent of $activePickTickets above (which
+        // only describes the summary card, not staging eligibility).
         $coveredSaleItemIds = PickTicketItem::whereIn('sale_item_id', $materialSaleItems->pluck('id'))
             ->whereHas('pickTicket', fn ($q) => $q->where('sale_id', $sale->id)->whereIn('status', PickTicket::ACTIVE_STATUSES))
             ->pluck('sale_item_id')
@@ -380,7 +383,7 @@ class SaleController extends Controller
             'sale', 'employees', 'taxGroups', 'defaultTaxGroupId',
             'emailSubject', 'emailBody', 'itemPoStatusMap', 'itemWoStatusMap', 'pmEmail',
             'deleteBlockReason', 'customerContacts',
-            'directPickTicket', 'materialSaleItems', 'stageableMaterialItems',
+            'activePickTickets', 'materialSaleItems', 'stageableMaterialItems',
             'unscheduledLabourCount', 'rtvCreditSaleItemIds',
             'depositPayerOptions', 'depositPaymentMethods',
         ));

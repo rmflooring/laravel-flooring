@@ -2741,51 +2741,64 @@
             @endif
         </div>
 
-        {{-- Active PT info --}}
-        @if ($directPickTicket)
+        {{-- Active pick tickets (direct and work-order-linked) --}}
+        @php
+            $ptColors = [
+                'staged'              => '#ea580c',
+                'pending'             => '#6b7280',
+                'ready'               => '#2563eb',
+                'picked'              => '#7c3aed',
+                'partially_delivered' => '#ca8a04',
+            ];
+        @endphp
+        @forelse ($activePickTickets as $pt)
             @php
-                $ptColors = [
-                    'staged'              => '#ea580c',
-                    'pending'             => '#6b7280',
-                    'ready'               => '#2563eb',
-                    'picked'              => '#7c3aed',
-                    'partially_delivered' => '#ca8a04',
-                ];
-                $ptColor = $ptColors[$directPickTicket->status] ?? '#6b7280';
-                $ftLabel = $directPickTicket->fulfillment_type_label ?? '—';
+                $ptColor = $ptColors[$pt->status] ?? '#6b7280';
+                $ftLabel = $pt->fulfillment_type_label ?? null;
             @endphp
-            <div class="px-5 py-4 flex items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
-                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
-                          style="background:{{ $ptColor }}">
-                        {{ $directPickTicket->status_label }}
-                    </span>
-                    <span class="text-sm text-gray-700 font-medium">{{ $directPickTicket->pt_number }}</span>
-                    <span class="text-sm text-gray-500">·</span>
-                    <span class="text-sm text-gray-500">{{ $ftLabel }}</span>
-                    @if ($directPickTicket->staging_notes)
-                        <span class="text-sm text-gray-400 italic">· {{ $directPickTicket->staging_notes }}</span>
+            <div class="px-5 py-4 flex items-center justify-between gap-4 {{ $loop->first ? '' : 'border-t border-gray-100' }}">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
+                              style="background:{{ $ptColor }}">
+                            {{ $pt->status_label }}
+                        </span>
+                        <span class="text-sm text-gray-700 font-medium">{{ $pt->pt_number }}</span>
+                        @if ($ftLabel)
+                            <span class="text-sm text-gray-500">· {{ $ftLabel }}</span>
+                        @endif
+                        @if ($pt->workOrder)
+                            <span class="text-sm text-gray-500">· Work order {{ $pt->workOrder->wo_number }}</span>
+                        @endif
+                        @if ($pt->staging_notes)
+                            <span class="text-sm text-gray-400 italic">· {{ $pt->staging_notes }}</span>
+                        @endif
+                    </div>
+                    @if ($pt->items->isNotEmpty())
+                        <p class="mt-1 text-xs text-gray-500 truncate">
+                            {{ $pt->items->map(fn ($i) => \Illuminate\Support\Str::limit($i->item_name, 45) . ' × ' . (float) $i->quantity)->implode(' · ') }}
+                        </p>
                     @endif
                 </div>
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('pages.warehouse.pick-tickets.show', $directPickTicket) }}"
+                <div class="flex items-center gap-2 shrink-0">
+                    <a href="{{ route('pages.warehouse.pick-tickets.show', $pt) }}"
                        class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800">
                         View Pick Ticket
                     </a>
-                    @if ($directPickTicket->status === 'staged')
+                    @if ($pt->status === 'staged')
                         <form method="POST"
-                              action="{{ route('pages.warehouse.pick-tickets.unstage', $directPickTicket) }}"
-                              onsubmit="return confirm('Unstage pick ticket {{ $directPickTicket->pt_number }}? The sale can then be re-staged.')">
+                              action="{{ route('pages.warehouse.pick-tickets.unstage', $pt) }}"
+                              onsubmit="return confirm('Unstage pick ticket {{ $pt->pt_number }}? Its items can then be re-staged.')">
                             @csrf
                             <button type="submit"
                                     class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">
                                 Unstage
                             </button>
                         </form>
-                    @elseif (in_array($directPickTicket->status, ['pending', 'ready', 'picked']))
+                    @elseif (in_array($pt->status, ['pending', 'ready', 'picked']))
                         <form method="POST"
-                              action="{{ route('pages.warehouse.pick-tickets.update-status', $directPickTicket) }}"
-                              onsubmit="return confirm('Cancel pick ticket {{ $directPickTicket->pt_number }}? The sale can then be re-staged.')">
+                              action="{{ route('pages.warehouse.pick-tickets.update-status', $pt) }}"
+                              onsubmit="return confirm('Cancel pick ticket {{ $pt->pt_number }}? Its items can then be re-staged.')">
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="action" value="cancel">
@@ -2797,9 +2810,9 @@
                     @endif
                 </div>
             </div>
-        @else
+        @empty
             <div class="px-5 py-4 text-sm text-gray-400">No active pick ticket. Use the button above to stage items.</div>
-        @endif
+        @endforelse
 
         {{-- Stage Modal --}}
         <div x-show="showStageModal" x-cloak
