@@ -7,6 +7,18 @@
         </div>
         <h1 class="text-2xl font-bold text-gray-900 mb-2">Already Completed</h1>
         <p class="text-gray-500 text-sm">This document has already been signed or is no longer active.</p>
+
+        @if (($nextRequest ?? null))
+            <div class="mt-8 mx-auto max-w-md rounded-xl border border-blue-200 bg-blue-50 p-6 text-left">
+                <p class="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-1">You still have a document to sign</p>
+                <p class="text-lg font-semibold text-gray-900 mb-4">{{ $nextRequest->documentLabel() }}</p>
+                <a href="{{ route('sign.show', $nextRequest->uuid) }}"
+                   class="block w-full rounded-lg bg-blue-700 px-5 py-3 text-center text-base font-semibold text-white hover:bg-blue-800">
+                    Review &amp; Sign Next Document →
+                </a>
+            </div>
+        @endif
+
         <p class="text-gray-400 text-xs mt-4">If you have questions, please contact RM Flooring &amp; Cabinetry.</p>
     </div>
 </x-signing-layout>

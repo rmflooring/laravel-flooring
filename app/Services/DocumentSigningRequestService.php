@@ -25,26 +25,124 @@ class DocumentSigningRequestService
         ?string $customSubject = null,
         ?string $customBody = null
     ): DocumentSigningRequest {
-        $uuid = Str::uuid()->toString();
+        $signingRequest = $this->makeSigningRequest($documentType, $documentId, $clientName, $clientEmail);
 
+        (new SignatureRequestMail($signingRequest, $customSubject, $customBody))->send();
+
+        return $signingRequest;
+    }
+
+    /**
+     * Send several documents to the client in ONE email. Each document gets its
+     * own signing request (sharing a batch_uuid); the email links to the first,
+     * and after signing each one the client is taken on to the next.
+     *
+     * @param  array<int, array{0: string, 1: int}>  $documents  [[document_type, document_id], ...] in signing order
+     * @return DocumentSigningRequest  the first request in the batch
+     */
+    public function createSigningBatch(
+        array $documents,
+        string $clientName,
+        string $clientEmail,
+        ?string $customSubject = null,
+        ?string $customBody = null
+    ): DocumentSigningRequest {
+        $documents = array_values($documents);
+
+        if (count($documents) === 1) {
+            return $this->createSigningRequest($documents[0][0], (int) $documents[0][1], $clientName, $clientEmail, $customSubject, $customBody);
+        }
+
+        $batchUuid = Str::uuid()->toString();
+        $requests  = [];
+        foreach ($documents as $position => [$type, $id]) {
+            $requests[] = $this->makeSigningRequest($type, (int) $id, $clientName, $clientEmail, $batchUuid, $position + 1);
+        }
+
+        (new SignatureRequestMail($requests[0], $customSubject, $customBody))->send();
+
+        return $requests[0];
+    }
+
+    private function makeSigningRequest(
+        string $documentType,
+        int $documentId,
+        string $clientName,
+        string $clientEmail,
+        ?string $batchUuid = null,
+        ?int $batchPosition = null
+    ): DocumentSigningRequest {
         $signingRequest = DocumentSigningRequest::create([
-            'uuid'          => $uuid,
-            'document_type' => $documentType,
-            'document_id'   => $documentId,
-            'client_name'   => $clientName,
-            'client_email'  => $clientEmail,
-            'status'        => 'pending',
-            'sent_at'       => now(),
-            'expires_at'    => now()->addDays(10),
-            'audit_log'     => ['sent_at' => now()->toIso8601String()],
+            'uuid'           => Str::uuid()->toString(),
+            'batch_uuid'     => $batchUuid,
+            'batch_position' => $batchPosition,
+            'document_type'  => $documentType,
+            'document_id'    => $documentId,
+            'client_name'    => $clientName,
+            'client_email'   => $clientEmail,
+            'status'         => 'pending',
+            'sent_at'        => now(),
+            'expires_at'     => now()->addDays(10),
+            'audit_log'      => ['sent_at' => now()->toIso8601String()],
         ]);
 
         $pdfPath = $this->storePendingPdf($signingRequest);
         $signingRequest->update(['pending_pdf_path' => $pdfPath]);
 
-        (new SignatureRequestMail($signingRequest, $customSubject, $customBody))->send();
-
         return $signingRequest;
+    }
+
+    /**
+     * Documents on an opportunity that can be sent for e-signature right now:
+     * flooring sign-offs, and generated documents whose template allows it
+     * (e.g. the Work Authorization Form). Anything already awaiting a signature
+     * or already signed is left out.
+     *
+     * @return \Illuminate\Support\Collection<int, array{key: string, type: string, id: int, label: string}>
+     */
+    public function signableDocumentsForOpportunity(int $opportunityId, ?string $exceptKey = null)
+    {
+        $docs = collect();
+
+        foreach (FlooringSignOff::where('opportunity_id', $opportunityId)->orderBy('id')->get() as $signOff) {
+            $docs->push([
+                'key'   => 'flooring_selection:' . $signOff->id,
+                'type'  => 'flooring_selection',
+                'id'    => $signOff->id,
+                'label' => 'Flooring Selection' . ($signOff->date ? ' — ' . $signOff->date->format('M j, Y') : ' #' . $signOff->id),
+            ]);
+        }
+
+        $signableTemplateIds = DocumentTemplate::where('allows_esignature', true)->pluck('id');
+        $generated = OpportunityDocument::where('opportunity_id', $opportunityId)
+            ->where('category', 'generated_document')
+            ->whereNotNull('rendered_body')
+            ->whereIn('template_id', $signableTemplateIds)
+            ->orderBy('id')
+            ->get();
+        foreach ($generated as $doc) {
+            $docs->push([
+                'key'   => 'opportunity_document:' . $doc->id,
+                'type'  => 'opportunity_document',
+                'id'    => $doc->id,
+                'label' => $doc->original_name . ' — ' . $doc->created_at->format('M j, Y'),
+            ]);
+        }
+
+        // Drop anything already out for signature or signed
+        $taken = DocumentSigningRequest::whereIn('status', ['pending', 'signed'])
+            ->where(function ($q) use ($docs) {
+                foreach ($docs->groupBy('type') as $type => $group) {
+                    $q->orWhere(fn ($q) => $q->where('document_type', $type)->whereIn('document_id', $group->pluck('id')));
+                }
+            })
+            ->get(['document_type', 'document_id'])
+            ->map(fn ($r) => $r->document_type . ':' . $r->document_id)
+            ->all();
+
+        return $docs
+            ->reject(fn ($d) => in_array($d['key'], $taken, true) || $d['key'] === $exceptKey)
+            ->values();
     }
 
     public function storePendingPdf(DocumentSigningRequest $request): string

@@ -1,5 +1,7 @@
 @php
-    $docLabel = $signingRequest->document_type === 'flooring_selection' ? 'Flooring Selection' : 'Work Authorization';
+    $docLabel   = $signingRequest->documentLabel();
+    $batchCount = $batchCount ?? 1;
+    $batchIndex = $batchIndex ?? 1;
     $docUrl   = route('sign.document', $signingRequest->uuid);
 @endphp
 <x-signing-layout :title="$docLabel">
@@ -18,6 +20,11 @@
 
         {{-- Header --}}
         <div class="mb-5 max-w-3xl mx-auto">
+            @if ($batchCount > 1)
+                <div class="mb-2 inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-700">
+                    Document {{ $batchIndex }} of {{ $batchCount }}
+                </div>
+            @endif
             <h1 class="text-2xl font-bold text-gray-900 mb-1">{{ $docLabel }}</h1>
             <p class="text-sm text-gray-600">
                 Prepared for <strong>{{ $signingRequest->client_name }}</strong>.

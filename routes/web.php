@@ -1895,6 +1895,11 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
                 ->name('opportunities.documents.send-email')
                 ->middleware('role_or_permission:admin|edit documents');
 
+            // E-signature — only for documents whose template allows it (e.g. Work Authorization Form)
+            Route::post('documents/{document}/request-signature', [\App\Http\Controllers\Pages\SigningRequestController::class, 'storeFromOpportunityDocument'])
+                ->middleware('can:manage signing requests')
+                ->name('opportunities.documents.request-signature');
+
             // Flooring Sign-Off routes
             Route::get('sign-offs/create', [\App\Http\Controllers\Pages\FlooringSignOffController::class, 'create'])
                 ->name('opportunities.sign-offs.create');

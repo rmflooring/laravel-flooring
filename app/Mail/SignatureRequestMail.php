@@ -26,18 +26,20 @@ class SignatureRequestMail
             default                => 'signature_request_document',
         };
 
-        $documentLabel = match ($this->signingRequest->document_type) {
-            'flooring_selection'   => 'Flooring Selection',
-            'work_auth'            => 'Work Authorization',
-            'opportunity_document' => \App\Models\OpportunityDocument::find($this->signingRequest->document_id)?->original_name ?? 'Document',
-            default                => 'Document',
-        };
+        // A batch (several documents in one email) is described as a whole
+        $members       = $this->signingRequest->batchMembers();
+        $labels        = $members->map(fn ($r) => $r->documentLabel())->values();
+        $documentLabel = $labels->count() > 1
+            ? $labels->slice(0, -1)->implode(', ') . ' and ' . $labels->last()
+            : $labels->first();
 
         $template   = $service->getTemplate(null, $templateType);
         $signingUrl = url('/sign/' . $this->signingRequest->uuid);
 
-        $jobSiteName = $this->signingRequest->document_type === 'flooring_selection'
-            ? \App\Models\FlooringSignOff::find($this->signingRequest->document_id)?->job_site_name ?? ''
+        // Job site name comes from a flooring sign-off (any one in the batch)
+        $signOffRequest = $members->firstWhere('document_type', 'flooring_selection');
+        $jobSiteName = $signOffRequest
+            ? \App\Models\FlooringSignOff::find($signOffRequest->document_id)?->job_site_name ?? ''
             : '';
 
         $vars = [
@@ -71,7 +73,22 @@ class SignatureRequestMail
             '</a>' .
             '</div>';
 
-        $linked = str_replace('{{signing_link_button}}', $buttonHtml, $linked);
+        // Batch: list the documents so the client knows there's more than one to sign
+        if ($labels->count() > 1) {
+            $items = $labels->map(fn ($l) => '<li>' . e($l) . '</li>')->implode('');
+            $buttonHtml .=
+                '<div style="margin:0 0 20px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;">' .
+                    '<strong>' . $labels->count() . ' documents to sign:</strong>' .
+                    '<ol style="margin:6px 0 6px 20px;padding:0;">' . $items . '</ol>' .
+                    '<span style="color:#64748b;">After you sign each one, you\'ll be taken straight to the next.</span>' .
+                '</div>';
+        }
+
+        if (str_contains($linked, '{{signing_link_button}}')) {
+            $linked = str_replace('{{signing_link_button}}', $buttonHtml, $linked);
+        } elseif ($labels->count() > 1) {
+            $linked .= $buttonHtml; // custom body without the button tag — still show the list
+        }
 
         $htmlBody = '<div style="font-family:sans-serif;font-size:15px;line-height:1.7;color:#222;max-width:600px;">'
             . $linked

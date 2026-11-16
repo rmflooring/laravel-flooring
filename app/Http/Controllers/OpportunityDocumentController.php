@@ -601,10 +601,16 @@ public function index(Opportunity $opportunity, Request $request)
             ->latest()
             ->first();
 
+        // Other documents on this job that can go out in the same signing email
+        $alsoSignable = $template?->allows_esignature
+            ? app(\App\Services\DocumentSigningRequestService::class)
+                ->signableDocumentsForOpportunity($opportunity->id, 'opportunity_document:' . $document->id)
+            : collect();
+
         return view('pages.opportunities.documents.show-generated', compact(
             'opportunity', 'document', 'template',
             'jobSiteEmail', 'pmEmail', 'customerContacts',
-            'emailSubject', 'emailBody', 'signingRequest',
+            'emailSubject', 'emailBody', 'signingRequest', 'alsoSignable',
         ));
     }
 

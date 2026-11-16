@@ -159,8 +159,12 @@ class FlooringSignOffController extends Controller
             'body'    => $emailTemplates->render($signatureTemplate['body'], $signatureVars),
         ];
 
+        // Other documents on this job that can go out in the same signing email
+        $alsoSignable = app(\App\Services\DocumentSigningRequestService::class)
+            ->signableDocumentsForOpportunity($opportunity->id, 'flooring_selection:' . $signOff->id);
+
         return view('pages.opportunities.sign-offs.show', compact(
-            'opportunity', 'signOff', 'conditions', 'branding', 'signatureEmailPreview'
+            'opportunity', 'signOff', 'conditions', 'branding', 'signatureEmailPreview', 'alsoSignable'
         ));
     }
 

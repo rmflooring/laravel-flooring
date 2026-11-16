@@ -27,11 +27,13 @@ class DocumentTemplateController extends Controller
             'description' => ['nullable', 'string'],
             'body'        => ['required', 'string'],
             'needs_sale'  => ['boolean'],
+            'allows_esignature' => ['boolean'],
             'is_active'   => ['boolean'],
             'sort_order'  => ['nullable', 'integer', 'min:0'],
         ]);
 
         $data['needs_sale'] = $request->boolean('needs_sale');
+        $data['allows_esignature'] = $request->boolean('allows_esignature');
         $data['is_active']  = $request->boolean('is_active', true);
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
@@ -56,11 +58,13 @@ class DocumentTemplateController extends Controller
             'description' => ['nullable', 'string'],
             'body'        => ['required', 'string'],
             'needs_sale'  => ['boolean'],
+            'allows_esignature' => ['boolean'],
             'is_active'   => ['boolean'],
             'sort_order'  => ['nullable', 'integer', 'min:0'],
         ]);
 
         $data['needs_sale'] = $request->boolean('needs_sale');
+        $data['allows_esignature'] = $request->boolean('allows_esignature');
         $data['is_active']  = $request->boolean('is_active', true);
         $data['sort_order'] = $data['sort_order'] ?? 0;
 

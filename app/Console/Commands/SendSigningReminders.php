@@ -37,11 +37,29 @@ class SendSigningReminders extends Command
         $mailer = app(GraphMailService::class);
 
         foreach ($requests as $signingRequest) {
+            // Several documents sent together: remind once, for the first one still
+            // unsigned (its signing flow leads on to the rest). The others are marked
+            // as reminded too, so they don't fire a burst of reminders later.
+            if ($signingRequest->isBatched()) {
+                $firstOpen = DocumentSigningRequest::where('batch_uuid', $signingRequest->batch_uuid)
+                    ->where('status', 'pending')
+                    ->where('expires_at', '>', now())
+                    ->orderBy('batch_position')
+                    ->orderBy('id')
+                    ->first();
+
+                if ($firstOpen && $firstOpen->id !== $signingRequest->id) {
+                    $signingRequest->update([
+                        'reminder_sent_at' => now(),
+                        'reminder_count'   => $signingRequest->reminder_count + 1,
+                    ]);
+                    continue;
+                }
+            }
+
             (new SignatureReminderMail($signingRequest))->send();
 
-            $documentLabel  = $signingRequest->document_type === 'flooring_selection'
-                ? 'Flooring Selection'
-                : 'Work Authorization';
+            $documentLabel  = $signingRequest->documentLabel();
             $reminderNumber = $signingRequest->reminder_count + 1;
 
             $mailer->send(

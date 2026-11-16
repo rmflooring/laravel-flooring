@@ -12,5 +12,20 @@
         <p class="text-gray-500 text-sm">
             A copy of your signed document has been sent to <strong>{{ $signingRequest->client_email }}</strong>.
         </p>
+
+        @if ($nextRequest)
+            <div class="mt-8 mx-auto max-w-md rounded-xl border border-blue-200 bg-blue-50 p-6 text-left">
+                <p class="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-1">{{ $remainingCount > 1 ? 'Next — ' . $remainingCount . ' documents left to sign' : 'One more document to sign' }}</p>
+                <p class="text-lg font-semibold text-gray-900 mb-4">{{ $nextRequest->documentLabel() }}</p>
+                <a href="{{ route('sign.show', $nextRequest->uuid) }}"
+                   class="block w-full rounded-lg bg-blue-700 px-5 py-3 text-center text-base font-semibold text-white hover:bg-blue-800">
+                    Review &amp; Sign Next Document →
+                </a>
+            </div>
+        @endif
+
+        @if (! $nextRequest && $signingRequest->isBatched())
+            <p class="mt-6 text-sm font-medium text-green-700">That's everything — all your documents are signed.</p>
+        @endif
     </div>
 </x-signing-layout>

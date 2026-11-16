@@ -395,6 +395,22 @@
     </script>
 
 @can('manage signing requests')
+<script>
+// Request E-Signature: keep the email's document name in step with the "Also send" ticks
+document.addEventListener('change', function (e) {
+    if (!e.target.matches('#request-signature-modal [data-also-include] input[type=checkbox]')) return;
+    const modal   = document.getElementById('request-signature-modal');
+    const subject = modal.querySelector('input[name="subject"]');
+    const body    = modal.querySelector('textarea[name="body"]');
+    const labels  = ['Flooring Selection'].concat(
+        Array.from(modal.querySelectorAll('[data-also-include] input:checked')).map(cb => cb.dataset.docLabel)
+    );
+    const joined  = labels.length > 1 ? labels.slice(0, -1).join(', ') + ' and ' + labels[labels.length - 1] : labels[0];
+    const prev    = modal.dataset.docLabelJoined || 'Flooring Selection';
+    [subject, body].forEach(el => { if (el) el.value = el.value.split(prev).join(joined); });
+    modal.dataset.docLabelJoined = joined;
+});
+</script>
 <div id="request-signature-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
@@ -417,6 +433,8 @@
                 <input type="email" name="client_email" value="{{ $signOff->job_site_email }}" required
                        class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             </div>
+
+            <x-signing.also-include :documents="$alsoSignable" first="Flooring Selection" />
 
             <hr class="border-gray-200 dark:border-gray-700 mb-4">
 

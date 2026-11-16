@@ -50,6 +50,18 @@
             </label>
         </div>
 
+        {{-- E-signature --}}
+        <div class="flex items-start gap-3 pt-6">
+            <input type="hidden" name="allows_esignature" value="0">
+            <input type="checkbox" id="allows_esignature" name="allows_esignature" value="1"
+                   {{ old('allows_esignature', $template?->allows_esignature) ? 'checked' : '' }}
+                   class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+            <label for="allows_esignature" class="text-sm text-gray-700 dark:text-gray-300">
+                Can be sent for e-signature
+                <span class="block text-xs text-gray-400 dark:text-gray-500">Shows "Request Signature" on documents generated from this template</span>
+            </label>
+        </div>
+
         {{-- Active --}}
         <div class="flex items-start gap-3 pt-6">
             <input type="hidden" name="is_active" value="0">

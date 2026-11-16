@@ -16,7 +16,10 @@ class SigningController extends Controller
         $signingRequest = DocumentSigningRequest::where('uuid', $uuid)->firstOrFail();
 
         if ($signingRequest->isSigned() || $signingRequest->isCancelled()) {
-            return view('signing.already-signed', compact('signingRequest'));
+            // Part of a batch? Point them at whatever's still left to sign
+            $nextRequest = $signingRequest->nextInBatch();
+
+            return view('signing.already-signed', compact('signingRequest', 'nextRequest'));
         }
 
         if ($signingRequest->isExpired() || $signingRequest->expires_at->isPast()) {
@@ -33,7 +36,12 @@ class SigningController extends Controller
             ]);
         }
 
-        return view('signing.show', compact('signingRequest'));
+        // "Document 2 of 3" when several documents were sent together
+        $batchMembers = $signingRequest->batchMembers();
+        $batchIndex   = $batchMembers->search(fn ($r) => $r->id === $signingRequest->id) + 1;
+        $batchCount   = $batchMembers->count();
+
+        return view('signing.show', compact('signingRequest', 'batchIndex', 'batchCount'));
     }
 
     public function document(string $uuid)
@@ -94,6 +102,13 @@ class SigningController extends Controller
         (new DocumentSignedClientMail($signingRequest))->send();
         (new DocumentSignedAdminMail($signingRequest))->send();
 
-        return view('signing.thank-you', compact('signingRequest'));
+        // Several documents sent together — send them on to the next one
+        $nextRequest    = $signingRequest->nextInBatch();
+        $remainingCount = $signingRequest->isBatched()
+            ? DocumentSigningRequest::where('batch_uuid', $signingRequest->batch_uuid)
+                ->where('status', 'pending')->where('expires_at', '>', now())->count()
+            : 0;
+
+        return view('signing.thank-you', compact('signingRequest', 'nextRequest', 'remainingCount'));
     }
 }

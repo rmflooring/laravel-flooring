@@ -13,6 +13,7 @@ class DocumentTemplate extends Model
         'description',
         'body',
         'needs_sale',
+        'allows_esignature',
         'special_flow',
         'is_active',
         'sort_order',
@@ -22,6 +23,7 @@ class DocumentTemplate extends Model
 
     protected $casts = [
         'needs_sale' => 'boolean',
+        'allows_esignature' => 'boolean',
         'is_active'  => 'boolean',
         'sort_order' => 'integer',
     ];
