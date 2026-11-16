@@ -268,7 +268,8 @@
 
                         @if ($pickTicket->notes)
                             <div class="border-t border-gray-100 px-6 py-3 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                                <span class="font-medium">Notes:</span> {{ $pickTicket->notes }}
+                                <span class="font-medium">Notes:</span>
+                                <div class="mt-0.5 whitespace-pre-line text-gray-700 dark:text-gray-300">{{ $pickTicket->notes }}</div>
                             </div>
                         @endif
                     </div>
@@ -311,6 +312,15 @@
                                         </span>
                                     </label>
                                 @endforeach
+                            </div>
+                            <div class="border-t border-blue-100 px-6 py-4 dark:border-blue-900/50">
+                                <label for="add-items-notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Notes for the warehouse <span class="font-normal text-gray-400">(optional)</span>
+                                </label>
+                                <textarea id="add-items-notes" name="notes" rows="2" maxlength="1000"
+                                          placeholder="e.g. Not in inventory, but there's a leftover box on shelf B3"
+                                          class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">{{ old('notes') }}</textarea>
+                                <p class="mt-1 text-xs text-gray-400">Added to this pick ticket's notes, with the date, your name and the items &mdash; shown on the pick ticket, the mobile warehouse view and the printed ticket.</p>
                             </div>
                             <div class="flex justify-end border-t border-blue-100 px-6 py-4 dark:border-blue-900/50">
                                 <button type="submit"

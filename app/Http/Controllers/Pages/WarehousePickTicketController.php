@@ -185,6 +185,7 @@ class WarehousePickTicketController extends Controller
         $request->validate([
             'sale_item_ids'   => ['required', 'array', 'min:1'],
             'sale_item_ids.*' => ['required', 'integer'],
+            'notes'           => ['nullable', 'string', 'max:1000'],
         ]);
 
         $existingSaleItemIds = $pickTicket->items()->pluck('sale_item_id')->filter()->toArray();
@@ -222,7 +223,18 @@ class WarehousePickTicketController extends Controller
             ]);
         }
 
-        return back()->with('success', $saleItems->count() . ' ' . \Str::plural('item', $saleItems->count()) . ' added to pick ticket.');
+        // Optional note for the warehouse (e.g. "not in inventory, leftover box on
+        // shelf B3"). Appended to the ticket's notes — shown on the pick ticket page,
+        // the mobile warehouse view and the printed ticket — with who/when/which items.
+        $note = trim((string) $request->input('notes'));
+        if ($note !== '') {
+            $itemNames = $saleItems->map(fn ($i) => implode(' ', array_filter([$i->manufacturer, $i->style])) ?: ($i->product_type ?: 'Material'))->implode(', ');
+            $entry = now()->timezone('America/Vancouver')->format('M j') . ' · ' . (auth()->user()?->name ?? 'Staff')
+                . ' — Added ' . $itemNames . ': ' . $note;
+            $pickTicket->update(['notes' => trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . $entry)]);
+        }
+
+        return back()->with('success', $saleItems->count() . ' ' . \Str::plural('item', $saleItems->count()) . ' added to pick ticket.' . ($note !== '' ? ' Note saved.' : ''));
     }
 
     public function updateItem(Request $request, PickTicket $pickTicket, PickTicketItem $item): RedirectResponse

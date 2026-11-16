@@ -501,13 +501,13 @@ class PickTicketService
                     'status'       => 'delivered',
                     'delivered_at' => $pickTicket->delivered_at ?? $now,
                     'returned_at'  => null,
-                    'notes'        => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                    'notes'        => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
                 ]);
             } else {
                 $pickTicket->update([
                     'status'       => 'partially_delivered',
                     'delivered_at' => $pickTicket->delivered_at ?? $now, // stamp first partial delivery
-                    'notes'        => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                    'notes'        => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
                 ]);
             }
 
@@ -574,7 +574,7 @@ class PickTicketService
                 $pickTicket->update([
                     'status'      => 'partially_delivered',
                     'returned_at' => $pickTicket->returned_at ?? $now,
-                    'notes'       => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                    'notes'       => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
                 ]);
             } elseif ($anyStillOut) {
                 // Delivery was complete; some (not all) of it has since come back.
@@ -583,7 +583,7 @@ class PickTicketService
                 $pickTicket->update([
                     'status'      => 'delivered',
                     'returned_at' => $pickTicket->returned_at ?? $now,
-                    'notes'       => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                    'notes'       => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
                 ]);
             } else {
                 // All items fully returned — clear released_at on allocations
@@ -599,7 +599,7 @@ class PickTicketService
                 $pickTicket->update([
                     'status'      => 'returned',
                     'returned_at' => $pickTicket->returned_at ?? $now,
-                    'notes'       => $noteParts ? implode("\n", $noteParts) : $pickTicket->notes,
+                    'notes'       => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
                 ]);
             }
         });
