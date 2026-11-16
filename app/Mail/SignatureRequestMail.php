@@ -14,17 +14,22 @@ class SignatureRequestMail
         protected ?string $customBody = null,
     ) {}
 
+    /** System Email Template used for a signing request of this document type. */
+    public static function templateTypeFor(string $documentType): string
+    {
+        return match ($documentType) {
+            'flooring_selection'   => 'signature_request_flooring',
+            'work_auth'            => 'signature_request_work_auth',
+            default                => 'signature_request_document',
+        };
+    }
+
     public function send(): bool
     {
         $mailer  = app(GraphMailService::class);
         $service = app(EmailTemplateService::class);
 
-        $templateType = match ($this->signingRequest->document_type) {
-            'flooring_selection'   => 'signature_request_flooring',
-            'work_auth'            => 'signature_request_work_auth',
-            'opportunity_document' => 'signature_request_document',
-            default                => 'signature_request_document',
-        };
+        $templateType = self::templateTypeFor($this->signingRequest->document_type);
 
         // A batch (several documents in one email) is described as a whole
         $members       = $this->signingRequest->batchMembers();

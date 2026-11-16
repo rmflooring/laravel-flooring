@@ -261,7 +261,12 @@ class WorkOrderController extends Controller
         $billableQty = $billableQuantityService->forWorkOrder($workOrder);
         $hasRemainingToBill = $billableQuantityService->hasRemainingBillableQty($workOrder);
 
-        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody', 'customerContacts', 'bills', 'billableQty', 'hasRemainingToBill'));
+        // Request E-Signature modal: pre-filled email from the Work Authorization template
+        $signatureEmailPreview = app(\App\Services\DocumentSigningRequestService::class)->emailPreview(
+            'work_auth', (string) ($sale->homeowner_name ?? $sale->customer_name), 'Work Authorization'
+        );
+
+        return view('pages.work-orders.show', compact('sale', 'workOrder', 'stagingPickTicket', 'materialWarnings', 'emailSubject', 'emailBody', 'customerContacts', 'bills', 'billableQty', 'hasRemainingToBill', 'signatureEmailPreview'));
     }
 
     private function resolveEmailTemplate(WorkOrder $workOrder, Sale $sale): array

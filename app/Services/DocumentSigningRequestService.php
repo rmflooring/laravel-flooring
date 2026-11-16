@@ -10,6 +10,7 @@ use App\Models\OpportunityDocument;
 use App\Models\Setting;
 use App\Models\WorkOrder;
 use App\Services\DocumentTemplateService;
+use App\Services\EmailTemplateService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -93,14 +94,17 @@ class DocumentSigningRequestService
     }
 
     /**
-     * Documents on an opportunity that can be sent for e-signature right now:
-     * flooring sign-offs, and generated documents whose template allows it
-     * (e.g. the Work Authorization Form). Anything already awaiting a signature
-     * or already signed is left out.
+     * Documents on an opportunity that can be sent for e-signature: flooring
+     * sign-offs, and generated documents whose template allows it (e.g. the
+     * Work Authorization Form).
      *
-     * @return \Illuminate\Support\Collection<int, array{key: string, type: string, id: int, label: string}>
+     * Each item has a `status`: null = can be sent now, 'pending' = already
+     * awaiting a signature, 'signed' = already signed. Unavailable ones are left
+     * out unless $includeUnavailable (the modal shows them greyed out).
+     *
+     * @return \Illuminate\Support\Collection<int, array{key: string, type: string, id: int, label: string, status: ?string}>
      */
-    public function signableDocumentsForOpportunity(int $opportunityId, ?string $exceptKey = null)
+    public function signableDocumentsForOpportunity(int $opportunityId, ?string $exceptKey = null, bool $includeUnavailable = false)
     {
         $docs = collect();
 
@@ -129,20 +133,54 @@ class DocumentSigningRequestService
             ]);
         }
 
-        // Drop anything already out for signature or signed
-        $taken = DocumentSigningRequest::whereIn('status', ['pending', 'signed'])
+        $docs = $docs->reject(fn ($d) => $d['key'] === $exceptKey)->values();
+        if ($docs->isEmpty()) {
+            return $docs;
+        }
+
+        // Status of anything already out for signature or signed ('signed' wins)
+        $taken = [];
+        DocumentSigningRequest::whereIn('status', ['pending', 'signed'])
             ->where(function ($q) use ($docs) {
                 foreach ($docs->groupBy('type') as $type => $group) {
                     $q->orWhere(fn ($q) => $q->where('document_type', $type)->whereIn('document_id', $group->pluck('id')));
                 }
             })
-            ->get(['document_type', 'document_id'])
-            ->map(fn ($r) => $r->document_type . ':' . $r->document_id)
-            ->all();
+            ->get(['document_type', 'document_id', 'status'])
+            ->each(function ($r) use (&$taken) {
+                $key = $r->document_type . ':' . $r->document_id;
+                if (($taken[$key] ?? null) !== 'signed') {
+                    $taken[$key] = $r->status;
+                }
+            });
 
-        return $docs
-            ->reject(fn ($d) => in_array($d['key'], $taken, true) || $d['key'] === $exceptKey)
-            ->values();
+        $docs = $docs->map(fn ($d) => $d + ['status' => $taken[$d['key']] ?? null]);
+
+        return $includeUnavailable ? $docs : $docs->whereNull('status')->values();
+    }
+
+    /**
+     * Pre-filled subject/body for the Request E-Signature modal, from the same
+     * System Email Template the email itself uses. {{signing_link_button}},
+     * {{signing_link}} and {{expires_date}} are left in — they're resolved when
+     * the request is actually sent.
+     *
+     * @return array{subject: string, body: string}
+     */
+    public function emailPreview(string $documentType, string $clientName, string $documentLabel, string $jobSiteName = ''): array
+    {
+        $templates = app(EmailTemplateService::class);
+        $template  = $templates->getTemplate(null, SignatureRequestMail::templateTypeFor($documentType));
+        $vars      = [
+            'client_name'    => $clientName,
+            'job_site_name'  => $jobSiteName,
+            'document_label' => $documentLabel,
+        ];
+
+        return [
+            'subject' => $templates->render($template['subject'], $vars),
+            'body'    => $templates->render($template['body'], $vars),
+        ];
     }
 
     public function storePendingPdf(DocumentSigningRequest $request): string

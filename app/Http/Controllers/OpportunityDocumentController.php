@@ -602,15 +602,22 @@ public function index(Opportunity $opportunity, Request $request)
             ->first();
 
         // Other documents on this job that can go out in the same signing email
-        $alsoSignable = $template?->allows_esignature
-            ? app(\App\Services\DocumentSigningRequestService::class)
-                ->signableDocumentsForOpportunity($opportunity->id, 'opportunity_document:' . $document->id)
+        $signingService = app(\App\Services\DocumentSigningRequestService::class);
+        $alsoSignable   = $template?->allows_esignature
+            ? $signingService->signableDocumentsForOpportunity($opportunity->id, 'opportunity_document:' . $document->id, includeUnavailable: true)
             : collect();
+
+        // Request E-Signature modal defaults (client = job site customer)
+        $signatureClientName   = $opportunity->jobSiteCustomer?->name ?? $opportunity->parentCustomer?->name ?? '';
+        $signatureEmailPreview = $signingService->emailPreview(
+            'opportunity_document', $signatureClientName, $document->original_name, $opportunity->jobSiteCustomer?->name ?? ''
+        );
 
         return view('pages.opportunities.documents.show-generated', compact(
             'opportunity', 'document', 'template',
             'jobSiteEmail', 'pmEmail', 'customerContacts',
             'emailSubject', 'emailBody', 'signingRequest', 'alsoSignable',
+            'signatureClientName', 'signatureEmailPreview',
         ));
     }
 

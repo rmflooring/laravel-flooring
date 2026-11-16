@@ -395,78 +395,12 @@
     </script>
 
 @can('manage signing requests')
-<script>
-// Request E-Signature: keep the email's document name in step with the "Also send" ticks
-document.addEventListener('change', function (e) {
-    if (!e.target.matches('#request-signature-modal [data-also-include] input[type=checkbox]')) return;
-    const modal   = document.getElementById('request-signature-modal');
-    const subject = modal.querySelector('input[name="subject"]');
-    const body    = modal.querySelector('textarea[name="body"]');
-    const labels  = ['Flooring Selection'].concat(
-        Array.from(modal.querySelectorAll('[data-also-include] input:checked')).map(cb => cb.dataset.docLabel)
-    );
-    const joined  = labels.length > 1 ? labels.slice(0, -1).join(', ') + ' and ' + labels[labels.length - 1] : labels[0];
-    const prev    = modal.dataset.docLabelJoined || 'Flooring Selection';
-    [subject, body].forEach(el => { if (el) el.value = el.value.split(prev).join(joined); });
-    modal.dataset.docLabelJoined = joined;
-});
-</script>
-<div id="request-signature-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Request E-Signature</h3>
-            <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
-                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
-        </div>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            The client will receive an email with a link to review and sign this Flooring Selection document. The link expires in 10 days.
-        </p>
-        <form method="POST" action="{{ route('pages.opportunities.sign-offs.request-signature', [$opportunity->id, $signOff->id]) }}">
-            @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name</label>
-                <input type="text" name="client_name" value="{{ $signOff->job_site_name ?: $signOff->customer_name }}" required
-                       class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Email</label>
-                <input type="email" name="client_email" value="{{ $signOff->job_site_email }}" required
-                       class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-            </div>
-
-            <x-signing.also-include :documents="$alsoSignable" first="Flooring Selection" />
-
-            <hr class="border-gray-200 dark:border-gray-700 mb-4">
-
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Subject</label>
-                <input type="text" name="subject" value="{{ $signatureEmailPreview['subject'] }}" required
-                       class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-            </div>
-            <div class="mb-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Body</label>
-                <textarea name="body" rows="10" required
-                          class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white font-mono">{{ $signatureEmailPreview['body'] }}</textarea>
-            </div>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mb-6">
-                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">@{{signing_link_button}}</code>,
-                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">@{{signing_link}}</code> and
-                <code class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700">@{{expires_date}}</code>
-                are placeholders filled in automatically when the email is sent &mdash; leave them as-is.
-            </p>
-
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="document.getElementById('request-signature-modal').classList.add('hidden')"
-                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                    Cancel
-                </button>
-                <button type="submit"
-                        class="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300">
-                    Send Signature Request
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+<x-signing.request-modal
+    :action="route('pages.opportunities.sign-offs.request-signature', [$opportunity->id, $signOff->id])"
+    document-name="Flooring Selection"
+    :client-name="$signOff->job_site_name ?: $signOff->customer_name"
+    :client-email="$signOff->job_site_email"
+    :preview="$signatureEmailPreview"
+    :also-signable="$alsoSignable" />
 @endcan
 </x-app-layout>
