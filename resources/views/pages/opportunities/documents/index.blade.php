@@ -509,7 +509,7 @@
                                            data-trashed="{{ $doc->trashed() ? '1' : '0' }}">
                                 </td>
 
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3" style="white-space:normal; width:17rem; max-width:17rem;">
                                     <div class="flex items-center gap-3">
                                         @if($isImage)
                                             <img src="{{ $docUrl }}"
@@ -526,7 +526,9 @@
                                             </div>
                                         @endif
                                         <div class="min-w-0">
-                                            <div class="truncate font-medium text-gray-900 dark:text-white">
+                                            <div class="font-medium text-gray-900 dark:text-white"
+                                                 title="{{ $doc->original_name }}"
+                                                 style="word-break:break-all; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
                                                 {{ $doc->original_name }}
                                             </div>
                                             <div class="truncate text-xs text-gray-500 dark:text-gray-300">
@@ -536,7 +538,7 @@
                                     </div>
                                 </td>
 
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3" style="min-width:12rem;">
                                     @if(!$doc->trashed())
                                         <form method="POST" action="{{ route('pages.opportunities.documents.update', [$opportunity->id, $doc->id]) }}">
                                             @csrf
@@ -578,7 +580,7 @@
                                 </td>
 
                                 @if ($tags->isNotEmpty())
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3" style="min-width:10rem;">
                                     @if(!$doc->trashed())
                                         @php $docTagIds = $doc->tags->pluck('id'); @endphp
                                         <select multiple size="3"
