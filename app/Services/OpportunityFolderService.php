@@ -50,7 +50,6 @@ class OpportunityFolderService
         foreach ($docs as $doc) {
             $changed  = false;
             $newPath  = $doc->path;
-            $newThumb = $doc->thumbnail_path;
 
             if ($doc->path) {
                 $parts = explode('/', $doc->path, 3);
@@ -67,24 +66,28 @@ class OpportunityFolderService
                 }
             }
 
-            if ($doc->thumbnail_path) {
-                $parts = explode('/', $doc->thumbnail_path, 3);
+            $newThumbs = [];
+            foreach (['thumbnail_path', 'thumbnail_sm_path'] as $col) {
+                $thumb = $doc->{$col};
+                if (! $thumb) {
+                    continue;
+                }
+                $parts = explode('/', $thumb, 3);
                 if (count($parts) === 3 && $parts[0] === 'opportunities' && $parts[1] !== $newFolderName) {
-                    $newThumb = "opportunities/{$newFolderName}/" . $parts[2];
-                    $disk     = Storage::disk($doc->disk);
-                    if ($disk->exists($doc->thumbnail_path)) {
-                        $disk->move($doc->thumbnail_path, $newThumb);
-                        DocumentStorageService::forceOpenPermissions($doc->disk, $newThumb);
+                    $newThumbs[$col] = "opportunities/{$newFolderName}/" . $parts[2];
+                    $disk = Storage::disk($doc->disk);
+                    if ($disk->exists($thumb)) {
+                        $disk->move($thumb, $newThumbs[$col]);
+                        DocumentStorageService::forceOpenPermissions($doc->disk, $newThumbs[$col]);
                     }
                     $changed = true;
                 }
             }
 
             if ($changed) {
-                OpportunityDocument::withoutTimestamps(fn () => $doc->update([
-                    'path'           => $newPath,
-                    'thumbnail_path' => $newThumb,
-                ]));
+                OpportunityDocument::withoutTimestamps(fn () => $doc->update(array_merge([
+                    'path' => $newPath,
+                ], $newThumbs)));
                 $anyMoved = true;
             }
         }

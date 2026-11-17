@@ -41,7 +41,7 @@
                         data-date="{{ $doc->created_at?->format('M j, Y g:i A') }}"
                         class="relative aspect-square w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 focus:outline-none active:scale-95 transition-transform"
                         onclick="openPhoto(this)">
-                    <img src="{{ $doc->url }}"
+                    <img src="{{ $doc->grid_url }}"
                          alt="{{ $doc->original_name }}"
                          loading="lazy"
                          decoding="async"

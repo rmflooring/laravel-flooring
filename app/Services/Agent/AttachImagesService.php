@@ -7,6 +7,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Services\Agent\Concerns\ValidatesAgentAttachments;
 use App\Services\DocumentStorageService;
+use App\Services\MediaThumbnailService;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -127,6 +128,8 @@ class AttachImagesService
             'updated_by' => $task->requester_user_id,
         ]);
         // OpportunityDocument::booted() already queues the OneDrive mirror on create.
+
+        app(MediaThumbnailService::class)->generate($document);
 
         return $document->id;
     }

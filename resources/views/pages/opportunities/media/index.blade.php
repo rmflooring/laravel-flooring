@@ -261,21 +261,60 @@
 </div>
 
 {{-- Thumbnail Grid --}}
+@php
+    $tileMin  = ['small' => 110, 'medium' => 170, 'large' => 260][$view];
+    $tileGap  = $view === 'small' ? 6 : 12;
+    $relPath  = fn (?string $u) => $u ? (parse_url($u, PHP_URL_PATH) ?: $u) : null;
+@endphp
 <div class="bg-white border border-gray-200 rounded-lg p-4">
+    {{-- View size toggle --}}
+    <div class="mb-3 flex items-center justify-between gap-3">
+        <p class="text-xs text-gray-500">
+            @if ($media->total() > 0)
+                Showing {{ $media->firstItem() }}–{{ $media->lastItem() }} of {{ $media->total() }}
+            @endif
+        </p>
+        <div class="inline-flex rounded-lg border border-gray-300 bg-white p-0.5 text-xs font-medium" role="group" aria-label="Thumbnail size">
+            @foreach (['small' => 'Small', 'medium' => 'Medium', 'large' => 'Large'] as $size => $sizeLabel)
+                <a href="{{ request()->fullUrlWithQuery(['view' => $size, 'page' => null]) }}"
+                   class="inline-flex items-center gap-1 rounded-md px-2.5 py-1"
+                   style="{{ $view === $size ? 'background:#1f2937;color:#fff;' : 'color:#374151;' }}"
+                   @if ($view === $size) aria-current="true" @endif>
+                    @if ($size === 'small')
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><rect x="1" y="1" width="4" height="4" rx=".5"/><rect x="6" y="1" width="4" height="4" rx=".5"/><rect x="11" y="1" width="4" height="4" rx=".5"/><rect x="1" y="6" width="4" height="4" rx=".5"/><rect x="6" y="6" width="4" height="4" rx=".5"/><rect x="11" y="6" width="4" height="4" rx=".5"/><rect x="1" y="11" width="4" height="4" rx=".5"/><rect x="6" y="11" width="4" height="4" rx=".5"/><rect x="11" y="11" width="4" height="4" rx=".5"/></svg>
+                    @elseif ($size === 'medium')
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><rect x="1" y="1" width="6.5" height="6.5" rx=".75"/><rect x="8.5" y="1" width="6.5" height="6.5" rx=".75"/><rect x="1" y="8.5" width="6.5" height="6.5" rx=".75"/><rect x="8.5" y="8.5" width="6.5" height="6.5" rx=".75"/></svg>
+                    @else
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="1"/></svg>
+                    @endif
+                    {{ $sizeLabel }}
+                </a>
+            @endforeach
+        </div>
+    </div>
+
     @if ($media->count() < 1)
         <p class="text-sm text-gray-600">No media found for this opportunity.</p>
     @else
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax({{ $tileMin }}px, 1fr)); gap:{{ $tileGap }}px;">
             @foreach ($media as $doc)
                 @php
-                    $url          = parse_url($doc->url, PHP_URL_PATH) ?: $doc->url;
-                    $thumbUrl     = $doc->thumbnail_path ? (parse_url($doc->thumbnailUrl, PHP_URL_PATH) ?: $doc->thumbnailUrl) : $url;
+                    $url          = $relPath($doc->url);
+                    $isSvg        = ($doc->mime_type ?? '') === 'image/svg+xml';
+                    // Small view uses the ~300px thumb; medium/large the ~600px one. Never the full file
+                    // (SVGs are tiny, so they're the exception). No thumb → placeholder tile.
+                    $thumbUrl     = $view === 'small'
+                        ? ($relPath($doc->smallThumbnailUrl) ?? $relPath($doc->thumbnailUrl))
+                        : ($relPath($doc->thumbnailUrl) ?? $relPath($doc->smallThumbnailUrl));
+                    if (! $thumbUrl && $isSvg) {
+                        $thumbUrl = $url;
+                    }
                     $isVideo      = str_starts_with($doc->mime_type ?? '', 'video/');
                     $uploaderName = $doc->creator?->name ?? 'Unknown';
                     $uploadedAt   = $doc->created_at?->format('M j, Y g:i A') ?? '';
                     $tagNames     = $doc->tags->pluck('name');
                 @endphp
-                <div class="relative group aspect-square">
+                <div class="relative group aspect-square" title="{{ $doc->original_name }}">
                     {{-- Selection checkbox (shown in select mode via CSS) --}}
                     <div class="tile-check-wrap absolute top-1.5 left-1.5 z-10"
                          onclick="event.stopPropagation()">
@@ -303,15 +342,22 @@
                             <div class="absolute inset-0 flex items-center justify-center">
                                 <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/80 border border-gray-200">▶</div>
                             </div>
-                        @else
+                        @elseif ($thumbUrl)
                             <img src="{{ $thumbUrl }}"
                                  alt="{{ $doc->original_name }}"
                                  loading="lazy"
                                  decoding="async"
                                  class="h-full w-full object-cover">
+                        @else
+                            <div class="flex h-full w-full flex-col items-center justify-center gap-1 text-gray-400">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"/></svg>
+                                @if ($view !== 'small')
+                                    <span class="text-[10px] uppercase tracking-wide">{{ strtoupper($doc->extension ?: 'image') }} · no preview</span>
+                                @endif
+                            </div>
                         @endif
 
-                        @if ($tagNames->isNotEmpty())
+                        @if ($tagNames->isNotEmpty() && $view !== 'small')
                             <div class="absolute top-1.5 right-1.5 z-10 max-w-[85%] flex flex-wrap justify-end gap-1">
                                 @foreach ($tagNames->take(2) as $tagName)
                                     <span class="inline-flex items-center rounded bg-purple-600/90 px-1.5 py-0.5 text-[9px] font-medium text-white truncate max-w-full">{{ $tagName }}</span>
@@ -322,10 +368,12 @@
                             </div>
                         @endif
 
-                        <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] px-1.5 py-1">
+                        @if ($view !== 'small')
+                        <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white px-1.5 py-1 {{ $view === 'large' ? 'text-xs' : 'text-[10px]' }}">
                             <div class="truncate font-medium">{{ $doc->original_name }}</div>
                             <div class="truncate opacity-80">{{ $uploaderName }} &middot; {{ $doc->created_at?->format('M j, Y') }}</div>
                         </div>
+                        @endif
                     </button>
                 </div>
             @endforeach

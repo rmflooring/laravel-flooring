@@ -59,7 +59,6 @@ class MigrateOpportunityFolders extends Command
                 $disk = Storage::disk($doc->disk);
 
                 $newPath      = $doc->path;
-                $newThumbPath = $doc->thumbnail_path;
                 $changed      = false;
 
                 // Move main file
@@ -75,22 +74,23 @@ class MigrateOpportunityFolders extends Command
                     $changed = true;
                 }
 
-                // Move thumbnail
-                if ($doc->thumbnail_path && str_starts_with($doc->thumbnail_path, $oldPrefix . '/')) {
-                    $newThumbPath = $newPrefix . '/' . basename($doc->thumbnail_path);
-                    if (! $dryRun) {
-                        if ($disk->exists($doc->thumbnail_path)) {
-                            $disk->move($doc->thumbnail_path, $newThumbPath);
+                // Move thumbnails (gallery ~600px and compact ~300px)
+                $newThumbs = [];
+                foreach (['thumbnail_path', 'thumbnail_sm_path'] as $col) {
+                    $thumb = $doc->{$col};
+                    if ($thumb && str_starts_with($thumb, $oldPrefix . '/')) {
+                        $newThumbs[$col] = $newPrefix . '/' . basename($thumb);
+                        if (! $dryRun && $disk->exists($thumb)) {
+                            $disk->move($thumb, $newThumbs[$col]);
                         }
+                        $changed = true;
                     }
-                    $changed = true;
                 }
 
                 if ($changed && ! $dryRun) {
-                    OpportunityDocument::withoutTimestamps(fn() => $doc->update([
-                        'path'           => $newPath,
-                        'thumbnail_path' => $newThumbPath,
-                    ]));
+                    OpportunityDocument::withoutTimestamps(fn() => $doc->update(array_merge([
+                        'path' => $newPath,
+                    ], $newThumbs)));
                 }
 
                 $moved++;

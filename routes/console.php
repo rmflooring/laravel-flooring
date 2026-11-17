@@ -168,3 +168,10 @@ Schedule::command('opportunities:sync-requires-rfm')
 
 // Web orders: remind customers whose order has been ready for pickup past the hold period (Admin → Shop Settings)
 Schedule::command('web-orders:remind')->dailyAt('10:00')->timezone('America/Vancouver')->name('web-orders-remind')->withoutOverlapping();
+
+// Media gallery thumbnails — catch any image uploaded without one (failed images aren't retried)
+Schedule::command('media:generate-thumbnails')
+    ->dailyAt('02:30')
+    ->timezone('America/Vancouver')
+    ->name('media-generate-thumbnails')
+    ->withoutOverlapping();

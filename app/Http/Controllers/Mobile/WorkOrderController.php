@@ -7,6 +7,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Models\WorkOrder;
 use App\Services\DocumentStorageService;
+use App\Services\MediaThumbnailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -75,7 +76,7 @@ class WorkOrderController extends Controller
             $path = $file->store("opportunities/{$opportunity->storageFolderName()}", $disk);
             DocumentStorageService::forceOpenPermissions($disk, $path);
 
-            OpportunityDocument::create([
+            $doc = OpportunityDocument::create([
                 'opportunity_id' => $opportunity->id,
                 'disk'           => $disk,
                 'path'           => $path,
@@ -88,6 +89,8 @@ class WorkOrderController extends Controller
                 'created_by'     => $userId,
                 'updated_by'     => $userId,
             ]);
+
+            app(MediaThumbnailService::class)->generate($doc, $file->getRealPath());
 
             $count++;
         }

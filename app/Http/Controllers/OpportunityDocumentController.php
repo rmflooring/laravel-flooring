@@ -18,8 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
+use App\Services\MediaThumbnailService;
 
 class OpportunityDocumentController extends Controller
 {
@@ -208,32 +207,10 @@ public function index(Opportunity $opportunity, Request $request)
                     'original'       => $file->getClientOriginalName(),
                 ]);
 
-                // Generate thumbnail for images (skip SVG and video)
-                $thumbnailPath = null;
-                $isThumbableImage = str_starts_with($mime, 'image/') && $ext !== 'svg';
-                if ($isThumbableImage) {
-                    try {
-                        $manager = new ImageManager(new Driver());
-                        $image   = $manager->decodePath($file->getRealPath());
-                        $image->scaleDown(width: 600);
-                        $thumbContents = (string) $image->encodeUsingMediaType('image/jpeg', quality: 80);
-                        $thumbnailPath = "{$folder}/thumb_" . pathinfo($filename, PATHINFO_FILENAME) . '.jpg';
-                        Storage::disk($disk)->put($thumbnailPath, $thumbContents);
-                        DocumentStorageService::forceOpenPermissions($disk, $thumbnailPath);
-                    } catch (\Throwable $e) {
-                        \Log::warning('[docs] thumbnail generation failed', [
-                            'path'    => $path,
-                            'message' => $e->getMessage(),
-                        ]);
-                        $thumbnailPath = null;
-                    }
-                }
-
                 $doc = OpportunityDocument::create([
                     'opportunity_id' => $opportunity->id,
                     'disk'           => $disk,
                     'path'           => $path,
-                    'thumbnail_path' => $thumbnailPath,
                     'original_name'  => $file->getClientOriginalName(),
                     'stored_name'    => basename($path),
                     'mime_type'      => $mime,
@@ -245,6 +222,9 @@ public function index(Opportunity $opportunity, Request $request)
                     'created_by'     => $userId,
                     'updated_by'     => $userId,
                 ]);
+
+                // Gallery thumbnails (from the temp upload, so no re-read from the NAS)
+                app(MediaThumbnailService::class)->generate($doc, $file->getRealPath());
 
                 $tagIdsForFile = array_unique(array_merge(
                     array_map('intval', $fileTagIds[$i] ?? []),
@@ -418,9 +398,7 @@ public function index(Opportunity $opportunity, Request $request)
 			if ($doc->disk && $doc->path) {
 				Storage::disk($doc->disk)->delete($doc->path);
 			}
-			if ($doc->disk && $doc->thumbnail_path) {
-				Storage::disk($doc->disk)->delete($doc->thumbnail_path);
-			}
+			MediaThumbnailService::deleteFiles($doc);
 
 			$doc->forceDelete();
 		}
@@ -486,9 +464,7 @@ public function index(Opportunity $opportunity, Request $request)
         if ($doc->disk && $doc->path) {
             Storage::disk($doc->disk)->delete($doc->path);
         }
-        if ($doc->disk && $doc->thumbnail_path) {
-            Storage::disk($doc->disk)->delete($doc->thumbnail_path);
-        }
+        MediaThumbnailService::deleteFiles($doc);
 
         $doc->forceDelete();
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Opportunity;
 use App\Models\OpportunityDocument;
 use App\Services\DocumentStorageService;
+use App\Services\MediaThumbnailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,10 @@ class PhotoGalleryController extends Controller
             ->map(function ($doc) {
                 $absolute = Storage::disk($doc->disk)->url($doc->path);
                 $doc->url = parse_url($absolute, PHP_URL_PATH) ?: $absolute;
+                // Grid tiles use the ~600px thumbnail; the full photo only loads when tapped.
+                // No thumbnail (e.g. HEIC, which iPhone Safari can still show) → the original.
+                $thumb = $doc->thumbnailUrl ?? $doc->smallThumbnailUrl;
+                $doc->grid_url = $thumb ? (parse_url($thumb, PHP_URL_PATH) ?: $thumb) : $doc->url;
                 return $doc;
             });
 
@@ -44,7 +49,7 @@ class PhotoGalleryController extends Controller
             $disk = DocumentStorageService::disk();
             $path = $file->store("opportunities/{$opportunity->storageFolderName()}", $disk);
 
-            OpportunityDocument::create([
+            $doc = OpportunityDocument::create([
                 'opportunity_id' => $opportunity->id,
                 'disk'           => $disk,
                 'path'           => $path,
@@ -57,6 +62,8 @@ class PhotoGalleryController extends Controller
                 'created_by'     => $userId,
                 'updated_by'     => $userId,
             ]);
+
+            app(MediaThumbnailService::class)->generate($doc, $file->getRealPath());
 
             $count++;
         }

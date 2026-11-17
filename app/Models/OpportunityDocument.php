@@ -29,6 +29,8 @@ class OpportunityDocument extends Model
         'disk',
         'path',
         'thumbnail_path',
+        'thumbnail_sm_path',
+        'thumbnail_failed_at',
         'original_name',
         'stored_name',
         'mime_type',
@@ -49,6 +51,7 @@ class OpportunityDocument extends Model
 
     protected $casts = [
         'document_fields' => 'array',
+        'thumbnail_failed_at' => 'datetime',
     ];
 
     public function getUrlAttribute(): string
@@ -62,6 +65,15 @@ class OpportunityDocument extends Model
             return null;
         }
         return Storage::disk($this->disk)->url($this->thumbnail_path);
+    }
+
+    /** ~300px thumbnail for the compact gallery view. */
+    public function getSmallThumbnailUrlAttribute(): ?string
+    {
+        if (! $this->thumbnail_sm_path) {
+            return null;
+        }
+        return Storage::disk($this->disk)->url($this->thumbnail_sm_path);
     }
 
     public function opportunity()

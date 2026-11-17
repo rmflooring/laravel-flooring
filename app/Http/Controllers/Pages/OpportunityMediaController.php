@@ -7,6 +7,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityDocumentTag;
 use App\Models\OpportunityShare;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 
 class OpportunityMediaController extends Controller
 {
@@ -34,7 +35,19 @@ class OpportunityMediaController extends Controller
             $mediaQuery->whereHas('tags', fn ($q) => $q->where('opportunity_document_tags.id', $tagId));
         }
 
-        $media = $mediaQuery->paginate(30)->withQueryString();
+        // Gallery tile size — small / medium / large, remembered in a browser cookie for a year
+        $perPage = ['small' => 60, 'medium' => 30, 'large' => 24];
+        $view    = $request->input('view');
+        if (isset($perPage[$view])) {
+            Cookie::queue('media_view', $view, 60 * 24 * 365);
+        } else {
+            $view = $request->cookie('media_view');
+            if (! isset($perPage[$view])) {
+                $view = 'medium';
+            }
+        }
+
+        $media = $mediaQuery->paginate($perPage[$view])->withQueryString();
 
         // Build uploader list from all media for this opportunity (unfiltered, for the dropdown)
         $uploaderIds = $opportunity->documents()
@@ -65,6 +78,7 @@ class OpportunityMediaController extends Controller
             'shares'       => $shares,
             'tags'         => $tags,
             'tagId'        => $tagId,
+            'view'         => $view,
         ]);
     }
 }
