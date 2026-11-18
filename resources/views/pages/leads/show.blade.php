@@ -263,7 +263,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h2 class="text-base font-semibold text-gray-900 dark:text-white">Reply History</h2>
-                    @if ($smsConversation)
+                    @if ($smsConversation && auth()->user()->can('view sms inbox'))
                         <a href="{{ route('pages.sms.show', $smsConversation) }}"
                            class="text-xs text-blue-600 hover:underline dark:text-blue-400">View SMS thread →</a>
                     @endif

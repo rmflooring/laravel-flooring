@@ -100,6 +100,7 @@
                 </li>
 
                 {{-- SMS Inbox --}}
+                @can('view sms inbox')
                 <li>
                     <a href="{{ route('pages.sms.index') }}"
                        class="sidebar-link flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 {{ request()->routeIs('pages.sms.*') ? 'bg-gray-100 font-medium dark:bg-gray-800' : '' }}">
@@ -110,6 +111,7 @@
                         <span id="sidebar-sms-badge" class="sidebar-label hidden rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white"></span>
                     </a>
                 </li>
+                @endcan
 
                 {{-- Leads --}}
                 @can('view leads')

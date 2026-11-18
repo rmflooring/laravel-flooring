@@ -2127,8 +2127,8 @@ Route::post('calendar/events/{event}/move', [CalendarEventController::class, 'mo
     Route::post('messages/{thread}/reply', [\App\Http\Controllers\Pages\MessageController::class, 'reply'])
         ->name('messages.reply');
 
-    // SMS Portal
-    Route::prefix('sms')->name('sms.')->group(function () {
+    // SMS Portal — admin, Manager, and any role given "view sms inbox"
+    Route::prefix('sms')->name('sms.')->middleware('role_or_permission:admin|view sms inbox')->group(function () {
         Route::get('/unread-count', [\App\Http\Controllers\Pages\SmsPortalController::class, 'unreadCount'])
             ->name('unread-count');
         Route::get('/api/customers', [\App\Http\Controllers\Pages\SmsPortalController::class, 'searchCustomers'])
@@ -2228,6 +2228,20 @@ Route::prefix('m')->name('mobile.')->group(function () {
 // ─── Mobile views ─────────────────────────────────────────────────────────────
 Route::middleware(['auth.mobile'])->prefix('m')->name('mobile.')->group(function () {
     Route::get('/', fn () => view('mobile.home'))->name('home');
+
+    // SMS inbox on mobile — admin, Manager, and any role given "use sms on mobile"
+    Route::prefix('sms')->name('sms.')->middleware('role_or_permission:admin|use sms on mobile')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Mobile\SmsController::class, 'index'])->name('index');
+        Route::get('/new', [\App\Http\Controllers\Mobile\SmsController::class, 'create'])->name('create');
+        Route::post('/new', [\App\Http\Controllers\Mobile\SmsController::class, 'compose'])->name('compose');
+        Route::get('/api/customers', [\App\Http\Controllers\Pages\SmsPortalController::class, 'searchCustomers'])->name('api.customers');
+        Route::get('/media/{smsMessage}/{index}', [\App\Http\Controllers\Pages\SmsPortalController::class, 'media'])
+            ->whereNumber('index')->name('media');
+        Route::get('/{conversation}', [\App\Http\Controllers\Mobile\SmsController::class, 'show'])->whereNumber('conversation')->name('show');
+        Route::post('/{conversation}/reply', [\App\Http\Controllers\Mobile\SmsController::class, 'reply'])->name('reply');
+        Route::post('/{conversation}/archive', [\App\Http\Controllers\Mobile\SmsController::class, 'archive'])->name('archive');
+        Route::post('/{conversation}/unarchive', [\App\Http\Controllers\Mobile\SmsController::class, 'unarchive'])->name('unarchive');
+    });
 
     Route::get('po/{purchaseOrder}', [\App\Http\Controllers\Mobile\PurchaseOrderController::class, 'show'])
         ->middleware('role_or_permission:admin|view purchase orders')

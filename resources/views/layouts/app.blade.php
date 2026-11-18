@@ -201,6 +201,7 @@
 		            }
 		        } catch (_) {}
 
+		        @can('view sms inbox')
 		        try {
 		            const smsRes = await fetch('{{ route('pages.sms.unread-count') }}', {
 		                headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -210,6 +211,7 @@
 		                updateSmsBadge(smsData.count || 0);
 		            }
 		        } catch (_) {}
+		        @endcan
 		    }
 
 		    poll();

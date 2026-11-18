@@ -816,7 +816,7 @@
             @endcan
 
             {{-- SMS Conversation --}}
-            @isset($smsConversation)
+            @if (isset($smsConversation) && auth()->user()->can('view sms inbox'))
             <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="border-b border-gray-200 p-5 dark:border-gray-700 flex items-center justify-between">
                     <div>
@@ -861,7 +861,7 @@
                     </form>
                 </div>
             </div>
-            @endisset
+            @endif
 
             {{-- Notes & Updates --}}
             <div class="mt-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">

@@ -10,10 +10,8 @@ use App\Models\SmsConversation;
 use App\Models\SmsLog;
 use App\Models\SmsMessage;
 use App\Services\SmsMediaStore;
-use App\Services\SmsService;
-use App\Services\VoipMsSmsService;
+use App\Services\SmsPortalSender;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 
 class SmsPortalController extends Controller
@@ -68,40 +66,17 @@ class SmsPortalController extends Controller
         return view('pages.sms.show', compact('conversation'));
     }
 
-    public function reply(Request $request, SmsConversation $conversation)
+    public function reply(Request $request, SmsConversation $conversation, SmsPortalSender $sender)
     {
-        $validated = $request->validate($this->messageRules(), $this->messageMessages());
-        $body      = $validated['body'] ?? '';
+        $validated = $request->validate($sender->rules(), $sender->messages());
 
-        // Reply through whichever channel this conversation is on, so it goes out as
-        // the same number the customer texted in on.
-        $smsService = $conversation->channel === 'voipms'
-            ? app(VoipMsSmsService::class)
-            : app(SmsService::class);
+        $result = $sender->reply($conversation, $validated['body'] ?? '', $request->file('photos', []));
 
-        $media = $this->storeAttachments($request, $conversation->channel);
-
-        $sent = $media
-            ? $smsService->send($conversation->phone, $body, 'portal_reply', $conversation->customer, $media)
-            : $smsService->send($conversation->phone, $body, 'portal_reply', $conversation->customer);
-
-        if (! $sent) {
-            app(SmsMediaStore::class)->delete($media);
-            return back()->withInput()->with('error', 'Failed to send SMS: ' . ($smsService->lastError ?? 'check SMS settings.'));
+        if (! $result['ok']) {
+            return back()->withInput()->with(...$result['flash']);
         }
 
-        SmsMessage::create([
-            'conversation_id' => $conversation->id,
-            'direction'       => 'outbound',
-            'body'            => $body,
-            'media'           => $media ?: null,
-            'sent_by_id'      => auth()->id(),
-        ] + (($smsService->unconfirmed ?? false) ? ['unconfirmed' => true] : []));
-
-        $conversation->update(['last_message_at' => now()]);
-
-        return redirect()->route('pages.sms.show', $conversation)
-            ->with(...$this->sentFlash($smsService));
+        return redirect()->route('pages.sms.show', $conversation)->with(...$result['flash']);
     }
 
     /**
@@ -120,61 +95,6 @@ class SmsPortalController extends Controller
             'Content-Type'  => $item['mime'],
             'Cache-Control' => 'private, max-age=86400',
         ]);
-    }
-
-    private function messageRules(): array
-    {
-        return [
-            'body'     => 'nullable|string|max:1600|required_without:photos',
-            'photos'   => 'nullable|array|max:' . VoipMsSmsService::MAX_MEDIA,
-            'photos.*' => 'image|mimes:jpeg,jpg,png,gif,webp|max:16384',
-        ];
-    }
-
-    private function messageMessages(): array
-    {
-        return [
-            'body.required_without' => 'Type a message or attach a picture.',
-            'photos.max'            => 'You can attach up to ' . VoipMsSmsService::MAX_MEDIA . ' pictures per message.',
-            'photos.*.image'        => 'Pictures must be JPEG, PNG, GIF or WebP.',
-            'photos.*.mimes'        => 'Pictures must be JPEG, PNG, GIF or WebP.',
-            'photos.*.max'          => 'Each picture must be under 16 MB.',
-        ];
-    }
-
-    /**
-     * Saves attached pictures, shrunk for MMS. Only the VoIP.ms main line can send
-     * pictures — Twilio reminders conversations stay text-only.
-     */
-    private function storeAttachments(Request $request, string $channel): array
-    {
-        $files = $request->file('photos', []);
-        if (! $files) {
-            return [];
-        }
-
-        if ($channel !== 'voipms') {
-            throw ValidationException::withMessages([
-                'photos' => 'Pictures can only be sent from the main line (604-299-4447). This conversation is on the reminders number.',
-            ]);
-        }
-
-        $store = app(SmsMediaStore::class);
-
-        return array_map(fn ($file) => $store->storeUpload($file), $files);
-    }
-
-    /**
-     * A send that timed out may still have gone out — warn instead of claiming success,
-     * so nobody resends and double-texts the customer.
-     */
-    private function sentFlash($smsService): array
-    {
-        if ($smsService->unconfirmed ?? false) {
-            return ['warning', 'VoIP.ms didn\'t respond in time, so this message is unconfirmed. It has probably still gone out — check with the customer before resending.'];
-        }
-
-        return ['success', 'Message sent.'];
     }
 
     public function unreadCount()
@@ -233,55 +153,21 @@ class SmsPortalController extends Controller
         ]));
     }
 
-    public function compose(Request $request)
+    public function compose(Request $request, SmsPortalSender $sender)
     {
         $validated = $request->validate([
             'phone'       => 'required|string|max:20',
             'customer_id' => 'nullable|exists:customers,id',
-        ] + $this->messageRules(), $this->messageMessages());
-        $body = $validated['body'] ?? '';
+        ] + $sender->rules(), $sender->messages());
 
-        $customer   = $validated['customer_id'] ? Customer::find($validated['customer_id']) : null;
-        $normalized = app(SmsService::class)->normalizePhone($validated['phone']);
+        $customer = ($validated['customer_id'] ?? null) ? Customer::find($validated['customer_id']) : null;
+        $result   = $sender->compose($validated['phone'], $customer, $validated['body'] ?? '', $request->file('photos', []));
 
-        // Keep an ongoing thread on whichever channel it's already using; a brand-new
-        // conversation defaults to the shop's main line (VoIP.ms).
-        $existing = SmsConversation::where('phone', $normalized)->first();
-        $channel  = $existing?->channel ?? 'voipms';
-        $smsService = $channel === 'voipms' ? app(VoipMsSmsService::class) : app(SmsService::class);
-
-        $media = $this->storeAttachments($request, $channel);
-
-        $sent = $media
-            ? $smsService->send($normalized, $body, 'portal_outbound', $customer, $media)
-            : $smsService->send($normalized, $body, 'portal_outbound', $customer);
-
-        if (! $sent) {
-            app(SmsMediaStore::class)->delete($media);
-            return back()->withInput()->with('error', 'Failed to send SMS: ' . ($smsService->lastError ?? 'check SMS settings.'));
+        if (! $result['ok']) {
+            return back()->withInput()->with(...$result['flash']);
         }
 
-        $conversation = SmsConversation::firstOrCreate(
-            ['phone' => $normalized],
-            ['status' => 'active', 'channel' => $channel, 'customer_id' => $customer?->id]
-        );
-
-        if ($customer && ! $conversation->customer_id) {
-            $conversation->update(['customer_id' => $customer->id]);
-        }
-
-        SmsMessage::create([
-            'conversation_id' => $conversation->id,
-            'direction'       => 'outbound',
-            'body'            => $body,
-            'media'           => $media ?: null,
-            'sent_by_id'      => auth()->id(),
-        ] + (($smsService->unconfirmed ?? false) ? ['unconfirmed' => true] : []));
-
-        $conversation->update(['last_message_at' => now()]);
-
-        return redirect()->route('pages.sms.show', $conversation)
-            ->with(...$this->sentFlash($smsService));
+        return redirect()->route('pages.sms.show', $result['conversation'])->with(...$result['flash']);
     }
 
     public function linkCustomer(Request $request, SmsConversation $conversation)
