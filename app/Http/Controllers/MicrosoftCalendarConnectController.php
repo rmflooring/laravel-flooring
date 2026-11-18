@@ -420,7 +420,8 @@ foreach ($enabledCalendars as $cal) {
 
         // Map Windows timezone names to IANA (PHP does not recognise Windows names)
         $windowsToIana = [
-            'Pacific Standard Time'  => 'America/Vancouver',
+            // Microsoft's Pacific zone still changes clocks (US rules); BC no longer does
+            'Pacific Standard Time'  => 'America/Los_Angeles',
             'Mountain Standard Time' => 'America/Denver',
             'Central Standard Time'  => 'America/Chicago',
             'Eastern Standard Time'  => 'America/New_York',

@@ -84,13 +84,14 @@ $payload['end'] = [
 ];
         } else {
             $payload['isAllDay'] = false;
+            // UTC, not a named zone — see GraphCalendarService::toGraphUtc()
             $payload['start'] = [
-                'dateTime' => date('Y-m-d\TH:i:s', strtotime($data['start'])),
-                'timeZone' => 'America/Vancouver',
+                'dateTime' => \App\Services\GraphCalendarService::toGraphUtc($data['start']),
+                'timeZone' => 'UTC',
             ];
             $payload['end'] = [
-                'dateTime' => date('Y-m-d\TH:i:s', strtotime($data['end'])),
-                'timeZone' => 'America/Vancouver',
+                'dateTime' => \App\Services\GraphCalendarService::toGraphUtc($data['end']),
+                'timeZone' => 'UTC',
             ];
         }
 

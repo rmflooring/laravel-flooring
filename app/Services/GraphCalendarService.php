@@ -52,6 +52,23 @@ class GraphCalendarService
     }
 
     /**
+     * Event time as a UTC string for Graph.
+     *
+     * We send UTC rather than a named zone: Microsoft's "Pacific Standard Time"
+     * still follows the US clock changes, but BC stays on UTC-7 all year, so a
+     * named zone put winter events an hour late. Carbon times keep their own
+     * zone; plain strings are read as app (BC) wall-clock time.
+     */
+    public static function toGraphUtc(\DateTimeInterface|string $value): string
+    {
+        $dt = $value instanceof \DateTimeInterface
+            ? \Carbon\Carbon::instance($value)
+            : \Carbon\Carbon::parse($value, config('app.timezone'));
+
+        return $dt->copy()->setTimezone('UTC')->format('Y-m-d\TH:i:s');
+    }
+
+    /**
      * Create an event in a Microsoft 365 calendar (group or personal).
      *
      * $eventData keys:
@@ -68,13 +85,8 @@ class GraphCalendarService
     {
         $accessToken = $this->ensureAccessToken($account);
 
-        $start = $eventData['start'] instanceof \Carbon\Carbon
-            ? $eventData['start']->format('Y-m-d\TH:i:s')
-            : date('Y-m-d\TH:i:s', strtotime($eventData['start']));
-
-        $end = $eventData['end'] instanceof \Carbon\Carbon
-            ? $eventData['end']->format('Y-m-d\TH:i:s')
-            : date('Y-m-d\TH:i:s', strtotime($eventData['end']));
+        $start = self::toGraphUtc($eventData['start']);
+        $end   = self::toGraphUtc($eventData['end']);
 
         $payload = [
             'subject' => $eventData['title'],
@@ -82,8 +94,8 @@ class GraphCalendarService
                 'contentType' => 'text',
                 'content'     => $eventData['notes'] ?? '',
             ],
-            'start' => ['dateTime' => $start, 'timeZone' => 'Pacific Standard Time'],
-            'end'   => ['dateTime' => $end,   'timeZone' => 'Pacific Standard Time'],
+            'start' => ['dateTime' => $start, 'timeZone' => 'UTC'],
+            'end'   => ['dateTime' => $end,   'timeZone' => 'UTC'],
         ];
 
         if (!empty($eventData['location'])) {
@@ -131,13 +143,8 @@ class GraphCalendarService
     {
         $accessToken = $this->ensureAccessToken($account);
 
-        $start = $eventData['start'] instanceof \Carbon\Carbon
-            ? $eventData['start']->format('Y-m-d\TH:i:s')
-            : date('Y-m-d\TH:i:s', strtotime($eventData['start']));
-
-        $end = $eventData['end'] instanceof \Carbon\Carbon
-            ? $eventData['end']->format('Y-m-d\TH:i:s')
-            : date('Y-m-d\TH:i:s', strtotime($eventData['end']));
+        $start = self::toGraphUtc($eventData['start']);
+        $end   = self::toGraphUtc($eventData['end']);
 
         $payload = [
             'subject' => $eventData['title'],
@@ -145,8 +152,8 @@ class GraphCalendarService
                 'contentType' => 'text',
                 'content'     => $eventData['notes'] ?? '',
             ],
-            'start' => ['dateTime' => $start, 'timeZone' => 'Pacific Standard Time'],
-            'end'   => ['dateTime' => $end,   'timeZone' => 'Pacific Standard Time'],
+            'start' => ['dateTime' => $start, 'timeZone' => 'UTC'],
+            'end'   => ['dateTime' => $end,   'timeZone' => 'UTC'],
         ];
 
         if (array_key_exists('location', $eventData)) {
