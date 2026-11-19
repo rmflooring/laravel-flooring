@@ -226,7 +226,7 @@ class WarehousePickTicketController extends Controller
                 'sale_item_id'            => $saleItem->id,
                 'item_name'               => $itemName,
                 'unit'                    => $saleItem->unit ?? '',
-                'quantity'                => $saleItem->quantity,
+                'quantity'                => \App\Services\PickTicketService::effectiveQty($saleItem),
                 'notes'                   => $lineNote,
                 'sort_order'              => $nextSortOrder + $index,
             ]);

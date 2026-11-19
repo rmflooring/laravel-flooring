@@ -845,6 +845,9 @@ public function update(\Illuminate\Http\Request $request, \App\Models\Sale $sale
                 }
             }
         }
+
+        // Keep open pick ticket lines in step with edited Qty / Order Qty
+        app(\App\Services\PickTicketService::class)->syncQuantitiesFromSale($sale);
     });
 
     return back()->with('success', 'Sale updated.');

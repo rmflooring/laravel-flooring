@@ -266,7 +266,7 @@ class PickTicketService
                     'sale_item_id'            => $saleItem->id,
                     'item_name'               => $itemName,
                     'unit'                    => $saleItem->unit ?? '',
-                    'quantity'                => $saleItem->quantity,
+                    'quantity'                => self::effectiveQty($saleItem),
                     'sort_order'              => $index,
                 ]);
             }
@@ -322,7 +322,7 @@ class PickTicketService
                     'sale_item_id'            => $saleItem->id,
                     'item_name'               => $itemName,
                     'unit'                    => $saleItem->unit ?? '',
-                    'quantity'                => $saleItem->quantity,
+                    'quantity'                => self::effectiveQty($saleItem),
                     'sort_order'              => $index,
                 ]);
             }
@@ -487,22 +487,7 @@ class PickTicketService
             if ($deliveryNotes) $noteParts[] = $deliveryNotes;
 
             if ($allFullyDelivered) {
-                // Release all linked inventory allocations
-                $allocationIds = $pickTicket->items
-                    ->pluck('inventory_allocation_id')
-                    ->filter()
-                    ->values()
-                    ->all();
-
-                InventoryAllocation::whereIn('id', $allocationIds)
-                    ->update(['released_at' => $now]);
-
-                $pickTicket->update([
-                    'status'       => 'delivered',
-                    'delivered_at' => $pickTicket->delivered_at ?? $now,
-                    'returned_at'  => null,
-                    'notes'        => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
-                ]);
+                $this->markFullyDelivered($pickTicket, $now, $noteParts);
             } else {
                 $pickTicket->update([
                     'status'       => 'partially_delivered',
@@ -510,11 +495,111 @@ class PickTicketService
                     'notes'        => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
                 ]);
             }
-
-            if ($allFullyDelivered) {
-                $this->transitionPOsToDelivered($pickTicket);
-            }
         });
+    }
+
+    /**
+     * Close out a ticket whose every line is fully delivered: release its
+     * inventory allocations, mark it delivered, and roll linked POs forward.
+     */
+    private function markFullyDelivered(PickTicket $pickTicket, $now, array $noteParts = []): void
+    {
+        $allocationIds = $pickTicket->items
+            ->pluck('inventory_allocation_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        InventoryAllocation::whereIn('id', $allocationIds)
+            ->update(['released_at' => $now]);
+
+        $pickTicket->update([
+            'status'       => 'delivered',
+            'delivered_at' => $pickTicket->delivered_at ?? $now,
+            'returned_at'  => null,
+            'notes'        => $noteParts ? trim(($pickTicket->notes ? $pickTicket->notes . "\n" : '') . implode("\n", $noteParts)) : $pickTicket->notes, // append, keep earlier notes
+        ]);
+
+        $this->transitionPOsToDelivered($pickTicket);
+    }
+
+    /**
+     * The qty a sale material line actually needs fulfilled: its Order Qty when
+     * set, otherwise the design Qty. Matches how POs, work orders, profits and
+     * the delivery guardrail already read a sale item.
+     */
+    public static function effectiveQty(SaleItem $saleItem): float
+    {
+        return $saleItem->order_qty !== null
+            ? (float) $saleItem->order_qty
+            : (float) $saleItem->quantity;
+    }
+
+    /**
+     * Keep open pick ticket lines in step with the sale after its quantities
+     * change (e.g. Order Qty edited down because less was needed).
+     *
+     * Found live 2026-11-19, Sale #93: underlayment Order Qty was cut to 200 and
+     * 200 was delivered, but the PT line still held the 320 design qty it was
+     * created with, so the ticket was stuck at "Partial" forever.
+     *
+     * Only lines that are the sole non-cancelled PT line for their sale item are
+     * synced — when material is split across several tickets/batches there's no
+     * safe way to know which line should absorb the change. A line is never set
+     * below what's already been delivered on it. A partially delivered ticket
+     * whose lines are all now fully delivered is closed out as delivered.
+     */
+    public function syncQuantitiesFromSale(Sale $sale): void
+    {
+        $items = PickTicketItem::with(['saleItem', 'pickTicket'])
+            ->whereNotNull('sale_item_id')
+            ->whereHas('pickTicket', fn ($q) => $q
+                ->where('sale_id', $sale->id)
+                ->whereIn('status', PickTicket::ACTIVE_STATUSES))
+            ->get();
+
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $lineCounts = PickTicketItem::whereIn('sale_item_id', $items->pluck('sale_item_id')->unique())
+            ->whereHas('pickTicket', fn ($q) => $q->where('status', '<>', 'cancelled'))
+            ->selectRaw('sale_item_id, COUNT(*) as c')
+            ->groupBy('sale_item_id')
+            ->pluck('c', 'sale_item_id');
+
+        $touched = [];
+
+        foreach ($items as $item) {
+            if (! $item->saleItem || (int) ($lineCounts[$item->sale_item_id] ?? 0) !== 1) {
+                continue;
+            }
+
+            $target = max(self::effectiveQty($item->saleItem), (float) $item->delivered_qty);
+
+            if (abs($target - (float) $item->quantity) < 0.005) {
+                continue;
+            }
+
+            $item->update(['quantity' => $target]);
+            $touched[$item->pick_ticket_id] = $item->pickTicket;
+        }
+
+        foreach ($touched as $pickTicket) {
+            if ($pickTicket->status !== 'partially_delivered') {
+                continue;
+            }
+
+            $pickTicket->load('items');
+
+            $allDelivered = $pickTicket->items->every(
+                fn ($i) => (float) $i->delivered_qty + 0.005 >= (float) $i->quantity
+            );
+
+            if ($allDelivered) {
+                $this->markFullyDelivered($pickTicket, now());
+            }
+        }
     }
 
     /**

@@ -601,6 +601,9 @@ class PurchaseOrderController extends Controller
             foreach ($orderQtyUpdates as $itemId => $orderQty) {
                 \App\Models\SaleItem::where('id', $itemId)->where('sale_id', $sale->id)->update(['order_qty' => $orderQty]);
             }
+            if ($orderQtyUpdates) {
+                app(\App\Services\PickTicketService::class)->syncQuantitiesFromSale($sale);
+            }
 
             $pickupAt = null;
             if ($data['fulfillment_method'] === 'pickup' && ! empty($data['pickup_date']) && ! empty($data['pickup_time'])) {
