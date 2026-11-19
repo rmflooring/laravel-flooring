@@ -151,6 +151,22 @@
             </div>
         @endif
 
+        {{-- Installer --}}
+        @if($rfm->installer)
+            <div class="flex items-start gap-3">
+                <svg class="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085"/>
+                </svg>
+                <div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Installer</p>
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ $rfm->installer->company_name }}</p>
+                    @if($rfm->installer->mobile ?: $rfm->installer->phone)
+                        <a href="tel:{{ $rfm->installer->mobile ?: $rfm->installer->phone }}" class="text-xs text-blue-600 dark:text-blue-400">{{ $rfm->installer->mobile ?: $rfm->installer->phone }}</a>
+                    @endif
+                </div>
+            </div>
+        @endif
+
         {{-- Flooring types --}}
         @if(!empty($rfm->flooring_type))
             <div class="flex items-start gap-3">
@@ -158,7 +174,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
                 </svg>
                 <div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">Flooring Types</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">Types</p>
                     <div class="flex flex-wrap gap-1.5">
                         @foreach($rfm->flooring_type as $type)
                             <span class="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">

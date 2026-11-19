@@ -231,10 +231,13 @@
                                 @enderror
                             </div>
 
+                            {{-- Installer (optional) --}}
+                            @include('pages.rfms.partials.installer-select', ['selectedInstallerId' => $rfm->installer_id])
+
                             {{-- Flooring Type --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Flooring Type <span class="text-red-500">*</span>
+                                    Type <span class="text-red-500">*</span>
                                 </label>
                                 <div class="space-y-2">
                                     @foreach ($flooringTypes as $type)
@@ -299,6 +302,9 @@
                                 </div>
                             </label>
 
+                            {{-- Notify Installer --}}
+                            @include('pages.rfms.partials.installer-notify', ['channel' => 'email', 'checked' => false])
+
                             {{-- Notify Project Manager --}}
                             @if($opportunity->projectManager && $opportunity->projectManager->email)
                                 <label class="flex items-start gap-3 cursor-pointer">
@@ -361,6 +367,9 @@
                                     </p>
                                 </div>
                             </label>
+
+                            {{-- SMS Notify Installer --}}
+                            @include('pages.rfms.partials.installer-notify', ['channel' => 'sms', 'checked' => false])
 
                             {{-- SMS Notify PM --}}
                             @if($opportunity->projectManager && $opportunity->projectManager->mobile)
@@ -520,6 +529,10 @@
         function onFieldChange() {
             if (notifyEstimatorBox && hasKeyFieldChanged()) {
                 notifyEstimatorBox.checked = true;
+                const notifyInstallerBox = document.getElementById('notify_installer');
+                if (notifyInstallerBox && !notifyInstallerBox.disabled && document.getElementById('installer_id').value) {
+                    notifyInstallerBox.checked = true;
+                }
             }
             updateEstimatorHints();
         }
@@ -534,4 +547,6 @@
 
         updateEstimatorHints();
     </script>
+
+    @include('pages.rfms.partials.installer-script')
 </x-app-layout>

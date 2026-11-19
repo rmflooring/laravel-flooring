@@ -191,8 +191,18 @@
             </div>
         </div>
 
+        @if($rfm->installer)
         <div class="info-block">
-            <div class="info-label">Flooring Type</div>
+            <div class="info-label">Installer</div>
+            <div class="info-value">
+                {{ $rfm->installer->company_name }}
+                @if($rfm->installer->mobile ?: $rfm->installer->phone) <br><span style="color:#555">{{ $rfm->installer->mobile ?: $rfm->installer->phone }}</span> @endif
+            </div>
+        </div>
+        @endif
+
+        <div class="info-block">
+            <div class="info-label">Type</div>
             <div style="margin-top:2px">
                 @forelse((array) $rfm->flooring_type as $type)
                     <span class="flooring-tag">{{ $type }}</span>

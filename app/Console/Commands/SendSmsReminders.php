@@ -100,9 +100,9 @@ class SendSmsReminders extends Command
 
         // ── RFM reminders ─────────────────────────────────────────
         if (Setting::get('sms_notify_rfm_reminder')) {
-            $recipients = array_filter(explode(',', Setting::get('sms_rfm_reminder_to', 'estimator,pm')));
+            $recipients = array_filter(explode(',', Setting::get('sms_rfm_reminder_to', 'estimator,pm,installer')));
 
-            $rfms = Rfm::with(['estimator', 'parentCustomer', 'jobSiteCustomer', 'opportunity.projectManager'])
+            $rfms = Rfm::with(['estimator', 'installer', 'parentCustomer', 'jobSiteCustomer', 'opportunity.projectManager'])
                 ->whereDate('scheduled_at', $tomorrow)
                 ->whereIn('status', ['pending', 'confirmed'])
                 ->whereNull('sms_reminder_sent_at')
@@ -111,6 +111,8 @@ class SendSmsReminders extends Command
             foreach ($rfms as $rfm) {
                 try {
                     $estimator       = $rfm->estimator;
+                    $installer       = $rfm->installer;
+                    $installerName   = $installer ? ($installer->contact_name ?: $installer->company_name ?: '') : '';
                     $pm              = $rfm->opportunity?->projectManager;
                     $jobSiteCustomer = $rfm->jobSiteCustomer;
                     $customerName    = $jobSiteCustomer?->company_name
@@ -134,6 +136,8 @@ class SendSmsReminders extends Command
                         'estimator_first_name' => explode(' ', trim($estimatorName))[0],
                         'pm_name'              => $pm?->name ?? '',
                         'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
+                        'installer_name'       => $installerName,
+                        'installer_first_name' => explode(' ', trim($installerName))[0],
                         'rfm_link'             => route('mobile.rfms.show', $rfm->id),
                     ];
 
@@ -148,6 +152,12 @@ class SendSmsReminders extends Command
 
                     if (in_array('pm', $recipients) && $pm?->mobile) {
                         $sms->send($pm->mobile, $body, 'rfm_reminder', $rfm);
+                        $sent = true;
+                    }
+
+                    $installerPhone = $installer?->mobile ?: $installer?->phone;
+                    if (in_array('installer', $recipients) && $installerPhone) {
+                        $sms->send($installerPhone, $body, 'rfm_reminder', $rfm);
                         $sent = true;
                     }
 

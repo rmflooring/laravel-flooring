@@ -32,6 +32,8 @@ class EmailTemplate extends Model
         'rfm_created_pm'               => 'RFM Created — PM',
         'rfm_updated_estimator'        => 'RFM Updated — Estimator',
         'rfm_updated_pm'               => 'RFM Updated — PM',
+        'rfm_created_installer'        => 'RFM Created — Installer',
+        'rfm_updated_installer'        => 'RFM Updated — Installer',
         'shop_quote_confirmation'      => 'Shop Quote — Customer Confirmation',
         'signature_request_flooring'   => 'Signature Request — Flooring Selection',
         'signature_request_work_auth'  => 'Signature Request — Work Authorization',
@@ -95,6 +97,20 @@ class EmailTemplate extends Model
             '{{special_instructions}}',
             '{{estimator_name}}', '{{estimator_first_name}}', '{{pm_name}}', '{{pm_first_name}}',
             '{{rfm_link}}',
+        ],
+        'rfm_created_installer' => [
+            '{{customer_name}}', '{{job_no}}', '{{job_site}}',
+            '{{rfm_date}}', '{{rfm_time}}', '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{flooring_type}}', '{{special_instructions}}',
+            '{{estimator_name}}', '{{estimator_first_name}}', '{{pm_name}}', '{{pm_first_name}}',
+            '{{installer_name}}', '{{installer_first_name}}',
+        ],
+        'rfm_updated_installer' => [
+            '{{customer_name}}', '{{job_no}}', '{{job_site}}',
+            '{{rfm_date}}', '{{rfm_time}}', '{{job_address}}', '{{job_phone}}', '{{job_mobile}}',
+            '{{flooring_type}}', '{{special_instructions}}',
+            '{{estimator_name}}', '{{estimator_first_name}}', '{{pm_name}}', '{{pm_first_name}}',
+            '{{installer_name}}', '{{installer_first_name}}',
         ],
         'shop_quote_confirmation' => [
             '{{first_name}}', '{{last_name}}', '{{phone}}',
@@ -166,6 +182,14 @@ class EmailTemplate extends Model
         'rfm_updated_pm' => [
             'subject' => 'RFM Updated — {{customer_name}}',
             'body'    => "Hi {{pm_first_name}},\n\nThe flooring measurement details for {{customer_name}} at {{job_site}} have been updated.\n\n----------------------------------------\nDate:         {{rfm_date}}\nTime:         {{rfm_time}}\nLocation:     {{job_address}}\nPhone:        {{job_phone}}\nEstimator:    {{estimator_name}}\n----------------------------------------\n\nPlease ensure site access is available at the updated scheduled time.\n\nThank you,\nRM Flooring",
+        ],
+        'rfm_created_installer' => [
+            'subject' => 'RFM Scheduled — {{customer_name}}',
+            'body'    => "Hi {{installer_first_name}},\n\nYou have been booked to attend a site measure.\n\n----------------------------------------\nJob:          {{job_no}} — {{customer_name}}\nJob Site:     {{job_site}}\nDate:         {{rfm_date}}\nTime:         {{rfm_time}}\nAddress:      {{job_address}}\nPhone:        {{job_phone}}\nMobile:       {{job_mobile}}\nType:         {{flooring_type}}\nEstimator:    {{estimator_name}}\n\nSpecial Instructions:\n{{special_instructions}}\n----------------------------------------\n\nThank you,\nRM Flooring",
+        ],
+        'rfm_updated_installer' => [
+            'subject' => 'RFM Updated — {{customer_name}}',
+            'body'    => "Hi {{installer_first_name}},\n\nA site measure you are booked on has been updated. Current details below.\n\n----------------------------------------\nJob:          {{job_no}} — {{customer_name}}\nJob Site:     {{job_site}}\nDate:         {{rfm_date}}\nTime:         {{rfm_time}}\nAddress:      {{job_address}}\nPhone:        {{job_phone}}\nMobile:       {{job_mobile}}\nType:         {{flooring_type}}\nEstimator:    {{estimator_name}}\n\nSpecial Instructions:\n{{special_instructions}}\n----------------------------------------\n\nThank you,\nRM Flooring",
         ],
         'shop_quote_confirmation' => [
             'subject' => 'We received your quote request — RM Flooring',

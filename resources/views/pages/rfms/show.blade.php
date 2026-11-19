@@ -154,8 +154,17 @@
                             </p>
                         </div>
 
+                        @if($rfm->installer)
                         <div>
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Flooring Type</p>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Installer</p>
+                            <p class="text-sm text-gray-900 dark:text-white">
+                                {{ $rfm->installer->company_name }}@if($rfm->installer->contact_name && $rfm->installer->contact_name !== $rfm->installer->company_name) — {{ $rfm->installer->contact_name }}@endif
+                            </p>
+                        </div>
+                        @endif
+
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Type</p>
                             <div class="flex flex-wrap gap-1.5 mt-1">
                                 @foreach((array) $rfm->flooring_type as $type)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">

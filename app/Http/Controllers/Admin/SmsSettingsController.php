@@ -55,9 +55,9 @@ class SmsSettingsController extends Controller
             // Recipients per notification
             'woScheduledTo'       => Setting::get('sms_wo_scheduled_to', 'pm,installer'),
             'woReminderTo'        => Setting::get('sms_wo_reminder_to', 'pm,installer'),
-            'rfmBookedTo'         => Setting::get('sms_rfm_booked_to', 'estimator,pm'),
-            'rfmUpdatedTo'        => Setting::get('sms_rfm_updated_to', 'estimator,pm'),
-            'rfmReminderTo'       => Setting::get('sms_rfm_reminder_to', 'estimator,pm'),
+            'rfmBookedTo'         => Setting::get('sms_rfm_booked_to', 'estimator,pm,installer'),
+            'rfmUpdatedTo'        => Setting::get('sms_rfm_updated_to', 'estimator,pm,installer'),
+            'rfmReminderTo'       => Setting::get('sms_rfm_reminder_to', 'estimator,pm,installer'),
             // Send log
             'smsLogs'             => SmsLog::latest()->take(100)->get(),
         ]);

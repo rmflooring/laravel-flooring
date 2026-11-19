@@ -68,7 +68,7 @@
 
                     {{-- Flooring Type --}}
                     <div class="md:col-span-3">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Flooring Type</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                         <select name="flooring_type"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                             <option value="">All Types</option>

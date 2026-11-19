@@ -609,7 +609,7 @@
                                     <tr>
                                         <th class="px-4 py-3">Scheduled</th>
                                         <th class="px-4 py-3">Estimator</th>
-                                        <th class="px-4 py-3">Flooring Type</th>
+                                        <th class="px-4 py-3">Type</th>
                                         <th class="px-4 py-3">Site Address</th>
                                         <th class="px-4 py-3">Status</th>
                                         <th class="px-4 py-3">Actions</th>

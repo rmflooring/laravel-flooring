@@ -7,6 +7,7 @@ use App\Mail\RfmCreatedMail;
 use App\Mail\RfmUpdatedMail;
 use App\Models\Employee;
 use App\Models\MicrosoftAccount;
+use App\Models\Installer;
 use App\Models\MicrosoftCalendar;
 use App\Models\Opportunity;
 use App\Models\Rfm;
@@ -77,12 +78,15 @@ class RfmController extends Controller
     {
         $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']);
 
+        $installers = Installer::where('status', 'active')->orderBy('company_name')->get(['id', 'company_name', 'contact_name', 'email', 'mobile', 'phone']);
+
         $smsRfmBookedEnabled     = (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_booked', '0');
-        $smsRfmBookedToCustomer  = $smsRfmBookedEnabled && in_array('customer', array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm'))));
+        $smsRfmBookedToCustomer  = $smsRfmBookedEnabled && in_array('customer', array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm,installer'))));
 
         return view('pages.rfms.create', [
             'opportunity'               => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
             'estimators'                => $estimators,
+            'installers'                => $installers,
             'flooringTypes'             => Rfm::FLOORING_TYPES,
             'emailNotificationsEnabled' => (bool) Setting::get('mail_notifications_enabled', '1'),
             'smsEnabled'                => (bool) Setting::get('sms_enabled', '0'),
@@ -95,6 +99,7 @@ class RfmController extends Controller
     {
         $data = $request->validate([
             'estimator_id'        => ['required', 'integer', 'exists:employees,id'],
+            'installer_id'        => ['nullable', 'integer', 'exists:installers,id'],
             'flooring_type'       => ['required', 'array', 'min:1'],
             'flooring_type.*'     => ['string', 'in:' . implode(',', Rfm::FLOORING_TYPES)],
             'scheduled_at'        => ['required', 'date'],
@@ -104,17 +109,20 @@ class RfmController extends Controller
             'site_province'       => ['nullable', 'string', 'max:100'],
             'site_postal_code'    => ['nullable', 'string', 'max:20'],
             'special_instructions'=> ['nullable', 'string'],
-        ]);
+        ], [], ['flooring_type' => 'type', 'flooring_type.*' => 'type']);
 
         $notifyEstimator    = $request->boolean('notify_estimator', false);
         $notifyPm           = $request->boolean('notify_pm', false);
         $smsNotifyEstimator = $request->boolean('sms_notify_estimator', false);
         $smsNotifyPm        = $request->boolean('sms_notify_pm', false);
         $smsNotifyCustomer  = $request->boolean('sms_notify_customer', false);
+        $notifyInstaller    = $request->boolean('notify_installer', false);
+        $smsNotifyInstaller = $request->boolean('sms_notify_installer', false);
 
         $rfm = Rfm::create([
             'opportunity_id'      => $opportunity->id,
             'estimator_id'        => $data['estimator_id'],
+            'installer_id'        => $data['installer_id'] ?? null,
             'parent_customer_id'  => $opportunity->parent_customer_id,
             'job_site_customer_id'=> $opportunity->job_site_customer_id,
             'flooring_type'       => $data['flooring_type'],
@@ -142,10 +150,10 @@ class RfmController extends Controller
 
         // --- Email notification (best-effort, never blocks the save) ---
         try {
-            $rfm->load(['estimator']);
+            $rfm->load(['estimator', 'installer']);
             $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
             $includeCalendarInvite = (bool) Setting::get('rfm_email_calendar_invite', '0');
-            (new RfmCreatedMail($rfm, $opportunity, $notifyEstimator, $notifyPm, $includeCalendarInvite))->send();
+            (new RfmCreatedMail($rfm, $opportunity, $notifyEstimator, $notifyPm, $includeCalendarInvite, $notifyInstaller && $rfm->installer_id))->send();
         } catch (\Throwable $e) {
             Log::error('[RFM] Email notification failed', [
                 'rfm_id' => $rfm->id,
@@ -157,7 +165,7 @@ class RfmController extends Controller
         // --- SMS notification (best-effort, never blocks the save) ---
         if (Setting::get('sms_notify_rfm_booked')) {
             try {
-                $rfm->loadMissing(['estimator']);
+                $rfm->loadMissing(['estimator', 'installer']);
                 $opportunity->loadMissing(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
 
                 $estimator       = $rfm->estimator;
@@ -167,6 +175,8 @@ class RfmController extends Controller
                     ?: $jobSiteCustomer?->name
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
+                $installer     = $rfm->installer;
+                $installerName = $installer ? ($installer->contact_name ?: $installer->company_name ?: '') : '';
                 $fullAddress   = implode(', ', array_filter([
                     $rfm->site_address, $rfm->site_address2, $rfm->site_city, $rfm->site_province, $rfm->site_postal_code,
                 ]));
@@ -182,10 +192,12 @@ class RfmController extends Controller
                     'estimator_first_name' => explode(' ', trim($estimatorName))[0],
                     'pm_name'              => $pm?->name ?? '',
                     'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
+                    'installer_name'       => $installerName,
+                    'installer_first_name' => explode(' ', trim($installerName))[0],
                     'rfm_link'             => route('mobile.rfms.show', $rfm->id),
                 ];
 
-                $recipients   = array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm')));
+                $recipients   = array_filter(explode(',', Setting::get('sms_rfm_booked_to', 'estimator,pm,installer')));
                 $sms          = new SmsService();
                 $tpl          = new SmsTemplateService();
                 $body         = $tpl->renderTemplate('rfm_booked', $vars);
@@ -197,6 +209,11 @@ class RfmController extends Controller
 
                 if ($smsNotifyPm && in_array('pm', $recipients) && $pm?->mobile) {
                     $sms->send($pm->mobile, $body, 'rfm_booked', $rfm);
+                }
+
+                $installerPhone = $installer?->mobile ?: $installer?->phone;
+                if ($smsNotifyInstaller && in_array('installer', $recipients) && $installerPhone) {
+                    $sms->send($installerPhone, $tpl->renderTemplate('rfm_booked_installer', $vars), 'rfm_booked_installer', $rfm);
                 }
 
                 if ($smsNotifyCustomer && in_array('customer', $recipients) && !$jobSiteCustomer?->sms_opted_out) {
@@ -223,7 +240,7 @@ class RfmController extends Controller
     {
         abort_if($rfm->opportunity_id !== $opportunity->id, 404);
 
-        $rfm->load(['estimator', 'parentCustomer', 'jobSiteCustomer', 'calendarEvent']);
+        $rfm->load(['estimator', 'installer', 'parentCustomer', 'jobSiteCustomer', 'calendarEvent']);
 
         return view('pages.rfms.show', [
             'opportunity' => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
@@ -235,7 +252,7 @@ class RfmController extends Controller
     {
         abort_if($rfm->opportunity_id !== $opportunity->id, 404);
 
-        $rfm->load(['estimator', 'parentCustomer', 'jobSiteCustomer', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer', 'opportunity.projectManager']);
+        $rfm->load(['estimator', 'installer', 'parentCustomer', 'jobSiteCustomer', 'opportunity.parentCustomer', 'opportunity.jobSiteCustomer', 'opportunity.projectManager']);
 
         $pdf      = Pdf::loadView('pdf.rfm', compact('rfm'));
         $filename = 'RFM-' . ($opportunity->job_no ? $opportunity->job_no . '-' : '') . $rfm->id . '.pdf';
@@ -252,13 +269,19 @@ class RfmController extends Controller
 
         $estimators = Employee::orderBy('first_name')->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']);
 
+        $installers = Installer::where('status', 'active')
+            ->when($rfm->installer_id, fn ($q) => $q->orWhere('id', $rfm->installer_id))
+            ->orderBy('company_name')
+            ->get(['id', 'company_name', 'contact_name', 'email', 'mobile', 'phone']);
+
         $smsRfmUpdatedEnabled    = (bool) Setting::get('sms_enabled', '0') && (bool) Setting::get('sms_notify_rfm_updated', '0');
-        $smsRfmUpdatedToCustomer = $smsRfmUpdatedEnabled && in_array('customer', array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm'))));
+        $smsRfmUpdatedToCustomer = $smsRfmUpdatedEnabled && in_array('customer', array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm,installer'))));
 
         return view('pages.rfms.edit', [
             'opportunity'               => $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']),
             'rfm'                       => $rfm,
             'estimators'                => $estimators,
+            'installers'                => $installers,
             'flooringTypes'             => Rfm::FLOORING_TYPES,
             'emailNotificationsEnabled' => (bool) Setting::get('mail_notifications_enabled', '1'),
             'smsEnabled'                => (bool) Setting::get('sms_enabled', '0'),
@@ -273,6 +296,7 @@ class RfmController extends Controller
 
         $data = $request->validate([
             'estimator_id'        => ['required', 'integer', 'exists:employees,id'],
+            'installer_id'        => ['nullable', 'integer', 'exists:installers,id'],
             'flooring_type'       => ['required', 'array', 'min:1'],
             'flooring_type.*'     => ['string', 'in:' . implode(',', Rfm::FLOORING_TYPES)],
             'scheduled_at'        => ['required', 'date'],
@@ -282,18 +306,21 @@ class RfmController extends Controller
             'site_province'       => ['nullable', 'string', 'max:100'],
             'site_postal_code'    => ['nullable', 'string', 'max:20'],
             'special_instructions'=> ['nullable', 'string'],
-        ]);
+        ], [], ['flooring_type' => 'type', 'flooring_type.*' => 'type']);
 
         $notifyEstimator    = $request->boolean('notify_estimator', false);
         $notifyPm           = $request->boolean('notify_pm', false);
         $smsNotifyEstimator = $request->boolean('sms_notify_estimator', false);
         $smsNotifyPm        = $request->boolean('sms_notify_pm', false);
         $smsNotifyCustomer  = $request->boolean('sms_notify_customer', false);
+        $notifyInstaller    = $request->boolean('notify_installer', false);
+        $smsNotifyInstaller = $request->boolean('sms_notify_installer', false);
 
         // Snapshot values before save for change detection
         $oldEstimatorName = $rfm->estimator
             ? trim($rfm->estimator->first_name . ' ' . $rfm->estimator->last_name)
             : '—';
+        $oldInstallerName = $rfm->installer ? $rfm->installer->company_name : '—';
         $oldScheduled  = $rfm->scheduled_at->format('M j, Y g:i A');
         $oldAddress    = $rfm->site_address ?? '';
         $oldCity       = $rfm->site_city ?? '';
@@ -308,7 +335,7 @@ class RfmController extends Controller
             $rfm->update(['sms_reminder_sent_at' => null]);
         }
 
-        $rfm->load(['estimator']);
+        $rfm->load(['estimator', 'installer']);
 
         // Build change list
         $changes = [];
@@ -318,6 +345,11 @@ class RfmController extends Controller
             : '—';
         if ($oldEstimatorName !== $newEstimatorName) {
             $changes['Estimator'] = ['from' => $oldEstimatorName, 'to' => $newEstimatorName];
+        }
+
+        $newInstallerName = $rfm->installer ? $rfm->installer->company_name : '—';
+        if ($oldInstallerName !== $newInstallerName) {
+            $changes['Installer'] = ['from' => $oldInstallerName, 'to' => $newInstallerName];
         }
 
         $newScheduled = $rfm->scheduled_at->format('M j, Y g:i A');
@@ -346,11 +378,13 @@ class RfmController extends Controller
         }
 
         // --- Email notification (best-effort, never blocks the save) ---
-        if ($notifyEstimator || $notifyPm) {
+        $notifyInstaller = $notifyInstaller && $rfm->installer_id;
+
+        if ($notifyEstimator || $notifyPm || $notifyInstaller) {
             try {
                 $opportunity->load(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
                 $includeCalendarInvite = (bool) Setting::get('rfm_email_calendar_invite', '0');
-                (new RfmUpdatedMail($rfm, $opportunity, $changes, $notifyEstimator, $notifyPm, $includeCalendarInvite))->send();
+                (new RfmUpdatedMail($rfm, $opportunity, $changes, $notifyEstimator, $notifyPm, $includeCalendarInvite, $notifyInstaller))->send();
             } catch (\Throwable $e) {
                 Log::error('[RFM] Update email notification failed', [
                     'rfm_id' => $rfm->id,
@@ -363,7 +397,7 @@ class RfmController extends Controller
         // --- SMS notification (best-effort, never blocks the save) ---
         if (Setting::get('sms_notify_rfm_updated')) {
             try {
-                $rfm->loadMissing(['estimator']);
+                $rfm->loadMissing(['estimator', 'installer']);
                 $opportunity->loadMissing(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
 
                 $estimator       = $rfm->estimator;
@@ -373,6 +407,8 @@ class RfmController extends Controller
                     ?: $jobSiteCustomer?->name
                     ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
+                $installer     = $rfm->installer;
+                $installerName = $installer ? ($installer->contact_name ?: $installer->company_name ?: '') : '';
                 $fullAddress   = implode(', ', array_filter([
                     $rfm->site_address, $rfm->site_address2, $rfm->site_city, $rfm->site_province, $rfm->site_postal_code,
                 ]));
@@ -388,10 +424,12 @@ class RfmController extends Controller
                     'estimator_first_name' => explode(' ', trim($estimatorName))[0],
                     'pm_name'              => $pm?->name ?? '',
                     'pm_first_name'        => explode(' ', trim($pm?->name ?? ''))[0],
+                    'installer_name'       => $installerName,
+                    'installer_first_name' => explode(' ', trim($installerName))[0],
                     'rfm_link'             => route('mobile.rfms.show', $rfm->id),
                 ];
 
-                $recipients   = array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm')));
+                $recipients   = array_filter(explode(',', Setting::get('sms_rfm_updated_to', 'estimator,pm,installer')));
                 $sms          = new SmsService();
                 $tpl          = new SmsTemplateService();
                 $body         = $tpl->renderTemplate('rfm_updated', $vars);
@@ -403,6 +441,11 @@ class RfmController extends Controller
 
                 if ($smsNotifyPm && in_array('pm', $recipients) && $pm?->mobile) {
                     $sms->send($pm->mobile, $body, 'rfm_updated', $rfm);
+                }
+
+                $installerPhone = $installer?->mobile ?: $installer?->phone;
+                if ($smsNotifyInstaller && in_array('installer', $recipients) && $installerPhone) {
+                    $sms->send($installerPhone, $tpl->renderTemplate('rfm_updated_installer', $vars), 'rfm_updated_installer', $rfm);
                 }
 
                 if ($smsNotifyCustomer && in_array('customer', $recipients) && !$jobSiteCustomer?->sms_opted_out) {
@@ -487,7 +530,7 @@ class RfmController extends Controller
 
     private function buildRfmEventData(Rfm $rfm, Opportunity $opportunity): array
     {
-        $rfm->loadMissing(['estimator']);
+        $rfm->loadMissing(['estimator', 'installer']);
         $opportunity->loadMissing(['parentCustomer', 'projectManager']);
 
         $customerName  = $opportunity->parentCustomer?->company_name
@@ -525,6 +568,12 @@ class RfmController extends Controller
             $attendees[] = [
                 'name'  => $estimatorName,
                 'email' => $rfm->estimator->email,
+            ];
+        }
+        if ($rfm->installer && !empty($rfm->installer->email)) {
+            $attendees[] = [
+                'name'  => $rfm->installer->contact_name ?: $rfm->installer->company_name,
+                'email' => $rfm->installer->email,
             ];
         }
 

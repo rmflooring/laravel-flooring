@@ -45,6 +45,7 @@ class RfmController extends Controller
         $rfm->load([
             'opportunity.projectManager',
             'estimator',
+            'installer',
             'parentCustomer',
             'jobSiteCustomer',
         ]);

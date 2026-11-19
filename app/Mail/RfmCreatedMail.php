@@ -18,6 +18,7 @@ class RfmCreatedMail
         protected bool $notifyEstimator = true,
         protected bool $notifyPm = false,
         protected bool $includeCalendarInvite = false,
+        protected bool $notifyInstaller = false,
     ) {}
 
     /**
@@ -94,7 +95,47 @@ class RfmCreatedMail
             }
         }
 
-        if (! $this->notifyEstimator && ! $this->notifyPm) {
+        // --- Installer ---
+        if ($this->notifyInstaller) {
+            $installer = $this->rfm->installer;
+            if ($installer && filled($installer->email)) {
+                $template = $tpl->getTemplate(null, 'rfm_created_installer');
+                $subject  = $tpl->render($template['subject'], $vars);
+                $body     = $tpl->render($template['body'], $vars);
+
+
+                $icsContent = null;
+                if ($this->includeCalendarInvite && $this->rfm->scheduled_at) {
+                    $fromAddress = Setting::get('mail_from_address', config('services.microsoft.mail_from_address', 'reception@rmflooring.ca'));
+                    $fromName    = Setting::get('mail_from_name', 'RM Flooring Notifications');
+                    $icsContent  = app(ICalService::class)->generate(
+                        uid:            "rfm-{$this->rfm->id}-installer@rmflooring.ca",
+                        title:          $subject,
+                        start:          $this->rfm->scheduled_at->copy(),
+                        end:            $this->rfm->scheduled_at->copy()->addHours(2),
+                        organizerEmail: $fromAddress,
+                        organizerName:  $fromName,
+                        attendees:      [['email' => $installer->email, 'name' => $vars['installer_name']]],
+                        location:       $vars['job_address'],
+                    );
+                }
+
+                $sent = $mailer->send(
+                    to:         $installer->email,
+                    subject:    $subject,
+                    body:       $body,
+                    type:       'rfm_notification',
+                    icsContent: $icsContent,
+                );
+                if ($sent) $success = true;
+            } else {
+                Log::info('[RFM Mail] Installer notify requested but no email on record', [
+                    'rfm_id' => $this->rfm->id,
+                ]);
+            }
+        }
+
+        if (! $this->notifyEstimator && ! $this->notifyPm && ! $this->notifyInstaller) {
             Log::info('[RFM Mail] No notifications requested — skipping', [
                 'rfm_id' => $this->rfm->id,
             ]);
@@ -116,6 +157,10 @@ class RfmCreatedMail
 
         $pm      = $opportunity->projectManager;
         $pmName  = $pm?->name ?? '';
+
+        $installerName = $rfm->installer
+            ? ($rfm->installer->contact_name ?: $rfm->installer->company_name ?: '')
+            : '';
 
         $customer = $opportunity->parentCustomer?->company_name
             ?: $opportunity->parentCustomer?->name
@@ -145,6 +190,8 @@ class RfmCreatedMail
             'estimator_first_name' => explode(' ', trim($estimatorName))[0] ?? '',
             'pm_name'              => $pmName,
             'pm_first_name'        => explode(' ', trim($pmName))[0] ?? '',
+            'installer_name'       => $installerName,
+            'installer_first_name' => explode(' ', trim($installerName))[0] ?? '',
             'rfm_date'             => $rfm->scheduled_at->format('l, F j, Y'),
             'rfm_time'             => $rfm->scheduled_at->format('g:i A'),
             'job_address'          => $address,

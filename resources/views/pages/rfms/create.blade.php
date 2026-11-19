@@ -154,10 +154,13 @@
                                 @enderror
                             </div>
 
+                            {{-- Installer (optional) --}}
+                            @include('pages.rfms.partials.installer-select', ['selectedInstallerId' => null])
+
                             {{-- Flooring Type --}}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Flooring Type <span class="text-red-500">*</span>
+                                    Type <span class="text-red-500">*</span>
                                 </label>
                                 <div class="space-y-2">
                                     @foreach ($flooringTypes as $type)
@@ -224,6 +227,9 @@
                                 </div>
                             </label>
 
+                            {{-- Notify Installer --}}
+                            @include('pages.rfms.partials.installer-notify', ['channel' => 'email', 'checked' => true])
+
                             {{-- Notify Project Manager --}}
                             @if($opportunity->projectManager && $opportunity->projectManager->email)
                                 <label class="flex items-start gap-3 cursor-pointer">
@@ -286,6 +292,9 @@
                                     </p>
                                 </div>
                             </label>
+
+                            {{-- SMS Notify Installer --}}
+                            @include('pages.rfms.partials.installer-notify', ['channel' => 'sms', 'checked' => true])
 
                             {{-- SMS Notify PM --}}
                             @if($opportunity->projectManager && $opportunity->projectManager->mobile)
@@ -425,4 +434,6 @@
         estimatorSelect.addEventListener('change', updateEstimatorHint);
         updateEstimatorHint();
     </script>
+
+    @include('pages.rfms.partials.installer-script')
 </x-app-layout>

@@ -193,7 +193,7 @@
                                         'toggle'    => $notifyRfmBooked,
                                         'to_key'    => 'sms_rfm_booked_to',
                                         'to_val'    => $rfmBookedTo,
-                                        'recipients'=> ['estimator' => 'Estimator', 'pm' => 'Project Manager', 'customer' => 'Customer'],
+                                        'recipients'=> ['estimator' => 'Estimator', 'installer' => 'Installer', 'pm' => 'Project Manager', 'customer' => 'Customer'],
                                     ],
                                     [
                                         'key'       => 'rfm_updated',
@@ -202,7 +202,7 @@
                                         'toggle'    => $notifyRfmUpdated,
                                         'to_key'    => 'sms_rfm_updated_to',
                                         'to_val'    => $rfmUpdatedTo,
-                                        'recipients'=> ['estimator' => 'Estimator', 'pm' => 'Project Manager', 'customer' => 'Customer'],
+                                        'recipients'=> ['estimator' => 'Estimator', 'installer' => 'Installer', 'pm' => 'Project Manager', 'customer' => 'Customer'],
                                     ],
                                     [
                                         'key'       => 'rfm_reminder',
@@ -211,7 +211,7 @@
                                         'toggle'    => $notifyRfmReminder,
                                         'to_key'    => 'sms_rfm_reminder_to',
                                         'to_val'    => $rfmReminderTo,
-                                        'recipients'=> ['estimator' => 'Estimator', 'pm' => 'Project Manager', 'customer' => 'Customer'],
+                                        'recipients'=> ['estimator' => 'Estimator', 'installer' => 'Installer', 'pm' => 'Project Manager', 'customer' => 'Customer'],
                                     ],
                                 ];
                             @endphp

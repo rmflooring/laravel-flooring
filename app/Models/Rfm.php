@@ -13,6 +13,7 @@ class Rfm extends Model
     protected $fillable = [
         'opportunity_id',
         'estimator_id',
+        'installer_id',
         'parent_customer_id',
         'job_site_customer_id',
         'site_address',
@@ -40,13 +41,14 @@ class Rfm extends Model
     // Valid statuses in lifecycle order
     const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
 
-    // Flooring types available in the create form
+    // Job types available in the create form (flooring + cabinets)
     const FLOORING_TYPES = [
         'Carpet',
         'Hardwood',
         'Vinyl / LVP',
         'Tile',
         'Laminate',
+        'Cabinets',
         'Other',
     ];
 
@@ -74,6 +76,11 @@ class Rfm extends Model
     public function estimator(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'estimator_id');
+    }
+
+    public function installer(): BelongsTo
+    {
+        return $this->belongsTo(Installer::class);
     }
 
     public function parentCustomer(): BelongsTo
