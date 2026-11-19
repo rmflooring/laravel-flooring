@@ -58,6 +58,10 @@ class CustomerCreditController extends Controller
             return back()->with('error', 'This credit is already voided.');
         }
 
+        if ($customerCredit->source_customer_payment_id) {
+            return back()->with('error', 'This credit is money the customer actually paid (left over from a split payment), so it can\'t be voided. Refund it, apply it to an invoice, or delete the original payment.');
+        }
+
         $request->validate([
             'void_reason' => ['nullable', 'string', 'max:500'],
         ]);
@@ -79,6 +83,10 @@ class CustomerCreditController extends Controller
 
         if ($customerCredit->status === 'voided') {
             return back()->with('error', 'Voided credits cannot be pushed to QuickBooks.');
+        }
+
+        if ($customerCredit->source_customer_payment_id) {
+            return back()->with('error', 'This credit is already in QuickBooks as the unapplied part of payment ' . $customerCredit->sourceCustomerPayment?->payment_number . '. Pushing it as a credit memo would count it twice.');
         }
 
         $itemId = Setting::get('qbo_income_credit_item_id') ?: Setting::get('qbo_income_material_item_id');
@@ -130,6 +138,10 @@ class CustomerCreditController extends Controller
 
         if ($application->type !== 'refund') {
             return back()->with('error', 'This is not a refund.');
+        }
+
+        if ($application->credit?->source_customer_payment_id) {
+            return back()->with('error', 'This refund is of money left over from a split payment. In QuickBooks, record it against that customer\'s unapplied payment (Expense or Cheque to Accounts Receivable, then apply it in Receive Payment); a refund receipt would post it to income.');
         }
 
         $itemId          = Setting::get('qbo_income_credit_item_id') ?: Setting::get('qbo_income_material_item_id');

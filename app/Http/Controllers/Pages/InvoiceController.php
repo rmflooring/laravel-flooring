@@ -414,6 +414,8 @@ class InvoiceController extends Controller
 
         $this->service->syncSaleInvoiceStatus($sale);
 
+        app(\App\Services\CustomerPaymentService::class)->resyncForInvoice($invoice);
+
         return redirect()->route('pages.sales.invoices.show', [$sale, $invoice])
             ->with('success', 'Invoice voided.');
     }
@@ -459,6 +461,9 @@ class InvoiceController extends Controller
 
     public function destroyPayment(Sale $sale, Invoice $invoice, InvoicePayment $payment)
     {
+        if ($payment->customer_payment_id) {
+            return back()->with('error', 'This is part of split payment ' . $payment->customerPayment?->payment_number . '. Delete it from the customer\'s payment page instead.');
+        }
 
         $payment->delete();
 

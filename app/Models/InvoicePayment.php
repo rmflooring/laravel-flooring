@@ -27,6 +27,11 @@ class InvoicePayment extends Model implements Auditable
         'other'        => 'Other',
     ];
 
+    public function customerPayment(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPayment::class);
+    }
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);

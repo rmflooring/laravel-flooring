@@ -13,15 +13,25 @@
                 </a>
             </div>
 
+            @if ($payment->customer_payment_id && $payment->customerPayment)
+                <div class="p-4 text-blue-800 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                    This payment is part of split payment
+                    <a href="{{ route('admin.customer-payments.show', $payment->customerPayment) }}" class="font-semibold underline">{{ $payment->customerPayment->payment_number }}</a>
+                    (${{ number_format((float) $payment->customerPayment->amount, 2) }} in total). Change or delete it there.
+                </div>
+            @endif
+
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Payment Detail</h1>
                     <p class="text-sm text-gray-500 mt-1">Recorded {{ $payment->created_at?->format('Y-m-d g:i A') }}</p>
                 </div>
+                @unless ($payment->customer_payment_id)
                 <a href="{{ route('admin.payments.edit', $payment) }}"
                    class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
                     Edit Payment
                 </a>
+                @endunless
                 @php
                     $methodBadge = match ($payment->payment_method) {
                         'cash'        => 'bg-green-100 text-green-800',

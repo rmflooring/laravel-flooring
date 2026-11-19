@@ -74,6 +74,12 @@ class CustomerCredit extends Model
         return $this->belongsTo(Invoice::class, 'source_invoice_id');
     }
 
+    /** Set when this credit is the unallocated remainder of a split CustomerPayment. */
+    public function sourceCustomerPayment(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPayment::class, 'source_customer_payment_id');
+    }
+
     public function applications(): HasMany
     {
         return $this->hasMany(CustomerCreditApplication::class);
@@ -145,6 +151,12 @@ class CustomerCredit extends Model
 
         if ($target instanceof Invoice) {
             app(\App\Services\InvoiceService::class)->derivePaymentStatus($target);
+
+            // Leftover from a split payment: in QBO it's unapplied money on that payment,
+            // so link it to this invoice there too.
+            if ($this->source_customer_payment_id) {
+                app(\App\Services\CustomerPaymentService::class)->resync([$this->source_customer_payment_id]);
+            }
         }
 
         return $application;

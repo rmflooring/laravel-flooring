@@ -1180,6 +1180,10 @@ public function showProfits(Sale $sale)
             abort(403);
         }
 
+        if ($deposit->customer_payment_id) {
+            return back()->with('error', 'This deposit is part of split payment ' . $deposit->customerPayment?->payment_number . '. Delete it from the customer\'s payment page instead.');
+        }
+
         if ($deposit->is_applied) {
             return back()->with('error', 'This deposit has been applied to an invoice and cannot be removed. Void the invoice first.');
         }

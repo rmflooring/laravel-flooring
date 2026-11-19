@@ -162,6 +162,7 @@ class InvoiceService
             InvoicePayment::create([
                 'invoice_id'       => $invoice->id,
                 'sale_payment_id'  => $deposit->id,
+                'customer_payment_id' => $deposit->customer_payment_id,
                 'amount'           => $deposit->amount,
                 'payment_date'     => $deposit->payment_date,
                 'payment_method'   => $deposit->payment_method,

@@ -20,12 +20,20 @@
                 <div class="p-4 text-red-800 bg-red-100 border border-red-200 rounded-lg">{{ session('error') }}</div>
             @endif
 
+            @if ($deposit->customer_payment_id && $deposit->customerPayment)
+                <div class="p-4 text-blue-800 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                    This deposit is part of split payment
+                    <a href="{{ route('admin.customer-payments.show', $deposit->customerPayment) }}" class="font-semibold underline">{{ $deposit->customerPayment->payment_number }}</a>
+                    (${{ number_format((float) $deposit->customerPayment->amount, 2) }} in total). Change or delete it there.
+                </div>
+            @endif
+
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Deposit Detail</h1>
                     <p class="text-sm text-gray-500 mt-1">Recorded {{ $deposit->created_at?->format('Y-m-d g:i A') }}</p>
                 </div>
-                @if (! $deposit->is_applied)
+                @if (! $deposit->is_applied && ! $deposit->customer_payment_id)
                     <a href="{{ route('admin.payments.deposits.edit', $deposit) }}"
                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
                         Edit Deposit

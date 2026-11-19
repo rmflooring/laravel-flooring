@@ -1016,6 +1016,8 @@ class QboSyncService
             $this->qbo->log('invoice', $invoice->id, 'push', 'success', $qboInvoice['Id'],
                 ucfirst($action) . ' invoice in QBO', $payload, $qboInvoice);
 
+            app(\App\Services\CustomerPaymentService::class)->resyncForInvoice($invoice);
+
             return ['success' => true, 'message' => 'Invoice ' . $action . ' in QuickBooks.', 'qbo_id' => $qboInvoice['Id']];
 
         } catch (\Exception $e) {
@@ -1041,6 +1043,11 @@ class QboSyncService
      */
     public function pushPayment(\App\Models\InvoicePayment $payment): array
     {
+        // Part of a split customer payment — QBO has it as one Payment, never as its own.
+        if ($payment->customer_payment_id && $payment->customerPayment) {
+            return $this->pushCustomerPayment($payment->customerPayment);
+        }
+
         try {
             $payment->load(['invoice.billToCustomer', 'invoice.sale.opportunity.jobSiteCustomer.parent', 'invoice.sale.opportunity.parentCustomer', 'invoice.sale.customer']);
 
@@ -1139,6 +1146,271 @@ class QboSyncService
             'other', 'credit_card'  => '21',
             default                 => null,
         };
+    }
+
+    // =========================================================================
+    // Customer Payments (one payment split across several sales/invoices)
+    // =========================================================================
+
+    /**
+     * Push a CustomerPayment to QBO as ONE Payment entity.
+     *
+     *  - Every portion sitting on a QBO-synced, non-voided invoice becomes a Line
+     *    linked to that invoice. That covers portions allocated straight to an invoice,
+     *    deposits that have since been invoiced (their InvoicePayment carries the same
+     *    customer_payment_id), and any of the leftover credit later redeemed on an invoice.
+     *  - Everything else — deposits on sales not invoiced yet, the unused leftover credit,
+     *    invoices not pushed to QBO yet — is simply left unapplied on the Payment
+     *    (TotalAmt > sum of Lines). QBO shows that as a credit on the customer's account,
+     *    which is exactly how QBO models a prepayment / overpayment.
+     *
+     * Called again (an update) whenever any of that changes, so the QBO payment's lines
+     * catch up — see CustomerPaymentService::resync().
+     */
+    public function pushCustomerPayment(\App\Models\CustomerPayment $payment): array
+    {
+        try {
+            $payment->load([
+                'customer.parent',
+                'invoicePayments.invoice.billToCustomer',
+                'invoicePayments.invoice.sale.opportunity.jobSiteCustomer.parent',
+                'invoicePayments.invoice.sale.opportunity.parentCustomer',
+                'invoicePayments.invoice.sale.customer',
+                'deposits.sale.opportunity.jobSiteCustomer.parent',
+                'deposits.sale.opportunity.parentCustomer',
+                'deposits.sale.customer',
+                'credit.applications.invoice.billToCustomer',
+                'credit.applications.invoice.sale.opportunity.jobSiteCustomer.parent',
+                'credit.applications.invoice.sale.opportunity.parentCustomer',
+                'credit.applications.invoice.sale.customer',
+            ]);
+
+            // ── Lines: amount per QBO invoice ────────────────────────────────
+            $lineAmounts  = [];   // qbo invoice id => amount
+            $lineInvoices = [];   // qbo invoice id => Invoice
+            $pending      = [];   // human-readable notes on what stays unapplied
+
+            $addToInvoice = function (?Invoice $invoice, float $amount) use (&$lineAmounts, &$lineInvoices, &$pending) {
+                if (! $invoice || $invoice->status === 'voided') {
+                    return;
+                }
+                if (! $invoice->qbo_id) {
+                    $pending[] = "Invoice #{$invoice->invoice_number} isn't in QuickBooks yet";
+                    return;
+                }
+                $lineAmounts[$invoice->qbo_id]  = round(($lineAmounts[$invoice->qbo_id] ?? 0) + $amount, 2);
+                $lineInvoices[$invoice->qbo_id] = $invoice;
+            };
+
+            foreach ($payment->invoicePayments as $ip) {
+                $addToInvoice($ip->invoice, (float) $ip->amount);
+            }
+            foreach ($payment->credit?->applications ?? [] as $app) {
+                if ($app->type === 'redemption' && $app->invoice_id) {
+                    $addToInvoice($app->invoice, (float) $app->amount);
+                }
+            }
+
+            // ── Which QBO customer the payment belongs to ───────────────────
+            // Must be the customer each linked invoice was billed to in QBO (same rule
+            // as pushPayment()). Un-invoiced deposits count too, so that when their sale
+            // is invoiced later the new line still fits this payment's customer.
+            $candidates = [];   // qbo customer id => Customer
+
+            foreach ($lineInvoices as $invoice) {
+                $resolved = $this->resolveCustomerForInvoicePayment($invoice);
+                if (! $resolved['success']) {
+                    return $this->failCustomerPayment($payment, $resolved['message']);
+                }
+                $candidates[$resolved['customer']->qbo_id] = $resolved['customer'];
+            }
+
+            foreach ($payment->deposits as $deposit) {
+                if ($deposit->is_applied || ! $deposit->sale) {
+                    continue; // already represented by its InvoicePayment above
+                }
+                $sale     = $deposit->sale;
+                $jobSite  = $sale->opportunity?->jobSiteCustomer;
+                $parent   = $jobSite?->parent ?? $sale->opportunity?->parentCustomer;
+                $billTo   = $jobSite ?? $parent ?? $sale->customer;
+                if (! $billTo) {
+                    continue;
+                }
+                $resolved = $this->resolveTransactionCustomer($billTo, $jobSite, $parent);
+                if (! $resolved['success']) {
+                    return $this->failCustomerPayment($payment, $resolved['message']);
+                }
+                $candidates[$resolved['customer']->qbo_id] = $resolved['customer'];
+            }
+
+            if (empty($candidates)) {
+                // Nothing allocated anywhere that pins the customer (e.g. it's all
+                // leftover credit) — post it against the paying customer.
+                $payer = $payment->customer;
+                if (! $payer->qbo_id) {
+                    $result = $this->pushCustomer($payer, (bool) $payer->parent_id);
+                    if (! $result['success']) {
+                        return $this->failCustomerPayment($payment, 'Failed to sync customer: ' . $result['message']);
+                    }
+                    $payer->refresh();
+                }
+                $customerQboId = $payer->qbo_id;
+            } elseif (count($candidates) === 1) {
+                $customerQboId = (string) array_key_first($candidates);
+            } else {
+                $customerQboId = $this->commonBillWithParentCustomer(array_keys($candidates));
+                if (! $customerQboId) {
+                    $names = implode(', ', array_map(fn ($c) => $c->company_name ?: $c->name, $candidates));
+                    return $this->failCustomerPayment($payment,
+                        "This payment covers jobs billed to different QuickBooks customers ({$names}) that aren't sub-customers billed with the same parent, so QuickBooks can't take it as one payment.");
+                }
+            }
+
+            // ── Payload ─────────────────────────────────────────────────────
+            $lines = [];
+            foreach ($lineAmounts as $qboInvoiceId => $amount) {
+                if ($amount <= 0.005) {
+                    continue;
+                }
+                $lines[] = [
+                    'Amount'    => $amount,
+                    'LinkedTxn' => [['TxnId' => (string) $qboInvoiceId, 'TxnType' => 'Invoice']],
+                ];
+            }
+
+            $payload = [
+                'CustomerRef' => ['value' => (string) $customerQboId],
+                'TotalAmt'    => (float) $payment->amount,
+                'TxnDate'     => $payment->payment_date->toDateString(),
+                'Line'        => $lines,
+            ];
+
+            $methodId = $this->mapPaymentMethod($payment->payment_method);
+            if ($methodId) {
+                $payload['PaymentMethodRef'] = ['value' => $methodId];
+            }
+            if ($payment->reference_number) {
+                $payload['PaymentRefNum'] = mb_substr($payment->reference_number, 0, 21);
+            }
+
+            $note = trim("Floor Manager {$payment->payment_number}. " . ($payment->notes ?? ''));
+            $payload['PrivateNote'] = mb_substr($note, 0, 4000);
+
+            if ($payment->qbo_id) {
+                // Always use QBO's current SyncToken — our stored one goes stale whenever
+                // the payment is touched in QBO, and a stale token fails the update.
+                $current = $this->qbo->get("payment/{$payment->qbo_id}")['Payment'] ?? null;
+                $payload['Id']        = $payment->qbo_id;
+                $payload['SyncToken'] = $current['SyncToken'] ?? $payment->qbo_sync_token ?? '0';
+                $action = 'updated';
+            } else {
+                $action = 'created';
+            }
+
+            $response   = $this->qbo->post('payment', $payload);
+            $qboPayment = $response['Payment'];
+
+            $payment->update([
+                'qbo_id'         => $qboPayment['Id'],
+                'qbo_sync_token' => $qboPayment['SyncToken'],
+                'qbo_synced_at'  => now(),
+                'qbo_last_error' => null,
+            ]);
+
+            $this->qbo->log('customer_payment', $payment->id, 'push', 'success', $qboPayment['Id'],
+                ucfirst($action) . ' payment in QBO', $payload, $qboPayment);
+
+            $message = "Payment {$action} in QuickBooks.";
+            $unapplied = round((float) $payment->amount - array_sum(array_column($lines, 'Amount')), 2);
+            if ($unapplied > 0.005) {
+                $message .= ' $' . number_format($unapplied, 2) . ' is held as a credit on the customer in QuickBooks until it\'s invoiced or used.';
+            }
+
+            return ['success' => true, 'message' => $message];
+
+        } catch (\Exception $e) {
+            return $this->failCustomerPayment($payment, $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete a CustomerPayment's QBO Payment (used when the payment is deleted in FM).
+     */
+    public function deleteCustomerPaymentInQbo(\App\Models\CustomerPayment $payment): array
+    {
+        if (! $payment->qbo_id) {
+            return ['success' => true, 'message' => 'Not in QuickBooks.'];
+        }
+
+        try {
+            $current = $this->qbo->get("payment/{$payment->qbo_id}")['Payment'] ?? null;
+            $this->qbo->post('payment?operation=delete', [
+                'Id'        => $payment->qbo_id,
+                'SyncToken' => $current['SyncToken'] ?? $payment->qbo_sync_token ?? '0',
+            ]);
+            $this->qbo->log('customer_payment', $payment->id, 'push', 'success', $payment->qbo_id, 'Deleted payment in QBO');
+
+            return ['success' => true, 'message' => 'Payment deleted in QuickBooks.'];
+        } catch (\Exception $e) {
+            $this->qbo->log('customer_payment', $payment->id, 'push', 'error', $payment->qbo_id, $e->getMessage());
+
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * The QBO customer an InvoicePayment against $invoice must reference — identical
+     * resolution to pushPayment()/pushInvoice().
+     */
+    private function resolveCustomerForInvoicePayment(Invoice $invoice): array
+    {
+        $sale        = $invoice->sale;
+        $opportunity = $sale?->opportunity;
+        $jobSite     = $opportunity?->jobSiteCustomer;
+        $parent      = $jobSite?->parent ?? $opportunity?->parentCustomer;
+        $billTo      = $invoice->billToCustomer ?? $jobSite ?? $parent ?? $sale?->customer;
+
+        if (! $billTo) {
+            return ['success' => false, 'message' => "Invoice #{$invoice->invoice_number} has no customer linked.", 'customer' => null];
+        }
+
+        return $this->resolveTransactionCustomer($billTo, $jobSite, $parent);
+    }
+
+    /**
+     * Several jobs billed to different QBO customers can still be paid with one QBO
+     * payment when they're all sub-customers "billed with parent" under the same parent
+     * (or that parent itself) — e.g. a builder paying for several job sites. Returns
+     * that parent's QBO id, or null if there isn't one.
+     */
+    private function commonBillWithParentCustomer(array $qboCustomerIds): ?string
+    {
+        $roots = [];
+        foreach ($qboCustomerIds as $id) {
+            $c = $this->qbo->get("customer/{$id}")['Customer'] ?? null;
+            if (! $c) {
+                return null;
+            }
+            if (! empty($c['ParentRef']['value']) && ! empty($c['BillWithParent'])) {
+                $roots[] = (string) $c['ParentRef']['value'];
+            } elseif (empty($c['ParentRef']['value'])) {
+                $roots[] = (string) $c['Id'];
+            } else {
+                return null; // a sub-customer billed on its own
+            }
+        }
+
+        $roots = array_unique($roots);
+
+        return count($roots) === 1 ? $roots[0] : null;
+    }
+
+    private function failCustomerPayment(\App\Models\CustomerPayment $payment, string $message): array
+    {
+        $payment->update(['qbo_last_error' => $message]);
+        $this->qbo->log('customer_payment', $payment->id, 'push', 'error', $payment->qbo_id, $message);
+
+        return ['success' => false, 'message' => $message];
     }
 
     // =========================================================================
@@ -1444,6 +1716,12 @@ class QboSyncService
      */
     public function handlePaymentUpdate(string $qboId, string $operation): void
     {
+        $group = \App\Models\CustomerPayment::where('qbo_id', $qboId)->first();
+        if ($group) {
+            $this->handleCustomerPaymentUpdate($group, $qboId, $operation);
+            return;
+        }
+
         $payment = \App\Models\InvoicePayment::where('qbo_id', $qboId)->first();
 
         if (! $payment) {
@@ -1490,6 +1768,39 @@ class QboSyncService
         }
     }
 
+    /**
+     * Webhook counterpart for a CustomerPayment (see handlePaymentUpdate()): same rules —
+     * a delete clears the link so a later push recreates it; an update re-syncs the
+     * token and flags (never auto-corrects) an amount mismatch.
+     */
+    private function handleCustomerPaymentUpdate(\App\Models\CustomerPayment $payment, string $qboId, string $operation): void
+    {
+        if ($operation === 'Delete') {
+            $payment->update(['qbo_id' => null, 'qbo_sync_token' => null, 'qbo_synced_at' => null]);
+            $this->qbo->log('customer_payment', $payment->id, 'pull', 'success', $qboId,
+                'Payment deleted in QBO — sync link cleared, will recreate on next push');
+            return;
+        }
+
+        try {
+            $qboPayment = $this->qbo->get("payment/{$qboId}")['Payment'] ?? null;
+            if (! $qboPayment) {
+                return;
+            }
+
+            $message   = 'Payment updated in QBO';
+            $qboAmount = (float) ($qboPayment['TotalAmt'] ?? 0);
+            if (abs($qboAmount - (float) $payment->amount) > 0.005) {
+                $message = "Payment amount in QBO (\${$qboAmount}) no longer matches FM (\${$payment->amount}) — review manually, not auto-corrected.";
+            }
+
+            $payment->update(['qbo_sync_token' => $qboPayment['SyncToken'], 'qbo_synced_at' => now()]);
+            $this->qbo->log('customer_payment', $payment->id, 'pull', 'success', $qboId, $message);
+        } catch (\Exception $e) {
+            Log::error("[QBO Webhook] Failed to fetch Payment #{$qboId}: " . $e->getMessage());
+            $this->qbo->log('customer_payment', $payment->id, 'pull', 'error', $qboId, $e->getMessage());
+        }
+    }
     /**
      * Creates an FM InvoicePayment for every FM-known invoice a QBO-originated
      * Payment is applied to (a payment with no matching InvoicePayment.qbo_id at

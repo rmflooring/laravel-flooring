@@ -560,6 +560,63 @@
             </div>
             @endif
 
+            {{-- Payments Received --}}
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-gray-700">
+                        Payments Received
+                        @if($customerPayments->isNotEmpty())
+                            <span class="ml-2 bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded">{{ $customerPayments->count() }}</span>
+                        @endif
+                    </h2>
+                    @can('edit invoices')
+                        <button type="button" onclick="document.getElementById('record-payment-modal').classList.remove('hidden')"
+                            class="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-100">
+                            + Record Payment
+                        </button>
+                    @endcan
+                </div>
+                @if($customerPayments->isEmpty())
+                    <div class="px-6 py-6 text-sm text-gray-400">No split payments recorded yet. Use Record Payment to take one payment and apply it across several invoices or sales.</div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3">Payment #</th>
+                                    <th class="px-6 py-3">Date</th>
+                                    <th class="px-6 py-3">Method / Ref</th>
+                                    <th class="px-6 py-3">Applied to</th>
+                                    <th class="px-6 py-3 text-right">Amount</th>
+                                    <th class="px-6 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($customerPayments as $cp)
+                                    @php
+                                        $parts = collect([
+                                            ($n = $cp->invoicePayments->whereNull('sale_payment_id')->count()) ? $n . ' invoice' . ($n > 1 ? 's' : '') : null,
+                                            ($n = $cp->deposits->count()) ? $n . ' sale deposit' . ($n > 1 ? 's' : '') : null,
+                                            $cp->credit ? '$' . number_format((float) $cp->credit->amount, 2) . ' credit' : null,
+                                        ])->filter()->implode(', ');
+                                    @endphp
+                                    <tr class="bg-white border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 font-medium text-gray-900">{{ $cp->payment_number }}</td>
+                                        <td class="px-6 py-4">{{ $cp->payment_date?->format('M j, Y') }}</td>
+                                        <td class="px-6 py-4">{{ $cp->method_label }}@if($cp->reference_number) <span class="text-gray-400">· {{ $cp->reference_number }}</span>@endif</td>
+                                        <td class="px-6 py-4">{{ $parts ?: '—' }}</td>
+                                        <td class="px-6 py-4 text-right font-medium text-gray-900">${{ number_format((float) $cp->amount, 2) }}</td>
+                                        <td class="px-6 py-4">
+                                            <a href="{{ route('admin.customer-payments.show', $cp) }}" class="font-medium text-blue-600 hover:underline">View</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+
             {{-- Store Credit --}}
             <div class="bg-white shadow-sm rounded-lg border border-gray-200">
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -692,7 +749,7 @@
                         <span class="ml-2 bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">{{ $invoices->count() }}</span>
                     </h2>
                     @can('edit invoices')
-                        @if($openInvoices->isNotEmpty())
+                        @if($openInvoices->isNotEmpty() || $depositableSales->isNotEmpty())
                             <button type="button" onclick="document.getElementById('record-payment-modal').classList.remove('hidden')"
                                 class="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-100">
                                 + Record Payment
@@ -778,18 +835,35 @@
         </div>
     </div>
 
-    {{-- Record Payment Modal --}}
-    @if($openInvoices->isNotEmpty())
+    {{-- Record Payment Modal — one payment split across invoices, un-invoiced sales, and leftover credit --}}
+    @can('edit invoices')
+    @php
+        $paymentTargets = $openInvoices->map(fn ($i) => [
+                'key'     => 'inv-' . $i->id,
+                'kind'    => 'invoice',
+                'id'      => $i->id,
+                'label'   => 'Invoice ' . $i->invoice_number,
+                'sub'     => 'Sale #' . $i->sale_number,
+                'balance' => round((float) $i->balance_due, 2),
+            ])
+            ->concat($depositableSales->map(fn ($s) => [
+                'key'     => 'sale-' . $s->id,
+                'kind'    => 'sale',
+                'id'      => $s->id,
+                'label'   => 'Sale #' . $s->sale_number,
+                'sub'     => trim(($s->job_name ?: '') . ' · deposit, not invoiced yet', ' ·'),
+                'balance' => round((float) $s->balance_due, 2),
+            ]))
+            ->values();
+    @endphp
     <div id="record-payment-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-         x-data="recordPaymentForm({{ $openInvoices->map(fn ($i) => [
-             'id'             => $i->id,
-             'invoice_number' => $i->invoice_number,
-             'sale_number'    => $i->sale_number,
-             'balance_due'    => round((float) $i->balance_due, 2),
-         ])->values()->toJson() }})">
+         x-data="recordPaymentForm(@js($paymentTargets))">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-                <h3 class="text-base font-semibold text-gray-900">Record Payment</h3>
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">Record Payment</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">One payment, split across this customer's invoices and sales. Anything left over becomes store credit.</p>
+                </div>
                 <button type="button" onclick="document.getElementById('record-payment-modal').classList.add('hidden')"
                     class="text-gray-400 hover:text-gray-600">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -797,7 +871,7 @@
             </div>
             <form method="POST" action="{{ route('admin.customers.payments.store', $customer) }}" class="p-5 space-y-4">
                 @csrf
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block mb-1 text-sm font-medium text-gray-700">Payment Amount <span class="text-red-500">*</span></label>
                         <input type="text" inputmode="decimal" name="amount" x-model="totalAmount" @input="autoFill()"
@@ -806,70 +880,77 @@
                     </div>
                     <div>
                         <label class="block mb-1 text-sm font-medium text-gray-700">Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}"
+                        <input type="date" name="payment_date" value="{{ old('payment_date', date('Y-m-d')) }}"
                             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                             required>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block mb-1 text-sm font-medium text-gray-700">Method <span class="text-red-500">*</span></label>
                         <select name="payment_method"
                             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                             required>
-                            @foreach(\App\Models\InvoicePayment::PAYMENT_METHODS as $value => $label)
-                                <option value="{{ $value }}" {{ $value === 'e-transfer' ? 'selected' : '' }}>{{ $label }}</option>
+                            @foreach(\App\Models\SalePayment::PAYMENT_METHODS as $value => $label)
+                                <option value="{{ $value }}" {{ old('payment_method', 'e-transfer') === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="block mb-1 text-sm font-medium text-gray-700">Reference #</label>
-                        <input type="text" name="reference_number"
+                        <input type="text" name="reference_number" value="{{ old('reference_number') }}" maxlength="100"
                             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                     </div>
                 </div>
                 <div>
                     <label class="block mb-1 text-sm font-medium text-gray-700">Notes</label>
-                    <textarea name="notes" rows="2"
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></textarea>
+                    <textarea name="notes" rows="2" maxlength="500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">{{ old('notes') }}</textarea>
                 </div>
 
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm font-medium text-gray-700">Allocate to Invoices <span class="text-red-500">*</span></label>
-                        <button type="button" @click="autoFill()" class="text-xs text-blue-600 hover:underline">Auto-fill oldest first</button>
+                        <label class="text-sm font-medium text-gray-700">Apply to</label>
+                        <button type="button" x-show="targets.length" @click="autoFill()" class="text-xs text-blue-600 hover:underline">Auto-fill oldest invoices first</button>
                     </div>
-                    <div class="border border-gray-200 rounded-lg overflow-hidden">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-                                <tr>
-                                    <th class="px-3 py-2 text-left">Invoice</th>
-                                    <th class="px-3 py-2 text-right">Balance Due</th>
-                                    <th class="px-3 py-2 text-right w-32">Allocate</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <template x-for="inv in invoices" :key="inv.id">
+                    <template x-if="targets.length">
+                        <div class="border border-gray-200 rounded-lg overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
                                     <tr>
-                                        <td class="px-3 py-2 text-gray-700">
-                                            <span x-text="inv.invoice_number"></span>
-                                            <span class="text-xs text-gray-400" x-text="'(Sale #' + inv.sale_number + ')'"></span>
-                                        </td>
-                                        <td class="px-3 py-2 text-right text-gray-600" x-text="'$' + inv.balance_due.toFixed(2)"></td>
-                                        <td class="px-3 py-2 text-right">
-                                            <input type="text" inputmode="decimal"
-                                                :name="'allocations[' + inv.id + ']'"
-                                                x-model="allocations[inv.id]"
-                                                class="w-24 border border-gray-300 rounded-lg px-2 py-1 text-sm text-right focus:ring-2 focus:ring-blue-400">
-                                        </td>
+                                        <th class="px-3 py-2 text-left">Invoice / Sale</th>
+                                        <th class="px-3 py-2 text-right">Owing</th>
+                                        <th class="px-3 py-2 text-right w-32">Apply</th>
                                     </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="flex justify-between text-sm mt-2 px-1">
-                        <span class="text-gray-500">Allocated: <span class="font-medium text-gray-800" x-text="'$' + allocatedTotal.toFixed(2)"></span></span>
-                        <span :class="Math.abs(remaining) < 0.01 ? 'text-green-600' : 'text-red-600'" x-text="'Remaining: $' + remaining.toFixed(2)"></span>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <template x-for="t in targets" :key="t.key">
+                                        <tr>
+                                            <td class="px-3 py-2 text-gray-700">
+                                                <span x-text="t.label"></span>
+                                                <span class="block text-xs text-gray-400" x-text="t.sub"></span>
+                                            </td>
+                                            <td class="px-3 py-2 text-right text-gray-600" x-text="'$' + t.balance.toFixed(2)"></td>
+                                            <td class="px-3 py-2 text-right">
+                                                <input type="text" inputmode="decimal"
+                                                    :name="(t.kind === 'invoice' ? 'allocations[' : 'sale_allocations[') + t.id + ']'"
+                                                    x-model="allocations[t.key]"
+                                                    :class="over(t) ? 'border-red-400' : 'border-gray-300'"
+                                                    class="w-24 border rounded-lg px-2 py-1 text-sm text-right focus:ring-2 focus:ring-blue-400">
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                    <p x-show="!targets.length" class="text-sm text-gray-500">This customer has nothing open to apply it to — the whole payment will be held as store credit.</p>
+
+                    <div class="flex flex-wrap justify-between gap-2 text-sm mt-2 px-1">
+                        <span class="text-gray-500">Applied: <span class="font-medium text-gray-800" x-text="'$' + allocatedTotal.toFixed(2)"></span></span>
+                        <span x-show="remaining < -0.005" class="text-red-600" x-text="'Over by $' + (-remaining).toFixed(2)"></span>
+                        <span x-show="remaining > 0.005" class="text-emerald-700" x-text="'$' + remaining.toFixed(2) + ' left over → store credit'"></span>
+                        <span x-show="Math.abs(remaining) <= 0.005 && total > 0" class="text-green-600">Fully applied</span>
                     </div>
                 </div>
 
@@ -888,37 +969,44 @@
     </div>
 
     <script>
-    function recordPaymentForm(invoices) {
+    function recordPaymentForm(targets) {
         return {
-            invoices: invoices,
+            targets: targets,
             totalAmount: '',
-            allocations: Object.fromEntries(invoices.map(inv => [inv.id, ''])),
+            allocations: Object.fromEntries(targets.map(t => [t.key, ''])),
 
+            // Invoices first (oldest first, as listed), then un-invoiced sales.
             autoFill() {
-                let remaining = parseFloat(this.totalAmount) || 0;
-                this.invoices.forEach(inv => {
-                    if (remaining <= 0) { this.allocations[inv.id] = ''; return; }
-                    const alloc = Math.min(remaining, inv.balance_due);
-                    this.allocations[inv.id] = alloc > 0 ? alloc.toFixed(2) : '';
-                    remaining = Math.round((remaining - alloc) * 100) / 100;
+                let remaining = this.total;
+                ['invoice', 'sale'].forEach(kind => {
+                    this.targets.filter(t => t.kind === kind).forEach(t => {
+                        if (remaining <= 0) { this.allocations[t.key] = ''; return; }
+                        const alloc = Math.min(remaining, t.balance);
+                        this.allocations[t.key] = alloc > 0 ? alloc.toFixed(2) : '';
+                        remaining = Math.round((remaining - alloc) * 100) / 100;
+                    });
                 });
             },
+
+            get total() { return parseFloat(this.totalAmount) || 0; },
 
             get allocatedTotal() {
                 return Object.values(this.allocations).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
             },
 
             get remaining() {
-                return Math.round(((parseFloat(this.totalAmount) || 0) - this.allocatedTotal) * 100) / 100;
+                return Math.round((this.total - this.allocatedTotal) * 100) / 100;
             },
 
+            over(t) { return (parseFloat(this.allocations[t.key]) || 0) > t.balance + 0.005; },
+
             get isValid() {
-                return (parseFloat(this.totalAmount) || 0) > 0 && Math.abs(this.remaining) < 0.01;
+                return this.total > 0 && this.remaining >= -0.005 && !this.targets.some(t => this.over(t));
             },
         };
     }
     </script>
-    @endif
+    @endcan
 
     @can('issue customer credits')
     {{-- Issue Credit Modal --}}

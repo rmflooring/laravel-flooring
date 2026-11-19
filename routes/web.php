@@ -439,6 +439,19 @@ Route::prefix('admin')
             ->middleware('role_or_permission:admin|edit invoices')
             ->name('customers.payments.store');
 
+        // Customer payments (one payment split across sales / invoices / credit)
+        Route::get('customer-payments/{customerPayment}', [\App\Http\Controllers\Admin\CustomerPaymentController::class, 'show'])
+            ->middleware('role_or_permission:admin|view invoices')
+            ->name('customer-payments.show');
+
+        Route::post('customer-payments/{customerPayment}/push-to-qbo', [\App\Http\Controllers\Admin\CustomerPaymentController::class, 'pushToQbo'])
+            ->middleware('role_or_permission:admin|edit invoices')
+            ->name('customer-payments.push-to-qbo');
+
+        Route::delete('customer-payments/{customerPayment}', [\App\Http\Controllers\Admin\CustomerPaymentController::class, 'destroy'])
+            ->middleware('role_or_permission:admin|delete invoices')
+            ->name('customer-payments.destroy');
+
         // Customer Credits
         Route::get('customer-credits', [\App\Http\Controllers\Pages\CustomerCreditController::class, 'index'])
             ->middleware('role_or_permission:admin|view customer credits')

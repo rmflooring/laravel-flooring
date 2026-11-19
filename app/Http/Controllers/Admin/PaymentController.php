@@ -128,6 +128,11 @@ class PaymentController extends Controller
 
     public function edit(InvoicePayment $payment)
     {
+        if ($payment->customer_payment_id) {
+            return redirect()->route('admin.payments.show', $payment)
+                ->with('error', 'This is part of split payment ' . $payment->customerPayment?->payment_number . ' and can\'t be edited on its own.');
+        }
+
         if ($payment->qbo_id) {
             return redirect()->route('admin.payments.show', $payment)
                 ->with('error', 'This payment has been pushed to QuickBooks Online and can no longer be edited.');
@@ -142,6 +147,11 @@ class PaymentController extends Controller
 
     public function update(Request $request, InvoicePayment $payment, InvoiceService $service)
     {
+        if ($payment->customer_payment_id) {
+            return redirect()->route('admin.payments.show', $payment)
+                ->with('error', 'This is part of split payment ' . $payment->customerPayment?->payment_number . ' and can\'t be edited on its own.');
+        }
+
         if ($payment->qbo_id) {
             return redirect()->route('admin.payments.show', $payment)
                 ->with('error', 'This payment has been pushed to QuickBooks Online and can no longer be edited.');
@@ -172,6 +182,11 @@ class PaymentController extends Controller
 
     public function depositEdit(SalePayment $deposit)
     {
+        if ($deposit->customer_payment_id) {
+            return redirect()->route('admin.payments.deposits.show', $deposit)
+                ->with('error', 'This deposit is part of split payment ' . $deposit->customerPayment?->payment_number . ' and can\'t be edited on its own.');
+        }
+
         if ($deposit->is_applied) {
             return redirect()->route('admin.payments.deposits.show', $deposit)
                 ->with('error', 'This deposit has been applied to an invoice and can no longer be edited.');
@@ -186,6 +201,11 @@ class PaymentController extends Controller
 
     public function depositUpdate(Request $request, SalePayment $deposit)
     {
+        if ($deposit->customer_payment_id) {
+            return redirect()->route('admin.payments.deposits.show', $deposit)
+                ->with('error', 'This deposit is part of split payment ' . $deposit->customerPayment?->payment_number . ' and can\'t be edited on its own.');
+        }
+
         if ($deposit->is_applied) {
             return redirect()->route('admin.payments.deposits.show', $deposit)
                 ->with('error', 'This deposit has been applied to an invoice and can no longer be edited.');
