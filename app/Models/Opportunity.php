@@ -68,6 +68,18 @@ class Opportunity extends Model
         return $this->belongsTo(Customer::class, 'job_site_customer_id');
     }
 
+    /** Name to show for the job: the job site customer, falling back to the parent. */
+    public function jobSiteOrParentName(): string
+    {
+        foreach ([$this->jobSiteCustomer, $this->parentCustomer] as $c) {
+            $name = $c?->company_name ?: $c?->name;
+            if ($name) {
+                return $name;
+            }
+        }
+        return '';
+    }
+
     public function projectManager()
     {
         return $this->belongsTo(ProjectManager::class, 'project_manager_id');

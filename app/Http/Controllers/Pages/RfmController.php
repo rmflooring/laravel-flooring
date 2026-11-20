@@ -171,9 +171,7 @@ class RfmController extends Controller
                 $estimator       = $rfm->estimator;
                 $pm              = $opportunity->projectManager;
                 $jobSiteCustomer = $opportunity->jobSiteCustomer;
-                $customerName    = $jobSiteCustomer?->company_name
-                    ?: $jobSiteCustomer?->name
-                    ?: 'Customer';
+                $customerName    = $opportunity->jobSiteOrParentName() ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
                 $installer     = $rfm->installer;
                 $installerName = $installer ? ($installer->contact_name ?: $installer->company_name ?: '') : '';
@@ -403,9 +401,7 @@ class RfmController extends Controller
                 $estimator       = $rfm->estimator;
                 $pm              = $opportunity->projectManager;
                 $jobSiteCustomer = $opportunity->jobSiteCustomer;
-                $customerName    = $jobSiteCustomer?->company_name
-                    ?: $jobSiteCustomer?->name
-                    ?: 'Customer';
+                $customerName    = $opportunity->jobSiteOrParentName() ?: 'Customer';
                 $estimatorName = $estimator ? trim($estimator->first_name . ' ' . $estimator->last_name) : '';
                 $installer     = $rfm->installer;
                 $installerName = $installer ? ($installer->contact_name ?: $installer->company_name ?: '') : '';
@@ -531,11 +527,12 @@ class RfmController extends Controller
     private function buildRfmEventData(Rfm $rfm, Opportunity $opportunity): array
     {
         $rfm->loadMissing(['estimator', 'installer']);
-        $opportunity->loadMissing(['parentCustomer', 'projectManager']);
+        $opportunity->loadMissing(['parentCustomer', 'jobSiteCustomer', 'projectManager']);
 
-        $customerName  = $opportunity->parentCustomer?->company_name
+        $customerName  = $opportunity->jobSiteOrParentName() ?: 'Unknown Customer';
+        $parentName    = $opportunity->parentCustomer?->company_name
             ?: $opportunity->parentCustomer?->name
-            ?: 'Unknown Customer';
+            ?: '';
         $estimatorName = $rfm->estimator
             ? trim($rfm->estimator->first_name . ' ' . $rfm->estimator->last_name)
             : null;
@@ -551,6 +548,7 @@ class RfmController extends Controller
 
         $vars = [
             'customer_name'        => $customerName,
+            'parent_customer_name' => $parentName,
             'estimator_name'       => $estimatorName ?? '',
             'job_number'           => $opportunity->job_no ?? '',
             'flooring_type'        => $flooringLabel,

@@ -178,7 +178,9 @@ class RfmUpdatedMail
             ? ($rfm->installer->contact_name ?: $rfm->installer->company_name ?: '')
             : '';
 
-        $customer = $opportunity->parentCustomer?->company_name
+        $customer = $opportunity->jobSiteOrParentName();
+
+        $parentCustomer = $opportunity->parentCustomer?->company_name
             ?: $opportunity->parentCustomer?->name
             ?: '';
 
@@ -200,6 +202,7 @@ class RfmUpdatedMail
 
         return [
             'customer_name'        => $customer,
+            'parent_customer_name' => $parentCustomer,
             'job_no'               => $opportunity->job_no ?? '',
             'job_site'             => $jobSite,
             'estimator_name'       => $estimatorName,

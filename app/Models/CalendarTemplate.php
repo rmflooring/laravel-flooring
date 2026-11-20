@@ -43,7 +43,8 @@ class CalendarTemplate extends Model
             '{{pm_first_name}}'        => 'Project manager first name',
         ],
         'rfm_calendar' => [
-            '{{customer_name}}'        => 'Opportunity customer name',
+            '{{customer_name}}'        => 'Job site customer name (falls back to parent)',
+            '{{parent_customer_name}}' => 'Parent customer name',
             '{{estimator_name}}'       => 'Assigned estimator full name',
             '{{job_number}}'           => 'Opportunity job number',
             '{{flooring_type}}'        => 'Flooring type(s)',
