@@ -32,6 +32,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // users can access desktop pages without re-logging in on the web guard
         $middleware->appendToGroup('web', \App\Http\Middleware\SyncMobileAuth::class);
 
+        // ...and it must run BEFORE `auth`. Laravel's priority sort moves Authenticate
+        // ahead of SubstituteBindings (and so ahead of this group-appended middleware),
+        // which made `auth` on /dashboard see a mobile-only user as a guest → /login,
+        // while `guest` on /login (unsorted, runs after the sync) saw them as logged
+        // in → /dashboard: an endless redirect loop (iPhone, 2026-11-21).
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            prepend: \App\Http\Middleware\SyncMobileAuth::class,
+        );
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\Admin::class,
             'auth.mobile' => \App\Http\Middleware\AuthMobile::class,
