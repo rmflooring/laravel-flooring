@@ -187,7 +187,7 @@ class LeadManagementController extends Controller
             relatedId:   $lead->id,
             relatedType: IncomingLead::class,
             // Lead replies should come back to a monitored inbox, not the global noreply default
-            replyTo:     'teams@rmflooring.ca',
+            replyTo:     'team@rmflooring.ca',
         );
 
         if (! $sent) {
