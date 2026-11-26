@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Estimate;
 use App\Models\FreightItem;
+use App\Models\LabourType;
 use App\Models\ProductType;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -43,16 +44,17 @@ class EstimateExcelExportService
         $fields    = ['xa_cat', 'xa_selector', 'xa_description_override'];
         $normalize = fn (?string $name) => mb_strtolower(trim((string) $name));
         $xaByType    = ProductType::get(['name', ...$fields])->keyBy(fn ($t) => $normalize($t->name));
+        $xaByLabour  = LabourType::get(['name', ...$fields])->keyBy(fn ($l) => $normalize($l->name));
         $xaByFreight = FreightItem::get(['description', ...$fields])->keyBy(fn ($f) => $normalize($f->description));
 
         foreach ($estimate->rooms as $room) {
             foreach ($room->items as $item) {
                 [$material, $description, $action] = $this->describeItem($item);
 
-                // Labour rows are not mapped; anything not configured stays blank /
-                // keeps the item's own description.
+                // Anything not configured stays blank / keeps the item's own description.
                 $xa = match ($item->item_type) {
                     'material' => $xaByType->get($normalize($item->product_type)),
+                    'labour'   => $xaByLabour->get($normalize($item->labour_type)),
                     'freight'  => $xaByFreight->get($normalize($item->freight_description)),
                     default    => null,
                 };

@@ -35,7 +35,7 @@
             <div class="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
                 <svg class="mt-0.5 h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
                 <span>
-                    Material types apply to <strong>material</strong> rows; freight items apply to <strong>freight</strong> rows. Labour rows are not affected.
+                    Material types apply to <strong>material</strong> rows, labour types to <strong>labour</strong> rows, and freight items to <strong>freight</strong> rows.
                     Leave a field blank to keep the current behaviour: blank XA columns, and the item's own description.
                     If <strong>Override Description</strong> is filled in, it replaces the description for every matching row
                     (e.g. Laminate &rarr; "As per independent analysis").
@@ -58,6 +58,17 @@
                         'empty'  => 'No product types found.',
                     ],
                     [
+                        'title'  => 'Labour Types',
+                        'label'  => 'Labour Type',
+                        'field'  => 'labour',
+                        'rows'   => $labourTypes->map(fn ($l) => [
+                            'model' => $l,
+                            'name'  => $l->name,
+                            'note'  => null,
+                        ]),
+                        'empty'  => 'No labour types found.',
+                    ],
+                    [
                         'title'  => 'Freight Items',
                         'label'  => 'Freight Item',
                         'field'  => 'freight',
@@ -75,9 +86,32 @@
                 @csrf
 
                 @foreach ($sections as $section)
-                <div>
-                    <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{{ $section['title'] }}</h2>
+                @php
+                    $configured = $section['rows']->filter(fn ($r) =>
+                        $r['model']->xa_cat || $r['model']->xa_selector || $r['model']->xa_description_override
+                    )->count();
+                    // Collapsed by default; open when a save failed validation so errors are visible
+                    $startOpen = $errors->any() ? 'true' : 'false';
+                @endphp
+                {{-- Collapsed sections stay in the form (hidden, not removed), so Save still submits them --}}
+                <div x-data="{ open: {{ $startOpen }} }"
+                     class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <button type="button" @click="open = ! open" :aria-expanded="open.toString()"
+                            class="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        <span class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-gray-500 transition-transform dark:text-gray-400"
+                                 :style="open ? 'transform: rotate(90deg)' : ''"
+                                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900 dark:text-white">{{ $section['title'] }}</span>
+                        </span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ $configured }} of {{ $section['rows']->count() }} set
+                        </span>
+                    </button>
 
+                    <div x-show="open" x-cloak class="border-t border-gray-200 p-4 dark:border-gray-700">
                     @if ($section['rows']->isEmpty())
                         <div class="rounded-lg border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                             {{ $section['empty'] }}
@@ -126,6 +160,7 @@
                         </table>
                     </div>
                     @endif
+                    </div>
                 </div>
                 @endforeach
 

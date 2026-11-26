@@ -14,6 +14,9 @@ class LabourType extends Model
         'notes',
         'created_by',
         'updated_by',
+        'xa_cat',
+        'xa_selector',
+        'xa_description_override',
     ];
 
     // Automatically set created_by and updated_by
