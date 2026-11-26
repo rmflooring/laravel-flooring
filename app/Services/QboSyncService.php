@@ -1827,7 +1827,8 @@ class QboSyncService
             $refNum  = $qboPayment['PaymentRefNum'] ?? null;
             $txnDate = $qboPayment['TxnDate'] ?? now()->toDateString();
 
-            $created = 0;
+            $created         = 0;
+            $touchedInvoices = [];
             foreach ($qboPayment['Line'] ?? [] as $line) {
                 foreach ($line['LinkedTxn'] ?? [] as $linkedTxn) {
                     if (($linkedTxn['TxnType'] ?? '') !== 'Invoice' || empty($linkedTxn['TxnId'])) {
@@ -1858,10 +1859,21 @@ class QboSyncService
                         'qbo_synced_at'    => now(),
                     ]);
                     $created++;
+                    $touchedInvoices[$invoice->id] = $invoice;
 
                     $this->qbo->log('payment', $invoice->id, 'pull', 'success', $qboId,
                         "Payment created in FM from QBO — invoice #{$invoice->invoice_number}, amount \${$line['Amount']}");
                 }
+            }
+
+            // The new InvoicePayment rows don't update the invoice on their own —
+            // amount_paid / status must be recalculated, or the invoice keeps showing
+            // unpaid/overdue until something else happens to touch it. Found live
+            // 2026-11-26: QBO Payments #38545/#38546 created FM payment rows for 12
+            // invoices (and the earlier backfill for 8 more) that all stayed "overdue"
+            // at $0.00 paid while QBO showed them fully paid.
+            foreach ($touchedInvoices as $touched) {
+                app(InvoiceService::class)->recalculateAfterPayment($touched);
             }
 
             if ($created === 0) {
