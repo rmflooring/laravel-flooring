@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Estimate;
 use App\Models\FreightItem;
+use App\Models\LabourItem;
 use App\Models\LabourType;
 use App\Models\ProductType;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,17 @@ class EstimateExcelExportService
         $xaByLabour  = LabourType::get(['name', ...$fields])->keyBy(fn ($l) => $normalize($l->name));
         $xaByFreight = FreightItem::get(['description', ...$fields])->keyBy(fn ($f) => $normalize($f->description));
 
+        // Per-labour-item description overrides, matched on the row's description.
+        // Keyed by "labour type|description" first, so two types sharing a description
+        // don't clash; plain description is the fallback when the type doesn't match.
+        $labourItemOverrides = LabourItem::with('labourType:id,name')
+            ->whereNotNull('xa_description_override')
+            ->get(['description', 'labour_type_id', 'xa_description_override']);
+        $overrideByTypeAndDesc = $labourItemOverrides->keyBy(
+            fn ($l) => $normalize($l->labourType?->name) . '|' . $normalize($l->description)
+        );
+        $overrideByDesc = $labourItemOverrides->keyBy(fn ($l) => $normalize($l->description));
+
         foreach ($estimate->rooms as $room) {
             foreach ($room->items as $item) {
                 [$material, $description, $action] = $this->describeItem($item);
@@ -61,6 +73,16 @@ class EstimateExcelExportService
 
                 if ($xa?->xa_description_override) {
                     $description = $xa->xa_description_override;
+                }
+
+                // A specific labour item's override beats its labour type's override
+                if ($item->item_type === 'labour' && $labourItemOverrides->isNotEmpty()) {
+                    $itemOverride = $overrideByTypeAndDesc->get($normalize($item->labour_type) . '|' . $normalize($item->description))
+                        ?? $overrideByDesc->get($normalize($item->description));
+
+                    if ($itemOverride) {
+                        $description = $itemOverride->xa_description_override;
+                    }
                 }
 
                 $sheet->setCellValue("A{$row}", $material);

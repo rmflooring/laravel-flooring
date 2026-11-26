@@ -18,6 +18,7 @@ class LabourItem extends Model
         'unit_measure_id',
         'status',
 	'labour_type_id',
+        'xa_description_override',
     ];
 
     public function unitMeasure()

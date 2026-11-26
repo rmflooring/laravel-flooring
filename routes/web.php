@@ -230,6 +230,8 @@ Route::prefix('admin')
                 ->name('settings.xactimate-export');
             Route::post('/settings/xactimate-export', [\App\Http\Controllers\Admin\XactimateExportSettingsController::class, 'update'])
                 ->name('settings.xactimate-export.update');
+            Route::get('/settings/xactimate-export/labour-items', [\App\Http\Controllers\Admin\XactimateExportSettingsController::class, 'searchLabourItems'])
+                ->name('settings.xactimate-export.labour-items');
 
             // Calendar entry templates (admin)
             Route::get('/settings/calendar-templates', [\App\Http\Controllers\Admin\AdminCalendarTemplateController::class, 'index'])

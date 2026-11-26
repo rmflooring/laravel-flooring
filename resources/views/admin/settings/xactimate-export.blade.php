@@ -164,6 +164,101 @@
                 </div>
                 @endforeach
 
+                {{-- Labour item description overrides: only items the admin has added are listed --}}
+                <div x-data="labourItemOverrides(@js($labourItemOverrides), '{{ route('admin.settings.xactimate-export.labour-items') }}', {{ $errors->any() ? 'true' : 'false' }})"
+                     class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <input type="hidden" name="labour_items_present" value="1">
+
+                    <button type="button" @click="open = ! open" :aria-expanded="open.toString()"
+                            class="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        <span class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-gray-500 transition-transform dark:text-gray-400"
+                                 :style="open ? 'transform: rotate(90deg)' : ''"
+                                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                            </svg>
+                            <span class="text-lg font-semibold text-gray-900 dark:text-white">Labour Item Description Overrides</span>
+                        </span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400" x-text="items.length + (items.length === 1 ? ' item' : ' items')"></span>
+                    </button>
+
+                    <div x-show="open" x-cloak class="space-y-4 border-t border-gray-200 p-4 dark:border-gray-700">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Replace the description for one specific labour item. This takes priority over the labour type's override above;
+                            XA Cat and XA Selector still come from the labour type. It only applies to estimate rows whose description still matches the labour item.
+                        </p>
+
+                        {{-- Search --}}
+                        <div class="relative" @click.outside="results = []">
+                            <input type="text" x-model="query" @input.debounce.300ms="search()" @keydown.escape="results = []"
+                                   @keydown.enter.prevent="results.length && add(results[0])"
+                                   placeholder="Search labour items to add (e.g. laminate click)…"
+                                   class="{{ $inputClass }}">
+                            <div x-show="loading" class="absolute right-3 top-2.5 text-xs text-gray-400">Searching…</div>
+
+                            <ul x-show="results.length" x-cloak
+                                class="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-gray-200 bg-white text-sm shadow-lg dark:border-gray-600 dark:bg-gray-700">
+                                <template x-for="r in results" :key="r.id">
+                                    <li>
+                                        <button type="button" @click="add(r)" :disabled="has(r.id)"
+                                                class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-blue-50 disabled:cursor-default disabled:opacity-50 dark:hover:bg-gray-600">
+                                            <span>
+                                                <span class="text-gray-900 dark:text-white" x-text="r.description"></span>
+                                                <span class="ml-1 text-xs text-gray-500 dark:text-gray-400" x-text="r.labour_type ? '(' + r.labour_type + ')' : ''"></span>
+                                            </span>
+                                            <span class="text-xs text-gray-400" x-text="has(r.id) ? 'Added' : 'Add'"></span>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                            <p x-show="noResults" x-cloak class="mt-1 text-xs text-gray-500 dark:text-gray-400">No labour items match.</p>
+                        </div>
+
+                        {{-- Current list --}}
+                        <template x-if="items.length === 0">
+                            <div class="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
+                                No labour item overrides yet. Search above to add one.
+                            </div>
+                        </template>
+
+                        <div x-show="items.length" class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table class="w-full text-left text-sm text-gray-700 dark:text-gray-300">
+                                <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                        <th class="px-4 py-3 w-80">Labour Item</th>
+                                        <th class="px-4 py-3">Override Description</th>
+                                        <th class="px-4 py-3 w-20"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <template x-for="item in items" :key="item.id">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white" x-text="item.description"></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="item.labour_type || ''"></div>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                {{-- Not "required": a collapsed section can't show the browser's warning. Blank = removed on save. --}}
+                                                <input type="text" maxlength="500"
+                                                       :name="'labour_items[' + item.id + '][xa_description_override]'"
+                                                       x-model="item.override"
+                                                       placeholder="Description to use in the Excel export (blank = remove)"
+                                                       class="{{ $inputClass }}">
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                <button type="button" @click="remove(item.id)"
+                                                        class="text-sm font-medium text-red-600 hover:underline dark:text-red-400">Remove</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Changes here, including removals, are saved when you click <strong>Save</strong>.</p>
+                    </div>
+                </div>
+
                 <div class="flex justify-end">
                     <button type="submit" class="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
                         Save
@@ -172,4 +267,51 @@
             </form>
         </div>
     </div>
+
+    <script>
+        function labourItemOverrides(initial, searchUrl, startOpen) {
+            return {
+                open: startOpen,
+                items: initial,
+                query: '',
+                results: [],
+                loading: false,
+                noResults: false,
+                has(id) { return this.items.some(i => i.id === id); },
+                async search() {
+                    const q = this.query.trim();
+                    this.noResults = false;
+                    if (q.length < 2) { this.results = []; return; }
+                    this.loading = true;
+                    try {
+                        const res = await fetch(searchUrl + '?q=' + encodeURIComponent(q), {
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        });
+                        // Ignore a stale response if the box changed while it was in flight
+                        if (q !== this.query.trim()) return;
+                        this.results = res.ok ? await res.json() : [];
+                        this.noResults = this.results.length === 0;
+                    } catch (e) {
+                        this.results = [];
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                add(r) {
+                    if (! this.has(r.id)) {
+                        this.items.push({ id: r.id, description: r.description, labour_type: r.labour_type, override: r.override || '' });
+                    }
+                    this.query = '';
+                    this.results = [];
+                    this.noResults = false;
+                    // Put the cursor in the new row's override field
+                    this.$nextTick(() => {
+                        const input = this.$root.querySelector('input[name="labour_items[' + r.id + '][xa_description_override]"]');
+                        if (input) input.focus();
+                    });
+                },
+                remove(id) { this.items = this.items.filter(i => i.id !== id); },
+            };
+        }
+    </script>
 </x-app-layout>
