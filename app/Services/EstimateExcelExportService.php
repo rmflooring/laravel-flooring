@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Estimate;
+use App\Models\FreightItem;
 use App\Models\ProductType;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -36,21 +37,25 @@ class EstimateExcelExportService
 
         $row = $headerRow + 1;
 
-        // Admin → Settings → Excel Export (Xactimate): per-product-type XA codes and
-        // description override, keyed by name because estimate items store the
-        // product type as text rather than an id.
-        $xaByType = ProductType::get(['name', 'xa_cat', 'xa_selector', 'xa_description_override'])
-            ->keyBy(fn (ProductType $type) => mb_strtolower(trim($type->name)));
+        // Admin → Settings → Excel Export (Xactimate): XA codes and description
+        // override per product type (material rows) and per freight item (freight
+        // rows), keyed by name because estimate items store these as text, not ids.
+        $fields    = ['xa_cat', 'xa_selector', 'xa_description_override'];
+        $normalize = fn (?string $name) => mb_strtolower(trim((string) $name));
+        $xaByType    = ProductType::get(['name', ...$fields])->keyBy(fn ($t) => $normalize($t->name));
+        $xaByFreight = FreightItem::get(['description', ...$fields])->keyBy(fn ($f) => $normalize($f->description));
 
         foreach ($estimate->rooms as $room) {
             foreach ($room->items as $item) {
                 [$material, $description, $action] = $this->describeItem($item);
 
-                // XA columns and the description override apply to material rows only;
-                // anything not configured stays blank / keeps the item's own description.
-                $xa = $item->item_type === 'material'
-                    ? $xaByType->get(mb_strtolower(trim((string) $item->product_type)))
-                    : null;
+                // Labour rows are not mapped; anything not configured stays blank /
+                // keeps the item's own description.
+                $xa = match ($item->item_type) {
+                    'material' => $xaByType->get($normalize($item->product_type)),
+                    'freight'  => $xaByFreight->get($normalize($item->freight_description)),
+                    default    => null,
+                };
 
                 if ($xa?->xa_description_override) {
                     $description = $xa->xa_description_override;

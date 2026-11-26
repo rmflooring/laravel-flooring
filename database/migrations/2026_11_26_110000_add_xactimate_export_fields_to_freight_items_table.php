@@ -1,0 +1,25 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('freight_items', function (Blueprint $table) {
+            // Used by the estimate Excel (Xactimate-style) export for freight rows
+            $table->string('xa_cat', 50)->nullable()->after('notes');
+            $table->string('xa_selector', 50)->nullable()->after('xa_cat');
+            $table->string('xa_description_override', 500)->nullable()->after('xa_selector');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('freight_items', function (Blueprint $table) {
+            $table->dropColumn(['xa_cat', 'xa_selector', 'xa_description_override']);
+        });
+    }
+};

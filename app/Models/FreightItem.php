@@ -13,5 +13,8 @@ class FreightItem extends Model
         'notes',
         'created_by',
         'updated_by',
+        'xa_cat',
+        'xa_selector',
+        'xa_description_override',
     ];
 }
