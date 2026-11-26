@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Estimate;
+use App\Models\ProductType;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -34,14 +36,31 @@ class EstimateExcelExportService
 
         $row = $headerRow + 1;
 
+        // Admin → Settings → Excel Export (Xactimate): per-product-type XA codes and
+        // description override, keyed by name because estimate items store the
+        // product type as text rather than an id.
+        $xaByType = ProductType::get(['name', 'xa_cat', 'xa_selector', 'xa_description_override'])
+            ->keyBy(fn (ProductType $type) => mb_strtolower(trim($type->name)));
+
         foreach ($estimate->rooms as $room) {
             foreach ($room->items as $item) {
                 [$material, $description, $action] = $this->describeItem($item);
 
+                // XA columns and the description override apply to material rows only;
+                // anything not configured stays blank / keeps the item's own description.
+                $xa = $item->item_type === 'material'
+                    ? $xaByType->get(mb_strtolower(trim((string) $item->product_type)))
+                    : null;
+
+                if ($xa?->xa_description_override) {
+                    $description = $xa->xa_description_override;
+                }
+
                 $sheet->setCellValue("A{$row}", $material);
                 $sheet->setCellValue("B{$row}", $description);
-                // XA Cat / XA Selector (C, D) intentionally left blank — Floor Manager
-                // doesn't store Xactimate codes; fill in manually after export.
+                // Set as explicit strings so codes like "007" keep their leading zeros
+                $sheet->setCellValueExplicit("C{$row}", (string) ($xa?->xa_cat ?? ''), DataType::TYPE_STRING);
+                $sheet->setCellValueExplicit("D{$row}", (string) ($xa?->xa_selector ?? ''), DataType::TYPE_STRING);
                 $sheet->setCellValue("E{$row}", $item->unit);
                 $sheet->setCellValue("F{$row}", (float) $item->quantity);
                 $sheet->setCellValue("G{$row}", (float) $item->sell_price);
@@ -53,7 +72,10 @@ class EstimateExcelExportService
         }
 
         $lastItemRow = $row - 1;
-        $sheet->getStyle("F2:H{$lastItemRow}")->getNumberFormat()->setFormatCode('#,##0.00');
+        // Skip when there are no items, otherwise the range would cover the header row
+        if ($lastItemRow > $headerRow) {
+            $sheet->getStyle('F' . ($headerRow + 1) . ":H{$lastItemRow}")->getNumberFormat()->setFormatCode('#,##0.00');
+        }
 
         // ── Totals block ────────────────────────────────────────────
         $row++; // blank separator row

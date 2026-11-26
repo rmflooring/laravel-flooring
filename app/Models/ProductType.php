@@ -21,6 +21,9 @@ class ProductType extends Model
         'sold_by_unit_id',
         'default_cost_gl_account_id',
         'default_sell_gl_account_id',
+        'xa_cat',
+        'xa_selector',
+        'xa_description_override',
     ];
 
     public function productLines()

@@ -61,6 +61,9 @@
                         <a href="{{ route('admin.settings.installer-colors') }}" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             Installer Calendar Colors
                         </a>
+                        <a href="{{ route('admin.settings.xactimate-export') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
+                            Excel Export (Xactimate)
+                        </a>
                         <a href="{{ route('admin.settings.sms') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-center block">
                             SMS Notifications
                         </a>

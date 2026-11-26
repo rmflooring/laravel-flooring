@@ -225,6 +225,12 @@ Route::prefix('admin')
             Route::post('/settings/installer-colors/push', [\App\Http\Controllers\Admin\InstallerColorController::class, 'push'])
                 ->name('settings.installer-colors.push');
 
+            // Estimate Excel export — Xactimate codes / description override per product type
+            Route::get('/settings/xactimate-export', [\App\Http\Controllers\Admin\XactimateExportSettingsController::class, 'index'])
+                ->name('settings.xactimate-export');
+            Route::post('/settings/xactimate-export', [\App\Http\Controllers\Admin\XactimateExportSettingsController::class, 'update'])
+                ->name('settings.xactimate-export.update');
+
             // Calendar entry templates (admin)
             Route::get('/settings/calendar-templates', [\App\Http\Controllers\Admin\AdminCalendarTemplateController::class, 'index'])
                 ->name('settings.calendar-templates.index');
