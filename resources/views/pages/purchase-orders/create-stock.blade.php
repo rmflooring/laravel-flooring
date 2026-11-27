@@ -416,7 +416,7 @@
                 const qty = parseFloat(row.quantity) || 0;
                 if (!qty) return;
 
-                const boxes  = Math.ceil(qty / row.units_per);
+                const boxes  = Math.ceil(parseFloat((qty / row.units_per).toFixed(6))); // strip float noise (489.49 / 15.79 = 31.000000000000004)
                 const boxQty = parseFloat((boxes * row.units_per).toFixed(4));
 
                 if (Math.abs(qty - boxQty) < 0.001) return; // already aligned

@@ -2387,7 +2387,8 @@ window.FM_CURRENT_EFFECTIVE_TAX_PERCENT = effectivePercent;
     const qty = parseFloat(target.value || 0);
     if (!qty || qty <= 0) return;
 
-    const boxes = Math.ceil(qty / unitsPer);
+    // toFixed(6) strips float noise: 489.49 / 15.79 = 31.000000000000004, which would ceil to 32
+    const boxes = Math.ceil(parseFloat((qty / unitsPer).toFixed(6)));
     const boxQty = parseFloat((boxes * unitsPer).toFixed(4));
 
     updateBoxQtyHighlight(qtyInput); // orange if aligned, cleared if not
