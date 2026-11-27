@@ -158,7 +158,9 @@
                                 @endif
                                 &middot; {{ $message->created_at->diffForHumans() }}
                                 @if ($message->unconfirmed)
-                                    &middot; <span class="font-medium text-amber-600 dark:text-amber-400" title="VoIP.ms didn't respond in time — it probably still went out">Unconfirmed</span>
+                                    &middot; <span class="font-medium text-amber-600 dark:text-amber-400" title="VoIP.ms was slow to respond — it probably still went out. Checking with VoIP.ms automatically.">Unconfirmed</span>
+                                @elseif ($message->failed)
+                                    &middot; <span class="font-medium text-red-600 dark:text-red-400" title="VoIP.ms has no record of sending this message — please resend">Not delivered</span>
                                 @endif
                             </p>
                         </div>

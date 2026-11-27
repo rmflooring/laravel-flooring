@@ -35,6 +35,13 @@ class VoipMsSmsService
      */
     public bool $unconfirmed = false;
 
+    /** The sms_log row written by the most recent send(), for VerifyVoipMsSend. */
+    public ?int $lastLogId = null;
+
+    // How long to wait for sendSMS. Must stay under nginx's 60s fastcgi_read_timeout
+    // for fm.rmflooring.ca, or the portal page itself errors out (504).
+    private const SEND_TIMEOUT = 45;
+
     /**
      * Send an SMS, or an MMS when it's long or has pictures attached ($media: items
      * from SmsMediaStore). Returns true on success, false on failure.
@@ -44,6 +51,7 @@ class VoipMsSmsService
     {
         $this->lastError   = null;
         $this->unconfirmed = false;
+        $this->lastLogId   = null;
 
         if (! Setting::get('voipms_enabled')) {
             $this->lastError = 'VoIP.ms SMS is disabled.';
@@ -95,12 +103,12 @@ class VoipMsSmsService
 
         try {
             // VoIP.ms's REST API is inherently slow — confirmed real sendSMS/getDIDsInfo
-            // calls routinely take 10-11s to respond (2026-08-21), so 15s left almost no
-            // margin and caused intermittent cURL error 28 timeouts that looked like a
-            // credentials problem but weren't. 30s gives real headroom; uploads get more.
+            // calls routinely take 10-11s to respond (2026-08-21), and on bad days 20-30s+
+            // (2026-11-27: a bare request took 22s and a send hit the old 30s limit, yet
+            // was delivered). Timeouts are now checked afterwards by VerifyVoipMsSend.
             $response = $media
                 ? Http::timeout(60)->asMultipart()->post(self::API_URL, $params)
-                : Http::timeout(30)->get(self::API_URL, $params);
+                : Http::timeout(self::SEND_TIMEOUT)->get(self::API_URL, $params);
 
             $data = $response->json();
 
@@ -108,7 +116,7 @@ class VoipMsSmsService
                 throw new \RuntimeException('VoIP.ms API error: ' . ($data['status'] ?? $response->body()));
             }
 
-            SmsLog::create([
+            $this->lastLogId = SmsLog::create([
                 'to'           => $normalized,
                 'from'         => $did,
                 'body'         => $logBody,
@@ -117,17 +125,18 @@ class VoipMsSmsService
                 'related_type' => $related ? get_class($related) : null,
                 'related_id'   => $related?->id,
                 'sent_at'      => now(),
-            ]);
+            ])->id;
 
             return true;
         } catch (\Throwable $e) {
-            // cURL errors include the full request URL, which carries the API password.
-            $error    = str_replace([$password, urlencode($password)], '***', $e->getMessage());
             $timedOut = $e instanceof ConnectionException && str_contains($e->getMessage(), 'cURL error 28');
+            $error    = $timedOut
+                ? "VoIP.ms didn't respond in time — the message may still have been delivered. Checking with VoIP.ms automatically."
+                : $this->cleanError($e->getMessage(), $password);
 
             $this->lastError   = $error;
             $this->unconfirmed = $timedOut;
-            SmsLog::create([
+            $this->lastLogId   = SmsLog::create([
                 'to'           => $normalized,
                 'from'         => $did,
                 'body'         => $logBody,
@@ -137,10 +146,104 @@ class VoipMsSmsService
                 'related_type' => $related ? get_class($related) : null,
                 'related_id'   => $related?->id,
                 'sent_at'      => null,
-            ]);
+            ])->id;
 
             return $timedOut;
         }
+    }
+
+    /**
+     * cURL errors end with "(see https://curl.se/...) for <full request URL>", and that
+     * URL carries the API username, password and message — keep only the useful part.
+     */
+    private function cleanError(string $message, string $password): string
+    {
+        $message = preg_replace('~\s*\(see https?://\S+\)~', '', $message);
+        $message = preg_replace('~\s+for https?://\S+~', '', $message);
+
+        return str_replace([$password, urlencode($password)], '***', $message);
+    }
+
+    /**
+     * Did VoIP.ms actually send this logged message? Looks it up in the line's sent
+     * history (SMS, then MMS — long or picture messages go out as MMS).
+     * Returns true/false, or null when VoIP.ms couldn't be asked (try again later).
+     */
+    public function wasSent(SmsLog $log): ?bool
+    {
+        $since = $log->created_at->copy()->utc()->subMinute();
+        $body  = $this->comparable(preg_replace('/\s*\[\+\d+ pictures?\]$/', '', (string) $log->body));
+
+        foreach (['getSMS', 'getMMS'] as $method) {
+            $rows = $this->sentHistory($method, $log->to, $since);
+
+            if ($rows === null) {
+                return null;
+            }
+
+            foreach ($rows as $row) {
+                $sentAt = \Carbon\Carbon::parse($row['date'] ?? '1970-01-01', 'UTC');
+
+                if ($sentAt->gte($since) && ($body === '' || $this->comparable($row['message'] ?? '') === $body)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** Sent messages to one number since a time, or null if VoIP.ms couldn't be reached. */
+    private function sentHistory(string $method, string $contact, \Carbon\Carbon $since): ?array
+    {
+        $username = Setting::get('voipms_api_username');
+        $password = Setting::get('voipms_api_password');
+        $did      = Setting::get('voipms_did');
+
+        if (! $username || ! $password || ! $did) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(60)->get(self::API_URL, [
+                'api_username' => $username,
+                'api_password' => $password,
+                'method'       => $method,
+                'did'          => $did,
+                'type'         => 0, // sent
+                'contact'      => $this->normalizePhone($contact),
+                'from'         => $since->toDateString(),
+                'to'           => now('UTC')->toDateString(),
+                'timezone'     => 0, // dates in UTC
+                'limit'        => 100,
+            ]);
+            $data = $response->json();
+        } catch (\Throwable $e) {
+            Log::warning('[VoIP.ms] ' . $method . ' lookup failed', ['error' => $this->cleanError($e->getMessage(), $password)]);
+            return null;
+        }
+
+        $status = $data['status'] ?? null;
+
+        if ($status === 'success') {
+            return $data['sms'] ?? [];
+        }
+
+        if ($status === 'no_sms') {
+            return [];
+        }
+
+        Log::warning('[VoIP.ms] ' . $method . ' lookup returned an unexpected status', [
+            'status' => $status,
+            'http'   => $response->status(),
+            'body'   => mb_substr($response->body(), 0, 200),
+        ]);
+        return null;
+    }
+
+    private function comparable(string $text): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', $text));
     }
 
     /**

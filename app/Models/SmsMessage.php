@@ -16,12 +16,14 @@ class SmsMessage extends Model
         'twilio_sid',
         'voipms_id',
         'unconfirmed',
+        'failed',
         'read_at',
     ];
 
     protected $casts = [
         'read_at'     => 'datetime',
         'unconfirmed' => 'boolean',
+        'failed'      => 'boolean',
         'media'       => 'array',
     ];
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\VerifyVoipMsSend;
 use App\Models\Customer;
 use App\Models\SmsConversation;
 use App\Models\SmsMessage;
@@ -110,13 +111,20 @@ class SmsPortalSender
 
     private function record(SmsConversation $conversation, string $body, array $media, $smsService): void
     {
-        SmsMessage::create([
+        $unconfirmed = $smsService->unconfirmed ?? false;
+
+        $message = SmsMessage::create([
             'conversation_id' => $conversation->id,
             'direction'       => 'outbound',
             'body'            => $body,
             'media'           => $media ?: null,
             'sent_by_id'      => auth()->id(),
-        ] + (($smsService->unconfirmed ?? false) ? ['unconfirmed' => true] : []));
+        ] + ($unconfirmed ? ['unconfirmed' => true] : []));
+
+        // Timed out: check VoIP.ms's sent history in a minute and settle it either way.
+        if ($unconfirmed && $smsService instanceof VoipMsSmsService && $smsService->lastLogId) {
+            VerifyVoipMsSend::dispatch($smsService->lastLogId, $message->id)->delay(now()->addMinute());
+        }
 
         $conversation->update(['last_message_at' => now()]);
     }
@@ -149,7 +157,7 @@ class SmsPortalSender
     private function sentFlash($smsService): array
     {
         if ($smsService->unconfirmed ?? false) {
-            return ['warning', 'VoIP.ms didn\'t respond in time, so this message is unconfirmed. It has probably still gone out — check with the customer before resending.'];
+            return ['warning', 'VoIP.ms was slow to respond, so this message is marked unconfirmed. It has most likely gone out — don\'t resend. The app will check with VoIP.ms over the next few minutes and update it to sent, or to "Not delivered" if it really didn\'t go.'];
         }
 
         return ['success', 'Message sent.'];

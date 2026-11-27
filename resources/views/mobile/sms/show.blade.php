@@ -85,6 +85,8 @@
                         {{ $message->created_at->isToday() ? $message->created_at->format('g:i A') : $message->created_at->format('M j, g:i A') }}
                         @if ($message->unconfirmed)
                             &middot; <span class="font-medium" style="color:#d97706;">Unconfirmed</span>
+                        @elseif ($message->failed)
+                            &middot; <span class="font-medium" style="color:#dc2626;">Not delivered — please resend</span>
                         @endif
                     </p>
                 </div>
